@@ -1,0 +1,16 @@
+{
+  "server": "nginx",
+  "date": "Sat, 04 Jul 2026 16:38:05 GMT",
+  "content-type": "text/html;charset=UTF-8",
+  "transfer-encoding": "chunked",
+  "vary": "Accept-Encoding",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "set-cookie": "JSESSIONID=w6~58D96A5A0C0B44A8969B6EB2FE118AE2; Path=/; Secure; HttpOnly",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "cache-control": "no-cache, no-store, must-revalidate, no-transform",
+  "pragma": "no-cache",
+  "expires": "Thu, 01 Jan 1970 00:00:00 GMT",
+  "x-frame-options": "SAMEORIGIN",
+  "x-content-type-options": "nosniff",
+  "content-encoding": "gzip"
+}

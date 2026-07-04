@@ -6,8 +6,11 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
-from src.models import SOURCE_PRIORITY, DiscoveredJob, Status, dedup_key
+from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, dedup_key
+
+RESOLVE_FAILURE_LIMIT = 3
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -155,3 +158,39 @@ def rows_by_status(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
 
 def get_by_url(conn: sqlite3.Connection, url: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM jobs WHERE url = ?", (url,)).fetchone()
+
+
+def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -> None:
+    """Set status=RESOLVED with the resolved JD text/resolver, and backfill
+    title/location if they were still holding their inbox placeholder value
+    (title == the URL's hostname, or location NULL)."""
+    row = conn.execute("SELECT url, title, location FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    title = row["title"]
+    if resolved.raw_title and title == (urlparse(row["url"]).hostname or ""):
+        title = resolved.raw_title
+    location = row["location"]
+    if resolved.raw_location and not location:
+        location = resolved.raw_location
+
+    conn.execute(
+        """
+        UPDATE jobs
+        SET status = ?, jd_text = ?, jd_resolved_at = ?, resolver = ?,
+            title = ?, location = ?
+        WHERE id = ?
+        """,
+        (Status.RESOLVED, resolved.jd_text, _utcnow_iso(), resolved.resolver, title, location, job_id),
+    )
+    conn.commit()
+
+
+def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> None:
+    """Increment resolve_attempts; mark RESOLVE_FAILED once the limit is hit."""
+    row = conn.execute("SELECT resolve_attempts FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    attempts = row["resolve_attempts"] + 1
+    status = Status.RESOLVE_FAILED if attempts >= RESOLVE_FAILURE_LIMIT else Status.DISCOVERED
+    conn.execute(
+        "UPDATE jobs SET resolve_attempts = ?, status = ? WHERE id = ?",
+        (attempts, status, job_id),
+    )
+    conn.commit()

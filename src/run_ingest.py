@@ -11,9 +11,10 @@ import logging
 
 import yaml
 
-from src import db
+from src import db, resolve
 from src.discover import tracker_vansh
-from src.models import DiscoveredJob
+from src.models import DiscoveredJob, Status
+from src.resolve.base import PoliteSession
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -72,6 +73,21 @@ def run_discovery(
     return all_jobs
 
 
+def run_resolution(conn, session) -> tuple[int, int]:
+    """Resolve all DISCOVERED rows. Returns (resolved_count, failed_count)."""
+    resolved_count = 0
+    failed_count = 0
+    for row in db.rows_by_status(conn, Status.DISCOVERED):
+        result = resolve.resolve(row["url"], session)
+        if result is not None:
+            db.mark_resolved(conn, row["id"], result)
+            resolved_count += 1
+        else:
+            db.record_resolve_failure(conn, row["id"])
+            failed_count += 1
+    return resolved_count, failed_count
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -87,16 +103,23 @@ def main(argv: list[str] | None = None) -> int:
     conn = db.get_connection(db_path)
     run_id = db.start_run(conn)
 
-    discovered = run_discovery(selected, limit=args.limit, dry_run=args.dry_run)
-    new_count = db.insert_discovered(conn, discovered)
-    db.finish_run(conn, run_id, new_jobs=new_count)
+    new_count = 0
+    if not args.resolve_only:
+        discovered = run_discovery(selected, limit=args.limit, dry_run=args.dry_run)
+        new_count = db.insert_discovered(conn, discovered)
+        print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
+        for job in discovered:
+            print(f"  - {job.company}: {job.title} [{job.source}]")
 
-    print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
-    for job in discovered:
-        print(f"  - {job.company}: {job.title} [{job.source}]")
-
+    resolved_count = 0
+    failed_count = 0
     if not args.discover_only:
-        logger.info("resolve/prefilter/digest steps are not implemented yet (later milestones)")
+        session = PoliteSession()
+        resolved_count, failed_count = run_resolution(conn, session)
+        print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
+        logger.info("prefilter/digest steps are not implemented yet (later milestones)")
+
+    db.finish_run(conn, run_id, new_jobs=new_count, resolved=resolved_count, failed=failed_count)
 
     return 0
 

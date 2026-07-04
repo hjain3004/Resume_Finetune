@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from src import db
-from src.models import DiscoveredJob, Status
+from src.models import DiscoveredJob, ResolvedJD, Status
 
 
 @pytest.fixture
@@ -85,3 +85,81 @@ def test_rows_by_status_and_get_by_url(conn):
     fetched = db.get_by_url(conn, "https://example.com/job/42")
     assert fetched is not None
     assert fetched["company"] == "Acme"
+
+
+def test_mark_resolved_sets_status_and_jd_fields(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(jd_text="full jd text", resolver="greenhouse")
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.RESOLVED
+    assert row["jd_text"] == "full jd text"
+    assert row["resolver"] == "greenhouse"
+    assert row["jd_resolved_at"] is not None
+
+
+def test_mark_resolved_backfills_placeholder_title_and_location_for_inbox(conn):
+    db.insert_discovered(
+        conn,
+        [_job(source="inbox", company="unknown", title="example.com", location=None)],
+    )
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(
+        jd_text="full jd text",
+        resolver="greenhouse",
+        raw_title="Software Engineer",
+        raw_location="Remote",
+    )
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["title"] == "Software Engineer"
+    assert row["location"] == "Remote"
+
+
+def test_mark_resolved_does_not_overwrite_non_placeholder_fields(conn):
+    db.insert_discovered(
+        conn,
+        [_job(source="inbox", company="unknown", title="Real Title", location="Real Loc")],
+    )
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(
+        jd_text="full jd text",
+        resolver="greenhouse",
+        raw_title="Other Title",
+        raw_location="Other Loc",
+    )
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["title"] == "Real Title"
+    assert row["location"] == "Real Loc"
+
+
+def test_record_resolve_failure_increments_attempts_and_stays_discovered(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    db.record_resolve_failure(conn, job_id)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["resolve_attempts"] == 1
+    assert row["status"] == Status.DISCOVERED
+
+
+def test_record_resolve_failure_sets_resolve_failed_at_three_attempts(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    db.record_resolve_failure(conn, job_id)
+    db.record_resolve_failure(conn, job_id)
+    db.record_resolve_failure(conn, job_id)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["resolve_attempts"] == 3
+    assert row["status"] == Status.RESOLVE_FAILED

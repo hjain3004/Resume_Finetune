@@ -1,0 +1,20 @@
+{
+  "Content-Type": "application/json",
+  "Transfer-Encoding": "chunked",
+  "Connection": "keep-alive",
+  "Date": "Sat, 04 Jul 2026 16:38:00 GMT",
+  "X-Download-Options": "noopen",
+  "Content-Encoding": "gzip",
+  "Vary": "Accept-Encoding, Origin",
+  "X-Farm-Id": "us",
+  "ETag": "W/\"f5069095e219a4b55d8deeb61f7dd1ec\"",
+  "Cache-Control": "max-age=0, private, must-revalidate",
+  "X-Request-Id": "b5e4dc5a8030c84fd77be725ff698b67",
+  "X-Runtime": "0.017055",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-XSS-Protection": "1; mode=block",
+  "X-Cache": "Miss from cloudfront",
+  "Via": "1.1 c504c22c46350d66f7c4474cd7905f30.cloudfront.net (CloudFront)",
+  "X-Amz-Cf-Pop": "DXB53-P3",
+  "X-Amz-Cf-Id": "LILM17R4Kyh5RDuHp9yMG5C3GyW8-0ofel6t0giY-GwOIGHqTrV85A=="
+}

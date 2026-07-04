@@ -1,0 +1,20 @@
+{
+  "Date": "Sat, 04 Jul 2026 16:38:03 GMT",
+  "Content-Type": "application/json; charset=utf-8",
+  "Transfer-Encoding": "chunked",
+  "Connection": "keep-alive",
+  "x-ashby-request-id": "01KWPZVG23YSVBJP0MNP8YXYYT",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "same-origin",
+  "ashby-session-expiry-alert-level": "",
+  "access-control-allow-origin": "*",
+  "Cache-Control": "public, max-age=60, stale-while-revalidate=60",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+  "last-modified": "Sat, 04 Jul 2026 16:38:03 GMT",
+  "cf-cache-status": "HIT",
+  "Content-Encoding": "gzip",
+  "Server": "cloudflare",
+  "CF-RAY": "a15f8edcde53dddb-DXB",
+  "alt-svc": "h3=\":443\"; ma=86400"
+}

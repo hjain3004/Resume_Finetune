@@ -1,0 +1,22 @@
+{
+  "Date": "Sat, 04 Jul 2026 16:38:04 GMT",
+  "Content-Type": "application/json",
+  "Transfer-Encoding": "chunked",
+  "Connection": "keep-alive",
+  "Content-Security-Policy-Report-Only": "script-src 'none'; connect-src 'none'; report-uri https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report?m=iQ2W6lmAw459uv_cnwqIjEMTKDz6ABAMUrzAgYFdwAc-1783183084.2290006-1.0.1.1-7cdYx0cD0RdrnEuCC1ec0bj2CkQtFw0U4LZs4.31uUXui_tSkGKy1GJc_tW7CAIkbe.O3pMAWPtuuCcZYCyPQGwcVLNIod8QY8npwlttjguSxBTKlajWpnOGbjSae_j5WMYkiZFR2m80idKljZx01Fk.SQYzdYKGksmmMiizJVjGKUYbG48j79vazy6R5DLY9LBkEqwljlzf7ABx5ZFFAg; report-to cf-hrmjfjotwxaztvow",
+  "vary": "accept-encoding",
+  "Pragma": "no-cache",
+  "Server": "cloudflare",
+  "Expires": "Thu, 1 Jan 1970 00:00:00 UTC",
+  "X-Content-Type-Options": "nosniff",
+  "Set-Cookie": "PLAY_SESSION=069f718f064c0bed88f8da913910b60640f5dbfd-cadence_pSessionId=mpqqlvrrtf3uhtp43eqss739jf&instance=vps-prod-paupcnwx.prod-vps.pr502.cust.ash.wd; SameSite=Lax; Path=/; Secure; HTTPOnly, wd-browser-id=39e07a53-f1b9-492d-a3e9-665e22e1423f; Path=/; Secure; HTTPOnly, CALYPSO_SESSION=d0e05921-0dd0-4aa6-9c79-136f836e99a4.Y2FkZW5jZQ==.V0RDQzEuMIQAJQAAIJL9fToZMHpsUKYQL5ednZlVMbnWmTbz39xZbCvhVrtAAACMABYBMQAQ7FtzrzwR0I6lVGnG/NsEigAAAGQwZTA1OTIxLTBkZDAtNGFhNi05Yzc5LTEzNmY4MzZlOTlhNA==; SameSite=Lax; Path=/; Secure; HTTPOnly, wday_vps_cookie=2356770826.53810.0000; path=/; Httponly; Secure; SameSite=none, __cf_bm=YMjiI2Ba9b6HnVnV0OIQADpgMrVs9xPrRvRI77SQ2rg-1783183084.2290006-1.0.1.1-RKRSjmYtYC0GlK8NNZ0sGuACd62E.mswzXbOV1h4i_TVFvTOcvQ0igHKPnpUJ1Z6o8lZpKlo5DzvG9vWjVO_8lf..Ztse.pMR3XzjyC2ZTgXSiZII8sX7Z_o6Z.hmvqP; HttpOnly; SameSite=None; Secure; Path=/; Domain=cadence.wd1.myworkdayjobs.com; Expires=Sat, 04 Jul 2026 17:08:04 GMT, __cflb=0H28vCu5mZQ5H5URQ4Xbzh7qZvE1AhQrtnThtWs7upY; HttpOnly; SameSite=None; Secure; Path=/; Expires=Sun, 05 Jul 2026 15:38:04 GMT, _cfuvid=bJrpLFbX.kyREps5mQJQYehix0I7XeW.HnBYRy.2wS0-1783183084.2290006-1.0.1.1-OQ79blEEUixCrvrbLCL1Cncx2LmxUF47QOvc6ZTp2Vo; HttpOnly; SameSite=None; Secure; Path=/; Domain=cadence.wd1.myworkdayjobs.com",
+  "Cache-Control": "no-store, no-cache",
+  "X-WD-REQUEST-ID": "VPS|a91e4b50-10ae-447b-b8ef-43db3b98c846",
+  "Content-Encoding": "gzip",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "cf-cache-status": "DYNAMIC",
+  "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.01,\"max_age\":604800}",
+  "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=nvyVEjz2IqW5oj17d6mrTeZGwyTrAhQBDNZw%2FDQpU88CR9qM88qRlk0m53dUQ9QOooLP151eiRsCokI%2FKcUFbMZqMlBoaFRiGEMtgw79Srdg2jtyq7KoLu9GKHy%2Bjn%2BhazLeEIvHeUpkKGEcKueQ\"}]}, {\"group\":\"cf-hrmjfjotwxaztvow\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report?m=iQ2W6lmAw459uv_cnwqIjEMTKDz6ABAMUrzAgYFdwAc-1783183084.2290006-1.0.1.1-7cdYx0cD0RdrnEuCC1ec0bj2CkQtFw0U4LZs4.31uUXui_tSkGKy1GJc_tW7CAIkbe.O3pMAWPtuuCcZYCyPQGwcVLNIod8QY8npwlttjguSxBTKlajWpnOGbjSae_j5WMYkiZFR2m80idKljZx01Fk.SQYzdYKGksmmMiizJVjGKUYbG48j79vazy6R5DLY9LBkEqwljlzf7ABx5ZFFAg\"}]}",
+  "CF-RAY": "a15f8ee468aaa497-DTW",
+  "alt-svc": "h3=\":443\"; ma=86400"
+}

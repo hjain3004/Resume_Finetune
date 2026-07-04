@@ -1,0 +1,22 @@
+{
+  "Date": "Sat, 04 Jul 2026 16:38:04 GMT",
+  "Content-Type": "text/html; charset=utf-8",
+  "Transfer-Encoding": "chunked",
+  "Connection": "keep-alive",
+  "cf-cache-status": "DYNAMIC",
+  "Set-Cookie": "AWSALB=H2pEmOf3NwBWTJsdFlglz9kyFvIn5U31AU20p3aow8cf1ay2eNCdhj54qauz/II5J6dDoJBLIfU29E9iOFinyfBD1fgsfEEp4dX4vAKbPlEL/4w9n5UPHE5YwsHB; Expires=Sat, 11 Jul 2026 16:38:04 GMT; Path=/, AWSALBCORS=H2pEmOf3NwBWTJsdFlglz9kyFvIn5U31AU20p3aow8cf1ay2eNCdhj54qauz/II5J6dDoJBLIfU29E9iOFinyfBD1fgsfEEp4dX4vAKbPlEL/4w9n5UPHE5YwsHB; Expires=Sat, 11 Jul 2026 16:38:04 GMT; Path=/; SameSite=None; Secure",
+  "Server": "cloudflare",
+  "Vary": "Accept-Encoding",
+  "x-content-type-options": "nosniff",
+  "x-robots-tag": "noindex, nofollow",
+  "Trace-Id": "5b04d09417beec6d717a3ab832afdc13",
+  "x-envoy-upstream-service-time": "119",
+  "X-Cache-Status": "MISS",
+  "X-Frame-Options": "SAMEORIGIN",
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+  "X-XSS-Protection": "1; mode=block",
+  "Content-Security-Policy": "upgrade-insecure-requests",
+  "External-Trace-Id": "25d608ca6849b71c0eb38cf224e1ecae",
+  "Content-Encoding": "gzip",
+  "CF-RAY": "a15f8ee79f0cccd4-DXB"
+}
