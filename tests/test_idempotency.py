@@ -1,0 +1,53 @@
+"""The idempotency test: running the full default pipeline twice back-to-back
+must not mutate the jobs table a second time (ARCHITECTURE §9's requirement),
+other than the `runs` row itself and legitimate resolve retries."""
+
+from unittest.mock import patch
+
+from src import db, run_ingest
+from src.discover.inbox_manual import InboxResult
+from src.models import DiscoveredJob, ResolvedJD
+
+FIXED_JOBS = [
+    DiscoveredJob(
+        "Acme", "Software Engineer New Grad", "Remote",
+        "https://boards.greenhouse.io/acme/jobs/1", "tracker_vansh", None,
+    ),
+    DiscoveredJob(
+        "Beta", "Senior Software Engineer", "Remote",
+        "https://jobs.lever.co/beta/2", "tracker_simplify", None,
+    ),
+]
+
+
+def _resolve_side_effect(url, session):
+    return ResolvedJD(jd_text="5 years is a plus, not required.", resolver="fixture")
+
+
+def _run_pipeline(db_path: str) -> int:
+    with (
+        patch.object(run_ingest, "discover_all", return_value=list(FIXED_JOBS)),
+        patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
+        patch.object(run_ingest.resolve, "resolve", side_effect=_resolve_side_effect),
+    ):
+        return run_ingest.main(["--db", db_path])
+
+
+def test_full_pipeline_run_twice_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+
+    assert _run_pipeline(db_path) == 0
+    conn = db.get_connection(db_path)
+    first_run = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+    assert first_run["new_jobs"] == 2
+    rows_after_first = [dict(r) for r in conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()]
+    conn.close()
+
+    assert _run_pipeline(db_path) == 0
+    conn = db.get_connection(db_path)
+    second_run = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+    assert second_run["new_jobs"] == 0
+    rows_after_second = [dict(r) for r in conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()]
+    conn.close()
+
+    assert rows_after_second == rows_after_first

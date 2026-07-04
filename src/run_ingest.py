@@ -1,7 +1,7 @@
 """CLI entry point for the job-pipeline ingestion run.
 
-Wires discovery (trackers + manual inbox), resolution, and run accounting
-end-to-end. Pre-filter and digest steps are implemented in a later milestone.
+Wires discovery (trackers + manual inbox), resolution, pre-filter, and digest
+generation end-to-end.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import logging
 
 import yaml
 
-from src import db, resolve
+from src import db, digest, prefilter, resolve
 from src.discover import ADAPTERS, discover_all, inbox_manual
 from src.models import Status
 from src.resolve.base import PoliteSession
@@ -39,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
 def load_sources_config(path: str = "config/sources.yaml") -> dict:
     with open(path) as f:
         return yaml.safe_load(f)["sources"]
+
+
+def load_filters_config(path: str = "config/filters.yaml") -> dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 
 def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
@@ -100,13 +105,33 @@ def main(argv: list[str] | None = None) -> int:
 
     resolved_count = 0
     failed_count = 0
+    filtered_count = 0
     if not args.discover_only:
         session = PoliteSession()
         resolved_count, failed_count = run_resolution(conn, session)
         print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
-        logger.info("prefilter/digest steps are not implemented yet (later milestones)")
 
-    db.finish_run(conn, run_id, new_jobs=new_count, resolved=resolved_count, failed=failed_count)
+        if not args.resolve_only:
+            filters_cfg = load_filters_config()
+            filtered_count = prefilter.run_prefilter(conn, filters_cfg)
+            print(f"Filtered out {filtered_count} job(s).")
+
+    db.finish_run(
+        conn,
+        run_id,
+        new_jobs=new_count,
+        resolved=resolved_count,
+        failed=failed_count,
+        filtered_out=filtered_count,
+    )
+
+    if not args.discover_only and not args.resolve_only:
+        run_row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+        if args.dry_run:
+            print(digest.build_digest(conn, run_row))
+        else:
+            digest_path = digest.write_digest(conn, run_row)
+            print(f"Digest written to {digest_path}")
 
     return 0
 
