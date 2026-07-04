@@ -1,0 +1,593 @@
+[
+  {
+    "date_updated": 1762554697,
+    "sponsorship": "Other",
+    "active": true,
+    "degrees": [],
+    "url": "https://job-boards.greenhouse.io/newsbreak/jobs/4615879006",
+    "company_name": "NewsBreak",
+    "title": "Software Engineer, ML Infra (Junior & New Grad)",
+    "locations": [
+      "Mountain View, CA"
+    ],
+    "category": "Data Science, AI & Machine Learning",
+    "source": "angie-hue",
+    "id": "699a858e-37ed-4cf5-b038-da228c57e7c6",
+    "date_posted": 1762554697,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "date_updated": 1762554834,
+    "sponsorship": "U.S. Citizenship is Required",
+    "active": true,
+    "degrees": [],
+    "url": "https://jobs.smartrecruiters.com/BryceTech/f40e9665-32d7-47d8-90fd-ac1f18dc05be?dcr_ci=BryceTech",
+    "company_name": "BryceTech",
+    "title": "Junior Exercise Software IT Specialist",
+    "locations": [
+      "Suffolk, VA"
+    ],
+    "category": "Software Engineering",
+    "source": "angie-hue",
+    "id": "3e8a341b-5b62-445c-8382-6d3bdb849f34",
+    "date_posted": 1762554834,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "date_updated": 1762771383,
+    "sponsorship": "Offers Sponsorship",
+    "active": true,
+    "degrees": [],
+    "url": "https://lifeattiktok.com/search/7535220808265681159",
+    "company_name": "TikTok",
+    "title": "Software Engineer Graduate (Data Arch - Data Ecosystem)",
+    "locations": [
+      "San Jose, CA"
+    ],
+    "category": "Software Engineering",
+    "source": "Simplify",
+    "id": "0226ad2b-76b9-4a34-83eb-b0dd7ee4e68e",
+    "date_posted": 1762771383,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "date_updated": 1763138170,
+    "sponsorship": "U.S. Citizenship is Required",
+    "active": true,
+    "degrees": [],
+    "url": "https://metecs.applytojob.com/apply/csAVnq7Ij4/Junior-Software-Engineer-DST",
+    "company_name": "METECS",
+    "title": "Junior Software Engineer - DST",
+    "locations": [
+      "Houston, TX"
+    ],
+    "category": "Software Engineering",
+    "source": "angie-hue",
+    "id": "76295fb2-f3bc-499e-bd1c-bd591ce14c36",
+    "date_posted": 1763138170,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "date_updated": 1763149326,
+    "sponsorship": "U.S. Citizenship is Required",
+    "active": true,
+    "degrees": [],
+    "url": "https://kbr.wd5.myworkdayjobs.com/en-US/KBR_Careers/job/Huntsville-Alabama/Junior-Software-Engineer_R2115179",
+    "company_name": "KBR",
+    "title": "Junior Software Engineer",
+    "locations": [
+      "Huntsville, AL"
+    ],
+    "category": "Software Engineering",
+    "source": "angie-hue",
+    "id": "81b868dd-353e-4c2a-ae8e-30170c73a203",
+    "date_posted": 1763138209,
+    "company_url": "",
+    "is_visible": false
+  },
+  {
+    "source": "Simplify",
+    "category": "Hardware",
+    "company_name": "Leidos",
+    "id": "de6e3580-a3fb-4a6a-b4af-bd24bb0e1f6c",
+    "title": "PCBA Soldering Technician",
+    "active": true,
+    "date_updated": 1762915565,
+    "date_posted": 1762915565,
+    "url": "https://leidos.wd5.myworkdayjobs.com/External/job/Huntsville-AL/PCBA-Aoldering-Technician_R-00170309",
+    "locations": [
+      "Huntsville, AL"
+    ],
+    "company_url": "https://simplify.jobs/c/Leidos",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "Vertiv",
+    "id": "9e9c65e4-a1cc-4988-b6d5-3d10d3b0730d",
+    "title": "Manufacturing Engineering Technician",
+    "active": true,
+    "date_updated": 1762820712,
+    "date_posted": 1762820712,
+    "url": "https://egup.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/job/20262349",
+    "locations": [
+      "Ashland, KY"
+    ],
+    "company_url": "https://simplify.jobs/c/Vertiv",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Hardware",
+    "company_name": "Ciena",
+    "id": "d26ce57a-9f65-4a82-af45-1e1f59ea6111",
+    "title": "Digital Verification Engineer \u2013 New Grad",
+    "active": true,
+    "date_updated": 1762820446,
+    "date_posted": 1762820446,
+    "url": "https://ciena.wd5.myworkdayjobs.com/Careers/job/US--NY--Pittsford--1250-Pittsford-Victor-Road-Rochester/Digital-Verification-Engineer_R029443",
+    "locations": [
+      "Rochester, NY"
+    ],
+    "company_url": "https://simplify.jobs/c/Ciena",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "Gotion",
+    "id": "9ee895f9-f3c4-4415-9d51-558e1881b398",
+    "title": "Data Analyst",
+    "active": true,
+    "date_updated": 1762817560,
+    "date_posted": 1762817560,
+    "url": "https://job-boards.greenhouse.io/gotion/jobs/8282912002",
+    "locations": [
+      "Fremont, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/Gotion",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "ByteDance",
+    "id": "9f197d2d-9e2c-4c85-96a0-2d38644a115e",
+    "title": "Graduate Research Scientist - 3D/4D Reconstruction/Generation/Relighting",
+    "active": true,
+    "date_updated": 1762909553,
+    "date_posted": 1762544111,
+    "url": "https://jobs.bytedance.com/en/position/7564547210038380853/detail",
+    "locations": [
+      "San Jose, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/ByteDance",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Product",
+    "company_name": "Oracle",
+    "id": "a9f0c4a4-c4c1-4b2d-8a3d-5799ff47b1d3",
+    "title": "Product Manager",
+    "active": true,
+    "date_updated": 1762621485,
+    "date_posted": 1762621485,
+    "url": "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_45001/job/314448",
+    "locations": [
+      "United States"
+    ],
+    "company_url": "https://simplify.jobs/c/Oracle",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "mthree",
+    "id": "e828c150-30c9-41f2-80b8-ef5fe79e24d0",
+    "title": "Junior Software Engineer",
+    "active": true,
+    "date_updated": 1763162299,
+    "date_posted": 1763162299,
+    "url": "https://mthree.com/careers/job/?gh_jid=4374344006",
+    "locations": [
+      "United States"
+    ],
+    "company_url": "https://simplify.jobs/c/Mthree",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "WTW",
+    "id": "432a4f28-6d99-4201-aa6c-17009cbe0e23",
+    "title": "Data Scientist Graduate Programme - Insurance Consulting",
+    "active": true,
+    "date_updated": 1763398292,
+    "date_posted": 1763398292,
+    "url": "https://eedu.fa.em3.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1003/job/202508011",
+    "locations": [
+      "London, UK",
+      "Dorking, UK"
+    ],
+    "company_url": "https://simplify.jobs/c/WTW",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "Figure",
+    "id": "3c75f0ca-29e4-400d-8e74-9adafaebcc9c",
+    "title": "Data Labeler",
+    "active": true,
+    "date_updated": 1763442345,
+    "date_posted": 1763442345,
+    "url": "https://job-boards.greenhouse.io/figureai/jobs/4590702006",
+    "locations": [
+      "San Jose, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/Figure-AI",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "date_updated": 1763770077,
+    "sponsorship": "Other",
+    "active": true,
+    "degrees": [],
+    "url": "https://zoom.wd5.myworkdayjobs.com/Zoom/job/Remote--WA/Software-Development_R17786-1",
+    "company_name": "Zoom",
+    "title": "Software Development",
+    "locations": [
+      "Remote in USA"
+    ],
+    "category": "Software Engineering",
+    "source": "angie-hue",
+    "id": "2316e6fd-7d71-44bb-a671-cde022188740",
+    "date_posted": 1763482649,
+    "company_url": "",
+    "is_visible": false
+  },
+  {
+    "date_updated": 1763482797,
+    "sponsorship": "U.S. Citizenship is Required",
+    "active": true,
+    "degrees": [],
+    "url": "https://jobs.lever.co/parallelwireless/0608a395-7c6d-4e01-acfe-ade970b991dd/",
+    "company_name": "Parallel Wireless",
+    "title": "Junior RT Software Engineer 5G Stack",
+    "locations": [
+      "Nashua, NH"
+    ],
+    "category": "Hardware Engineering",
+    "source": "angie-hue",
+    "id": "343d1734-5ba1-4337-ae45-088cf64f7eda",
+    "date_posted": 1763482797,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "source": "Simplify",
+    "category": "Hardware",
+    "company_name": "Apple",
+    "id": "96e3ab45-cbe2-4c48-afad-c3dbb4f37fba",
+    "title": "Graphics FE Integration Engineer",
+    "active": true,
+    "date_updated": 1763513749,
+    "date_posted": 1763513749,
+    "url": "https://jobs.apple.com/en-us/details/200630324",
+    "locations": [
+      "Austin, TX"
+    ],
+    "company_url": "https://simplify.jobs/c/Apple",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Apple",
+    "id": "1c3d075a-8671-4995-b1ae-f11e46373031",
+    "title": "SWE \u2013 Early Career - User Land Security Researcher - Sear",
+    "active": true,
+    "date_updated": 1763514403,
+    "date_posted": 1763514403,
+    "url": "https://jobs.apple.com/en-us/details/200622968",
+    "locations": [
+      "Gloucester, UK"
+    ],
+    "company_url": "https://simplify.jobs/c/Apple",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "date_updated": 1763557991,
+    "sponsorship": "Offers Sponsorship",
+    "active": true,
+    "degrees": [],
+    "url": "https://careers.cisco.com/global/en/job/2000073/Software-Engineer-Data-AI-Intelligent-Systems-I-Full-Time-%E2%80%93-United-States",
+    "company_name": "Cisco",
+    "title": "Software Engineer Data/AI/Intelligent Systems I (Full Time)",
+    "locations": [
+      "Austin, TX",
+      "San Jose, CA",
+      "Alpharetta, GA",
+      "Atlanta, GA",
+      "Boston, MA",
+      "Dallas, TX",
+      "Fulton, MD",
+      "Hillsboro, OR",
+      "Knoxville, TN",
+      "Maynard, MA",
+      "Milpitas, CA",
+      "New York, NY",
+      "Research Triangle Park, NC"
+    ],
+    "category": "Software Engineering",
+    "source": "DereC4",
+    "id": "dff4c026-8cab-4cdd-92eb-26189980b28c",
+    "date_posted": 1763557991,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "date_updated": 1763558319,
+    "sponsorship": "Offers Sponsorship",
+    "active": true,
+    "degrees": [],
+    "url": "https://job-boards.greenhouse.io/applovin/jobs/4451556006",
+    "company_name": "AppLovin",
+    "title": "Backend Engineer, New Grad",
+    "locations": [
+      "Palo Alto, CA"
+    ],
+    "category": "Software Engineering",
+    "source": "DereC4",
+    "id": "b8ccf2d6-f57b-44fd-bb25-fdda3e617777",
+    "date_posted": 1763558319,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Okta",
+    "id": "dfc489c9-e403-46e0-a1ba-e7e8092e311e",
+    "title": "Software Engineer I \u2013 New Grad",
+    "active": false,
+    "date_updated": 1762471485,
+    "date_posted": 1762471485,
+    "url": "https://www.okta.com/company/careers/opportunity/6209884?gh_jid=6209884",
+    "locations": [
+      "Toronto, ON, Canada"
+    ],
+    "company_url": "https://simplify.jobs/c/Okta",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Citizen Health",
+    "id": "b39419cf-950a-488e-b775-01a81bbe2ad0",
+    "title": "Early Career Software Engineer",
+    "active": false,
+    "date_updated": 1762472986,
+    "date_posted": 1762472986,
+    "url": "https://jobs.ashbyhq.com/Citizen%20Health/6157ab51-0fc9-4ad8-90ea-8e87e2a95eef/application",
+    "locations": [
+      "SF",
+      "San Mateo, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/Citizen-Health",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "AI/ML/Data",
+    "company_name": "Viridien",
+    "id": "775c36f8-9bf5-425f-828b-2e2aa1ade7df",
+    "title": "Machine Learning Engineer/Researcher \u2013 2026 Graduate Programme",
+    "active": false,
+    "date_updated": 1762471948,
+    "date_posted": 1762471948,
+    "url": "https://cgg.wd103.myworkdayjobs.com/viridiencareers/job/Crawley-United-Kingdom/Machine-Learning-Engineer-Researcher---2026-Graduate-Programme_JR101055-1",
+    "locations": [
+      "Crawley, UK"
+    ],
+    "company_url": "https://simplify.jobs/c/Viridien",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Businessolver",
+    "id": "52000c2d-724b-4297-bfb6-f17fd27ceef9",
+    "title": "Java Software Engineer I - Remote within the USA",
+    "active": false,
+    "date_updated": 1762472194,
+    "date_posted": 1762472194,
+    "url": "https://www.businessolver.com/careers/openings/?gh_jid=7358032",
+    "locations": [
+      "Remote in USA"
+    ],
+    "company_url": "https://simplify.jobs/c/Businessolver",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Hardware",
+    "company_name": "RTX",
+    "id": "b27ecf71-d5ba-422e-8ec8-deb17b381bbf",
+    "title": "Software Engineer I - C - C++ - Onsite",
+    "active": false,
+    "date_updated": 1762471733,
+    "date_posted": 1762471733,
+    "url": "https://globalhr.wd5.myworkdayjobs.com/rec_rtx_ext_gateway/job/MA105-BBN-Headquarters-10-Moulton-Street---Cambridge-MA-02138-USA/Software-Engineer-I---C--C----Onsite-_01804913",
+    "locations": [
+      "Cambridge, MA"
+    ],
+    "company_url": "https://simplify.jobs/c/RTX",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Jerry",
+    "id": "e46ce1fe-4bd7-427a-9959-8cb9070a81e8",
+    "title": "Software Engineer I - Entry",
+    "active": false,
+    "date_updated": 1762537288,
+    "date_posted": 1762537288,
+    "url": "https://jobs.ashbyhq.com/jerry.ai/7ee96a8a-8cb6-4083-ae43-7d0f6a67d679/application",
+    "locations": [
+      "Palo Alto, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/Jerry",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Intuit",
+    "id": "14ab0e89-be76-410f-97d1-d2821f3daba3",
+    "title": "Software Engineer 1",
+    "active": false,
+    "date_updated": 1762539294,
+    "date_posted": 1762539294,
+    "url": "https://jobs.intuit.com/job/new-york/software-engineer-1/27595/88136864768",
+    "locations": [
+      "NYC"
+    ],
+    "company_url": "https://simplify.jobs/c/Intuit",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Intuit",
+    "id": "a26f59eb-1079-48eb-9709-4f93545c30f9",
+    "title": "Software Engineer 1 - Multiple Teams",
+    "active": false,
+    "date_updated": 1762539302,
+    "date_posted": 1762539302,
+    "url": "https://jobs.intuit.com/job/new-york/software-engineer-1/27595/88136864736",
+    "locations": [
+      "NYC"
+    ],
+    "company_url": "https://simplify.jobs/c/Intuit",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "date_updated": 1762557353,
+    "sponsorship": "Offers Sponsorship",
+    "active": false,
+    "degrees": [],
+    "url": "https://job-boards.greenhouse.io/maintainx/jobs/4969878007",
+    "company_name": "MaintainX",
+    "title": "AI IoT Connectivity Associate",
+    "locations": [
+      "Montr\u00e9al, Canada",
+      "Raleigh, NC"
+    ],
+    "category": "Software Engineering",
+    "source": "Simplify",
+    "id": "9daf7eed-dfea-4432-a319-73fb11a32780",
+    "date_posted": 1762554222,
+    "company_url": "",
+    "is_visible": false
+  },
+  {
+    "date_updated": 1765195362,
+    "sponsorship": "Does Not Offer Sponsorship",
+    "active": false,
+    "degrees": [],
+    "url": "https://jobs.lever.co/thinkahead/ea0c65d1-dd6b-4f68-8abb-2bacebbd98a1",
+    "company_name": "AHEAD",
+    "title": "Associate AI Engineer",
+    "locations": [
+      "Chicago, IL"
+    ],
+    "category": "Data Science, AI & Machine Learning",
+    "source": "angie-hue",
+    "id": "14faf8be-cb39-4e8d-9146-fb74da0d7d17",
+    "date_posted": 1762554544,
+    "company_url": "",
+    "is_visible": true
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Example Corp",
+    "id": "test-extra-1",
+    "title": "Example Software Engineer",
+    "active": true,
+    "date_updated": 1735689600,
+    "date_posted": 1735689600,
+    "url": "https://example.com/jobs/1",
+    "locations": [
+      "Remote"
+    ],
+    "company_url": "https://simplify.jobs/c/Example",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Example Corp Two",
+    "id": "test-extra-2",
+    "title": "Example Backend Engineer",
+    "active": true,
+    "date_updated": 1735689600,
+    "date_posted": 1735689600,
+    "url": "https://example.com/jobs/2",
+    "locations": [
+      "New York, NY"
+    ],
+    "company_url": "https://simplify.jobs/c/ExampleTwo",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  }
+]

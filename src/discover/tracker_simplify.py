@@ -1,9 +1,8 @@
-"""Discovery adapter for vanshb03/New-Grad-2027.
+"""Discovery adapter for SimplifyJobs/New-Grad-Positions.
 
-Verified 2026-07-04 (see docs/DECISIONS.md): default branch is `dev`, and a
-machine-readable `.github/scripts/listings.json` exists and is preferred over
-the README table per ARCHITECTURE §5.2. The README parser is kept as a
-defensive fallback. Shared tracker machinery lives in `tracker_common.py`.
+Verified 2026-07-04 (see docs/DECISIONS.md): default branch is `dev`, same as
+vansh's fork of this tracker, and `.github/scripts/listings.json` exists with
+the identical schema. The README parser is kept as a defensive fallback.
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ import requests
 from src.discover import tracker_common as common
 from src.models import DiscoveredJob, dedup_key
 
-SOURCE_NAME = "tracker_vansh"
+SOURCE_NAME = "tracker_simplify"
 BRANCH = "dev"
 JSON_LISTINGS_PATH = ".github/scripts/listings.json"
 

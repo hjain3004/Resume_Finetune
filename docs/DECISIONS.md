@@ -88,3 +88,53 @@ One dated entry per decision/finding. Newest last.
   A more representative rate should come from resolving jobs closer to
   their discovery time in the normal daily-run flow (once M4 schedules it)
   rather than jobs that already sat for a while.
+
+## 2026-07-05 — Remaining discovery adapters + manual inbox (M3)
+
+- SimplifyJobs/New-Grad-Positions: default branch `dev` (confirmed via the
+  GitHub API), `.github/scripts/listings.json` exists with the identical
+  schema to vansh's fork of the same tracker infra. `simplify_listings.json`
+  fixture is a trimmed sample (20 active + 10 inactive of 17,565 real
+  entries — the live file is ~11.8MB) with a hand-built `_plus2` variant for
+  the snapshot-diff test, following the same pattern as the vansh fixtures.
+- jobright-ai/2026-Software-Engineer-New-Grad: default branch `master`
+  (differs from vansh/Simplify's `dev`); `.github/scripts/listings.json`
+  returns 404, so this adapter always falls back to the README table. That
+  table's header is `Company | Job Title | Location | Work Model | Date
+  Posted` — no dedicated `Application/Link` column; the apply URL is a
+  markdown link embedded in the `Job Title` cell instead of vansh's HTML
+  `<a href>` in a separate column. `tracker_common.parse_readme_table` was
+  generalized to accept column-name aliases and to fall back to extracting a
+  markdown link from the title cell when no link column is found, rather
+  than writing a second bespoke parser.
+- Extracted the shared JSON-probe / README-table / snapshot-diff logic from
+  `tracker_vansh.py` (M1) into `discover/tracker_common.py` per the M3 task
+  list; `tracker_vansh.py`'s public functions (`parse_listings_json`,
+  `parse_readme_table`, `diff_new_jobs`, `discover`) keep their exact M1
+  signatures so the M1 tests needed no changes.
+- Since jobright repos may be added later by the user with an unknown
+  default branch (the sources.yaml comment says as much), `tracker_jobright`
+  looks up each configured repo's default branch via the GitHub API at
+  discovery time (falling back to `master` on any API error) instead of
+  hardcoding it, unlike vansh/Simplify where the branch is fixed per-adapter.
+- `discover_all()` (moved into `discover/__init__.py` as the ARCHITECTURE
+  §5.1-specified registry) only iterates the three tracker adapters. The
+  manual inbox (`inbox_manual.py`) is deliberately *not* registered there and
+  is called directly from `run_ingest.py` instead: §5.3 requires MD-paste
+  rows to be inserted **and** immediately marked `RESOLVED`, and requires
+  moving processed files / rewriting `urls.txt` based on which lines
+  actually became DB rows — none of that fits the uniform
+  `discover(config) -> list[DiscoveredJob]` contract that trackers use,
+  since it needs the DB connection and reports back which files to move.
+  Flagging this as a deliberate adapter-contract exception rather than
+  forcing inbox into the same shape.
+- Known gap in the inbox URL-line path: per §5.3 an unresolved URL gets
+  placeholder `company="unknown"`, `title=<hostname>` (matching
+  `db.mark_resolved`'s existing placeholder-detection check, which compares
+  `title` against the URL's hostname to decide whether to backfill). Because
+  `dedup_key` is computed from `company`/`title`/`location` only, two
+  still-unresolved inbox URLs on the same hostname collide to the same key
+  and the second silently reuses the first's row. Unlikely to matter for a
+  single-user manual inbox (few pending links at once, typically on
+  different domains), but noted here rather than quietly changing the
+  placeholder scheme beyond what §5.3 specifies.

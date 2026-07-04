@@ -1,7 +1,7 @@
 """CLI entry point for the job-pipeline ingestion run.
 
-Discovery (this milestone) wires the tracker_vansh adapter end-to-end.
-Resolution, pre-filter, and digest steps are implemented in later milestones.
+Wires discovery (trackers + manual inbox), resolution, and run accounting
+end-to-end. Pre-filter and digest steps are implemented in a later milestone.
 """
 
 from __future__ import annotations
@@ -12,16 +12,14 @@ import logging
 import yaml
 
 from src import db, resolve
-from src.discover import tracker_vansh
-from src.models import DiscoveredJob, Status
+from src.discover import ADAPTERS, discover_all, inbox_manual
+from src.models import Status
 from src.resolve.base import PoliteSession
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-SOURCE_ADAPTERS = {
-    "tracker_vansh": tracker_vansh,
-}
+INBOX_SOURCE_NAME = inbox_manual.SOURCE_NAME
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,32 +43,14 @@ def load_sources_config(path: str = "config/sources.yaml") -> dict:
 
 def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     if source_name:
-        if source_name not in SOURCE_ADAPTERS or source_name not in sources_cfg:
+        if source_name == INBOX_SOURCE_NAME:
+            return {}
+        if source_name not in ADAPTERS or source_name not in sources_cfg:
             raise ValueError(f"unknown or unimplemented source: {source_name}")
         return {source_name: sources_cfg[source_name]}
     return {
-        name: cfg
-        for name, cfg in sources_cfg.items()
-        if cfg.get("enabled") and name in SOURCE_ADAPTERS
+        name: cfg for name, cfg in sources_cfg.items() if cfg.get("enabled") and name in ADAPTERS
     }
-
-
-def run_discovery(
-    sources_cfg: dict, *, limit: int | None = None, dry_run: bool = False
-) -> list[DiscoveredJob]:
-    all_jobs: list[DiscoveredJob] = []
-    for name, cfg in sources_cfg.items():
-        adapter = SOURCE_ADAPTERS[name]
-        adapter_cfg = dict(cfg, dry_run=dry_run)
-        try:
-            jobs = adapter.discover(adapter_cfg)
-        except Exception:
-            logger.exception("discovery failed for source %s", name)
-            continue
-        if limit is not None:
-            jobs = jobs[:limit]
-        all_jobs.extend(jobs)
-    return all_jobs
 
 
 def run_resolution(conn, session) -> tuple[int, int]:
@@ -105,11 +85,18 @@ def main(argv: list[str] | None = None) -> int:
 
     new_count = 0
     if not args.resolve_only:
-        discovered = run_discovery(selected, limit=args.limit, dry_run=args.dry_run)
+        discovered = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
         new_count = db.insert_discovered(conn, discovered)
         print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
         for job in discovered:
             print(f"  - {job.company}: {job.title} [{job.source}]")
+
+        if args.source is None or args.source == INBOX_SOURCE_NAME:
+            inbox_result = inbox_manual.ingest(conn, {"dry_run": args.dry_run})
+            new_count += inbox_result.new_urls + inbox_result.new_pastes
+            print(
+                f"Inbox: {inbox_result.new_urls} URL(s), {inbox_result.new_pastes} paste(s) ingested."
+            )
 
     resolved_count = 0
     failed_count = 0
