@@ -2,6 +2,7 @@
 data/
 snapshots/
 inbox/processed/
+profile/
 .env
 __pycache__/
 *.pyc

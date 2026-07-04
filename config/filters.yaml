@@ -10,3 +10,4 @@ jd_flags:
   sponsorship_risk:
     - "unable to sponsor|not.{0,20}sponsor|no visa|citizens? only|clearance required|US citizenship"
 years_cap: 3
+score_threshold: 7.0
