@@ -1,0 +1,10 @@
+.venv/
+data/
+snapshots/
+inbox/processed/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.DS_Store

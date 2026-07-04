@@ -1,0 +1,11 @@
+sources:
+  tracker_vansh:
+    enabled: true
+    repo: vanshb03/New-Grad-2027
+  tracker_simplify:
+    enabled: true
+    repo: SimplifyJobs/New-Grad-Positions
+  tracker_jobright:
+    enabled: true
+    repos:
+      - jobright-ai/2026-Software-Engineer-New-Grad

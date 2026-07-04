@@ -1,0 +1,422 @@
+# ARCHITECTURE.md — Job Pipeline System Design
+
+Status: authoritative. If code and this document disagree, this document wins unless the user
+says otherwise. Implementation questions not answered here should be raised to the user, not
+guessed.
+
+---
+
+## 1. System overview
+
+```
+                 DISCOVERY (daily, deterministic)
+  ┌──────────────┬──────────────┬───────────────┬─────────────┐
+  │ GitHub       │ GitHub       │ GitHub        │ Manual      │
+  │ tracker:     │ tracker:     │ trackers:     │ inbox:      │
+  │ vanshb03     │ SimplifyJobs │ jobright-ai   │ URLs + MD   │
+  └──────┬───────┴──────┬───────┴──────┬────────┴──────┬──────┘
+         └──────────────┴───── normalize ──────────────┘
+                               │
+                        dedupe + insert
+                               │
+                        ┌──────▼──────┐
+                        │  SQLite DB  │  status: DISCOVERED
+                        └──────┬──────┘
+                               │
+                 RESOLUTION (deterministic router)
+        greenhouse │ lever │ ashby │ workday │ generic
+                               │
+                        status: RESOLVED / RESOLVE_FAILED
+                               │
+                 PRE-FILTER (deterministic rules)
+                               │
+                        status: FILTERED_OUT or stays RESOLVED
+                               │
+                 DIGEST (markdown report for the user)
+                               │
+        ═══════════ Phase 2+: Claude enters here ═══════════
+                               │
+                 SCORING (one batched Claude call)   → SCORED / SHORTLISTED
+                 TAILORING (per-job, diff-based)     → TAILORED
+                 HUMAN REVIEW                        → APPLIED / REJECTED
+```
+
+Phase 0–1 (this build) implements everything above the double line. The DB schema and status
+machine are designed for the full lifecycle from day one so later phases need no migration.
+
+## 2. Repository layout
+
+```
+job-pipeline/
+├── CLAUDE.md
+├── docs/                      # this documentation package
+├── config/
+│   ├── sources.yaml           # tracker repos, watchlist, toggles
+│   └── filters.yaml           # pre-filter rules
+├── data/
+│   ├── jobs.db                # SQLite (gitignored)
+│   └── digests/               # daily digest output (gitignored)
+├── snapshots/                 # per-source snapshots for diffing (gitignored)
+├── inbox/
+│   ├── urls.txt               # manual URL drop, one per line
+│   └── *.md                   # manual JD paste files
+├── src/
+│   ├── __init__.py
+│   ├── models.py              # dataclasses, enums, normalization helpers
+│   ├── db.py                  # schema, connection, upsert/query helpers
+│   ├── discover/
+│   │   ├── __init__.py        # discover_all() registry
+│   │   ├── base.py            # adapter protocol
+│   │   ├── tracker_vansh.py
+│   │   ├── tracker_simplify.py
+│   │   ├── tracker_jobright.py
+│   │   └── inbox_manual.py
+│   ├── resolve/
+│   │   ├── __init__.py        # route(url) -> resolver
+│   │   ├── base.py            # resolver protocol, polite HTTP session
+│   │   ├── greenhouse.py
+│   │   ├── lever.py
+│   │   ├── ashby.py
+│   │   ├── workday.py
+│   │   └── generic.py         # trafilatura fallback
+│   ├── prefilter.py
+│   ├── digest.py
+│   └── run_ingest.py          # CLI entry point
+├── tests/
+│   ├── fixtures/              # saved HTML/JSON responses
+│   └── test_*.py
+├── scripts/
+│   └── record_fixture.py      # one-off: fetch a URL and save it as a test fixture
+├── pyproject.toml
+└── .gitignore
+```
+
+## 3. Dependencies (exhaustive — do not add others without asking)
+
+- `requests` — HTTP
+- `trafilatura` — main-content extraction for generic resolver
+- `PyYAML` — config files
+- `pytest` — testing
+- Standard library for everything else (`sqlite3`, `hashlib`, `re`, `dataclasses`,
+  `argparse`, `logging`, `datetime`, `json`, `pathlib`).
+
+No ORM (raw `sqlite3` with helper functions). No async (daily batch job; simplicity wins).
+No Playwright in Phase 0–1.
+
+## 4. Data model
+
+### 4.1 SQLite schema
+
+```sql
+CREATE TABLE IF NOT EXISTS jobs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    dedup_key       TEXT UNIQUE NOT NULL,
+    company         TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    location        TEXT,
+    url             TEXT NOT NULL,
+    source          TEXT NOT NULL,      -- 'tracker_vansh' | 'tracker_simplify' | 'tracker_jobright' | 'inbox'
+    date_posted     TEXT,               -- ISO date if known, else NULL
+    discovered_at   TEXT NOT NULL,      -- ISO datetime UTC
+    status          TEXT NOT NULL DEFAULT 'DISCOVERED',
+    jd_text         TEXT,
+    jd_resolved_at  TEXT,
+    resolver        TEXT,               -- which resolver succeeded
+    resolve_attempts INTEGER NOT NULL DEFAULT 0,
+    filter_reason   TEXT,               -- why FILTERED_OUT, human-readable
+    flags           TEXT,               -- JSON array, e.g. ["sponsorship_risk"]
+    fit_score       REAL,               -- Phase 2
+    fit_rationale   TEXT,               -- Phase 2
+    base_variant    TEXT,               -- Phase 3
+    missing_keywords TEXT,              -- Phase 2, JSON array
+    notes           TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+
+CREATE TABLE IF NOT EXISTS runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at   TEXT NOT NULL,
+    finished_at  TEXT,
+    new_jobs     INTEGER DEFAULT 0,
+    resolved     INTEGER DEFAULT 0,
+    failed       INTEGER DEFAULT 0,
+    filtered_out INTEGER DEFAULT 0,
+    notes        TEXT
+);
+```
+
+### 4.2 Status state machine
+
+```
+DISCOVERED ──resolve ok──▶ RESOLVED ──prefilter fail──▶ FILTERED_OUT   (terminal, keep row)
+     │                        │
+     │ resolve fail ×3        │  Phase 2: scoring
+     ▼                        ▼
+RESOLVE_FAILED (terminal    SCORED ──▶ SHORTLISTED ──▶ TAILORED ──▶ APPLIED
+ unless user intervenes)                     │
+                                             ▼
+                                          REJECTED (by user or by score threshold)
+```
+
+Rules:
+- Status only moves forward. Never reset a status automatically.
+- `RESOLVE_FAILED` is set after 3 failed attempts across runs (`resolve_attempts >= 3`).
+  Fewer than 3: stay `DISCOVERED`, retry next run.
+- A job the user manually pastes into `inbox/` for a row in `RESOLVE_FAILED` moves it to
+  `RESOLVED` (match by URL).
+
+### 4.3 Dedup key
+
+`dedup_key = sha256(f"{norm(company)}|{norm(title)}|{norm_loc(location)}")` where:
+
+- `norm(s)`: lowercase → strip accents → remove punctuation → collapse whitespace →
+  strip corporate suffixes as trailing words (`inc`, `llc`, `ltd`, `corp`, `co`) →
+  strip requisition IDs from titles (regex: trailing `#?\d{4,}` or `\(req[^\)]*\)` or
+  bracketed IDs like `[R-12345]`).
+- `norm_loc(s)`: apply `norm`, then map any of {`remote`, `remote us`, `remote usa`,
+  `united states remote`, `us remote`} → `remote-us`. Empty/NULL location → `unknown`.
+- Insertion uses `INSERT ... ON CONFLICT(dedup_key) DO NOTHING`. If the conflicting existing
+  row has a "worse" source (see priority below) and no `jd_text` yet, update its `url` and
+  `source` to the better one:
+  priority: `inbox` > `tracker_simplify` > `tracker_vansh` > `tracker_jobright`.
+
+### 4.4 Normalized interchange types (`models.py`)
+
+```python
+@dataclass(frozen=True)
+class DiscoveredJob:
+    company: str
+    title: str
+    location: str | None
+    url: str
+    source: str
+    date_posted: str | None   # ISO date or None
+
+@dataclass(frozen=True)
+class ResolvedJD:
+    jd_text: str               # clean plain text / markdown, no nav or boilerplate
+    resolver: str
+    raw_title: str | None      # title as the ATS reports it, if available
+    raw_location: str | None
+```
+
+## 5. Discovery adapters
+
+### 5.1 Adapter contract (`discover/base.py`)
+
+Each adapter module exposes:
+
+```python
+SOURCE_NAME: str
+def discover(config: dict) -> list[DiscoveredJob]: ...
+```
+
+`discover_all()` in `discover/__init__.py` iterates enabled adapters from `config/sources.yaml`,
+concatenates results, and never lets one adapter's exception kill the run: catch, log,
+record in the `runs.notes`, continue.
+
+### 5.2 GitHub tracker adapters (vansh, simplify, jobright)
+
+Shared strategy, implemented once in a helper and parameterized per repo:
+
+1. **Prefer machine-readable data.** On first run against a repo, probe for a JSON listings
+   file: try `/.github/scripts/listings.json` (Simplify's known location) and any `*.json`
+   under `/.github/` via the GitHub contents API (`api.github.com/repos/{owner}/{repo}/contents/.github`).
+   If found, record its path in the snapshot metadata and use it from then on.
+2. **Fallback: parse the README markdown table.** Fetch
+   `raw.githubusercontent.com/{owner}/{repo}/{branch}/README.md`. Parse rows of the main
+   table. Columns to expect (tolerate reordering by reading the header row): Company, Role,
+   Location, Application/Link, Date Posted. Extract the apply URL from the markdown link or
+   `<a href>` in the cell. Rows using `↳` or empty company cells inherit the company from the
+   previous row. Skip rows marked closed (🔒 or struck-through).
+3. **Diff against snapshot.** After parsing, compute the set of `dedup_key`s; compare with
+   `snapshots/{source}.json` (previous run's keys + parsed rows). Only rows with new keys are
+   returned. Then overwrite the snapshot. First-ever run: treat everything as new but cap via
+   `--limit` (see CLI) so the user isn't flooded; the plan's M1 acceptance covers this.
+4. Send header `User-Agent: job-pipeline (personal use)` and, if `GITHUB_TOKEN` is present in
+   env, an auth header (raises rate limits; optional).
+
+Configured repos (in `config/sources.yaml`, user-editable):
+
+```yaml
+sources:
+  tracker_vansh:
+    enabled: true
+    repo: vanshb03/New-Grad-2027
+  tracker_simplify:
+    enabled: true
+    repo: SimplifyJobs/New-Grad-Positions
+  tracker_jobright:
+    enabled: true
+    repos:                      # jobright-ai publishes several category repos
+      - jobright-ai/2026-Software-Engineer-New-Grad
+      # user may add e.g. backend / ML category repos later
+```
+
+Note for implementation: exact default branch names and README table shapes must be verified
+against the live repos during development (they are `dev`/`main` depending on repo). Verify
+once, hardcode per-repo config, and save a real README as a test fixture.
+
+### 5.3 Manual inbox adapter (`inbox_manual.py`)
+
+- `inbox/urls.txt`: one URL per line, `#` comments allowed. Each URL becomes a
+  `DiscoveredJob` with `source='inbox'`, company/title parsed later at resolution
+  (placeholder company `unknown` + the URL's domain; the resolver's `raw_title` backfills
+  title/company when available — update the row after resolution if fields were placeholders).
+- `inbox/*.md`: manual JD paste. File format:
+  - Line 1: the job URL
+  - Line 2: `Company — Title — Location` (em-dash or `|` separated; be lenient)
+  - Rest: the JD text
+  These become `DiscoveredJob`s AND are immediately marked `RESOLVED` with the pasted text
+  (`resolver='manual'`).
+- After successful ingestion, move processed files to `inbox/processed/` (create it), and
+  rewrite `urls.txt` keeping only unprocessed lines (a line is processed once its job row
+  exists). Never delete user files; move them.
+
+## 6. Resolution layer
+
+### 6.1 Router (`resolve/__init__.py`)
+
+`route(url) -> module` by hostname:
+
+| Hostname contains | Resolver |
+|---|---|
+| `greenhouse.io` | greenhouse |
+| `lever.co` | lever |
+| `ashbyhq.com` | ashby |
+| `myworkdayjobs.com` | workday |
+| anything else | generic |
+
+Redirect handling: tracker links are often shorteners (e.g. `simplify.jobs/p/...`). The polite
+session follows redirects; route on the **final** URL after redirects, not the original.
+
+### 6.2 Polite HTTP session (`resolve/base.py`)
+
+Single shared `requests.Session` with:
+- `User-Agent: Mozilla/5.0 (compatible; job-pipeline personal use)`
+- Timeout 15 s, `allow_redirects=True`
+- Per-hostname rate limit: minimum 2 s between requests to the same host (simple in-memory
+  timestamp map — the run is single-threaded)
+- On HTTP 429/403: log, count as a failed attempt, do NOT retry within the same run
+- Never attempt login, cookies from a browser, or paywall/auth circumvention
+
+### 6.3 Individual resolvers
+
+Each exposes `resolve(url: str, session) -> ResolvedJD | None` (None = failure; router
+increments `resolve_attempts`).
+
+- **greenhouse.py**: extract board token + job id from URL (patterns:
+  `boards.greenhouse.io/{board}/jobs/{id}`, `job-boards.greenhouse.io/{board}/jobs/{id}`).
+  GET `https://boards-api.greenhouse.io/v1/boards/{board}/jobs/{id}`. Response JSON has
+  `title`, `location.name`, `content` (HTML-escaped HTML). Unescape, strip HTML to text.
+- **lever.py**: pattern `jobs.lever.co/{company}/{id}`. GET
+  `https://api.lever.co/v0/postings/{company}/{id}`. Fields: `text` (title),
+  `categories.location`, `description` + `lists[]` (HTML). Strip to text.
+- **ashby.py**: pattern `jobs.ashbyhq.com/{org}/{jobPostingId}`. Use Ashby's public posting
+  API (`https://api.ashbyhq.com/posting-api/job-board/{org}` returns all postings with
+  `descriptionHtml`; match by id). Strip to text.
+- **workday.py**: URL pattern `https://{tenant}.wd{N}.myworkdayjobs.com/{lang?}/{site}/job/{slug}/{req}`.
+  Corresponding JSON endpoint:
+  `https://{tenant}.wd{N}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/job/{slug}/{req}`
+  (drop any language segment like `/en-US`). GET with `Accept: application/json`. Response
+  `jobPostingInfo` contains `title`, `location`, `jobDescription` (HTML). This endpoint is
+  unofficial: wrap in defensive parsing and treat any schema surprise as a soft failure.
+- **generic.py**: GET the page; run `trafilatura.extract()` on the HTML. Success criteria:
+  extracted text ≥ 400 characters AND contains at least one of the words
+  {`responsibilit`, `qualif`, `requirement`, `experience`, `skills`} (case-insensitive) —
+  otherwise treat as failure (likely got a nav shell or a JS-rendered page).
+
+HTML→text stripping: use a small shared helper (regex-free where possible; `html.unescape`
++ a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do not
+add BeautifulSoup as a dependency unless the helper proves insufficient — if it does, ask.
+
+## 7. Pre-filter (`prefilter.py`)
+
+Runs on `RESOLVED` rows without a `filter_reason`. Rules from `config/filters.yaml`:
+
+```yaml
+title_include:        # at least one must match (regex, case-insensitive) — else FILTERED_OUT
+  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed"
+  - "new.?grad|early.?career|university|entry.?level|graduate|2026|2027"
+    # NOTE: include-rules are OR-of-list; a title passes if ANY include regex matches.
+title_exclude:        # any match → FILTERED_OUT (reason recorded)
+  - "senior|staff|principal|lead|manager|director|intern(ship)?\\b"
+  - "\\b(7|8|9|10)\\+?\\s*years"
+location_allow:       # empty list = allow all
+  - "united states|usa|remote|san jose|san francisco|bay area|seattle|austin|new york"
+jd_flags:             # do NOT filter out; add to `flags` JSON for the digest
+  sponsorship_risk:
+    - "unable to sponsor|not.{0,20}sponsor|no visa|citizens? only|clearance required|US citizenship"
+years_cap: 3          # if JD demands more than this many years as a minimum → FILTERED_OUT
+```
+
+`years_cap` implementation: regex over the JD for `(\d+)\+?\s*(?:years|yrs)` near the words
+`minimum|at least|required`; take the smallest such number found in a requirements context; if
+it exceeds the cap, filter out with reason `yoe:{n}`. If ambiguous, do not filter (false
+negatives are cheaper than false positives — the user reviews the digest).
+
+Every `FILTERED_OUT` row keeps its `jd_text` and records a one-line `filter_reason`.
+
+## 8. Digest (`digest.py`)
+
+Written to `data/digests/YYYY-MM-DD.md` at the end of every run (overwrite if re-run same
+day). Sections, in order:
+
+1. **Run summary** — counts from the `runs` row (discovered / resolved / failed / filtered).
+2. **New & resolved** — table: Company | Title | Location | Flags | Source | Link. Sorted by
+   company. These are the rows awaiting scoring (Phase 2) — for now, the user's reading list.
+3. **Needs your help** — `RESOLVE_FAILED` rows (and rows at 1–2 failed attempts, marked
+   "retrying"): Company | Title | URL | last error. Instruction line reminding the user they
+   can paste the JD into `inbox/` using the file format from §5.3.
+4. **Filtered out** — collapsed one-liner per row: `Company — Title (reason)`. This section
+   exists so bad filter rules are caught by eyeball.
+
+## 9. CLI (`run_ingest.py`)
+
+```
+python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discover-only]
+                         [--limit N] [--db PATH]
+```
+
+- Default: discover → dedupe/insert → resolve (all `DISCOVERED` with attempts < 3) →
+  prefilter → digest. Log to stderr (INFO), plus a `runs` row.
+- `--dry-run`: full pipeline, no DB writes, no snapshot writes; print would-be digest to stdout.
+- `--limit N`: cap new insertions per source (protects the first-ever run).
+- Exit code 0 on success even if some resolutions failed (failures are data, not errors);
+  nonzero only on infrastructure errors (DB unwritable, all sources crashed).
+
+Idempotency requirement (testable): running the command twice back-to-back must produce a
+second `runs` row with `new_jobs=0` and no row modifications other than that `runs` row and
+legitimate resolve retries.
+
+## 10. Scheduling (M4)
+
+Detect the user's OS at milestone time and set up ONE of:
+- macOS: `launchd` plist in `~/Library/LaunchAgents` (survives sleep better than cron)
+- Linux: user crontab
+- Windows: Task Scheduler via `schtasks`
+
+Run daily at a fixed local time chosen by the user. The job runs
+`python -m src.run_ingest` and, on completion, opens/prints the digest path.
+Include a `scripts/install_schedule.*` helper and document uninstall.
+
+## 11. Phase 2+ interfaces (design now, build later)
+
+- **Scoring**: a script `scripts/export_batch.py` dumps all `RESOLVED` rows (id, company,
+  title, jd_text truncated to ~6k chars each) to `data/batch/YYYY-MM-DD.json`. A headless
+  Claude Code invocation reads that file plus `config/profile_summary.md` and writes
+  `data/batch/YYYY-MM-DD.scored.json` (`[{id, fit_score 0-10, base_variant, missing_keywords[],
+  rationale ≤160 chars}]`). A deterministic script validates the JSON against a schema and
+  writes scores back to SQLite (`SCORED`; ≥ threshold → `SHORTLISTED`). Claude never touches
+  the DB directly — files in, files out, validation in between.
+- **Tailoring**: see `docs/TAILORING_SPEC.md`.
+- **Gmail alerts adapter** (LinkedIn + Jobright alert emails): a future `discover/` adapter;
+  same `DiscoveredJob` contract. Not in scope for M1–M5.
+
+## 12. Security & etiquette (hard rules)
+
+- Never scrape LinkedIn. LinkedIn jobs enter only via the manual inbox or (later) alert emails.
+- Never bypass auth, CAPTCHAs, or bot detection anywhere.
+- Respect the rate limits in §6.2 even when it makes runs slower.
+- `data/`, `snapshots/`, `inbox/processed/`, `.env` are gitignored. No tokens in code.
+- All timestamps stored in UTC ISO-8601; the digest may render local time.

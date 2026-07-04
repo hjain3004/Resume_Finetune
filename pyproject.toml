@@ -1,0 +1,18 @@
+[project]
+name = "job-pipeline"
+version = "0.1.0"
+description = "Personal job-discovery and resume-tailoring pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "requests",
+    "trafilatura",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

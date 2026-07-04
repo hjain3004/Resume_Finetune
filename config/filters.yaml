@@ -1,0 +1,12 @@
+title_include:
+  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed"
+  - "new.?grad|early.?career|university|entry.?level|graduate|2026|2027"
+title_exclude:
+  - "senior|staff|principal|lead|manager|director|intern(ship)?\\b"
+  - "\\b(7|8|9|10)\\+?\\s*years"
+location_allow:
+  - "united states|usa|remote|san jose|san francisco|bay area|seattle|austin|new york"
+jd_flags:
+  sponsorship_risk:
+    - "unable to sponsor|not.{0,20}sponsor|no visa|citizens? only|clearance required|US citizenship"
+years_cap: 3
