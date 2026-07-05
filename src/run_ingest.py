@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from collections import Counter, defaultdict
 
 import yaml
 
@@ -58,19 +59,24 @@ def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     }
 
 
-def run_resolution(conn, session) -> tuple[int, int]:
-    """Resolve all DISCOVERED rows. Returns (resolved_count, failed_count)."""
+def run_resolution(conn, session) -> tuple[int, int, dict[str, dict[str, int]]]:
+    """Resolve all DISCOVERED rows. Returns (resolved_count, failed_count,
+    per_source) where per_source maps source -> {"resolved": n, "failed": n}."""
     resolved_count = 0
     failed_count = 0
+    per_source: dict[str, dict[str, int]] = defaultdict(lambda: {"resolved": 0, "failed": 0})
     for row in db.rows_by_status(conn, Status.DISCOVERED):
         result = resolve.resolve(row["url"], session)
+        source = row["source"]
         if result is not None:
             db.mark_resolved(conn, row["id"], result)
             resolved_count += 1
+            per_source[source]["resolved"] += 1
         else:
             db.record_resolve_failure(conn, row["id"])
             failed_count += 1
-    return resolved_count, failed_count
+            per_source[source]["failed"] += 1
+    return resolved_count, failed_count, dict(per_source)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -91,16 +97,31 @@ def main(argv: list[str] | None = None) -> int:
     new_count = 0
     if not args.resolve_only:
         discovered = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
-        new_count = db.insert_discovered(conn, discovered)
+        inserted_by_source = db.insert_discovered(conn, discovered)
+        new_count = sum(inserted_by_source.values())
         print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
         for job in discovered:
             print(f"  - {job.company}: {job.title} [{job.source}]")
 
+        discovered_by_source = Counter(job.source for job in discovered)
+        for source in selected:
+            db.record_run_source(
+                conn,
+                run_id,
+                source,
+                discovered=discovered_by_source.get(source, 0),
+                inserted=inserted_by_source.get(source, 0),
+            )
+
         if args.source is None or args.source == INBOX_SOURCE_NAME:
             inbox_result = inbox_manual.ingest(conn, {"dry_run": args.dry_run})
-            new_count += inbox_result.new_urls + inbox_result.new_pastes
+            inbox_new = inbox_result.new_urls + inbox_result.new_pastes
+            new_count += inbox_new
             print(
                 f"Inbox: {inbox_result.new_urls} URL(s), {inbox_result.new_pastes} paste(s) ingested."
+            )
+            db.record_run_source(
+                conn, run_id, INBOX_SOURCE_NAME, discovered=inbox_new, inserted=inbox_new
             )
 
     resolved_count = 0
@@ -108,8 +129,13 @@ def main(argv: list[str] | None = None) -> int:
     filtered_count = 0
     if not args.discover_only:
         session = PoliteSession()
-        resolved_count, failed_count = run_resolution(conn, session)
+        resolved_count, failed_count, resolved_by_source = run_resolution(conn, session)
         print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
+
+        for source, counts in resolved_by_source.items():
+            db.record_run_source(
+                conn, run_id, source, resolved=counts["resolved"], failed=counts["failed"]
+            )
 
         if not args.resolve_only:
             filters_cfg = load_filters_config()

@@ -138,3 +138,63 @@ One dated entry per decision/finding. Newest last.
   single-user manual inbox (few pending links at once, typically on
   different domains), but noted here rather than quietly changing the
   placeholder scheme beyond what §5.3 specifies.
+
+## 2026-07-05 — M6.0 diagnosis: dark sources, per PHASE2_KICKOFF.md
+
+PHASE2_KICKOFF.md frames the 24 stuck `tracker_vansh` rows as a systematic resolver
+defect ("not flakiness") and specifically calls the Ashby case "a defect, not a gap."
+Live testing before writing any fix contradicts that framing — this reaffirms and
+extends the M2 finding above (link rot, not a resolver bug), which the kickoff doc
+apparently didn't account for:
+
+- **Ashby** (`creditgenie`): resolver verified end-to-end against a currently-live
+  posting on the same board (title + full JD returned correctly). The specific stuck
+  job id is absent from the board's current listing entirely — the posting closed
+  between discovery (07-04) and resolution (07-05). No code defect.
+- **gh_jid trio** (amperity, esri, linksquares): derived board tokens correctly
+  (`amperity`, `esri`, `linksquaresinc` — confirmed `gh_jid` *is* literally the
+  Greenhouse job id via a live job's `absolute_url` field). All three specific job
+  ids 404 on their correctly-derived boards. Postings gone, not a derivation bug.
+- **Roblox wrapper**: mapping confirmed correct — a live Roblox posting
+  (`careers.roblox.com/jobs/7142298`) resolves 1:1 to Greenhouse board `roblox`,
+  same numeric id. The two stuck ids (6.7M range) are far below the current active
+  range (7.1–7.4M) and 404 directly. Old/removed postings.
+- **Amazon.jobs** (5 rows), **Qualtrics**, **iCIMS**: all 404/410 live right now.
+  Removed.
+- **Tesla** (6 rows): still 403, bot-protected as already documented in M2.
+
+Conclusion: the router/resolver *mechanisms* for gh_jid-unwrap, a wrapper map, and a
+dedicated Amazon resolver are genuine, real gaps (M6.0 builds them anyway — they'll
+catch current/future postings of these shapes), but building them will not flip
+these 24 specific rows to RESOLVED; the underlying postings churned out before
+resolution ran. Per CLAUDE.md directive #1 (docs vs. reality), flagging this rather
+than silently building toward a false acceptance claim. User approved: build the
+resolvers regardless, expect most of today's 24 rows to land in `RESOLVE_FAILED` /
+digest "needs your help" even after the fix, since that's the correct terminal state
+for an expired posting.
+
+One-off repairs performed before the first repaired run (documented per M6.0):
+- `UPDATE jobs SET resolve_attempts = 0 WHERE source = 'tracker_vansh' AND
+  resolve_attempts >= 2` — un-sticks the 24 rows so the new resolver mechanisms get
+  a fair first attempt against them (most will still fail as expired, correctly).
+- Deleted `snapshots/tracker_simplify.json`.
+
+## 2026-07-05 — M6.0 diagnosis: `tracker_simplify` silent zero
+
+Root cause confirmed (not the parsing/diff logic, which is correct and already
+covered by `test_tracker_simplify.py`): `snapshots/tracker_simplify.json` existed on
+disk with 1901 dedup keys *before* any `tracker_simplify` row ever reached
+`jobs.db` (0 rows for that source, despite `tracker_jobright` and `tracker_vansh`
+both having real rows from the same live run). `diff_new_jobs()` writes the snapshot
+unconditionally on every non-dry call, independent of whether the caller goes on to
+insert the returned jobs into the DB. Some earlier non-dry, out-of-band call to
+`tracker_simplify.discover()` — almost certainly a manual verification during M3
+development that pointed at the real `snapshots/` dir instead of a `tmp_path` — had
+already advanced the "seen" set to include essentially all currently-listed
+postings, with no corresponding DB insert. Every real pipeline run since has
+therefore correctly seen "0 new" against that poisoned baseline; this was not a
+silently swallowed exception. Fixed by deleting the stale snapshot (see above) so
+the next run treats current listings as new. No code change needed — the diff
+contract (pure snapshot diff, unaware of DB state) is working as designed; the
+recurrence-prevention measure is the M6.0(3) per-source `run_sources` observability,
+which would have made this zero-row source visible on day one instead of silent.

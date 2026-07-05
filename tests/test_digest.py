@@ -25,6 +25,12 @@ def _seed(conn: sqlite3.Connection) -> sqlite3.Row:
 
         INSERT INTO runs (id, started_at, finished_at, new_jobs, resolved, failed, filtered_out)
         VALUES (1, '2026-07-05T09:00:00+00:00', '2026-07-05T09:01:00+00:00', 5, 2, 1, 1);
+
+        INSERT INTO run_sources (run_id, source, discovered, inserted, resolved, failed)
+        VALUES (1, 'inbox', 1, 1, 0, 1),
+               (1, 'tracker_jobright', 1, 1, 0, 1),
+               (1, 'tracker_simplify', 1, 1, 1, 0),
+               (1, 'tracker_vansh', 2, 2, 1, 0);
         """
     )
     conn.commit()
@@ -39,6 +45,14 @@ EXPECTED = """\
 - Resolved: 2
 - Failed: 1
 - Filtered out: 1
+
+### Per-source
+| Source | Discovered | Inserted | Resolved | Failed |
+|---|---|---|---|---|
+| inbox | 1 | 1 | 0 | 1 |
+| tracker_jobright | 1 | 1 | 0 | 1 |
+| tracker_simplify | 1 | 1 | 1 | 0 |
+| tracker_vansh | 2 | 2 | 1 | 0 |
 
 ## New & resolved
 | Company | Title | Location | Flags | Source | Link |

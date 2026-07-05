@@ -1,0 +1,8 @@
+# Known wrapper pages that don't expose a gh_jid param but do wrap a fixed
+# ATS board 1:1 by path. Seeded per PHASE2_KICKOFF.md M6.0(c); grows over time.
+# A domain earns an entry here only after failing >=3 times on postings the
+# user marked as wanted (CLAUDE.md policy — no resolver arms race).
+careers.roblox.com:
+  ats: greenhouse
+  board: roblox
+  id_from: path

@@ -46,6 +46,7 @@ class ResolvedJD:
     resolver: str
     raw_title: str | None = None
     raw_location: str | None = None
+    ats_url: str | None = None
 
 
 _CORP_SUFFIXES = {"inc", "llc", "ltd", "corp", "co"}

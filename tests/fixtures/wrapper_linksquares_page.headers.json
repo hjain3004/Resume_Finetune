@@ -1,0 +1,17 @@
+{
+  "Age": "322205",
+  "Cache-Control": "public, max-age=0, must-revalidate",
+  "Content-Encoding": "gzip",
+  "Content-Type": "text/html; charset=utf-8",
+  "Date": "Wed, 01 Jul 2026 18:52:03 GMT",
+  "Etag": "W/\"139egl99qsl1b9z\"",
+  "Server": "Vercel",
+  "Strict-Transport-Security": "max-age=63072000",
+  "Vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch",
+  "X-Frame-Options": "DENY",
+  "X-Matched-Path": "/[...slug]",
+  "X-Powered-By": "Next.js",
+  "X-Vercel-Cache": "HIT",
+  "X-Vercel-Id": "bom1::iad1::6tn6x-1783254129028-831e0e7ab405",
+  "Transfer-Encoding": "chunked"
+}

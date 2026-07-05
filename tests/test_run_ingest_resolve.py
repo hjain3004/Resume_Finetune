@@ -17,13 +17,41 @@ def test_run_resolution_marks_resolved_rows_resolved():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd text", "greenhouse")):
-        resolved_count, failed_count = run_ingest.run_resolution(conn, session)
+        resolved_count, failed_count, _by_source = run_ingest.run_resolution(conn, session)
 
     assert resolved_count == 1
     assert failed_count == 0
     row = db.get_by_url(conn, "https://boards.greenhouse.io/acme/jobs/1")
     assert row["status"] == Status.RESOLVED
     assert row["jd_text"] == "jd text"
+
+
+def test_run_resolution_breaks_down_counts_by_source():
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob(
+                "Acme", "SWE", "Remote",
+                "https://boards.greenhouse.io/acme/jobs/1", "tracker_vansh", None,
+            ),
+            DiscoveredJob(
+                "Beta", "SWE 2", "Remote", "https://example.com/job/2", "tracker_simplify", None,
+            ),
+        ],
+    )
+    session = MagicMock()
+
+    def _side_effect(url, session):
+        return ResolvedJD("jd text", "greenhouse") if "greenhouse" in url else None
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
+        _, _, by_source = run_ingest.run_resolution(conn, session)
+
+    assert by_source == {
+        "tracker_vansh": {"resolved": 1, "failed": 0},
+        "tracker_simplify": {"resolved": 0, "failed": 1},
+    }
 
 
 def test_run_resolution_records_failure_and_leaves_discovered_under_limit():
@@ -34,7 +62,7 @@ def test_run_resolution_records_failure_and_leaves_discovered_under_limit():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=None):
-        resolved_count, failed_count = run_ingest.run_resolution(conn, session)
+        resolved_count, failed_count, _by_source = run_ingest.run_resolution(conn, session)
 
     assert resolved_count == 0
     assert failed_count == 1

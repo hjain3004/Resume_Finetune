@@ -52,7 +52,8 @@ job-pipeline/
 ├── docs/                      # this documentation package
 ├── config/
 │   ├── sources.yaml           # tracker repos, watchlist, toggles
-│   └── filters.yaml           # pre-filter rules
+│   ├── filters.yaml           # pre-filter rules
+│   └── wrapper_map.yaml       # M6.0: known wrapper hostname -> fixed ATS board
 ├── data/
 │   ├── jobs.db                # SQLite (gitignored)
 │   └── digests/               # daily digest output (gitignored)
@@ -78,6 +79,8 @@ job-pipeline/
 │   │   ├── lever.py
 │   │   ├── ashby.py
 │   │   ├── workday.py
+│   │   ├── amazon_jobs.py     # M6.0(d)
+│   │   ├── wrapper.py         # M6.0(b)-(c): gh_jid unwrap + wrapper_map
 │   │   └── generic.py         # trafilatura fallback
 │   ├── prefilter.py
 │   ├── digest.py
@@ -129,7 +132,9 @@ CREATE TABLE IF NOT EXISTS jobs (
     fit_rationale   TEXT,               -- Phase 2
     base_variant    TEXT,               -- Phase 3
     missing_keywords TEXT,              -- Phase 2, JSON array
-    notes           TEXT
+    notes           TEXT,
+    ats_url         TEXT                -- M6.0: underlying ATS URL when resolved via an
+                                         -- aggregator/wrapper unwrap (gh_jid, wrapper_map)
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
@@ -143,7 +148,23 @@ CREATE TABLE IF NOT EXISTS runs (
     filtered_out INTEGER DEFAULT 0,
     notes        TEXT
 );
+
+-- M6.0: per-source counters, one row per (run, source), so a source
+-- contributing zero rows is a visible zero rather than a silent gap.
+CREATE TABLE IF NOT EXISTS run_sources (
+    run_id      INTEGER NOT NULL,
+    source      TEXT NOT NULL,
+    discovered  INTEGER NOT NULL DEFAULT 0,
+    inserted    INTEGER NOT NULL DEFAULT 0,
+    resolved    INTEGER NOT NULL DEFAULT 0,
+    failed      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, source)
+);
 ```
+
+`ats_url` and `run_sources` were added after the initial (M1) schema; `db.init_db()` applies
+new `jobs` columns via idempotent `ALTER TABLE` so existing databases migrate without data
+loss (new tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
 
 ### 4.2 Status state machine
 
@@ -285,10 +306,18 @@ once, hardcode per-repo config, and save a real README as a test fixture.
 | `lever.co` | lever |
 | `ashbyhq.com` | ashby |
 | `myworkdayjobs.com` | workday |
-| anything else | generic |
+| `amazon.jobs` | amazon_jobs |
+| anything else | generic (after the M6.0 wrapper checks below) |
 
 Redirect handling: tracker links are often shorteners (e.g. `simplify.jobs/p/...`). The polite
 session follows redirects; route on the **final** URL after redirects, not the original.
+
+M6.0 wrapper unwrap (checked before falling through to generic, on the final URL): first
+`wrapper.resolve_wrapper_map()` (known hostname → fixed ATS board, `config/wrapper_map.yaml`),
+then `wrapper.resolve_gh_jid()` (URL carries a `gh_jid` query param → derive a Greenhouse board
+token and resolve through the greenhouse resolver). Either path sets `resolver` to the
+underlying resolver's name (e.g. `greenhouse`) and records the unwrapped URL in
+`ResolvedJD.ats_url`/`jobs.ats_url`. See §6.3.
 
 ### 6.2 Polite HTTP session (`resolve/base.py`)
 
@@ -325,6 +354,23 @@ increments `resolve_attempts`).
   extracted text ≥ 400 characters AND contains at least one of the words
   {`responsibilit`, `qualif`, `requirement`, `experience`, `skills`} (case-insensitive) —
   otherwise treat as failure (likely got a nav shell or a JS-rendered page).
+- **amazon_jobs.py** (M6.0(d)): pattern `amazon.jobs/{lang}/jobs/{id}`. The obvious per-job
+  `{job_path}.json` endpoint is bot-gated (406 without a browser session); instead GET
+  `https://www.amazon.jobs/en/search.json?base_query={id}` (public, not bot-gated) and match
+  the result whose `job_path` contains `/jobs/{id}/` — defensive against the search endpoint
+  returning unrelated hits. Fields: `title`, `description`, `basic_qualifications`,
+  `preferred_qualifications` (HTML), `normalized_location`.
+- **wrapper.py** (M6.0(b)-(c)): not hostname-routed — checked by the router before falling
+  through to generic (§6.1). Two independent unwrap paths, both resolving through
+  `greenhouse.py`'s API and setting `ResolvedJD.ats_url`:
+  - `resolve_gh_jid(url, html_text, session)`: if `url` has a `gh_jid` query param, try the
+    URL's second-level domain as the Greenhouse board token first, then (if that 404s) regex
+    `html_text` (the wrapper page, already fetched by the router — no extra request) for
+    `boards.greenhouse.io/{token}/jobs/` or `greenhouse.io/embed/job_board(?:/js)?\?for={token}`.
+  - `resolve_wrapper_map(url, session, wrapper_map=None)`: looks up the URL's hostname in
+    `config/wrapper_map.yaml` (schema: `{hostname: {ats, board, id_from}}`; only
+    `ats: greenhouse` + `id_from: path` are implemented, matching the seeded `roblox` entry —
+    extend when a new shape is actually needed, not speculatively).
 
 HTML→text stripping: use a small shared helper (regex-free where possible; `html.unescape`
 + a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do not
@@ -362,7 +408,10 @@ Every `FILTERED_OUT` row keeps its `jd_text` and records a one-line `filter_reas
 Written to `data/digests/YYYY-MM-DD.md` at the end of every run (overwrite if re-run same
 day). Sections, in order:
 
-1. **Run summary** — counts from the `runs` row (discovered / resolved / failed / filtered).
+1. **Run summary** — counts from the `runs` row (discovered / resolved / failed / filtered),
+   followed by a **Per-source** table (M6.0(3)) from `run_sources`: Source | Discovered |
+   Inserted | Resolved | Failed, one row per enabled adapter for this run — a source
+   contributing zero rows is a visible `0` row, not an absent one.
 2. **New & resolved** — table: Company | Title | Location | Flags | Source | Link. Sorted by
    company. These are the rows awaiting scoring (Phase 2) — for now, the user's reading list.
 3. **Needs your help** — `RESOLVE_FAILED` rows (and rows at 1–2 failed attempts, marked

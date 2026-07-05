@@ -91,7 +91,7 @@ def ingest(conn, config: dict) -> InboxResult:
         if dry_run:
             new_urls += 1
             continue
-        new_urls += db.insert_discovered(conn, [job])
+        new_urls += sum(db.insert_discovered(conn, [job]).values())
         processed_url_lines.add(url)
 
     new_pastes = 0

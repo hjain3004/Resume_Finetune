@@ -7,6 +7,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src import db
 from src.models import Status
 
 _RESOLVE_FAILURE_LIMIT = 3
@@ -68,6 +69,22 @@ def _filtered_out_list(conn: sqlite3.Connection) -> str:
     return "\n".join(f"- {row['company']} — {row['title']} ({row['filter_reason']})" for row in rows)
 
 
+def _per_source_table(conn: sqlite3.Connection, run_id: int) -> str:
+    rows = db.run_sources_for_run(conn, run_id)
+    lines = [
+        "| Source | Discovered | Inserted | Resolved | Failed |",
+        "|---|---|---|---|---|",
+    ]
+    for row in rows:
+        lines.append(
+            f"| {row['source']} | {row['discovered']} | {row['inserted']} | "
+            f"{row['resolved']} | {row['failed']} |"
+        )
+    if not rows:
+        lines.append("| _(no sources ran this run)_ | | | | |")
+    return "\n".join(lines)
+
+
 def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: str | None = None) -> str:
     date_str = date_str or _today_iso()
     return (
@@ -78,6 +95,9 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
         f"- Resolved: {run_row['resolved']}\n"
         f"- Failed: {run_row['failed']}\n"
         f"- Filtered out: {run_row['filtered_out']}\n"
+        "\n"
+        "### Per-source\n"
+        f"{_per_source_table(conn, run_row['id'])}\n"
         "\n"
         "## New & resolved\n"
         f"{_new_and_resolved_table(conn)}\n"

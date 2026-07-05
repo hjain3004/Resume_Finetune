@@ -29,8 +29,9 @@ def _job(**overrides) -> DiscoveredJob:
 
 def test_insert_discovered_inserts_new_rows(conn):
     jobs = [_job(), _job(company="Other Co", title="Backend Engineer")]
-    count = db.insert_discovered(conn, jobs)
-    assert count == 2
+    by_source = db.insert_discovered(conn, jobs)
+    assert sum(by_source.values()) == 2
+    assert by_source == {"tracker_vansh": 2}
     rows = conn.execute("SELECT * FROM jobs").fetchall()
     assert len(rows) == 2
     assert rows[0]["status"] == Status.DISCOVERED
@@ -40,8 +41,8 @@ def test_insert_discovered_twice_is_idempotent(conn):
     jobs = [_job()]
     first = db.insert_discovered(conn, jobs)
     second = db.insert_discovered(conn, jobs)
-    assert first == 1
-    assert second == 0
+    assert sum(first.values()) == 1
+    assert sum(second.values()) == 0
     assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 1
 
 
@@ -50,9 +51,9 @@ def test_insert_discovered_upgrades_source_by_priority(conn):
     db.insert_discovered(conn, [low_priority])
 
     high_priority = _job(source="tracker_simplify", url="https://simplify.example/1")
-    count = db.insert_discovered(conn, [high_priority])
+    by_source = db.insert_discovered(conn, [high_priority])
 
-    assert count == 0
+    assert sum(by_source.values()) == 0
     row = conn.execute("SELECT * FROM jobs").fetchone()
     assert row["source"] == "tracker_simplify"
     assert row["url"] == "https://simplify.example/1"
@@ -163,3 +164,90 @@ def test_record_resolve_failure_sets_resolve_failed_at_three_attempts(conn):
     row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
     assert row["resolve_attempts"] == 3
     assert row["status"] == Status.RESOLVE_FAILED
+
+
+def test_mark_resolved_persists_ats_url(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(
+        jd_text="full jd text",
+        resolver="greenhouse",
+        ats_url="https://boards.greenhouse.io/amperity/jobs/8040043",
+    )
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT ats_url FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["ats_url"] == "https://boards.greenhouse.io/amperity/jobs/8040043"
+
+
+def test_init_db_migration_adds_ats_url_to_pre_existing_db(tmp_path):
+    path = tmp_path / "old.db"
+    legacy = sqlite3.connect(str(path))
+    legacy.executescript(
+        """
+        CREATE TABLE jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dedup_key TEXT UNIQUE NOT NULL,
+            company TEXT NOT NULL,
+            title TEXT NOT NULL,
+            location TEXT,
+            url TEXT NOT NULL,
+            source TEXT NOT NULL,
+            date_posted TEXT,
+            discovered_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'DISCOVERED',
+            jd_text TEXT,
+            jd_resolved_at TEXT,
+            resolver TEXT,
+            resolve_attempts INTEGER NOT NULL DEFAULT 0,
+            filter_reason TEXT,
+            flags TEXT,
+            fit_score REAL,
+            fit_rationale TEXT,
+            base_variant TEXT,
+            missing_keywords TEXT,
+            notes TEXT
+        );
+        """
+    )
+    legacy.execute(
+        "INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at) "
+        "VALUES ('k', 'Acme', 'SWE', 'https://x/1', 'tracker_vansh', '2026-01-01')"
+    )
+    legacy.commit()
+    legacy.close()
+
+    migrated = sqlite3.connect(str(path))
+    migrated.row_factory = sqlite3.Row
+    db.init_db(migrated)
+
+    row = migrated.execute("SELECT * FROM jobs").fetchone()
+    assert row["ats_url"] is None
+    assert row["company"] == "Acme"
+
+    # Second init on an already-migrated DB must not error or duplicate the column.
+    db.init_db(migrated)
+
+
+def test_record_run_source_upserts_and_accumulates(conn):
+    run_id = db.start_run(conn)
+    db.record_run_source(conn, run_id, "tracker_vansh", discovered=5, inserted=3)
+    db.record_run_source(conn, run_id, "tracker_vansh", resolved=2, failed=1)
+
+    rows = db.run_sources_for_run(conn, run_id)
+    assert len(rows) == 1
+    assert rows[0]["discovered"] == 5
+    assert rows[0]["inserted"] == 3
+    assert rows[0]["resolved"] == 2
+    assert rows[0]["failed"] == 1
+
+
+def test_run_sources_for_run_lists_all_sources_including_zero(conn):
+    run_id = db.start_run(conn)
+    db.record_run_source(conn, run_id, "tracker_simplify", discovered=0, inserted=0)
+    db.record_run_source(conn, run_id, "tracker_vansh", discovered=4, inserted=4)
+
+    rows = db.run_sources_for_run(conn, run_id)
+    sources = {row["source"]: row["discovered"] for row in rows}
+    assert sources == {"tracker_simplify": 0, "tracker_vansh": 4}

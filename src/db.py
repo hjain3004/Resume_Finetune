@@ -4,6 +4,7 @@ strings anywhere else in the codebase."""
 from __future__ import annotations
 
 import sqlite3
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -48,7 +49,24 @@ CREATE TABLE IF NOT EXISTS runs (
     filtered_out INTEGER DEFAULT 0,
     notes        TEXT
 );
+
+CREATE TABLE IF NOT EXISTS run_sources (
+    run_id      INTEGER NOT NULL,
+    source      TEXT NOT NULL,
+    discovered  INTEGER NOT NULL DEFAULT 0,
+    inserted    INTEGER NOT NULL DEFAULT 0,
+    resolved    INTEGER NOT NULL DEFAULT 0,
+    failed      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, source)
+);
 """
+
+# Columns added after the initial schema. Applied via idempotent ALTER TABLE so
+# existing databases pick them up without data loss; new tables (run_sources)
+# are already covered by CREATE TABLE IF NOT EXISTS above.
+_JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
+    ("ats_url", "TEXT"),
+)
 
 
 def _utcnow_iso() -> str:
@@ -65,8 +83,16 @@ def get_connection(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate_jobs_columns(conn: sqlite3.Connection) -> None:
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
+    for column, coltype in _JOBS_MIGRATIONS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {column} {coltype}")
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
+    _migrate_jobs_columns(conn)
     conn.commit()
 
 
@@ -77,11 +103,12 @@ def _source_rank(source: str) -> int:
         return len(SOURCE_PRIORITY)
 
 
-def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob]) -> int:
+def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob]) -> dict[str, int]:
     """Insert new jobs, deduping by dedup_key. Returns the count of genuinely
-    new rows. If a conflicting row already exists with a lower-priority source
-    and no jd_text yet, its url/source are upgraded to the better source."""
-    new_count = 0
+    new rows per source (for per-source observability). If a conflicting row
+    already exists with a lower-priority source and no jd_text yet, its
+    url/source are upgraded to the better source."""
+    new_count_by_source: dict[str, int] = defaultdict(int)
     now = _utcnow_iso()
     for job in discovered:
         key = dedup_key(job.company, job.title, job.location)
@@ -110,7 +137,7 @@ def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob])
                 ),
             )
             if conn.execute("SELECT changes()").fetchone()[0]:
-                new_count += 1
+                new_count_by_source[job.source] += 1
             continue
 
         if existing["jd_text"] is None and _source_rank(job.source) < _source_rank(existing["source"]):
@@ -119,7 +146,41 @@ def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob])
                 (job.url, job.source, key),
             )
     conn.commit()
-    return new_count
+    return dict(new_count_by_source)
+
+
+def record_run_source(
+    conn: sqlite3.Connection,
+    run_id: int,
+    source: str,
+    *,
+    discovered: int = 0,
+    inserted: int = 0,
+    resolved: int = 0,
+    failed: int = 0,
+) -> None:
+    """Upsert one source's counters for a run. Called once after discovery
+    (discovered/inserted) and once after resolution (resolved/failed) per
+    source, so a source contributing zero is a visible row, not a silent gap."""
+    conn.execute(
+        """
+        INSERT INTO run_sources (run_id, source, discovered, inserted, resolved, failed)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(run_id, source) DO UPDATE SET
+            discovered = discovered + excluded.discovered,
+            inserted = inserted + excluded.inserted,
+            resolved = resolved + excluded.resolved,
+            failed = failed + excluded.failed
+        """,
+        (run_id, source, discovered, inserted, resolved, failed),
+    )
+    conn.commit()
+
+
+def run_sources_for_run(conn: sqlite3.Connection, run_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM run_sources WHERE run_id = ? ORDER BY source", (run_id,)
+    ).fetchall()
 
 
 def start_run(conn: sqlite3.Connection) -> int:
@@ -176,10 +237,19 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
         """
         UPDATE jobs
         SET status = ?, jd_text = ?, jd_resolved_at = ?, resolver = ?,
-            title = ?, location = ?
+            title = ?, location = ?, ats_url = ?
         WHERE id = ?
         """,
-        (Status.RESOLVED, resolved.jd_text, _utcnow_iso(), resolved.resolver, title, location, job_id),
+        (
+            Status.RESOLVED,
+            resolved.jd_text,
+            _utcnow_iso(),
+            resolved.resolver,
+            title,
+            location,
+            resolved.ats_url,
+            job_id,
+        ),
     )
     conn.commit()
 

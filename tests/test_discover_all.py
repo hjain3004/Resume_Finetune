@@ -69,7 +69,7 @@ def test_cross_source_dedup_upgrades_to_higher_priority_source(monkeypatch):
     new_count = db.insert_discovered(conn, jobs)
 
     rows = conn.execute("SELECT * FROM jobs").fetchall()
-    assert new_count == 1
+    assert sum(new_count.values()) == 1
     assert len(rows) == 1
     assert rows[0]["source"] == "tracker_simplify"
     assert rows[0]["url"] == "https://simplify.example/1"
