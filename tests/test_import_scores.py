@@ -27,6 +27,7 @@ def _conn() -> sqlite3.Connection:
 def _valid_entry(**overrides) -> dict:
     entry = {
         "id": 1,
+        "row_ids": [1],
         "fit_score": 8.5,
         "base_variant": "backend",
         "missing_keywords": ["kubernetes"],
@@ -39,8 +40,8 @@ def _valid_entry(**overrides) -> dict:
 def test_import_valid_scores_updates_status_and_fields():
     conn = _conn()
     scored = [
-        _valid_entry(id=1, fit_score=8.5),
-        _valid_entry(id=2, fit_score=5.0),
+        _valid_entry(id=1, row_ids=[1], fit_score=8.5),
+        _valid_entry(id=2, row_ids=[2], fit_score=5.0),
     ]
 
     result = import_scores.import_scores(conn, scored, threshold=7.0)
@@ -83,9 +84,25 @@ def test_import_rejects_score_out_of_range():
 
 def test_import_rejects_unknown_id():
     conn = _conn()
-    entry = _valid_entry(id=999)
+    entry = _valid_entry(id=999, row_ids=[999])
 
     with pytest.raises(ValueError, match="999"):
+        import_scores.import_scores(conn, [entry], threshold=7.0)
+
+
+def test_import_rejects_unknown_row_id():
+    conn = _conn()
+    entry = _valid_entry(row_ids=[1, 999])
+
+    with pytest.raises(ValueError, match="999"):
+        import_scores.import_scores(conn, [entry], threshold=7.0)
+
+
+def test_import_rejects_row_ids_missing_own_id():
+    conn = _conn()
+    entry = _valid_entry(id=1, row_ids=[2])
+
+    with pytest.raises(ValueError, match="row_ids"):
         import_scores.import_scores(conn, [entry], threshold=7.0)
 
 
@@ -99,9 +116,43 @@ def test_import_rejects_rationale_too_long():
 
 def test_import_is_all_or_nothing_across_entries():
     conn = _conn()
-    scored = [_valid_entry(id=1, fit_score=9.0), _valid_entry(id=2, fit_score=200)]
+    scored = [
+        _valid_entry(id=1, row_ids=[1], fit_score=9.0),
+        _valid_entry(id=2, row_ids=[2], fit_score=200),
+    ]
 
     with pytest.raises(ValueError):
+        import_scores.import_scores(conn, scored, threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["status"] == Status.RESOLVED
+    assert row1["fit_score"] is None
+
+
+def test_import_applies_score_to_every_row_id_in_group():
+    conn = _conn()
+    entry = _valid_entry(id=1, row_ids=[1, 2], fit_score=8.0)
+
+    result = import_scores.import_scores(conn, [entry], threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    row2 = conn.execute("SELECT * FROM jobs WHERE id = 2").fetchone()
+    assert row1["status"] == Status.SHORTLISTED
+    assert row2["status"] == Status.SHORTLISTED
+    assert row2["fit_score"] == 8.0
+    assert row2["fit_rationale"] == entry["rationale"]
+    assert result.updated == 2
+    assert result.shortlisted == 2
+
+
+def test_import_rejects_row_id_covered_by_two_entries():
+    conn = _conn()
+    scored = [
+        _valid_entry(id=1, row_ids=[1, 2], fit_score=8.0),
+        _valid_entry(id=2, row_ids=[2], fit_score=5.0),
+    ]
+
+    with pytest.raises(ValueError, match="covered exactly once"):
         import_scores.import_scores(conn, scored, threshold=7.0)
 
     row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()

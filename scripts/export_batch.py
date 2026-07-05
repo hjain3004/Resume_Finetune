@@ -6,19 +6,109 @@ Usage: python -m scripts.export_batch [--db PATH] [--out-dir DIR]
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sqlite3
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
 from src import db
-from src.models import Status
+from src.models import Status, norm
 
 JD_TEXT_TRUNCATE_LEN = 6000
+SHINGLE_SIZE = 5
+SIMILARITY_THRESHOLD = 0.85
+
+_AGO_LINE_RE = re.compile(r"^.{0,60}·\s*\d+\s*(?:minutes?|hours?|days?)\s+ago.*$", re.MULTILINE)
+_WHITESPACE_RE = re.compile(r"\s+")
 
 
 def _today_iso() -> str:
     return datetime.now(timezone.utc).date().isoformat()
+
+
+def normalize_jd(text: str) -> str:
+    """Lowercase, strip relative-time chrome lines, collapse whitespace."""
+    text = (text or "").lower()
+    text = _AGO_LINE_RE.sub("", text)
+    return _WHITESPACE_RE.sub(" ", text).strip()
+
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(normalize_jd(text).encode("utf-8")).hexdigest()
+
+
+def _shingles(text: str, n: int = SHINGLE_SIZE) -> set[str]:
+    words = normalize_jd(text).split(" ")
+    words = [w for w in words if w]
+    if not words:
+        return set()
+    if len(words) < n:
+        return {" ".join(words)}
+    return {" ".join(words[i : i + n]) for i in range(len(words) - n + 1)}
+
+
+def jaccard_similarity(a: set[str], b: set[str]) -> float:
+    if not a and not b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+@dataclass
+class _Cluster:
+    rep_id: int
+    rep_company: str
+    rep_title: str
+    rep_jd_text: str
+    company_norm: str
+    title_norm: str
+    content_hash: str
+    shingles: set[str]
+    row_ids: list[int] = field(default_factory=list)
+
+
+def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
+    """Group RESOLVED rows into duplicate clusters (exact content-hash or near-dup by title)."""
+    clusters: list[_Cluster] = []
+    for row in rows:
+        jd_text = row["jd_text"] or ""
+        company_norm = norm(row["company"])
+        title_norm = norm(row["title"])
+        c_hash = content_hash(jd_text)
+        shingles = _shingles(jd_text)
+
+        match = None
+        for cluster in clusters:
+            if cluster.company_norm != company_norm:
+                continue
+            if cluster.content_hash == c_hash:
+                match = cluster
+                break
+            if cluster.title_norm == title_norm and jaccard_similarity(shingles, cluster.shingles) >= SIMILARITY_THRESHOLD:
+                match = cluster
+                break
+
+        if match is not None:
+            match.row_ids.append(row["id"])
+        else:
+            clusters.append(
+                _Cluster(
+                    rep_id=row["id"],
+                    rep_company=row["company"],
+                    rep_title=row["title"],
+                    rep_jd_text=jd_text,
+                    company_norm=company_norm,
+                    title_norm=title_norm,
+                    content_hash=c_hash,
+                    shingles=shingles,
+                    row_ids=[row["id"]],
+                )
+            )
+    return clusters
 
 
 def export_batch(
@@ -32,14 +122,16 @@ def export_batch(
         "SELECT id, company, title, jd_text FROM jobs WHERE status = ? ORDER BY id",
         (Status.RESOLVED,),
     ).fetchall()
+    clusters = _cluster_rows(rows)
     batch = [
         {
-            "id": row["id"],
-            "company": row["company"],
-            "title": row["title"],
-            "jd_text": (row["jd_text"] or "")[:JD_TEXT_TRUNCATE_LEN],
+            "id": cluster.rep_id,
+            "row_ids": sorted(cluster.row_ids),
+            "company": cluster.rep_company,
+            "title": cluster.rep_title,
+            "jd_text": cluster.rep_jd_text[:JD_TEXT_TRUNCATE_LEN],
         }
-        for row in rows
+        for cluster in clusters
     ]
 
     base = Path(base_dir)

@@ -37,6 +37,7 @@ def test_export_then_hand_written_scored_file_imports_correctly(tmp_path):
             [
                 {
                     "id": 1,
+                    "row_ids": [1],
                     "fit_score": 8.0,
                     "base_variant": "backend",
                     "missing_keywords": [],
@@ -44,6 +45,7 @@ def test_export_then_hand_written_scored_file_imports_correctly(tmp_path):
                 },
                 {
                     "id": 2,
+                    "row_ids": [2],
                     "fit_score": 3.0,
                     "base_variant": "frontend",
                     "missing_keywords": ["typescript"],
@@ -74,6 +76,7 @@ def test_invalid_scored_file_rejected_leaves_db_unchanged(tmp_path):
     bad_scored = [
         {
             "id": 1,
+            "row_ids": [1],
             "fit_score": 8.0,
             "base_variant": "backend",
             "missing_keywords": [],
@@ -81,6 +84,7 @@ def test_invalid_scored_file_rejected_leaves_db_unchanged(tmp_path):
         },
         {
             "id": 2,
+            "row_ids": [2],
             "fit_score": 15,
             "base_variant": "frontend",
             "missing_keywords": ["typescript"],

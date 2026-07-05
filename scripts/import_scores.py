@@ -15,7 +15,7 @@ from src import db
 from src.models import Status
 from src.run_ingest import load_filters_config
 
-REQUIRED_FIELDS = ("id", "fit_score", "base_variant", "missing_keywords", "rationale")
+REQUIRED_FIELDS = ("id", "row_ids", "fit_score", "base_variant", "missing_keywords", "rationale")
 RATIONALE_MAX_LEN = 160
 DEFAULT_THRESHOLD = 7.0
 
@@ -40,6 +40,16 @@ def _validate_entry(conn: sqlite3.Connection, entry: dict) -> None:
     row = conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone()
     if row is None:
         raise ValueError(f"'id' {job_id} does not match any job in the database")
+
+    row_ids = entry["row_ids"]
+    if not isinstance(row_ids, list) or not row_ids or not all(isinstance(i, int) for i in row_ids):
+        raise ValueError(f"'row_ids' must be a non-empty list of integers for id {job_id}, got {row_ids!r}")
+    if job_id not in row_ids:
+        raise ValueError(f"'row_ids' for id {job_id} must include {job_id} itself, got {row_ids!r}")
+    for rid in row_ids:
+        rid_row = conn.execute("SELECT id FROM jobs WHERE id = ?", (rid,)).fetchone()
+        if rid_row is None:
+            raise ValueError(f"'row_ids' entry {rid} (from id {job_id}) does not match any job in the database")
 
     fit_score = entry["fit_score"]
     if not isinstance(fit_score, (int, float)) or isinstance(fit_score, bool):
@@ -77,29 +87,46 @@ def import_scores(
         raise ValueError(f"scored batch must be a list, got {type(scored).__name__}")
     for entry in scored:
         _validate_entry(conn, entry)
+    _validate_row_id_coverage(scored)
 
+    updated = 0
     shortlisted = 0
     for entry in scored:
         status = Status.SHORTLISTED if entry["fit_score"] >= threshold else Status.SCORED
-        if status == Status.SHORTLISTED:
-            shortlisted += 1
-        conn.execute(
-            """
-            UPDATE jobs
-            SET status = ?, fit_score = ?, fit_rationale = ?, base_variant = ?, missing_keywords = ?
-            WHERE id = ?
-            """,
-            (
-                status,
-                entry["fit_score"],
-                entry["rationale"],
-                entry["base_variant"],
-                json.dumps(entry["missing_keywords"]),
-                entry["id"],
-            ),
-        )
+        for row_id in entry["row_ids"]:
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = ?, fit_score = ?, fit_rationale = ?, base_variant = ?, missing_keywords = ?
+                WHERE id = ?
+                """,
+                (
+                    status,
+                    entry["fit_score"],
+                    entry["rationale"],
+                    entry["base_variant"],
+                    json.dumps(entry["missing_keywords"]),
+                    row_id,
+                ),
+            )
+            updated += 1
+            if status == Status.SHORTLISTED:
+                shortlisted += 1
     conn.commit()
-    return ImportResult(updated=len(scored), shortlisted=shortlisted)
+    return ImportResult(updated=updated, shortlisted=shortlisted)
+
+
+def _validate_row_id_coverage(scored: list[dict]) -> None:
+    """Every row_id across the scored file must be covered by exactly one entry."""
+    owner: dict[int, int] = {}
+    for entry in scored:
+        for row_id in entry["row_ids"]:
+            if row_id in owner:
+                raise ValueError(
+                    f"row_id {row_id} is covered by both id {owner[row_id]} and id {entry['id']} "
+                    "— each row_id must be covered exactly once"
+                )
+            owner[row_id] = entry["id"]
 
 
 def build_parser() -> argparse.ArgumentParser:

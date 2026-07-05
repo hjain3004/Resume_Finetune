@@ -23,7 +23,9 @@ summary. Do not invent facts about a job that aren't in its `jd_text`.
 1. Read `config/profile_summary.md` — this is the candidate's background,
    skills, and target roles.
 2. Read the most recent file in `data/batch/` named `YYYY-MM-DD.json` — a JSON
-   array of `{id, company, title, jd_text}` objects.
+   array of `{id, row_ids, company, title, jd_text}` objects. `row_ids` lists
+   every duplicate/near-duplicate row this one representative stands in for
+   (see M6.1) — copy it verbatim into your output for the same object.
 3. For every object in that array, score fit on a 0–10 scale (10 = excellent
    fit, 0 = no fit) based on how well the role matches the candidate's skills,
    experience level, and stated target roles in the profile summary.
@@ -43,6 +45,7 @@ object per input job, in this exact schema:
 [
   {
     "id": 123,
+    "row_ids": [123, 126],
     "fit_score": 7.5,
     "base_variant": "backend",
     "missing_keywords": ["kubernetes", "graphql"],
@@ -52,7 +55,8 @@ object per input job, in this exact schema:
 ```
 
 Rules:
-- `id` must be copied verbatim from the input — do not renumber or omit any.
+- `id` and `row_ids` must be copied verbatim from the matching input object —
+  do not renumber, split, merge, or omit any.
 - `fit_score` must be a number between 0 and 10 (decimals allowed).
 - `rationale` must be ≤ 160 characters.
 - Output ONLY the JSON array — no markdown fences, no commentary.

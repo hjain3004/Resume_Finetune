@@ -35,7 +35,8 @@ def test_export_batch_includes_only_resolved_rows(tmp_path):
     assert data[0]["company"] == "Acme Inc"
     assert data[0]["title"] == "Backend Engineer"
     assert data[0]["jd_text"] == "short jd text"
-    assert set(data[0].keys()) == {"id", "company", "title", "jd_text"}
+    assert data[0]["row_ids"] == [data[0]["id"]]
+    assert set(data[0].keys()) == {"id", "row_ids", "company", "title", "jd_text"}
 
 
 def test_export_batch_truncates_jd_text_to_6000_chars(tmp_path):
@@ -65,3 +66,94 @@ def test_export_batch_writes_to_date_named_file(tmp_path):
 
     assert path == tmp_path / "2026-07-05.json"
     assert path.exists()
+
+
+def test_normalize_jd_strips_ago_line_and_collapses_whitespace():
+    text = "Relativity · 3 hours ago\nWe build software.\n\n\nApply now."
+    normalized = export_batch.normalize_jd(text)
+    assert "hours ago" not in normalized
+    assert "relativity" not in normalized
+    assert normalized == "we build software. apply now."
+
+
+def test_content_hash_equal_for_texts_differing_only_in_ago_line():
+    text_a = "Relativity · 3 hours ago\nSame job description body."
+    text_b = "Relativity · 9 hours ago\nSame job description body."
+    assert export_batch.content_hash(text_a) == export_batch.content_hash(text_b)
+
+
+def test_jaccard_similarity_high_for_near_identical_texts_low_for_unrelated():
+    base = (
+        "We are looking for a driven software engineer to design build and scale "
+        "distributed backend systems handling millions of requests daily across "
+        "our microservices platform"
+    )
+    near_dup = base + " Location: Austin, TX."
+    unrelated = "Warehouse associate needed for logistics operations in Seattle warehouse fulfillment center shifts"
+
+    a = export_batch._shingles(base)
+    b = export_batch._shingles(near_dup)
+    c = export_batch._shingles(unrelated)
+
+    assert export_batch.jaccard_similarity(a, b) >= 0.85
+    assert export_batch.jaccard_similarity(a, c) < 0.85
+
+
+def test_export_batch_collapses_exact_content_duplicates(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    conn.executescript(
+        """
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k1', 'Relativity', 'Software Engineer', 'Chicago, IL', 'https://relativity.example/1', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Relativity · 3 hours ago\nBuild the future of legal tech.');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k2', 'Relativity', 'Software Engineer', 'Remote', 'https://relativity.example/2', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Relativity · 9 hours ago\nBuild the future of legal tech.');
+        """
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 1
+    assert sorted(data[0]["row_ids"]) == [1, 2]
+    assert data[0]["id"] == 1
+
+
+def test_export_batch_collapses_near_duplicate_by_title_similarity(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    base_jd = (
+        "We are looking for a driven software engineer to design build and scale "
+        "distributed backend systems handling millions of requests daily across "
+        "our microservices platform"
+    )
+    conn.executescript(
+        f"""
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k1', 'Neuralink', 'Software Engineer', 'Fremont, CA', 'https://neuralink.example/1', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', '{base_jd}');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k2', 'Neuralink', 'Software Engineer', 'Austin, TX', 'https://neuralink.example/2', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', '{base_jd} Location: Austin, TX.');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k3', 'Amazon', 'Warehouse Associate', 'Seattle, WA', 'https://amazon.example/1', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Warehouse associate needed for logistics operations in Seattle.');
+        """
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 2
+    neuralink_entry = next(d for d in data if d["company"] == "Neuralink")
+    amazon_entry = next(d for d in data if d["company"] == "Amazon")
+    assert sorted(neuralink_entry["row_ids"]) == [1, 2]
+    assert amazon_entry["row_ids"] == [3]

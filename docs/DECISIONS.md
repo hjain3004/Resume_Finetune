@@ -198,3 +198,37 @@ the next run treats current listings as new. No code change needed — the diff
 contract (pure snapshot diff, unaware of DB state) is working as designed; the
 recurrence-prevention measure is the M6.0(3) per-source `run_sources` observability,
 which would have made this zero-row source visible on day one instead of silent.
+
+## 2026-07-05 — M6.1 content-hash duplicate collapse (export-time)
+
+Implemented per `PHASE2_KICKOFF.md`'s M6.1 spec: `scripts/export_batch.py` now
+clusters RESOLVED rows before writing the batch, instead of exporting one object
+per row.
+
+- Clustering runs in a single pass over rows ordered by `id`: a row joins an
+  existing cluster if `norm(company)` matches AND either (a) its
+  `content_hash` (sha256 of `normalize_jd(jd_text)`) exactly matches the
+  cluster's, or (b) `norm(title)` matches AND the 5-word-shingle Jaccard
+  similarity of its `jd_text` to the cluster representative's is ≥ 0.85.
+  Otherwise it starts a new cluster as its own representative. This folds the
+  kickoff doc's two separately-described grouping rules (exact content-hash,
+  near-dup by title) into one clustering pass rather than two independent
+  group-bys, since a row can only sensibly belong to one output object.
+- `normalize_jd`: lowercases, strips lines matching the "· N minutes/hours/days
+  ago" pattern, collapses whitespace. Used for both the hash and the shingle
+  input.
+- Batch objects gained `"row_ids": [...]` (all ids folded into that
+  representative, sorted); `"id"` stays the lowest/first-seen id in the group
+  for backward compat, per spec.
+- `scripts/import_scores.py` now requires `row_ids` on every scored entry
+  (previously just `id`), applies the score/status update to every id in that
+  list, and validates that every `row_ids` entry: exists in the DB, is
+  disjoint across entries in the same scored file (a row_id claimed by two
+  entries is rejected — "must be covered exactly once"), and includes the
+  entry's own `id`. `docs/scoring_prompt.md` updated to tell the scorer to
+  copy `row_ids` verbatim per object.
+- Live re-export of the current `data/jobs.db` (28 RESOLVED objects after
+  clustering) confirms real collapsing: e.g. 9 Relativity rows (up from the
+  kickoff doc's 6, since more were discovered/resolved since) collapsed to one
+  object, two Neuralink location-variant pairs collapsed correctly, unrelated
+  companies untouched.
