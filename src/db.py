@@ -3,6 +3,7 @@ strings anywhere else in the codebase."""
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS run_sources (
 # are already covered by CREATE TABLE IF NOT EXISTS above.
 _JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
     ("ats_url", "TEXT"),
+    ("jd_quality", "TEXT"),
 )
 
 
@@ -237,7 +239,7 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
         """
         UPDATE jobs
         SET status = ?, jd_text = ?, jd_resolved_at = ?, resolver = ?,
-            title = ?, location = ?, ats_url = ?
+            title = ?, location = ?, ats_url = ?, flags = ?, jd_quality = ?, notes = ?
         WHERE id = ?
         """,
         (
@@ -248,6 +250,9 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
             title,
             location,
             resolved.ats_url,
+            json.dumps(resolved.flags) if resolved.flags else None,
+            resolved.jd_quality or "ats",
+            resolved.notes,
             job_id,
         ),
     )

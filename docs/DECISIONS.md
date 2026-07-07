@@ -232,3 +232,43 @@ per row.
   kickoff doc's 6, since more were discovered/resolved since) collapsed to one
   object, two Neuralink location-variant pairs collapsed correctly, unrelated
   companies untouched.
+
+## 2026-07-07 — M6.2 jobright unwrap: JSON extraction instead of regex text-cleaning
+
+PHASE2_KICKOFF.md's M6.2 fallback path assumes scraping the rendered page's visible
+text and regex-stripping aggregator chrome (funding/trend tables, CamelCase tag-soup
+lines, "H1B Sponsor Likely" text markers). Recording a real fixture
+(`tests/fixtures/jobright_amazon_page.body`) found the page instead embeds a
+structured `__NEXT_DATA__` Next.js JSON blob containing `jobSummary`,
+`coreResponsibilities`, `qualifications` (mustHave/preferredHave), and explicit
+booleans (`isH1bSponsor`, `isWorkAuthRequired`, `isCitizenOnly`,
+`isClearanceRequired`) alongside `jobTitle`/`jobLocation`. This is strictly more
+robust than regex text-cleaning (no tag-soup heuristics, no risk of a changed page
+layout silently breaking extraction) and gives an exact sponsor signal instead of a
+text-pattern guess.
+
+Approved deviation (per CLAUDE.md prime directive #1): `src/resolve/jobright.py`
+parses `__NEXT_DATA__` directly for the fallback path rather than implementing the
+doc's regex-based cleaner. `jd_quality='aggregator'` still applies — this is still
+Jobright's own summary, not the employer's literal wording (doc finding #2's
+caveat holds). `isH1bSponsor=True` maps to the `sponsor_likely` flag.
+
+Path 1 (outbound ATS link extraction) is implemented as specced: scan anchors for a
+known ATS host or "Apply"/"Original" text, re-routing through the normal router on a
+match. Live-verified (`jobright.ai/jobs/info/6a1882dfc2a87d6cd3df1c67`, BAE Systems):
+no outbound ATS link is present in the static HTML — the real apply flow is
+client-rendered — so path 1 does not fire in practice today; this matches the saved
+fixture's own live verification and the M6.6 punch-list finding that fallback
+cleaning is the dominant path for jobright rows.
+
+Also fixed a flag-clobbering bug found while wiring `sponsor_likely` through:
+`prefilter.run_prefilter` overwrote the `flags` column wholesale whenever its own
+`jd_flags` config matched, silently discarding any resolver-set flags (e.g. this
+new `sponsor_likely`). Changed to merge resolver-set and prefilter-set flags
+(union, deduped) rather than overwrite.
+
+Not done this session (left for M6.6, which already covers re-auditing/re-export):
+the ~40 jobright rows already `RESOLVED` via the old generic resolver were left
+as-is — idempotency means they won't be reprocessed by the new resolver
+automatically. Reprocessing them (reset to `DISCOVERED`, documented one-off) is
+M6.6's job per its punch-list acceptance criteria, not M6.2's.

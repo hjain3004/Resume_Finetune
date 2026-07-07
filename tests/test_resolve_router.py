@@ -1,11 +1,19 @@
 from unittest.mock import MagicMock, patch
 
 from src import resolve
-from src.resolve import amazon_jobs, ashby, generic, greenhouse, lever, workday, wrapper
+from src.resolve import amazon_jobs, ashby, generic, greenhouse, jobright, lever, workday, wrapper
 
 
 def test_route_amazon_jobs():
     assert resolve.route("https://www.amazon.jobs/en/jobs/123/some-role") is amazon_jobs
+
+
+def test_route_jobright_com():
+    assert resolve.route("https://jobright.com/jobs/info/abc") is jobright
+
+
+def test_route_jobright_ai():
+    assert resolve.route("https://jobright.ai/jobs/info/abc") is jobright
 
 
 def test_route_greenhouse_boards_subdomain():
@@ -97,6 +105,22 @@ def test_resolve_tries_gh_jid_unwrap_when_wrapper_map_misses():
     )
     mock_generic.assert_not_called()
     assert result == "UNWRAPPED"
+
+
+def test_resolve_dispatches_jobright_with_fetched_html():
+    session = MagicMock()
+    response = MagicMock(status_code=200)
+    response.url = "https://jobright.ai/jobs/info/abc"
+    response.text = "<html>jobright page</html>"
+    session.get.return_value = response
+
+    with patch.object(jobright, "resolve", return_value="JOBRIGHT_RESOLVED") as mock_jobright:
+        result = resolve.resolve("https://jobright.ai/jobs/info/abc", session)
+
+    mock_jobright.assert_called_once_with(
+        "https://jobright.ai/jobs/info/abc", "<html>jobright page</html>", session
+    )
+    assert result == "JOBRIGHT_RESOLVED"
 
 
 def test_resolve_falls_back_to_generic_when_no_wrapper_matches():

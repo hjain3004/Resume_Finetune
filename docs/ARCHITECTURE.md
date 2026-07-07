@@ -133,8 +133,11 @@ CREATE TABLE IF NOT EXISTS jobs (
     base_variant    TEXT,               -- Phase 3
     missing_keywords TEXT,              -- Phase 2, JSON array
     notes           TEXT,
-    ats_url         TEXT                -- M6.0: underlying ATS URL when resolved via an
-                                         -- aggregator/wrapper unwrap (gh_jid, wrapper_map)
+    ats_url         TEXT,               -- M6.0/M6.2: underlying ATS URL when resolved via an
+                                         -- aggregator/wrapper unwrap (gh_jid, wrapper_map, jobright)
+    jd_quality      TEXT                -- M6.2: 'ats' (employer's literal posting) or
+                                         -- 'aggregator' (jobright's own summary); Phase 3
+                                         -- tailoring requires jd_quality='ats'
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
@@ -162,7 +165,7 @@ CREATE TABLE IF NOT EXISTS run_sources (
 );
 ```
 
-`ats_url` and `run_sources` were added after the initial (M1) schema; `db.init_db()` applies
+`ats_url`, `jd_quality`, and `run_sources` were added after the initial (M1) schema; `db.init_db()` applies
 new `jobs` columns via idempotent `ALTER TABLE` so existing databases migrate without data
 loss (new tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
 
@@ -307,6 +310,7 @@ once, hardcode per-repo config, and save a real README as a test fixture.
 | `ashbyhq.com` | ashby |
 | `myworkdayjobs.com` | workday |
 | `amazon.jobs` | amazon_jobs |
+| `jobright.com`, `jobright.ai` | jobright |
 | anything else | generic (after the M6.0 wrapper checks below) |
 
 Redirect handling: tracker links are often shorteners (e.g. `simplify.jobs/p/...`). The polite
@@ -318,6 +322,11 @@ then `wrapper.resolve_gh_jid()` (URL carries a `gh_jid` query param → derive a
 token and resolve through the greenhouse resolver). Either path sets `resolver` to the
 underlying resolver's name (e.g. `greenhouse`) and records the unwrapped URL in
 `ResolvedJD.ats_url`/`jobs.ats_url`. See §6.3.
+
+M6.2 jobright dispatch: hostname-routed like a normal resolver, but (like the M6.0 wrapper
+checks) needs the already-fetched page HTML, so the router special-cases it to call
+`jobright.resolve(final_url, response.text, session)` directly rather than the uniform
+`module.resolve(url, session)` signature. See §6.3.
 
 ### 6.2 Polite HTTP session (`resolve/base.py`)
 
@@ -371,6 +380,25 @@ increments `resolve_attempts`).
     `config/wrapper_map.yaml` (schema: `{hostname: {ats, board, id_from}}`; only
     `ats: greenhouse` + `id_from: path` are implemented, matching the seeded `roblox` entry —
     extend when a new shape is actually needed, not speculatively).
+- **jobright.py** (M6.2): jobright.com/jobright.ai postings never host the employer's literal
+  JD, so this resolver signature is `resolve(url, html_text, session)` — the router passes it
+  the page HTML it already fetched (§6.1). Two-part fix, in order:
+  1. `find_ats_link(html_text)`: scan outbound anchors (host not jobright) for either a known
+     ATS host (per §6.1's router table) or "Apply"/"Original" anchor text. On a match, re-route
+     through the normal router and resolve via the underlying resolver; sets
+     `jd_quality='ats'` and `ats_url` to the discovered link, `resolver` to the underlying
+     resolver's name. Live-verified (2026-07-06): jobright's actual apply flow is
+     client-rendered, so this path does not find a link in practice today — kept as the
+     preferred path per spec, in case a page ever includes one statically.
+  2. Fallback: parse the page's `__NEXT_DATA__` Next.js JSON blob (present on every jobright
+     posting) for `props.pageProps.dataSource.jobResult`, and build `jd_text` from
+     `jobSummary` + `coreResponsibilities` + `qualifications` (mustHave/preferredHave).
+     `isH1bSponsor: true` → `"sponsor_likely"` in `flags`. Sets `resolver='jobright'`,
+     `jd_quality='aggregator'` (still Jobright's own summary, not the employer's literal
+     wording — Phase 3 tailoring requires `jd_quality='ats'`, so aggregator-quality
+     SHORTLISTED rows surface in the digest's "needs your help" section asking the user to
+     drop the real posting URL into `inbox/urls.txt`). Deviates from the kickoff doc's literal
+     regex-based text-cleaning spec — see `DECISIONS.md` 2026-07-07.
 
 HTML→text stripping: use a small shared helper (regex-free where possible; `html.unescape`
 + a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do not

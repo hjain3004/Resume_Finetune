@@ -61,6 +61,27 @@ def _needs_help_table(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
+def _needs_original_posting_table(conn: sqlite3.Connection) -> str:
+    rows = conn.execute(
+        "SELECT company, title, url FROM jobs WHERE status = ? AND jd_quality = ? ORDER BY company",
+        (Status.SHORTLISTED, "aggregator"),
+    ).fetchall()
+    if not rows:
+        return ""
+    lines = [
+        "",
+        "### Needs the original posting",
+        "",
+        "These shortlisted rows only have an aggregator's summary, not the employer's literal",
+        "wording. Drop the real posting URL into `inbox/urls.txt` before tailoring.",
+        "",
+        "| Company | Title | Aggregator URL |",
+        "|---|---|---|",
+    ]
+    lines.extend(f"| {row['company']} | {row['title']} | {row['url']} |" for row in rows)
+    return "\n".join(lines)
+
+
 def _filtered_out_list(conn: sqlite3.Connection) -> str:
     rows = conn.execute(
         "SELECT company, title, filter_reason FROM jobs WHERE status = ? ORDER BY company",
@@ -87,6 +108,9 @@ def _per_source_table(conn: sqlite3.Connection, run_id: int) -> str:
 
 def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: str | None = None) -> str:
     date_str = date_str or _today_iso()
+    needs_help = _needs_help_table(conn)
+    needs_original = _needs_original_posting_table(conn)
+    needs_section = needs_help + ("\n" + needs_original if needs_original else "")
     return (
         f"# Job Digest — {date_str}\n"
         "\n"
@@ -103,7 +127,7 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
         f"{_new_and_resolved_table(conn)}\n"
         "\n"
         "## Needs your help\n"
-        f"{_needs_help_table(conn)}\n"
+        f"{needs_section}\n"
         "\n"
         "## Filtered out\n"
         f"{_filtered_out_list(conn)}\n"

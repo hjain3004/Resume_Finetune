@@ -23,6 +23,9 @@ def _seed(conn: sqlite3.Connection) -> sqlite3.Row:
         INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, filter_reason)
         VALUES ('k5', 'Epsilon Ltd', 'Senior Software Engineer', 'Remote', 'https://epsilon.example/1', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'FILTERED_OUT', 'title_exclude');
 
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_quality)
+        VALUES ('k6', 'Zeta Inc', 'Software Engineer', 'Remote', 'https://jobright.ai/jobs/info/abc', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'SHORTLISTED', 'aggregator');
+
         INSERT INTO runs (id, started_at, finished_at, new_jobs, resolved, failed, filtered_out)
         VALUES (1, '2026-07-05T09:00:00+00:00', '2026-07-05T09:01:00+00:00', 5, 2, 1, 1);
 
@@ -67,6 +70,15 @@ Paste the job description into `inbox/<name>.md` using the format in ARCHITECTUR
 |---|---|---|---|
 | Delta Co | Infra Engineer | https://delta.example/1 | retrying (1/3 attempts) |
 | Gamma LLC | Platform Engineer | https://gamma.example/1 | failed (3/3 attempts) |
+
+### Needs the original posting
+
+These shortlisted rows only have an aggregator's summary, not the employer's literal
+wording. Drop the real posting URL into `inbox/urls.txt` before tailoring.
+
+| Company | Title | Aggregator URL |
+|---|---|---|
+| Zeta Inc | Software Engineer | https://jobright.ai/jobs/info/abc |
 
 ## Filtered out
 - Epsilon Ltd — Senior Software Engineer (title_exclude)

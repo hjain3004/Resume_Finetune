@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import pytest
@@ -225,6 +226,83 @@ def test_init_db_migration_adds_ats_url_to_pre_existing_db(tmp_path):
     row = migrated.execute("SELECT * FROM jobs").fetchone()
     assert row["ats_url"] is None
     assert row["company"] == "Acme"
+
+
+def test_mark_resolved_persists_flags_and_jd_quality(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(
+        jd_text="full jd text",
+        resolver="jobright",
+        jd_quality="aggregator",
+        flags=["sponsor_likely"],
+        notes="jobright aggregator: https://jobright.ai/jobs/info/1",
+    )
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["jd_quality"] == "aggregator"
+    assert json.loads(row["flags"]) == ["sponsor_likely"]
+    assert row["notes"] == "jobright aggregator: https://jobright.ai/jobs/info/1"
+
+
+def test_mark_resolved_defaults_jd_quality_to_ats_when_unset(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(jd_text="full jd text", resolver="greenhouse")
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT jd_quality, flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["jd_quality"] == "ats"
+    assert row["flags"] is None
+
+
+def test_init_db_migration_adds_jd_quality_to_pre_existing_db(tmp_path):
+    path = tmp_path / "old.db"
+    legacy = sqlite3.connect(str(path))
+    legacy.executescript(
+        """
+        CREATE TABLE jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dedup_key TEXT UNIQUE NOT NULL,
+            company TEXT NOT NULL,
+            title TEXT NOT NULL,
+            location TEXT,
+            url TEXT NOT NULL,
+            source TEXT NOT NULL,
+            date_posted TEXT,
+            discovered_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'DISCOVERED',
+            jd_text TEXT,
+            jd_resolved_at TEXT,
+            resolver TEXT,
+            resolve_attempts INTEGER NOT NULL DEFAULT 0,
+            filter_reason TEXT,
+            flags TEXT,
+            fit_score REAL,
+            fit_rationale TEXT,
+            base_variant TEXT,
+            missing_keywords TEXT,
+            notes TEXT,
+            ats_url TEXT
+        );
+        """
+    )
+    legacy.execute(
+        "INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at) "
+        "VALUES ('k', 'Acme', 'SWE', 'https://x/1', 'tracker_vansh', '2026-01-01')"
+    )
+    legacy.commit()
+    legacy.close()
+
+    migrated = sqlite3.connect(str(path))
+    migrated.row_factory = sqlite3.Row
+    db.init_db(migrated)
+
+    row = migrated.execute("SELECT * FROM jobs").fetchone()
+    assert row["jd_quality"] is None
 
     # Second init on an already-migrated DB must not error or duplicate the column.
     db.init_db(migrated)

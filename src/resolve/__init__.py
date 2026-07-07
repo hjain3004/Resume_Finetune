@@ -6,7 +6,7 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 from src.models import ResolvedJD
-from src.resolve import amazon_jobs, ashby, generic, greenhouse, lever, workday, wrapper
+from src.resolve import amazon_jobs, ashby, generic, greenhouse, jobright, lever, workday, wrapper
 
 _HOSTNAME_ROUTES = (
     ("greenhouse.io", greenhouse),
@@ -14,6 +14,8 @@ _HOSTNAME_ROUTES = (
     ("ashbyhq.com", ashby),
     ("myworkdayjobs.com", workday),
     ("amazon.jobs", amazon_jobs),
+    ("jobright.com", jobright),
+    ("jobright.ai", jobright),
 )
 
 
@@ -39,4 +41,6 @@ def resolve(url: str, session) -> ResolvedJD | None:
         unwrapped = wrapper.resolve_gh_jid(final_url, response.text, session)
         if unwrapped is not None:
             return unwrapped
+    if module is jobright:
+        return jobright.resolve(final_url, response.text, session)
     return module.resolve(final_url, session)

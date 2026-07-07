@@ -70,7 +70,7 @@ def run_prefilter(conn: sqlite3.Connection, config: dict) -> int:
     newly marked FILTERED_OUT."""
     filtered_count = 0
     rows = conn.execute(
-        "SELECT id, title, location, jd_text FROM jobs WHERE status = ? AND filter_reason IS NULL",
+        "SELECT id, title, location, jd_text, flags FROM jobs WHERE status = ? AND filter_reason IS NULL",
         (Status.RESOLVED,),
     ).fetchall()
     for row in rows:
@@ -82,9 +82,11 @@ def run_prefilter(conn: sqlite3.Connection, config: dict) -> int:
             )
             filtered_count += 1
         elif result.flags:
+            existing_flags = json.loads(row["flags"]) if row["flags"] else []
+            merged_flags = sorted(set(existing_flags) | set(result.flags))
             conn.execute(
                 "UPDATE jobs SET flags = ? WHERE id = ?",
-                (json.dumps(result.flags), row["id"]),
+                (json.dumps(merged_flags), row["id"]),
             )
     conn.commit()
     return filtered_count

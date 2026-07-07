@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import pytest
@@ -123,6 +124,32 @@ def test_run_prefilter_skips_rows_with_existing_filter_reason():
     assert filtered_count == 0
     row = conn.execute("SELECT * FROM jobs WHERE id = ?", (row_id,)).fetchone()
     assert row["filter_reason"] == "manual_reason"
+
+
+def test_run_prefilter_merges_flags_with_existing_resolver_set_flags():
+    conn = _conn()
+    url = "https://jobright.ai/jobs/info/1"
+    db.insert_discovered(
+        conn,
+        [DiscoveredJob("Acme", "Software Engineer New Grad", "Remote", url, "tracker_jobright", None)],
+    )
+    row_id = db.get_by_url(conn, url)["id"]
+    db.mark_resolved(
+        conn,
+        row_id,
+        ResolvedJD(
+            "unable to sponsor visas at this time",
+            "jobright",
+            flags=["sponsor_likely"],
+        ),
+    )
+
+    filtered_count = prefilter.run_prefilter(conn, CONFIG)
+
+    assert filtered_count == 0
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (row_id,)).fetchone()
+    flags = json.loads(row["flags"])
+    assert set(flags) == {"sponsor_likely", "sponsorship_risk"}
 
 
 def test_run_prefilter_only_processes_resolved_rows():

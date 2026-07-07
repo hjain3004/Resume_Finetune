@@ -47,6 +47,9 @@ class ResolvedJD:
     raw_title: str | None = None
     raw_location: str | None = None
     ats_url: str | None = None
+    flags: list[str] | None = None
+    jd_quality: str | None = None
+    notes: str | None = None
 
 
 _CORP_SUFFIXES = {"inc", "llc", "ltd", "corp", "co"}

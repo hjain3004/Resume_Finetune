@@ -147,7 +147,42 @@ Batch objects become:
 - The wrapper (not Claude) runs `import_scores.py` after the headless call; remove the
   instruction telling Claude to run it.
 
-### M6 acceptance criteria
+### M6.5 Tier-2 browser resolver (crawl4ai)
+
+Approved new dependency: `crawl4ai` (brings Playwright + Chromium; run its post-install
+setup). Update CLAUDE.md's dependency list accordingly. This formalizes a three-tier
+resolution ladder:
+
+- Tier 1: structured resolvers + unwrap rules (M6.0/M6.2). Always attempted first; nothing
+  about them changes.
+- Tier 2: `resolve/browser.py` — used ONLY when no tier-1 resolver applies AND `generic.py`
+  fails its quality heuristic. Renders the page with crawl4ai, takes the markdown output,
+  applies the SAME ≥400-chars + JD-keyword quality heuristic before accepting. Config toggle
+  `browser_resolver: true` in sources.yaml; when disabled, behavior is exactly pre-M6.5.
+- Tier 3: RESOLVE_FAILED → digest "needs your help" (unchanged).
+
+Constraints (hard):
+- Use crawl4ai's deterministic rendering/markdown only. Its LLM-extraction strategies are
+  FORBIDDEN in this repo (no model calls inside src/, no API keys in the pipeline).
+- No stealth/anti-bot-evasion features. Default browser fingerprint, honest behavior. If a
+  site blocks a plain headless browser (expected: tesla.com), it stays tier-3. Document this
+  in the module docstring.
+- Respect the same per-host rate limit as the polite session; browser fetches count.
+- Async is contained: crawl4ai is async — wrap in `asyncio.run()` inside browser.py; the
+  rest of the pipeline stays sync.
+- Also use the rendered DOM for M6.2's jobright apply-link extraction when static HTML
+  yields no outbound ATS link (reuse browser.py's fetch, not a second implementation).
+
+M6.5 acceptance:
+- With the toggle off: full test suite passes identically to pre-M6.5 (proves isolation).
+- Fixture tests: browser resolver accepts a rendered careers-page fixture, rejects a
+  blocked/empty fixture (crawl4ai calls mocked at the module boundary; no browser in pytest).
+- Live smoke: at least the qualtrics row from the 2026-07-05 stuck set resolves via tier 2;
+  tesla rows appear in "needs your help" with a note that a browser attempt was made.
+- Digest run summary gains a per-tier resolution count (t1/t2/manual) so the user can see
+  whether tier 2 is earning its 400MB.
+
+### M6 acceptance criteria (M6.0–M6.4)
 
 - M6.0: the ashby defect is fixed with a regression test; gh_jid unwrapping resolves the
   amperity/esri/linksquares rows; the roblox wrapper-map entry resolves both roblox rows;
@@ -165,6 +200,35 @@ Batch objects become:
 - Round-trip: scored file applies to all row_ids; a scored file missing a group is rejected.
 - Migration: running the pipeline on the existing DB adds ats_url/jd_quality columns without
   data loss; second run makes no schema changes.
+
+### M6.6 Completion punch list (from the 2026-07-06 batch audit)
+
+Audit of the first post-M6 export found these incomplete. Each is REQUIRED before Phase 2
+calibration begins:
+
+1. **Shingle-similarity grouping (M6.1) not collapsing near-duplicates.** Evidence:
+   Neuralink "Software Engineer, BCI Applications" still exports as 3 objects; Serco as 2.
+   Implement or fix the Jaccard-over-5-word-shingles ≥ 0.85 grouping. Fixture: the two live
+   Neuralink variants MUST group; a cross-company pair MUST NOT.
+2. **Aggregator cleaning (M6.2 fallback) not applied.** Evidence: 23/28 exported objects
+   still contain "H1B Sponsor Likely" / funding sections / "· N hours ago" lines. Implement
+   the cleaner AND run a one-off re-resolution pass: every row whose jd_text matches
+   aggregator-chrome patterns is re-resolved through the current pipeline (ATS unwrap first,
+   cleaning fallback), regardless of status or resolve_attempts. Document the one-off
+   command in DECISIONS.md.
+3. **Export schema v2 (M6.3) missing entirely.** Add locations, flags, jd_quality to every
+   exported object per M6.3 and enforce presence in import_scores.py validation.
+4. **Prefilter semantics fix (amends ARCHITECTURE §7).** Evidence: "Graduate Research
+   Scientist" and "Student Researcher" postings passed via the new-grad regex.
+   Change title_include to the role-family regex ONLY
+   ("software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer");
+   delete the level/new-grad regex from includes (level is already enforced by
+   title_exclude + years_cap). Re-run the prefilter over existing RESOLVED rows and report
+   how many flip to FILTERED_OUT; the two research postings must be among them.
+
+M6.6 acceptance: re-export the current DB → Neuralink ≤ 2 objects, Serco ≤ 2; zero objects
+match chrome patterns; every object carries locations/flags/jd_quality; research-role leak
+closed with a regression test.
 
 ---
 
