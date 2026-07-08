@@ -19,7 +19,6 @@ from src.models import Status, norm
 
 JD_TEXT_TRUNCATE_LEN = 6000
 SHINGLE_SIZE = 5
-SIMILARITY_THRESHOLD = 0.85
 
 _AGO_LINE_RE = re.compile(r"^.{0,60}·\s*\d+\s*(?:minutes?|hours?|days?)\s+ago.*$", re.MULTILINE)
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -69,20 +68,24 @@ class _Cluster:
     company_norm: str
     title_norm: str
     content_hash: str
-    shingles: set[str]
     row_ids: list[int] = field(default_factory=list)
     locations: list[str] = field(default_factory=list)
 
 
 def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
-    """Group RESOLVED rows into duplicate clusters (exact content-hash or near-dup by title)."""
+    """Group RESOLVED rows into duplicate clusters: exact content-hash match,
+    or exact (company, title) match (M6.6: dropped the Jaccard-similarity gate
+    on the title-match path — aggregator resolvers like jobright generate a
+    differently-worded AI summary per location for the same posting, so
+    same-company+same-title rows can legitimately score below any reasonable
+    shingle-similarity threshold. An exact title match within a company is
+    itself strong enough evidence of the same posting; see DECISIONS.md."""
     clusters: list[_Cluster] = []
     for row in rows:
         jd_text = row["jd_text"] or ""
         company_norm = norm(row["company"])
         title_norm = norm(row["title"])
         c_hash = content_hash(jd_text)
-        shingles = _shingles(jd_text)
         location = row["location"]
 
         match = None
@@ -92,7 +95,7 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
             if cluster.content_hash == c_hash:
                 match = cluster
                 break
-            if cluster.title_norm == title_norm and jaccard_similarity(shingles, cluster.shingles) >= SIMILARITY_THRESHOLD:
+            if cluster.title_norm == title_norm:
                 match = cluster
                 break
 
@@ -112,7 +115,6 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
                     company_norm=company_norm,
                     title_norm=title_norm,
                     content_hash=c_hash,
-                    shingles=shingles,
                     row_ids=[row["id"]],
                     locations=[location] if location else [],
                 )

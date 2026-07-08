@@ -248,6 +248,30 @@ def get_by_url(conn: sqlite3.Connection, url: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM jobs WHERE url = ?", (url,)).fetchone()
 
 
+def all_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
+
+
+def reset_for_reresolution(conn: sqlite3.Connection, job_ids: list[int]) -> None:
+    """M6.6 one-off: reset rows back to DISCOVERED so they're re-fetched and
+    re-resolved through the current router, regardless of their prior status
+    or resolve_attempts. Clears every field the resolve/prefilter steps set,
+    since a re-resolve should re-derive them from scratch."""
+    if not job_ids:
+        return
+    conn.executemany(
+        """
+        UPDATE jobs
+        SET status = ?, jd_text = NULL, jd_resolved_at = NULL, resolver = NULL,
+            resolve_attempts = 0, filter_reason = NULL, flags = NULL,
+            ats_url = NULL, jd_quality = NULL, notes = NULL
+        WHERE id = ?
+        """,
+        [(Status.DISCOVERED, job_id) for job_id in job_ids],
+    )
+    conn.commit()
+
+
 def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -> None:
     """Set status=RESOLVED with the resolved JD text/resolver, and backfill
     title/location if they were still holding their inbox placeholder value

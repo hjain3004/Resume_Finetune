@@ -1,6 +1,5 @@
 title_include:
-  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed"
-  - "new.?grad|early.?career|university|entry.?level|graduate|2026|2027"
+  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer"
 title_exclude:
   - "senior|staff|principal|lead|manager|director|intern(ship)?\\b"
   - "\\b(7|8|9|10)\\+?\\s*years"

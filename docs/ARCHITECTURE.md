@@ -472,9 +472,13 @@ Runs on `RESOLVED` rows without a `filter_reason`. Rules from `config/filters.ya
 
 ```yaml
 title_include:        # at least one must match (regex, case-insensitive) — else FILTERED_OUT
-  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed"
-  - "new.?grad|early.?career|university|entry.?level|graduate|2026|2027"
+  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer"
     # NOTE: include-rules are OR-of-list; a title passes if ANY include regex matches.
+    # M6.6: the former second line ("new.?grad|early.?career|university|entry.?level|
+    # graduate|2026|2027") is removed — it let non-role titles like "Graduate Research
+    # Scientist" or "Student Researcher" pass on the word "graduate"/"university" alone.
+    # Level/new-grad is already enforced by title_exclude (seniority terms) + years_cap,
+    # so role-family match is the only include gate now.
 title_exclude:        # any match → FILTERED_OUT (reason recorded)
   - "senior|staff|principal|lead|manager|director|intern(ship)?\\b"
   - "\\b(7|8|9|10)\\+?\\s*years"

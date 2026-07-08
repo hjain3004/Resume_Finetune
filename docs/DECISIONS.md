@@ -374,3 +374,78 @@ tesla.com's Akamai block defeats crawl4ai too — stays tier-3 rather than
 masking what could be a real tier-1 schema break). Confirmed live: qualtrics
 now resolves via tier 2; tesla rows still fail (crawl4ai reports "Blocked by
 anti-bot protection: Akamai block") and correctly stay in "needs your help."
+
+## M6.6 — Batch quality patch punch list (2026-07-08)
+
+Closed all four items from `PHASE2_KICKOFF.md`'s M6.6 punch list.
+
+**1 & 3 (shingle grouping, export schema v2)** were already implemented by
+M6.1/M6.3 (see those sections above); the punch list's own evidence predated
+those commits. No further code needed — just re-verified live post items 2/4
+below.
+
+**2 (aggregator cleaning / re-resolution one-off).** Per the M6.2 decision
+above, the ~107 `tracker_jobright` rows resolved via the old `generic`
+resolver (before `src/resolve/jobright.py` existed) were left untouched by
+M6.2 and still carried raw scraped chrome (`"H1B Sponsor Likely"`, funding/
+news sections, `"· N hours ago"` lines). Added
+`scripts/reresolve_aggregator_chrome.py`: a pure `matches_aggregator_chrome()`
+detector (six regexes covering the chrome patterns above) selects every row
+whose `jd_text` matches, regardless of `status`/`resolve_attempts`; `db.py`
+gained `all_rows()` and `reset_for_reresolution()` (reset to `DISCOVERED`,
+clearing `jd_text`/`resolver`/`flags`/`ats_url`/`jd_quality`/`notes`/
+`filter_reason`/`resolve_attempts`) so the reset rows flow back through the
+normal `run_ingest.run_resolution()` path — no bespoke re-fetch logic. Live
+run: `python -m scripts.reresolve_aggregator_chrome --db data/jobs.db`
+matched and re-resolved all 107 rows (0 failed); all now carry
+`resolver='jobright'`, `jd_quality='aggregator'`, and clean `__NEXT_DATA__`-
+derived `jd_text` with zero chrome-pattern matches (confirmed with
+`--dry-run` afterward: 0 rows match).
+
+**4 (prefilter title_include fix).** Removed the second `title_include` regex
+line (`new.?grad|early.?career|university|entry.?level|graduate|2026|2027`)
+from `config/filters.yaml` and `ARCHITECTURE.md` §7 — it let non-role titles
+like "Graduate Research Scientist" or "Student Researcher" pass on the bare
+word "graduate"/"university" alone; level/new-grad is already enforced by
+`title_exclude` + `years_cap`. Live re-run of `prefilter.run_prefilter()`
+over existing `RESOLVED` rows flipped 81 rows to `FILTERED_OUT` (50
+`title_include`, 47 `location`, 1 `title_exclude` — some rows would have hit
+multiple gates and are counted at whichever fires first); both punch-list
+examples ("Graduate Research Scientist - 3D/4D Reconstruction/..." id 111 and
+"Student Researcher(Multimedia Streaming)... " id 138) are among them, both
+with `filter_reason='title_include'`. Regression tests added in
+`tests/test_prefilter.py`.
+
+**Unplanned finding during live re-export.** After item 2's re-resolution,
+Neuralink exported as 5 objects instead of the required ≤ 2: jobright
+generates a differently-worded AI paraphrase of the same posting per
+location, so same-company+same-title rows now legitimately score below the
+0.85 Jaccard threshold (observed 0.66–0.85 across the 4 "Software Engineer,
+BCI Applications" rows) even though the exact-content-hash and near-dup-by-
+title rules were both designed to catch exactly this case. Per CLAUDE.md
+prime directive #1, stopped and asked the user rather than silently tuning
+the threshold. Approved fix: `_cluster_rows()` in `scripts/export_batch.py`
+now merges on exact `(company_norm, title_norm)` match unconditionally,
+dropping the Jaccard-similarity gate on that path entirely — an exact title
+match within a company is itself sufficient evidence of the same posting;
+the shingle/Jaccard helpers (`_shingles`, `jaccard_similarity`) remain as
+tested utilities but are no longer used by the clustering path itself. Live
+re-export post-fix: Neuralink → 2 objects, Serco → 1, 0 objects match
+aggregator-chrome patterns, every object still carries `locations`/`flags`/
+`jd_quality`. Regression test:
+`test_export_batch_collapses_same_title_even_below_similarity_threshold`.
+
+Also corrected mid-session: the first live prefilter re-run used a
+`title_include` regex missing the punch list's own `|developer` suffix,
+incorrectly filtering 4 rows containing "Developer" but none of the other
+role-family words (e.g. "Jr. Web Developer"). Caught by re-reading the punch
+list text, fixed `config/filters.yaml`/`ARCHITECTURE.md`/test `CONFIG` to add
+`|developer`, reset those 4 rows back to `RESOLVED`/`filter_reason=NULL`, and
+re-ran `prefilter.run_prefilter()` — 2 of the 4 correctly stayed filtered
+(on `location`), 2 correctly returned to `RESOLVED`.
+
+M6.6 acceptance criteria (per `PHASE2_KICKOFF.md`) all verified live against
+`data/jobs.db`: Neuralink ≤ 2 ✓ (2), Serco ≤ 2 ✓ (1), zero chrome-pattern
+objects ✓, every object carries `locations`/`flags`/`jd_quality` ✓,
+research-role leak closed with regression tests ✓. DB backed up beforehand to
+`data/jobs.db.pre-m6.6-bak`.

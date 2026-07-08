@@ -8,8 +8,7 @@ from src.models import DiscoveredJob, ResolvedJD, Status
 
 CONFIG = {
     "title_include": [
-        "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed",
-        "new.?grad|early.?career|university|entry.?level|graduate|2026|2027",
+        "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer",
     ],
     "title_exclude": [
         "senior|staff|principal|lead|manager|director|intern(ship)?\\b",
@@ -33,15 +32,20 @@ CONFIG = {
         ("Software Engineer I", "Remote", "", False, None),
         ("Senior Software Engineer", "Remote", "", True, "title_exclude"),
         ("Software Engineering Intern", "Remote", "", True, "title_exclude"),
-        ("Staff Engineer, New Grad", "Remote", "", True, "title_exclude"),
+        ("Staff Engineer, New Grad", "Remote", "", True, "title_include"),
         ("Software Engineer, New Grad 2026", "Remote", "", False, None),
-        ("Senior New Grad Program", "Remote", "", True, "title_exclude"),
+        ("Senior New Grad Program", "Remote", "", True, "title_include"),
         ("Product Manager", "Remote", "", True, "title_include"),
         ("Software Engineer New Grad", "Toronto, Canada", "", True, "location"),
         ("Software Engineer New Grad", "", "", True, "location"),
         ("Software Engineer New Grad", "Remote", "minimum 5 years of experience required", True, "yoe:5"),
         ("Software Engineer New Grad", "Remote", "5 years is a plus", False, None),
         ("Software Engineer New Grad", "Remote", "7+ years required", True, "yoe:7"),
+        # M6.6 regression: these used to pass title_include on the bare
+        # "graduate"/"university" words in the old new-grad regex even though
+        # they aren't software roles.
+        ("Graduate Research Scientist", "Remote", "", True, "title_include"),
+        ("Student Researcher", "Remote", "", True, "title_include"),
     ],
 )
 def test_evaluate_title_location_years_cases(

@@ -201,7 +201,11 @@ M6.5 acceptance:
 - Migration: running the pipeline on the existing DB adds ats_url/jd_quality columns without
   data loss; second run makes no schema changes.
 
-### M6.6 Completion punch list (from the 2026-07-06 batch audit)
+### M6.6 Completion punch list (from the 2026-07-06 batch audit) — CLOSED 2026-07-08
+
+All four items closed and acceptance criteria verified live; see the "M6.6" entry in
+DECISIONS.md for what was actually done (items 1/3 were already covered by M6.1/M6.3; items
+2/4 required new code, plus an unplanned clustering fix found during live re-export).
 
 Audit of the first post-M6 export found these incomplete. Each is REQUIRED before Phase 2
 calibration begins:

@@ -218,3 +218,39 @@ def test_export_batch_flags_and_jd_quality_come_from_representative_row(tmp_path
     assert data[0]["id"] == 1
     assert data[0]["flags"] == ["sponsor_likely"]
     assert data[0]["jd_quality"] == "aggregator"
+
+
+def test_export_batch_collapses_same_title_even_below_similarity_threshold(tmp_path):
+    """M6.6 regression: jobright generates a differently-worded AI summary per
+    location for the same posting, so same-company+same-title rows can score
+    well below the old 0.85 Jaccard gate. An exact title match within a
+    company must still collapse them (see DECISIONS.md)."""
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    conn.executescript(
+        """
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k1', 'Neuralink', 'Software Engineer, BCI Applications', 'Fremont, CA', 'https://neuralink.example/1', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Neuralink is creating devices that enable a bi-directional interface with the brain to restore movement.');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k2', 'Neuralink', 'Software Engineer, BCI Applications', 'Austin, TX', 'https://neuralink.example/2', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Join our team building implants that let paralyzed patients regain control over digital devices.');
+        """
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert export_batch.jaccard_similarity(
+        export_batch._shingles(
+            "Neuralink is creating devices that enable a bi-directional interface with the brain to restore movement."
+        ),
+        export_batch._shingles(
+            "Join our team building implants that let paralyzed patients regain control over digital devices."
+        ),
+    ) < 0.85
+    assert len(data) == 1
+    assert sorted(data[0]["row_ids"]) == [1, 2]
