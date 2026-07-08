@@ -16,13 +16,19 @@ _KEYWORD_RE = re.compile(
 )
 
 
+def passes_quality(text: str) -> bool:
+    """Shared quality gate: also used by resolve/browser.py's tier-2 fallback
+    so both tiers reject nav shells / JS-rendered pages the same way."""
+    return len(text) >= MIN_LENGTH and bool(_KEYWORD_RE.search(text))
+
+
 def resolve(url: str, session) -> ResolvedJD | None:
     response = session.get(url)
     if response.status_code != 200:
         return None
 
     text = trafilatura.extract(response.text) or ""
-    if len(text) < MIN_LENGTH or not _KEYWORD_RE.search(text):
+    if not passes_quality(text):
         return None
 
     return ResolvedJD(jd_text=text, resolver=RESOLVER_NAME)

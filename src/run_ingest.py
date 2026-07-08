@@ -47,6 +47,13 @@ def load_filters_config(path: str = "config/filters.yaml") -> dict:
         return yaml.safe_load(f)
 
 
+def load_browser_resolver_flag(path: str = "config/sources.yaml") -> bool:
+    """M6.5: top-level `browser_resolver` toggle, sibling to `sources:`.
+    Defaults to False (pre-M6.5 behavior) when absent."""
+    with open(path) as f:
+        return bool(yaml.safe_load(f).get("browser_resolver", False))
+
+
 def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     if source_name:
         if source_name == INBOX_SOURCE_NAME:
@@ -59,24 +66,32 @@ def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     }
 
 
-def run_resolution(conn, session) -> tuple[int, int, dict[str, dict[str, int]]]:
+def run_resolution(
+    conn, session, *, browser_resolver: bool = False
+) -> tuple[int, int, dict[str, dict[str, int]], dict[str, int]]:
     """Resolve all DISCOVERED rows. Returns (resolved_count, failed_count,
-    per_source) where per_source maps source -> {"resolved": n, "failed": n}."""
+    per_source, tiers) where per_source maps source -> {"resolved": n, "failed": n}
+    and tiers maps "tier1"/"tier2"/"manual" -> count (M6.5 per-tier observability:
+    tier2 = resolved via resolve/browser.py, manual = reached RESOLVE_FAILED this run)."""
     resolved_count = 0
     failed_count = 0
     per_source: dict[str, dict[str, int]] = defaultdict(lambda: {"resolved": 0, "failed": 0})
+    tiers = {"tier1": 0, "tier2": 0, "manual": 0}
     for row in db.rows_by_status(conn, Status.DISCOVERED):
-        result = resolve.resolve(row["url"], session)
+        result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
         source = row["source"]
         if result is not None:
             db.mark_resolved(conn, row["id"], result)
             resolved_count += 1
             per_source[source]["resolved"] += 1
+            tiers["tier2" if result.resolver == "browser" else "tier1"] += 1
         else:
-            db.record_resolve_failure(conn, row["id"])
+            status = db.record_resolve_failure(conn, row["id"])
             failed_count += 1
             per_source[source]["failed"] += 1
-    return resolved_count, failed_count, dict(per_source)
+            if status == Status.RESOLVE_FAILED:
+                tiers["manual"] += 1
+    return resolved_count, failed_count, dict(per_source), tiers
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,9 +142,13 @@ def main(argv: list[str] | None = None) -> int:
     resolved_count = 0
     failed_count = 0
     filtered_count = 0
+    tiers = {"tier1": 0, "tier2": 0, "manual": 0}
     if not args.discover_only:
         session = PoliteSession()
-        resolved_count, failed_count, resolved_by_source = run_resolution(conn, session)
+        browser_resolver = load_browser_resolver_flag()
+        resolved_count, failed_count, resolved_by_source, tiers = run_resolution(
+            conn, session, browser_resolver=browser_resolver
+        )
         print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
 
         for source, counts in resolved_by_source.items():
@@ -149,6 +168,9 @@ def main(argv: list[str] | None = None) -> int:
         resolved=resolved_count,
         failed=failed_count,
         filtered_out=filtered_count,
+        tier1_resolved=tiers["tier1"],
+        tier2_resolved=tiers["tier2"],
+        manual_failed=tiers["manual"],
     )
 
     if not args.discover_only and not args.resolve_only:

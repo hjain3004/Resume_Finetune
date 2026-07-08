@@ -92,8 +92,14 @@ def _build_jd_text(job: dict) -> str:
     return "\n\n".join(parts)
 
 
-def resolve(url: str, html_text: str, session) -> ResolvedJD | None:
+def resolve(url: str, html_text: str, session, *, browser_resolver: bool = False) -> ResolvedJD | None:
     ats_link = find_ats_link(html_text)
+    if ats_link is None and browser_resolver:
+        from src.resolve import browser  # deferred: avoids circular import at load time
+
+        rendered_html = browser.fetch_html(url, session)
+        if rendered_html:
+            ats_link = find_ats_link(rendered_html)
     if ats_link:
         from src.resolve import route  # deferred: avoids circular import at load time
 

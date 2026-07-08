@@ -41,14 +41,17 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
 CREATE TABLE IF NOT EXISTS runs (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    started_at   TEXT NOT NULL,
-    finished_at  TEXT,
-    new_jobs     INTEGER DEFAULT 0,
-    resolved     INTEGER DEFAULT 0,
-    failed       INTEGER DEFAULT 0,
-    filtered_out INTEGER DEFAULT 0,
-    notes        TEXT
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at     TEXT NOT NULL,
+    finished_at    TEXT,
+    new_jobs       INTEGER DEFAULT 0,
+    resolved       INTEGER DEFAULT 0,
+    failed         INTEGER DEFAULT 0,
+    filtered_out   INTEGER DEFAULT 0,
+    tier1_resolved INTEGER NOT NULL DEFAULT 0,
+    tier2_resolved INTEGER NOT NULL DEFAULT 0,
+    manual_failed  INTEGER NOT NULL DEFAULT 0,
+    notes          TEXT
 );
 
 CREATE TABLE IF NOT EXISTS run_sources (
@@ -68,6 +71,13 @@ CREATE TABLE IF NOT EXISTS run_sources (
 _JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
     ("ats_url", "TEXT"),
     ("jd_quality", "TEXT"),
+)
+
+# M6.5: per-run tier-2 (browser resolver) observability counters.
+_RUNS_MIGRATIONS: tuple[tuple[str, str], ...] = (
+    ("tier1_resolved", "INTEGER NOT NULL DEFAULT 0"),
+    ("tier2_resolved", "INTEGER NOT NULL DEFAULT 0"),
+    ("manual_failed", "INTEGER NOT NULL DEFAULT 0"),
 )
 
 
@@ -92,9 +102,17 @@ def _migrate_jobs_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {column} {coltype}")
 
 
+def _migrate_runs_columns(conn: sqlite3.Connection) -> None:
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
+    for column, coltype in _RUNS_MIGRATIONS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE runs ADD COLUMN {column} {coltype}")
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
     _migrate_jobs_columns(conn)
+    _migrate_runs_columns(conn)
     conn.commit()
 
 
@@ -201,16 +219,23 @@ def finish_run(
     resolved: int = 0,
     failed: int = 0,
     filtered_out: int = 0,
+    tier1_resolved: int = 0,
+    tier2_resolved: int = 0,
+    manual_failed: int = 0,
     notes: str | None = None,
 ) -> None:
     conn.execute(
         """
         UPDATE runs
         SET finished_at = ?, new_jobs = ?, resolved = ?, failed = ?,
-            filtered_out = ?, notes = ?
+            filtered_out = ?, tier1_resolved = ?, tier2_resolved = ?,
+            manual_failed = ?, notes = ?
         WHERE id = ?
         """,
-        (_utcnow_iso(), new_jobs, resolved, failed, filtered_out, notes, run_id),
+        (
+            _utcnow_iso(), new_jobs, resolved, failed, filtered_out,
+            tier1_resolved, tier2_resolved, manual_failed, notes, run_id,
+        ),
     )
     conn.commit()
 
@@ -259,8 +284,9 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
     conn.commit()
 
 
-def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> None:
-    """Increment resolve_attempts; mark RESOLVE_FAILED once the limit is hit."""
+def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> str:
+    """Increment resolve_attempts; mark RESOLVE_FAILED once the limit is hit.
+    Returns the resulting status so callers can tally permanent failures."""
     row = conn.execute("SELECT resolve_attempts FROM jobs WHERE id = ?", (job_id,)).fetchone()
     attempts = row["resolve_attempts"] + 1
     status = Status.RESOLVE_FAILED if attempts >= RESOLVE_FAILURE_LIMIT else Status.DISCOVERED
@@ -269,3 +295,4 @@ def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> None:
         (attempts, status, job_id),
     )
     conn.commit()
+    return status

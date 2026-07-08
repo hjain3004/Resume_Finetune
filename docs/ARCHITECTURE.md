@@ -100,11 +100,15 @@ job-pipeline/
 - `trafilatura` — main-content extraction for generic resolver
 - `PyYAML` — config files
 - `pytest` — testing
+- `crawl4ai` (M6.5) — deterministic headless-browser rendering/markdown for the tier-2
+  resolver only (`resolve/browser.py`); brings Playwright + Chromium. LLM-extraction
+  strategies are forbidden in this repo (see §6.4).
 - Standard library for everything else (`sqlite3`, `hashlib`, `re`, `dataclasses`,
-  `argparse`, `logging`, `datetime`, `json`, `pathlib`).
+  `argparse`, `logging`, `datetime`, `json`, `pathlib`, `asyncio`).
 
-No ORM (raw `sqlite3` with helper functions). No async (daily batch job; simplicity wins).
-No Playwright in Phase 0–1.
+No ORM (raw `sqlite3` with helper functions). No async in the pipeline proper (daily batch
+job; simplicity wins) — `resolve/browser.py` is the one exception, and it contains its
+async usage entirely behind a synchronous `asyncio.run()` wrapper.
 
 ## 4. Data model
 
@@ -142,14 +146,17 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
 CREATE TABLE IF NOT EXISTS runs (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    started_at   TEXT NOT NULL,
-    finished_at  TEXT,
-    new_jobs     INTEGER DEFAULT 0,
-    resolved     INTEGER DEFAULT 0,
-    failed       INTEGER DEFAULT 0,
-    filtered_out INTEGER DEFAULT 0,
-    notes        TEXT
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at     TEXT NOT NULL,
+    finished_at    TEXT,
+    new_jobs       INTEGER DEFAULT 0,
+    resolved       INTEGER DEFAULT 0,
+    failed         INTEGER DEFAULT 0,
+    filtered_out   INTEGER DEFAULT 0,
+    tier1_resolved INTEGER NOT NULL DEFAULT 0,  -- M6.5: resolved by a tier-1 resolver this run
+    tier2_resolved INTEGER NOT NULL DEFAULT 0,  -- M6.5: resolved by resolve/browser.py this run
+    manual_failed  INTEGER NOT NULL DEFAULT 0,  -- M6.5: reached RESOLVE_FAILED this run
+    notes          TEXT
 );
 
 -- M6.0: per-source counters, one row per (run, source), so a source
@@ -165,9 +172,10 @@ CREATE TABLE IF NOT EXISTS run_sources (
 );
 ```
 
-`ats_url`, `jd_quality`, and `run_sources` were added after the initial (M1) schema; `db.init_db()` applies
-new `jobs` columns via idempotent `ALTER TABLE` so existing databases migrate without data
-loss (new tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
+`ats_url`, `jd_quality`, and `run_sources` were added after the initial (M1) schema;
+`tier1_resolved`/`tier2_resolved`/`manual_failed` were added in M6.5. `db.init_db()` applies
+new `jobs`/`runs` columns via idempotent `ALTER TABLE` so existing databases migrate without
+data loss (new tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
 
 ### 4.2 Status state machine
 
@@ -325,8 +333,16 @@ underlying resolver's name (e.g. `greenhouse`) and records the unwrapped URL in
 
 M6.2 jobright dispatch: hostname-routed like a normal resolver, but (like the M6.0 wrapper
 checks) needs the already-fetched page HTML, so the router special-cases it to call
-`jobright.resolve(final_url, response.text, session)` directly rather than the uniform
-`module.resolve(url, session)` signature. See §6.3.
+`jobright.resolve(final_url, response.text, session, browser_resolver=browser_resolver)`
+directly rather than the uniform `module.resolve(url, session)` signature. See §6.3, §6.4.
+
+M6.5 tier-2 fallback: `resolve(url, session, *, browser_resolver=False)` threads the toggle
+(loaded from `config/sources.yaml`'s top-level `browser_resolver` key by
+`run_ingest.load_browser_resolver_flag()`) through to both the generic-path fallback and the
+jobright dispatch. When routing falls through to `generic` (no tier-1 resolver, wrapper-map,
+or gh_jid unwrap matched) and `generic.resolve()` returns `None`, the router calls
+`browser.resolve()` only if the toggle is on — a specific tier-1 resolver's failure (e.g.
+greenhouse 404) never triggers it (see §6.4).
 
 ### 6.2 Polite HTTP session (`resolve/base.py`)
 
@@ -334,7 +350,9 @@ Single shared `requests.Session` with:
 - `User-Agent: Mozilla/5.0 (compatible; job-pipeline personal use)`
 - Timeout 15 s, `allow_redirects=True`
 - Per-hostname rate limit: minimum 2 s between requests to the same host (simple in-memory
-  timestamp map — the run is single-threaded)
+  timestamp map — the run is single-threaded). `PoliteSession.throttle(url)` applies this
+  same wait without making a `requests` call, for the M6.5 browser resolver's non-`requests`
+  fetches.
 - On HTTP 429/403: log, count as a failed attempt, do NOT retry within the same run
 - Never attempt login, cookies from a browser, or paywall/auth circumvention
 
@@ -404,6 +422,50 @@ HTML→text stripping: use a small shared helper (regex-free where possible; `ht
 + a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do not
 add BeautifulSoup as a dependency unless the helper proves insufficient — if it does, ask.
 
+### 6.4 Tier-2 browser resolver (`resolve/browser.py`, M6.5)
+
+Three-tier resolution ladder:
+
+1. **Tier 1** — structured resolvers + unwrap rules (§6.1/§6.3, unchanged). Always tried first.
+2. **Tier 2** — `resolve/browser.py`, used only when routing fell through to `generic` and
+   either the initial plain-`requests` fetch failed (non-200 — a bot-blocked host, e.g.
+   qualtrics.com returns 410 to `requests` but renders fine in a headless browser) or it
+   succeeded but `generic.resolve()` failed its quality heuristic — and only if
+   `browser_resolver` is enabled. A blocked *tier-1* host (routed to a specific resolver, e.g.
+   a Tesla-style Akamai block) does NOT get a tier-2 retry: only hosts with no tier-1 resolver
+   qualify, so a real tier-1 schema break stays visible instead of being masked. Renders the
+   page with `crawl4ai` and applies the *same* `generic.passes_quality()` heuristic (≥400
+   chars + a JD keyword) to the rendered markdown before accepting.
+3. **Tier 3** — `RESOLVE_FAILED` → digest "Needs your help" (unchanged).
+
+Implementation:
+- `_crawl_async(url) -> CrawlResult`: the only async function, using `crawl4ai.AsyncWebCrawler`
+  with `CacheMode.BYPASS`. `_crawl(url)` wraps it in `asyncio.run()` — this is the sole seam
+  tests mock (`_crawl_async` patched with an `AsyncMock`); no real browser runs in pytest.
+- `fetch_markdown(url, session)` / `fetch_html(url, session)`: both call `session.throttle(url)`
+  first (§6.2) so browser fetches count against the same per-host rate limit, then `_crawl()`,
+  returning `None` on `result.success is False`.
+- `resolve(url, session) -> ResolvedJD | None`: `fetch_markdown()` + `generic.passes_quality()`;
+  on success, `resolver="browser"`, `jd_quality="ats"` (a rendered DOM is still the employer's
+  own text, unlike jobright's aggregator summary).
+- Deterministic rendering/markdown only — crawl4ai's LLM-extraction strategies are forbidden
+  (no model calls inside `src/`, no API keys in the pipeline). No stealth/anti-bot-evasion:
+  default browser fingerprint, honest behavior. A site that blocks a plain headless browser
+  (e.g. tesla.com) is expected to stay tier-3 — this is not a bug to work around.
+- M6.2 reuse: `jobright.resolve()` gains a `browser_resolver` kwarg. When the static-HTML
+  `find_ats_link()` finds nothing and the toggle is on, it calls `browser.fetch_html()` and
+  retries `find_ats_link()` against the rendered DOM before falling back to `__NEXT_DATA__`.
+  This reuses `browser.py`'s fetch rather than a second rendering implementation, per spec.
+- Config: `browser_resolver: true` is a top-level key in `config/sources.yaml` (sibling to
+  `sources:`, not per-source — the fallback applies pipeline-wide). Read by
+  `run_ingest.load_browser_resolver_flag()` (default `False` if absent) and threaded through
+  `run_ingest.run_resolution()` → `resolve.resolve(..., browser_resolver=...)`. With the
+  toggle off, behavior is byte-for-byte identical to pre-M6.5.
+- Observability: `run_ingest.run_resolution()` tallies `tier1`/`tier2`/`manual` counts per run
+  (tier2 = `ResolvedJD.resolver == "browser"`; manual = `db.record_resolve_failure()` returned
+  `RESOLVE_FAILED` this run) and writes them to the new `runs.tier1_resolved`/`tier2_resolved`/
+  `manual_failed` columns (§4.1) via `db.finish_run()`. See §8 for the digest line.
+
 ## 7. Pre-filter (`prefilter.py`)
 
 Runs on `RESOLVED` rows without a `filter_reason`. Rules from `config/filters.yaml`:
@@ -437,9 +499,12 @@ Written to `data/digests/YYYY-MM-DD.md` at the end of every run (overwrite if re
 day). Sections, in order:
 
 1. **Run summary** — counts from the `runs` row (discovered / resolved / failed / filtered),
-   followed by a **Per-source** table (M6.0(3)) from `run_sources`: Source | Discovered |
-   Inserted | Resolved | Failed, one row per enabled adapter for this run — a source
-   contributing zero rows is a visible `0` row, not an absent one.
+   plus a **Resolution tiers** line (M6.5): `t1: N, t2: N, manual: N` from
+   `tier1_resolved`/`tier2_resolved`/`manual_failed`, so the user can see at a glance whether
+   tier 2 (the browser resolver) is earning its cost. Followed by a **Per-source** table
+   (M6.0(3)) from `run_sources`: Source | Discovered | Inserted | Resolved | Failed, one row
+   per enabled adapter for this run — a source contributing zero rows is a visible `0` row,
+   not an absent one.
 2. **New & resolved** — table: Company | Title | Location | Flags | Source | Link. Sorted by
    company. These are the rows awaiting scoring (Phase 2) — for now, the user's reading list.
 3. **Needs your help** — `RESOLVE_FAILED` rows (and rows at 1–2 failed attempts, marked

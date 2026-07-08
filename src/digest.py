@@ -119,6 +119,8 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
         f"- Resolved: {run_row['resolved']}\n"
         f"- Failed: {run_row['failed']}\n"
         f"- Filtered out: {run_row['filtered_out']}\n"
+        f"- Resolution tiers — t1: {run_row['tier1_resolved']}, t2: {run_row['tier2_resolved']}, "
+        f"manual: {run_row['manual_failed']}\n"
         "\n"
         "### Per-source\n"
         f"{_per_source_table(conn, run_row['id'])}\n"

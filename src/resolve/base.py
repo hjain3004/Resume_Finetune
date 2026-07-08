@@ -38,6 +38,12 @@ class PoliteSession:
                 self._sleep_func(MIN_HOST_INTERVAL - elapsed)
         self._last_request_at[host] = now
 
+    def throttle(self, url: str) -> None:
+        """Apply the per-hostname rate limit without making a request, for
+        non-`requests` fetches (e.g. resolve/browser.py's crawl4ai calls)
+        that must still respect the same politeness budget."""
+        self._wait_for_host(urlparse(url).hostname or "")
+
     def get(self, url: str, **kwargs) -> requests.Response:
         host = urlparse(url).hostname or ""
         self._wait_for_host(host)

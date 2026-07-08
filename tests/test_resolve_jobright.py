@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.resolve import jobright
 
@@ -91,3 +91,60 @@ def test_resolve_prefers_ats_link_path_over_next_data():
     # so resolve() should return None rather than silently falling through to
     # the aggregator path once an ATS link was found.
     assert result is None
+
+
+# --- resolve: M6.5 rendered-DOM link discovery reuse -------------------------
+
+
+def test_resolve_does_not_render_when_browser_resolver_disabled():
+    session = MagicMock()
+    with patch("src.resolve.browser.fetch_html") as mock_fetch_html:
+        result = jobright.resolve(
+            "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd",
+            _jobright_html(),
+            session,
+        )
+
+    mock_fetch_html.assert_not_called()
+    assert result is not None
+    assert result.jd_quality == "aggregator"
+
+
+def test_resolve_finds_ats_link_via_rendered_dom_when_static_html_has_none():
+    session = MagicMock()
+    rendered_html = '<a href="https://boards.greenhouse.io/acme/jobs/999">Apply</a>'
+    fake_result = MagicMock(jd_text="real jd", resolver="greenhouse", raw_title="SWE", raw_location="Remote")
+    with patch("src.resolve.browser.fetch_html", return_value=rendered_html) as mock_fetch_html, \
+         patch("src.resolve.greenhouse.resolve", return_value=fake_result) as mock_greenhouse_resolve:
+        result = jobright.resolve(
+            "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd",
+            _jobright_html(),
+            session,
+            browser_resolver=True,
+        )
+
+    mock_fetch_html.assert_called_once_with(
+        "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd", session
+    )
+    mock_greenhouse_resolve.assert_called_once_with(
+        "https://boards.greenhouse.io/acme/jobs/999", session
+    )
+    assert result is not None
+    assert result.jd_text == "real jd"
+    assert result.resolver == "greenhouse"
+    assert result.jd_quality == "ats"
+    assert result.ats_url == "https://boards.greenhouse.io/acme/jobs/999"
+
+
+def test_resolve_falls_back_to_next_data_when_rendered_dom_also_has_no_link():
+    session = MagicMock()
+    with patch("src.resolve.browser.fetch_html", return_value="<html>still nothing</html>"):
+        result = jobright.resolve(
+            "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd",
+            _jobright_html(),
+            session,
+            browser_resolver=True,
+        )
+
+    assert result is not None
+    assert result.jd_quality == "aggregator"

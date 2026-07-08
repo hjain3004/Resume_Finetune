@@ -26,8 +26,8 @@ def _seed(conn: sqlite3.Connection) -> sqlite3.Row:
         INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_quality)
         VALUES ('k6', 'Zeta Inc', 'Software Engineer', 'Remote', 'https://jobright.ai/jobs/info/abc', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'SHORTLISTED', 'aggregator');
 
-        INSERT INTO runs (id, started_at, finished_at, new_jobs, resolved, failed, filtered_out)
-        VALUES (1, '2026-07-05T09:00:00+00:00', '2026-07-05T09:01:00+00:00', 5, 2, 1, 1);
+        INSERT INTO runs (id, started_at, finished_at, new_jobs, resolved, failed, filtered_out, tier1_resolved, tier2_resolved, manual_failed)
+        VALUES (1, '2026-07-05T09:00:00+00:00', '2026-07-05T09:01:00+00:00', 5, 2, 1, 1, 1, 1, 1);
 
         INSERT INTO run_sources (run_id, source, discovered, inserted, resolved, failed)
         VALUES (1, 'inbox', 1, 1, 0, 1),
@@ -48,6 +48,7 @@ EXPECTED = """\
 - Resolved: 2
 - Failed: 1
 - Filtered out: 1
+- Resolution tiers — t1: 1, t2: 1, manual: 1
 
 ### Per-source
 | Source | Discovered | Inserted | Resolved | Failed |

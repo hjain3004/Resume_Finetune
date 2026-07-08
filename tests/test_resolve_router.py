@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from src import resolve
-from src.resolve import amazon_jobs, ashby, generic, greenhouse, jobright, lever, workday, wrapper
+from src.resolve import amazon_jobs, ashby, browser, generic, greenhouse, jobright, lever, workday, wrapper
 
 
 def test_route_amazon_jobs():
@@ -68,6 +68,45 @@ def test_resolve_returns_none_when_initial_fetch_fails():
     assert result is None
 
 
+def test_resolve_does_not_try_browser_on_initial_fetch_failure_when_toggle_disabled():
+    session = MagicMock()
+    session.get.return_value = MagicMock(status_code=410)
+
+    with patch.object(browser, "resolve") as mock_browser:
+        result = resolve.resolve("https://careers.example.com/job/1", session)
+
+    mock_browser.assert_not_called()
+    assert result is None
+
+
+def test_resolve_falls_back_to_browser_when_a_generic_hostname_blocks_the_plain_fetch():
+    # Real M6.5 case: qualtrics.com returns 410 to a plain `requests` GET (bot
+    # detection) but renders fine for crawl4ai's headless browser.
+    session = MagicMock()
+    session.get.return_value = MagicMock(status_code=410)
+
+    with patch.object(browser, "resolve", return_value="BROWSER_RESOLVED") as mock_browser:
+        result = resolve.resolve("https://careers.example.com/job/1", session, browser_resolver=True)
+
+    mock_browser.assert_called_once_with("https://careers.example.com/job/1", session)
+    assert result == "BROWSER_RESOLVED"
+
+
+def test_resolve_does_not_try_browser_on_initial_fetch_failure_for_a_known_ats_host():
+    # tier-2 is a generic-only rescue; a blocked tier-1 host (e.g. Tesla-style
+    # Akamai block) should stay tier-3, not get a browser retry.
+    session = MagicMock()
+    session.get.return_value = MagicMock(status_code=403)
+
+    with patch.object(browser, "resolve") as mock_browser:
+        result = resolve.resolve(
+            "https://boards.greenhouse.io/acme/jobs/123", session, browser_resolver=True
+        )
+
+    mock_browser.assert_not_called()
+    assert result is None
+
+
 def test_resolve_tries_wrapper_map_before_generic_on_a_wrapper_hostname():
     session = MagicMock()
     response = MagicMock(status_code=200)
@@ -118,7 +157,7 @@ def test_resolve_dispatches_jobright_with_fetched_html():
         result = resolve.resolve("https://jobright.ai/jobs/info/abc", session)
 
     mock_jobright.assert_called_once_with(
-        "https://jobright.ai/jobs/info/abc", "<html>jobright page</html>", session
+        "https://jobright.ai/jobs/info/abc", "<html>jobright page</html>", session, browser_resolver=False
     )
     assert result == "JOBRIGHT_RESOLVED"
 
@@ -139,3 +178,78 @@ def test_resolve_falls_back_to_generic_when_no_wrapper_matches():
 
     mock_generic.assert_called_once_with("https://example.com/careers/123", session)
     assert result == "GENERIC"
+
+
+# --- M6.5 tier-2 browser fallback --------------------------------------------
+
+
+def test_resolve_does_not_try_browser_when_toggle_disabled_by_default():
+    session = MagicMock()
+    response = MagicMock(status_code=200)
+    response.url = "https://example.com/careers/123"
+    response.text = "<html>plain careers page</html>"
+    session.get.return_value = response
+
+    with (
+        patch.object(wrapper, "resolve_wrapper_map", return_value=None),
+        patch.object(wrapper, "resolve_gh_jid", return_value=None),
+        patch.object(generic, "resolve", return_value=None),
+        patch.object(browser, "resolve") as mock_browser,
+    ):
+        result = resolve.resolve("https://example.com/careers/123", session)
+
+    mock_browser.assert_not_called()
+    assert result is None
+
+
+def test_resolve_falls_back_to_browser_when_generic_fails_and_toggle_enabled():
+    session = MagicMock()
+    response = MagicMock(status_code=200)
+    response.url = "https://example.com/careers/123"
+    response.text = "<html>plain careers page</html>"
+    session.get.return_value = response
+
+    with (
+        patch.object(wrapper, "resolve_wrapper_map", return_value=None),
+        patch.object(wrapper, "resolve_gh_jid", return_value=None),
+        patch.object(generic, "resolve", return_value=None),
+        patch.object(browser, "resolve", return_value="BROWSER_RESOLVED") as mock_browser,
+    ):
+        result = resolve.resolve("https://example.com/careers/123", session, browser_resolver=True)
+
+    mock_browser.assert_called_once_with("https://example.com/careers/123", session)
+    assert result == "BROWSER_RESOLVED"
+
+
+def test_resolve_does_not_try_browser_when_a_specific_resolver_fails():
+    session = MagicMock()
+    response = MagicMock(status_code=200)
+    response.url = "https://boards.greenhouse.io/acme/jobs/123"
+    session.get.return_value = response
+
+    with (
+        patch.object(greenhouse, "resolve", return_value=None),
+        patch.object(browser, "resolve") as mock_browser,
+    ):
+        result = resolve.resolve(
+            "https://boards.greenhouse.io/acme/jobs/123", session, browser_resolver=True
+        )
+
+    mock_browser.assert_not_called()
+    assert result is None
+
+
+def test_resolve_passes_browser_resolver_toggle_through_to_jobright():
+    session = MagicMock()
+    response = MagicMock(status_code=200)
+    response.url = "https://jobright.ai/jobs/info/abc"
+    response.text = "<html>jobright page</html>"
+    session.get.return_value = response
+
+    with patch.object(jobright, "resolve", return_value="JOBRIGHT_RESOLVED") as mock_jobright:
+        result = resolve.resolve("https://jobright.ai/jobs/info/abc", session, browser_resolver=True)
+
+    mock_jobright.assert_called_once_with(
+        "https://jobright.ai/jobs/info/abc", "<html>jobright page</html>", session, browser_resolver=True
+    )
+    assert result == "JOBRIGHT_RESOLVED"

@@ -323,3 +323,54 @@ checks.
 `scripts/import_scores.py` itself — the wrapper runs it after the headless
 call returns, per the spec ("The wrapper (not Claude) runs `import_scores.py`
 after the headless call").
+
+## M6.5 — Tier-2 browser resolver placement and reuse (2026-07-08)
+
+The kickoff doc specifies the `browser_resolver` toggle lives "in
+`config/sources.yaml`" without saying exactly where. It's a top-level key
+(`browser_resolver: true`), a sibling of `sources:`, not a per-source flag —
+the tier-2 fallback is a pipeline-wide behavior (any URL that falls through
+to `generic.py` can hit it), not something that varies by discovery adapter.
+`run_ingest.load_browser_resolver_flag()` reads it independently of
+`load_sources_config()` (which still returns only the `sources:` sub-dict,
+unchanged, so existing tests patching its return value are unaffected).
+
+Tier-2 only fires when the router falls through to `generic.py` and
+`generic.resolve()` fails its quality heuristic — never for a URL that
+matched a specific tier-1 resolver (greenhouse/lever/ashby/workday/
+amazon_jobs) that then failed. A specific resolver failing usually means a
+real schema break (bad board token, API shape changed) that a browser render
+won't fix, and silently masking that with a browser fallback would hide the
+break instead of surfacing it. This matches the kickoff doc's wording
+("used ONLY when no tier-1 resolver applies AND `generic.py` fails").
+
+Per-tier counts (`tier1_resolved`/`tier2_resolved`/`manual_failed`) are new
+columns on `runs`, populated by `run_ingest.run_resolution()` tallying by
+`ResolvedJD.resolver` (`"browser"` → tier2, anything else on success → tier1)
+and by `db.record_resolve_failure()`'s returned status (`RESOLVE_FAILED` this
+run → manual). This is a run-scoped snapshot, not a lifetime count of rows
+in `RESOLVE_FAILED` (the digest's "Needs your help" table already shows the
+full lifetime list) — it answers "how did *this run's* resolutions break
+down," which is what the acceptance criterion ("whether tier 2 is earning
+its 400MB") is asking about.
+
+`resolve/browser.py` exposes `fetch_markdown()` and `fetch_html()` as two
+thin wrappers over one internal `_crawl()`/`_crawl_async()` seam (the only
+thing tests mock — no real browser in pytest). `jobright.py`'s rendered-DOM
+reuse (`find_ats_link()` retried against `fetch_html()`'s output) only
+replaces the *input* to the existing `find_ats_link()` regex scan; the
+`__NEXT_DATA__` aggregator fallback is untouched and still runs against the
+original static `html_text` if no link is found even after rendering.
+
+Live smoke run (2026-07-08) surfaced a gap the test suite didn't catch: the
+router's very first check, `if response.status_code != 200: return None`, ran
+*before* any tier-2 attempt — so a host that plain `requests` can't reach at
+all (qualtrics.com returns `410` to `requests` but renders fine for crawl4ai's
+headless browser — real bot detection keyed on the HTTP client, not the URL)
+never got a chance at tier 2, exactly the case tier 2 exists for. Fixed by
+retrying via `browser.resolve(url, session)` on a non-200 initial fetch, but
+only when `route(url) is generic` (a blocked tier-1 host — confirmed live:
+tesla.com's Akamai block defeats crawl4ai too — stays tier-3 rather than
+masking what could be a real tier-1 schema break). Confirmed live: qualtrics
+now resolves via tier 2; tesla rows still fail (crawl4ai reports "Blocked by
+anti-bot protection: Akamai block") and correctly stay in "needs your help."

@@ -20,7 +20,7 @@ FIXED_JOBS = [
 ]
 
 
-def _resolve_side_effect(url, session):
+def _resolve_side_effect(url, session, **kwargs):
     return ResolvedJD(jd_text="5 years is a plus, not required.", resolver="fixture")
 
 

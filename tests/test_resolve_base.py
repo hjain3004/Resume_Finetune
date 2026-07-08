@@ -59,6 +59,32 @@ def test_get_uses_timeout_and_allow_redirects_and_user_agent():
     assert kwargs["headers"]["User-Agent"] == "Mozilla/5.0 (compatible; job-pipeline personal use)"
 
 
+def test_throttle_sleeps_at_least_two_seconds_between_same_host_requests():
+    times = iter([100.0, 100.3])
+    fake_time = lambda: next(times)
+    fake_sleep = MagicMock()
+    session = PoliteSession(session=_make_session(), time_func=fake_time, sleep_func=fake_sleep)
+
+    session.throttle("https://example.com/a")
+    session.throttle("https://example.com/b")
+
+    fake_sleep.assert_called_once()
+    (slept,), _ = fake_sleep.call_args
+    assert slept >= 1.7
+
+
+def test_throttle_shares_the_same_per_host_clock_as_get():
+    times = iter([100.0, 100.3])
+    fake_time = lambda: next(times)
+    fake_sleep = MagicMock()
+    session = PoliteSession(session=_make_session(), time_func=fake_time, sleep_func=fake_sleep)
+
+    session.get("https://example.com/a")
+    session.throttle("https://example.com/b")
+
+    fake_sleep.assert_called_once()
+
+
 def test_get_returns_the_response():
     expected = MagicMock(status_code=200)
     session = PoliteSession(session=_make_session(expected), time_func=lambda: 0.0, sleep_func=MagicMock())

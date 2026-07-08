@@ -80,6 +80,24 @@ def test_start_and_finish_run(conn):
     assert row["finished_at"] is not None
 
 
+def test_finish_run_defaults_tier_counts_to_zero(conn):
+    run_id = db.start_run(conn)
+    db.finish_run(conn, run_id, new_jobs=3, resolved=1)
+    row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+    assert row["tier1_resolved"] == 0
+    assert row["tier2_resolved"] == 0
+    assert row["manual_failed"] == 0
+
+
+def test_finish_run_records_tier_counts(conn):
+    run_id = db.start_run(conn)
+    db.finish_run(conn, run_id, tier1_resolved=4, tier2_resolved=2, manual_failed=1)
+    row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+    assert row["tier1_resolved"] == 4
+    assert row["tier2_resolved"] == 2
+    assert row["manual_failed"] == 1
+
+
 def test_rows_by_status_and_get_by_url(conn):
     db.insert_discovered(conn, [_job(url="https://example.com/job/42")])
     rows = db.rows_by_status(conn, Status.DISCOVERED)
@@ -147,11 +165,12 @@ def test_record_resolve_failure_increments_attempts_and_stays_discovered(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
 
-    db.record_resolve_failure(conn, job_id)
+    status = db.record_resolve_failure(conn, job_id)
 
     row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
     assert row["resolve_attempts"] == 1
     assert row["status"] == Status.DISCOVERED
+    assert status == Status.DISCOVERED
 
 
 def test_record_resolve_failure_sets_resolve_failed_at_three_attempts(conn):
@@ -160,10 +179,11 @@ def test_record_resolve_failure_sets_resolve_failed_at_three_attempts(conn):
 
     db.record_resolve_failure(conn, job_id)
     db.record_resolve_failure(conn, job_id)
-    db.record_resolve_failure(conn, job_id)
+    status = db.record_resolve_failure(conn, job_id)
 
     row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
     assert row["resolve_attempts"] == 3
+    assert status == Status.RESOLVE_FAILED
     assert row["status"] == Status.RESOLVE_FAILED
 
 

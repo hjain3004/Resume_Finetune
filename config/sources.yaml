@@ -1,3 +1,6 @@
+# M6.5: tier-2 crawl4ai browser resolver toggle. false = pre-M6.5 behavior.
+browser_resolver: true
+
 sources:
   tracker_vansh:
     enabled: true

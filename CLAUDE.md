@@ -14,8 +14,9 @@ the design is fixed in `docs/ARCHITECTURE.md` and the work queue in
 2. **One milestone at a time.** Never start milestone N+1 in the same session as N.
 3. **Idempotency is sacred.** Any change that could make a second identical run mutate the DB
    is a bug, full stop.
-4. **No new dependencies** beyond: requests, trafilatura, PyYAML, pytest. Ask before adding
-   anything, including BeautifulSoup.
+4. **No new dependencies** beyond: requests, trafilatura, PyYAML, pytest, crawl4ai (M6.5,
+   tier-2 resolver only — see ARCHITECTURE §6.4). Ask before adding anything else, including
+   BeautifulSoup.
 5. **Tests never touch the network.** Fixtures live in `tests/fixtures/`, recorded via
    `scripts/record_fixture.py`. Live checks are manual "smoke" steps run with the user.
 6. **Etiquette is non-negotiable:** no LinkedIn scraping, no auth/CAPTCHA bypass, ≥2 s

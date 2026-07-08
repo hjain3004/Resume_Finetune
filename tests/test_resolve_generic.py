@@ -54,3 +54,15 @@ def test_resolve_returns_none_on_short_text_even_with_keyword():
     result = generic.resolve("https://example.com/short", session)
 
     assert result is None
+
+
+def test_passes_quality_accepts_long_text_with_jd_keyword():
+    assert generic.passes_quality("Responsibilities: " + "x" * 400) is True
+
+
+def test_passes_quality_rejects_short_text():
+    assert generic.passes_quality("Requirements: experience with Python.") is False
+
+
+def test_passes_quality_rejects_long_text_without_jd_keyword():
+    assert generic.passes_quality("lorem ipsum " * 100) is False
