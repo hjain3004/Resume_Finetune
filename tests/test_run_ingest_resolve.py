@@ -159,3 +159,34 @@ def test_run_resolution_passes_browser_resolver_toggle_through():
     mock_resolve.assert_called_once_with(
         "https://example.com/job/1", session, browser_resolver=True
     )
+
+
+def test_run_resolution_flags_content_repost_against_terminal_row():
+    conn = _conn()
+    base_jd = (
+        "We are looking for a driven software engineer to design build and scale "
+        "distributed backend systems handling millions of requests daily across "
+        "our microservices platform"
+    )
+    db.insert_discovered(
+        conn, [DiscoveredJob("Acme", "Backend Engineer", "Remote", "https://acme.example/old", "tracker_vansh", None)]
+    )
+    old_id = db.get_by_url(conn, "https://acme.example/old")["id"]
+    db.mark_resolved(conn, old_id, ResolvedJD(base_jd, "greenhouse"))
+    conn.execute("UPDATE jobs SET status = ? WHERE id = ?", (Status.FILTERED_OUT, old_id))
+    conn.commit()
+
+    db.insert_discovered(
+        conn,
+        [DiscoveredJob("Acme", "Backend Software Engineer II", "Remote", "https://acme.example/new", "tracker_vansh", None)],
+    )
+    session = MagicMock()
+
+    with patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD(base_jd, "greenhouse")):
+        run_ingest.run_resolution(conn, session)
+
+    new_row = db.get_by_url(conn, "https://acme.example/new")
+    import json
+
+    assert json.loads(new_row["flags"]) == ["repost"]
+    assert f"job #{old_id}" in new_row["notes"]

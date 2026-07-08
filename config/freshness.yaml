@@ -1,0 +1,4 @@
+# M6.8 freshness & recycling defense (docs/PHASE2_KICKOFF.md).
+stale_days: 21    # date_posted older than this at discovery -> flag stale_listing
+reopen_days: 45   # RESOLVE_FAILED/CLOSED row resurfaced after this long -> reset to DISCOVERED
+liveness_days: 5  # SHORTLISTED/TAILORED rows unchecked this long get one liveness GET

@@ -1,6 +1,10 @@
 """The idempotency test: running the full default pipeline twice back-to-back
 must not mutate the jobs table a second time (ARCHITECTURE §9's requirement),
-other than the `runs` row itself and legitimate resolve retries."""
+other than the `runs` row itself, legitimate resolve retries, and M6.8's
+last_seen_at/repost_count — those are DESIGNED to change on every rediscovery
+of a still-active posting (docs/PHASE2_KICKOFF.md M6.8 item 2: "on dedup-key
+conflict: update last_seen_at, increment repost_count"), so a second run
+discovering the same still-open postings is expected to touch them."""
 
 from unittest.mock import patch
 
@@ -50,4 +54,14 @@ def test_full_pipeline_run_twice_is_idempotent(tmp_path):
     rows_after_second = [dict(r) for r in conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()]
     conn.close()
 
-    assert rows_after_second == rows_after_first
+    permitted_drift = {"last_seen_at", "repost_count"}
+    strip_permitted = lambda rows: [
+        {k: v for k, v in row.items() if k not in permitted_drift} for row in rows
+    ]
+    assert strip_permitted(rows_after_second) == strip_permitted(rows_after_first)
+    # but the drift itself must be exactly the M6.8-documented kind: every
+    # still-active row seen again bumps repost_count by 1 and refreshes
+    # last_seen_at, nothing more.
+    for before, after in zip(rows_after_first, rows_after_second):
+        assert after["repost_count"] == before["repost_count"] + 1
+        assert after["last_seen_at"] > before["last_seen_at"]

@@ -449,3 +449,64 @@ M6.6 acceptance criteria (per `PHASE2_KICKOFF.md`) all verified live against
 objects ✓, every object carries `locations`/`flags`/`jd_quality` ✓,
 research-role leak closed with regression tests ✓. DB backed up beforehand to
 `data/jobs.db.pre-m6.6-bak`.
+
+## M6.8 — Freshness & recycling defense (2026-07-08)
+
+Per CLAUDE.md prime directive #2, M6.8 was done before M6.7 in this session at the user's
+explicit request (M6.8 is schema-touching; doing it first meant the idempotent migration
+could be validated by itself, per §5's "run the I7 idempotency check ... before anything
+else"). `docs/SELF_HEALING.md` §1 (I7) supplied the actual mechanism: the existing
+`tests/test_idempotency.py` (full pipeline run twice on fixtures, byte-diff the jobs table)
+already *is* the I7 check — `scripts/audit.py` (M7) doesn't exist yet to run it standalone.
+
+**Migration-only step, verified in isolation.** Added `last_seen_at TEXT`,
+`repost_count INTEGER NOT NULL DEFAULT 0` to `_JOBS_MIGRATIONS`, and `Status.CLOSED` to
+`models.py`, with zero behavior change. Ran `pytest tests/test_idempotency.py` — passed —
+before writing any M6.8 logic. Also confirmed the idempotent `ALTER TABLE` applies cleanly
+to the live `data/jobs.db` (columns present after first connect; second connect is a no-op).
+
+**I7 test itself required updating** once M6.8's actual behavior landed. Per
+`docs/PHASE2_KICKOFF.md` M6.8 item 2, `last_seen_at`/`repost_count` are *designed* to change
+on every dedup-key conflict — a daily run rediscovering the same still-open posting is
+supposed to bump `repost_count` and refresh `last_seen_at`. That's new legitimate drift, the
+same category as the pre-existing `resolve_attempts` retry carve-out. Updated
+`test_full_pipeline_run_twice_is_idempotent` to strip those two columns before the
+byte-equality check, and added an explicit assertion that the drift is *exactly*
+`repost_count += 1` / `last_seen_at` strictly increasing — nothing else — so the test still
+catches any unrelated second-run mutation.
+
+**Design decisions not fully pinned down by the spec:**
+- Shared shingle/Jaccard code moved out of `scripts/export_batch.py` into new
+  `src/textsim.py` (`normalize_jd`, `shingles`, `jaccard_similarity`, `content_hash`), since
+  M6.8's content-based repost detection needs the exact same similarity notion export
+  clustering uses (M6.6 already established 0.85 as a safe within-company threshold).
+  `export_batch.py` re-imports the same names so its existing tests needed no changes.
+- **Stale-at-discovery default when `date_posted` is missing:** flag only when `date_posted`
+  is present AND older than `stale_days` — missing data is not evidence of staleness. (An
+  earlier pass reused the reopen-rule's "missing timestamp = eligible" default here too,
+  which incorrectly flagged every job with no posted date; caught by the idempotency test
+  regressing before this shipped, fixed before commit.)
+- **"Prior outcome" wording:** the doc's target digest text is `"recycled: you
+  [skipped/applied] on <date>"`. Rendered at detection time (not re-derived by the digest)
+  as `"recycled: you {skipped|applied} job #{prior_id} ({prior_status}) on {date}"` —
+  `APPLIED` → "applied", everything else terminal (`FILTERED_OUT`/`REJECTED`/`CLOSED`) →
+  "skipped". `{date}` is the prior row's `jd_resolved_at` (fallback `discovered_at`) since
+  there's no dedicated "terminal transition" timestamp column (adding one would be a further
+  PROTECTED schema change beyond what's pre-approved here).
+- **Liveness recheck scope.** The doc's "404/410/absence from the board's live listing"
+  is implemented as 404/410 only; "absence from the board's live listing" would require
+  per-ATS scraping heuristics this pipeline deliberately avoids (CLAUDE.md prime directive
+  #6). Any other response (200, 5xx, timeout, connection error) just touches `last_seen_at`
+  and stays open — false negatives (missed closures) are cheaper than false positives (a row
+  wrongly marked CLOSED, blocking Phase 3 tailoring).
+- I13 (SELF_HEALING audit hook) intentionally not built — M7 hasn't started.
+
+**New files:** `src/freshness.py`, `src/textsim.py`, `config/freshness.yaml`,
+`tests/test_freshness.py`, `tests/test_run_ingest_freshness.py`. **Modified:** `src/db.py`
+(migrations, `insert_discovered` reopen/repost bookkeeping, `mark_resolved` flag-merge fix,
+`add_flag_and_note`/`mark_closed`/`touch_last_seen`/`rows_needing_liveness_check`),
+`src/models.py` (`Status.CLOSED`, `TERMINAL_STATUSES`), `src/run_ingest.py` (freshness config
+loading, content-repost call in `run_resolution`, liveness recheck before digest),
+`src/digest.py` (Recycled & reopened / Closed sections), `scripts/export_batch.py` (imports
+from `textsim` instead of defining its own copies), `docs/ARCHITECTURE.md` §4.1–4.3, §7.5
+(new), §8. Full suite: 259 passed.

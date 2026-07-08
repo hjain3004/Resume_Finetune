@@ -139,9 +139,14 @@ CREATE TABLE IF NOT EXISTS jobs (
     notes           TEXT,
     ats_url         TEXT,               -- M6.0/M6.2: underlying ATS URL when resolved via an
                                          -- aggregator/wrapper unwrap (gh_jid, wrapper_map, jobright)
-    jd_quality      TEXT                -- M6.2: 'ats' (employer's literal posting) or
+    jd_quality      TEXT,               -- M6.2: 'ats' (employer's literal posting) or
                                          -- 'aggregator' (jobright's own summary); Phase 3
                                          -- tailoring requires jd_quality='ats'
+    last_seen_at    TEXT,               -- M6.8: last time this dedup_key was seen anywhere —
+                                         -- set at insert, touched on every dedup-key conflict
+                                         -- and on every liveness-recheck GET (alive or dead)
+    repost_count    INTEGER NOT NULL DEFAULT 0  -- M6.8: dedup-key conflicts seen, i.e. how many
+                                         -- times a tracker has re-listed this same posting
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
@@ -173,9 +178,10 @@ CREATE TABLE IF NOT EXISTS run_sources (
 ```
 
 `ats_url`, `jd_quality`, and `run_sources` were added after the initial (M1) schema;
-`tier1_resolved`/`tier2_resolved`/`manual_failed` were added in M6.5. `db.init_db()` applies
-new `jobs`/`runs` columns via idempotent `ALTER TABLE` so existing databases migrate without
-data loss (new tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
+`tier1_resolved`/`tier2_resolved`/`manual_failed` were added in M6.5;
+`last_seen_at`/`repost_count` were added in M6.8. `db.init_db()` applies new `jobs`/`runs`
+columns via idempotent `ALTER TABLE` so existing databases migrate without data loss (new
+tables need no migration — `CREATE TABLE IF NOT EXISTS` already covers them).
 
 ### 4.2 Status state machine
 
@@ -184,18 +190,27 @@ DISCOVERED ──resolve ok──▶ RESOLVED ──prefilter fail──▶ FILT
      │                        │
      │ resolve fail ×3        │  Phase 2: scoring
      ▼                        ▼
-RESOLVE_FAILED (terminal    SCORED ──▶ SHORTLISTED ──▶ TAILORED ──▶ APPLIED
- unless user intervenes)                     │
-                                             ▼
-                                          REJECTED (by user or by score threshold)
+RESOLVE_FAILED (terminal)   SCORED ──▶ SHORTLISTED ──▶ TAILORED ──▶ APPLIED
+     │                                     │  │
+     │ M6.8 resurfacing                    │  │ M6.8 liveness recheck (dead link)
+     │ (reopen_days elapsed)               │  ▼
+     └──────────────▶ DISCOVERED           │ CLOSED (terminal — never tailor against it)
+                          ▲                ▼
+                          │             REJECTED (by user or by score threshold)
+                          └── M6.8 resurfacing from CLOSED (reopen_days elapsed)
 ```
 
 Rules:
-- Status only moves forward. Never reset a status automatically.
+- Status only moves forward, with one narrow exception: M6.8's resurfacing rule (§7.5) resets
+  `RESOLVE_FAILED`/`CLOSED` rows back to `DISCOVERED` when the same dedup_key reappears after
+  `reopen_days` of not being seen — the posting either was never actually evaluated
+  (RESOLVE_FAILED) or died and is genuinely back (CLOSED). No other status is ever reset.
 - `RESOLVE_FAILED` is set after 3 failed attempts across runs (`resolve_attempts >= 3`).
   Fewer than 3: stay `DISCOVERED`, retry next run.
 - A job the user manually pastes into `inbox/` for a row in `RESOLVE_FAILED` moves it to
   `RESOLVED` (match by URL).
+- `CLOSED` (M6.8) is set only by the digest-time liveness recheck (§7.5) finding a 404/410 on
+  a `SHORTLISTED`/`TAILORED` row's `ats_url`/`url`. Terminal.
 
 ### 4.3 Dedup key
 
@@ -211,6 +226,9 @@ Rules:
   row has a "worse" source (see priority below) and no `jd_text` yet, update its `url` and
   `source` to the better one:
   priority: `inbox` > `tracker_simplify` > `tracker_vansh` > `tracker_jobright`.
+- M6.8: every conflict (regardless of source priority) touches the existing row's
+  `last_seen_at`/`repost_count` (§7.5) — a dedup-key conflict means the posting is still being
+  seen somewhere, independent of which source wins.
 
 ### 4.4 Normalized interchange types (`models.py`)
 
@@ -497,6 +515,49 @@ negatives are cheaper than false positives — the user reviews the digest).
 
 Every `FILTERED_OUT` row keeps its `jd_text` and records a one-line `filter_reason`.
 
+### 7.5 Freshness & recycling defense (`freshness.py`, M6.8)
+
+Config in `config/freshness.yaml`: `stale_days: 21`, `reopen_days: 45`, `liveness_days: 5`.
+Four independent behaviors:
+
+1. **Stale-at-discovery flag.** `db.insert_discovered()`: a genuinely new row whose
+   `date_posted` is present and older than `stale_days` gets `flags=["stale_listing"]` at
+   insert time. Missing `date_posted` is never flagged (no evidence either way). This flag
+   must survive resolution — `db.mark_resolved()` merges (unions) `ResolvedJD.flags` into the
+   row's existing flags rather than overwriting, the same class of fix as M6.2's prefilter
+   flag-clobbering bug.
+2. **Repost bookkeeping + content-based repost detection.** Two mechanisms:
+   - Dedup-key conflict (same posting rediscovered): `db.insert_discovered()` always touches
+     `last_seen_at`/`repost_count` on the existing row (§4.3), regardless of source priority.
+   - Content-based (a *new* dedup_key that's really the same posting under different title
+     wording/location): after each successful resolve, `run_ingest.run_resolution()` calls
+     `freshness.find_content_repost(conn, company, jd_text, exclude_row_id=...)`, which scans
+     TERMINAL rows (`FILTERED_OUT`/`REJECTED`/`APPLIED`/`CLOSED`) at the same `norm(company)`
+     for a 5-word-shingle Jaccard ≥ 0.85 match (`src/textsim.py`, shared with
+     `export_batch.py`'s clustering). On a match, `freshness.record_content_repost()` flags
+     the new row `repost` and writes a rendered note directly (`db.add_flag_and_note()`), e.g.
+     `"recycled: you skipped job #57 (FILTERED_OUT) on 2026-06-01"` — the digest shows this
+     verbatim rather than re-deriving it from structured fields.
+3. **Resurfacing rule.** Inside the same dedup-key-conflict branch: if the existing row is
+   `RESOLVE_FAILED` or `CLOSED` and its `last_seen_at` is missing or older than `reopen_days`,
+   it's reset to `DISCOVERED` (flag `reopened`, `resolve_attempts`/`filter_reason` cleared,
+   `url`/`source` updated to the fresh discovery) — see §4.2. Any other terminal status is
+   left untouched by this path (content-repost detection, not resurfacing, is what flags
+   those).
+4. **Liveness recheck.** `run_ingest.main()` calls `freshness.run_liveness_recheck(conn,
+   session, liveness_days)` once per run, right after the pre-filter and before the digest is
+   built. For every `SHORTLISTED`/`TAILORED` row whose `last_seen_at` is missing or older than
+   `liveness_days`, one polite GET of `ats_url` (falling back to `url`): a 404/410 response
+   marks the row `CLOSED` (`db.mark_closed()`, note records the status code); any other
+   response (200, 5xx, timeout) just touches `last_seen_at` — deliberately scoped down from
+   the original "or absence from the board's live listing" spec, which would require
+   per-ATS scraping logic; see DECISIONS.md. A `RequestException` is swallowed (row stays
+   unchecked, retried next run) rather than failing the whole run over one dead link.
+
+I13 (audit hook for SHORTLISTED rows overdue a liveness check, and high-score `stale_listing`
+rows whose rationale doesn't mention staleness) is deferred to M7 (`SELF_HEALING.md` §5), not
+built in M6.8.
+
 ## 8. Digest (`digest.py`)
 
 Written to `data/digests/YYYY-MM-DD.md` at the end of every run (overwrite if re-run same
@@ -513,7 +574,12 @@ day). Sections, in order:
    company. These are the rows awaiting scoring (Phase 2) — for now, the user's reading list.
 3. **Needs your help** — `RESOLVE_FAILED` rows (and rows at 1–2 failed attempts, marked
    "retrying"): Company | Title | URL | last error. Instruction line reminding the user they
-   can paste the JD into `inbox/` using the file format from §5.3.
+   can paste the JD into `inbox/` using the file format from §5.3. Followed by "Needs the
+   original posting" (M6.2, aggregator-quality SHORTLISTED rows) and, when non-empty (M6.8):
+   **Recycled & reopened** — `RESOLVED` rows carrying `repost`/`reopened` flags, Company |
+   Title | Note (the rendered note from §7.5 item 2/3, shown verbatim); and **Closed (dead
+   links)** — `CLOSED` rows, Company | Title | Note (liveness-recheck status code, §7.5 item
+   4). Both are omitted entirely when there's nothing to show.
 4. **Filtered out** — collapsed one-liner per row: `Company — Title (reason)`. This section
    exists so bad filter rules are caught by eyeball.
 

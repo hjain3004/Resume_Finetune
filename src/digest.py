@@ -82,6 +82,49 @@ def _needs_original_posting_table(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
+def _recycled_table(conn: sqlite3.Connection) -> str:
+    """M6.8: RESOLVED rows carrying `repost` (content-matched a prior
+    terminal decision) or `reopened` (resurfaced after RESOLVE_FAILED/CLOSED)
+    — the friendly "recycled: you skipped/applied..." message was composed
+    at detection time and lives directly in `notes` (see freshness.py)."""
+    rows = conn.execute(
+        "SELECT company, title, flags, notes FROM jobs WHERE status = ? ORDER BY company",
+        (Status.RESOLVED,),
+    ).fetchall()
+    recycled = [row for row in rows if row["flags"] and set(json.loads(row["flags"])) & {"repost", "reopened"}]
+    if not recycled:
+        return ""
+    lines = [
+        "",
+        "## Recycled & reopened",
+        "",
+        "| Company | Title | Note |",
+        "|---|---|---|",
+    ]
+    lines.extend(f"| {row['company']} | {row['title']} | {row['notes'] or ''} |" for row in recycled)
+    return "\n".join(lines)
+
+
+def _closed_table(conn: sqlite3.Connection) -> str:
+    """M6.8: rows a liveness recheck confirmed dead (404/410). Terminal —
+    never tailor against these."""
+    rows = conn.execute(
+        "SELECT company, title, notes FROM jobs WHERE status = ? ORDER BY company",
+        (Status.CLOSED,),
+    ).fetchall()
+    if not rows:
+        return ""
+    lines = [
+        "",
+        "## Closed (dead links)",
+        "",
+        "| Company | Title | Note |",
+        "|---|---|---|",
+    ]
+    lines.extend(f"| {row['company']} | {row['title']} | {row['notes'] or ''} |" for row in rows)
+    return "\n".join(lines)
+
+
 def _filtered_out_list(conn: sqlite3.Connection) -> str:
     rows = conn.execute(
         "SELECT company, title, filter_reason FROM jobs WHERE status = ? ORDER BY company",
@@ -110,7 +153,10 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
     date_str = date_str or _today_iso()
     needs_help = _needs_help_table(conn)
     needs_original = _needs_original_posting_table(conn)
+    recycled = _recycled_table(conn)
+    closed = _closed_table(conn)
     needs_section = needs_help + ("\n" + needs_original if needs_original else "")
+    needs_section += ("\n" + recycled if recycled else "") + ("\n" + closed if closed else "")
     return (
         f"# Job Digest — {date_str}\n"
         "\n"

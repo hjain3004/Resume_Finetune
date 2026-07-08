@@ -201,11 +201,7 @@ M6.5 acceptance:
 - Migration: running the pipeline on the existing DB adds ats_url/jd_quality columns without
   data loss; second run makes no schema changes.
 
-### M6.6 Completion punch list (from the 2026-07-06 batch audit) — CLOSED 2026-07-08
-
-All four items closed and acceptance criteria verified live; see the "M6.6" entry in
-DECISIONS.md for what was actually done (items 1/3 were already covered by M6.1/M6.3; items
-2/4 required new code, plus an unplanned clustering fix found during live re-export).
+### M6.6 Completion punch list (from the 2026-07-06 batch audit)
 
 Audit of the first post-M6 export found these incomplete. Each is REQUIRED before Phase 2
 calibration begins:
@@ -233,6 +229,65 @@ calibration begins:
 M6.6 acceptance: re-export the current DB → Neuralink ≤ 2 objects, Serco ≤ 2; zero objects
 match chrome patterns; every object carries locations/flags/jd_quality; research-role leak
 closed with a regression test.
+
+### M6.7 Scoring architecture amendment (evidence: RecruitBench, Sood 2026)
+
+Benchmark evidence (RecruitBench: outcome-grounded evaluation of LLM job-fit scoring
+against real interview progression) shows monolithic scoring of large pools under-scores
+true positives (lost-in-the-middle / context bloat): parallel batches of ~6 doubled recall
+at unchanged precision and improved rubric-band calibration vs. one large prompt.
+Amendments:
+
+1. **Sub-batched scoring.** The scoring wrapper splits the exported batch into chunks of
+   at most 6 objects, invokes the headless scorer once per chunk (same prompt, chunk-local
+   input file), and concatenates results before import validation. import_scores.py
+   validation is unchanged (row coverage is checked across the concatenated whole).
+2. **Synthetic score-band suite.** `tests/fixtures/scoring_stress/`: 8–10 synthetic JDs
+   paired with expected score bands from the anchored scale (perfect backend match
+   [8.5–10]; hard-requirement miss [2.5–4.5]; wrong specialty [3–4]; sponsorship_risk case
+   [≤6 cap]; keyword-stuffed JD; stale/vague JD). `scripts/scoring_stress.py` runs them
+   and reports band adherence. Run at calibration start and after ANY change to
+   scoring_prompt.md or profile_summary.md (ties into SELF_HEALING D2 discipline; prompt
+   files remain PROTECTED post-calibration).
+3. **Exemplar injection (deferred until ≥20 calibration labels exist).** Include the 3–5
+   most similar past user decisions (APPLY/SKIP + one-line reason) in the scoring prompt
+   as few-shot exemplars, selected by shingle similarity of JD texts. Gate: only after
+   calibration Step 5 completes once; log exemplar ids in the trace (I11).
+
+### M6.8 Freshness & recycling defense (stale/reposted jobs) — CLOSED 2026-07-08
+
+See the "M6.8" entry in DECISIONS.md for what was built, the I7 idempotency-test update it
+required, and the scope decisions (liveness recheck limited to 404/410; I13 deferred to M7).
+
+Observed problems: aggregators recycle old postings as new; postings die within days
+(link-rot finding, M6.0); exact reposts are silently suppressed forever (correct for
+noise, wrong for legitimately re-opened roles); no staleness visibility at discovery.
+User-approved schema/state-machine changes (PROTECTED items; approval recorded here):
+columns `last_seen_at TEXT`, `repost_count INTEGER DEFAULT 0`; new terminal status
+`CLOSED` (posting verified dead).
+
+1. **Stale-at-discovery flag.** If date_posted is present and older than `stale_days`
+   (config, default 21) at discovery → flag `stale_listing`. The scoring prompt treats it
+   as a soft negative (must mention in rationale); the digest shows it.
+2. **Repost detection.** On dedup-key conflict: update the existing row's `last_seen_at`,
+   increment `repost_count` (cheap, no behavior change). Additionally, for genuinely new
+   rows after resolution: compare content (same norm(company), shingle ≥ 0.85) against
+   TERMINAL rows (FILTERED_OUT / REJECTED / APPLIED / CLOSED); on match → flag `repost`,
+   record prior row id + prior outcome in notes; digest renders "recycled: you
+   [skipped/applied] on <date>". Never silently re-shortlist recycled content the user
+   already rejected.
+3. **Resurfacing rule (narrow).** A dedup conflict whose existing row is RESOLVE_FAILED
+   or CLOSED, with last_seen_at older than `reopen_days` (default 45): reset that row to
+   DISCOVERED with flag `reopened` — it was never actually evaluated, or it died and is
+   genuinely back. All other terminal statuses stay suppressed.
+4. **Liveness recheck.** At digest time, SHORTLISTED/TAILORED rows unchecked for
+   `liveness_days` (default 5) get one polite GET of ats_url (or url): 404/410/absence
+   from the board's live listing → status CLOSED, digest note. Never tailor against a
+   CLOSED row.
+5. **Audit hook (I13 — add to the SELF_HEALING suite when building M7).** WARN on: any
+   SHORTLISTED row with no liveness check within `liveness_days`; any exported object
+   carrying `stale_listing` with fit_score ≥ 9 whose rationale doesn't mention staleness
+   (prompt-adherence spot check).
 
 ---
 

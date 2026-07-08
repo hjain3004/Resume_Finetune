@@ -349,3 +349,191 @@ def test_run_sources_for_run_lists_all_sources_including_zero(conn):
     rows = db.run_sources_for_run(conn, run_id)
     sources = {row["source"]: row["discovered"] for row in rows}
     assert sources == {"tracker_simplify": 0, "tracker_vansh": 4}
+
+
+# --- M6.8 freshness & recycling defense --------------------------------------
+
+
+def test_insert_discovered_flags_stale_listing_when_date_posted_old(conn):
+    old_job = _job(date_posted="2026-01-01")
+    db.insert_discovered(conn, [old_job], stale_days=21)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert json.loads(row["flags"]) == ["stale_listing"]
+
+
+def test_insert_discovered_does_not_flag_recent_posting(conn):
+    recent_job = _job(date_posted="2026-07-01")
+    db.insert_discovered(conn, [recent_job], stale_days=21)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert row["flags"] is None
+
+
+def test_insert_discovered_does_not_flag_when_date_posted_missing(conn):
+    job = _job(date_posted=None)
+    db.insert_discovered(conn, [job], stale_days=21)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert row["flags"] is None
+
+
+def test_insert_discovered_stale_check_disabled_when_stale_days_none(conn):
+    old_job = _job(date_posted="2020-01-01")
+    db.insert_discovered(conn, [old_job], stale_days=None)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert row["flags"] is None
+
+
+def test_insert_discovered_sets_last_seen_at_on_first_insert(conn):
+    db.insert_discovered(conn, [_job()])
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert row["last_seen_at"] is not None
+    assert row["repost_count"] == 0
+
+
+def test_insert_discovered_bumps_last_seen_and_repost_count_on_conflict(conn):
+    db.insert_discovered(conn, [_job()])
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    first_seen = row["last_seen_at"]
+
+    db.insert_discovered(conn, [_job()])
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert row["repost_count"] == 1
+    assert row["last_seen_at"] >= first_seen
+
+
+def test_insert_discovered_reopens_stale_resolve_failed_row(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET status = ?, resolve_attempts = 3, last_seen_at = ? WHERE id = ?",
+        (Status.RESOLVE_FAILED, "2026-01-01T00:00:00+00:00", job_id),
+    )
+    conn.commit()
+
+    db.insert_discovered(conn, [_job(url="https://example.com/job/1-refreshed")], reopen_days=45)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.DISCOVERED
+    assert row["resolve_attempts"] == 0
+    assert json.loads(row["flags"]) == ["reopened"]
+    assert row["url"] == "https://example.com/job/1-refreshed"
+
+
+def test_insert_discovered_reopens_stale_closed_row(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET status = ?, last_seen_at = ? WHERE id = ?",
+        (Status.CLOSED, "2026-01-01T00:00:00+00:00", job_id),
+    )
+    conn.commit()
+
+    db.insert_discovered(conn, [_job()], reopen_days=45)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.DISCOVERED
+    assert json.loads(row["flags"]) == ["reopened"]
+
+
+def test_insert_discovered_does_not_reopen_recently_seen_resolve_failed_row(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET status = ?, resolve_attempts = 3, last_seen_at = ? WHERE id = ?",
+        (Status.RESOLVE_FAILED, db._utcnow_iso(), job_id),
+    )
+    conn.commit()
+
+    db.insert_discovered(conn, [_job()], reopen_days=45)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.RESOLVE_FAILED
+
+
+def test_insert_discovered_does_not_reopen_other_terminal_statuses(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET status = ?, last_seen_at = ? WHERE id = ?",
+        (Status.FILTERED_OUT, "2026-01-01T00:00:00+00:00", job_id),
+    )
+    conn.commit()
+
+    db.insert_discovered(conn, [_job()], reopen_days=45)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.FILTERED_OUT
+
+
+def test_mark_resolved_merges_flags_instead_of_overwriting(conn):
+    db.insert_discovered(conn, [_job(date_posted="2026-01-01")], stale_days=21)
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    assert json.loads(conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()["flags"]) == [
+        "stale_listing"
+    ]
+
+    db.mark_resolved(conn, job_id, ResolvedJD(jd_text="jd", resolver="greenhouse", flags=["sponsor_likely"]))
+
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert set(json.loads(row["flags"])) == {"stale_listing", "sponsor_likely"}
+
+
+def test_add_flag_and_note_unions_flag_and_appends_note(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute("UPDATE jobs SET notes = ? WHERE id = ?", ("existing note", job_id))
+    conn.commit()
+
+    db.add_flag_and_note(conn, job_id, "repost", "recycled: you skipped job #7 on 2026-06-01")
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert json.loads(row["flags"]) == ["repost"]
+    assert row["notes"] == "existing note; recycled: you skipped job #7 on 2026-06-01"
+
+
+def test_mark_closed_sets_status_and_appends_note(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    db.mark_closed(conn, job_id, "liveness recheck: 404")
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.CLOSED
+    assert row["notes"] == "liveness recheck: 404"
+
+
+def test_touch_last_seen_updates_timestamp(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute("UPDATE jobs SET last_seen_at = NULL WHERE id = ?", (job_id,))
+    conn.commit()
+
+    db.touch_last_seen(conn, job_id)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["last_seen_at"] is not None
+
+
+def test_rows_needing_liveness_check_only_shortlisted_and_tailored_and_stale(conn):
+    db.insert_discovered(conn, [_job(url="https://example.com/1")])
+    db.insert_discovered(conn, [_job(url="https://example.com/2", title="Other")])
+    db.insert_discovered(conn, [_job(url="https://example.com/3", title="Third")])
+    ids = [r["id"] for r in conn.execute("SELECT id FROM jobs ORDER BY id").fetchall()]
+
+    conn.execute(
+        "UPDATE jobs SET status = ?, last_seen_at = ? WHERE id = ?",
+        (Status.SHORTLISTED, "2026-01-01T00:00:00+00:00", ids[0]),
+    )
+    conn.execute(
+        "UPDATE jobs SET status = ?, last_seen_at = ? WHERE id = ?",
+        (Status.TAILORED, db._utcnow_iso(), ids[1]),
+    )
+    conn.execute("UPDATE jobs SET status = ? WHERE id = ?", (Status.RESOLVED, ids[2]))
+    conn.commit()
+
+    rows = db.rows_needing_liveness_check(conn, "2026-06-01T00:00:00+00:00")
+
+    assert [r["id"] for r in rows] == [ids[0]]

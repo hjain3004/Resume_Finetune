@@ -12,7 +12,7 @@ from collections import Counter, defaultdict
 
 import yaml
 
-from src import db, digest, prefilter, resolve
+from src import db, digest, freshness, prefilter, resolve
 from src.discover import ADAPTERS, discover_all, inbox_manual
 from src.models import Status
 from src.resolve.base import PoliteSession
@@ -54,6 +54,11 @@ def load_browser_resolver_flag(path: str = "config/sources.yaml") -> bool:
         return bool(yaml.safe_load(f).get("browser_resolver", False))
 
 
+def load_freshness_config(path: str = "config/freshness.yaml") -> dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
 def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     if source_name:
         if source_name == INBOX_SOURCE_NAME:
@@ -82,6 +87,11 @@ def run_resolution(
         source = row["source"]
         if result is not None:
             db.mark_resolved(conn, row["id"], result)
+            prior_repost = freshness.find_content_repost(
+                conn, row["company"], result.jd_text, exclude_row_id=row["id"]
+            )
+            if prior_repost is not None:
+                freshness.record_content_repost(conn, row["id"], prior_repost)
             resolved_count += 1
             per_source[source]["resolved"] += 1
             tiers["tier2" if result.resolver == "browser" else "tier1"] += 1
@@ -108,11 +118,17 @@ def main(argv: list[str] | None = None) -> int:
     db_path = ":memory:" if args.dry_run else args.db
     conn = db.get_connection(db_path)
     run_id = db.start_run(conn)
+    freshness_cfg = load_freshness_config()
 
     new_count = 0
     if not args.resolve_only:
         discovered = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
-        inserted_by_source = db.insert_discovered(conn, discovered)
+        inserted_by_source = db.insert_discovered(
+            conn,
+            discovered,
+            stale_days=freshness_cfg["stale_days"],
+            reopen_days=freshness_cfg["reopen_days"],
+        )
         new_count = sum(inserted_by_source.values())
         print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
         for job in discovered:
@@ -160,6 +176,9 @@ def main(argv: list[str] | None = None) -> int:
             filters_cfg = load_filters_config()
             filtered_count = prefilter.run_prefilter(conn, filters_cfg)
             print(f"Filtered out {filtered_count} job(s).")
+
+            closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
+            print(f"Liveness recheck: {closed_count} job(s) closed.")
 
     db.finish_run(
         conn,

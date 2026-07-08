@@ -19,6 +19,17 @@ class Status(StrEnum):
     TAILORED = "TAILORED"
     APPLIED = "APPLIED"
     REJECTED = "REJECTED"
+    CLOSED = "CLOSED"  # M6.8: posting verified dead by a liveness recheck
+
+
+# M6.8: terminal statuses eligible for repost-detection comparison and for the
+# resurfacing rule's "was this ever actually evaluated" check.
+TERMINAL_STATUSES: tuple[Status, ...] = (
+    Status.FILTERED_OUT,
+    Status.REJECTED,
+    Status.APPLIED,
+    Status.CLOSED,
+)
 
 
 # Source priority for dedup conflict resolution, best first.

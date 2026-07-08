@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS run_sources (
 _JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
     ("ats_url", "TEXT"),
     ("jd_quality", "TEXT"),
+    # M6.8: freshness/recycling defense.
+    ("last_seen_at", "TEXT"),
+    ("repost_count", "INTEGER NOT NULL DEFAULT 0"),
 )
 
 # M6.5: per-run tier-2 (browser resolver) observability counters.
@@ -123,25 +126,49 @@ def _source_rank(source: str) -> int:
         return len(SOURCE_PRIORITY)
 
 
-def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob]) -> dict[str, int]:
+def insert_discovered(
+    conn: sqlite3.Connection,
+    discovered: list[DiscoveredJob],
+    *,
+    stale_days: int | None = None,
+    reopen_days: int = 45,
+) -> dict[str, int]:
     """Insert new jobs, deduping by dedup_key. Returns the count of genuinely
-    new rows per source (for per-source observability). If a conflicting row
-    already exists with a lower-priority source and no jd_text yet, its
-    url/source are upgraded to the better source."""
+    new rows per source (for per-source observability).
+
+    M6.8: new rows are flagged `stale_listing` if `date_posted` is older than
+    `stale_days` (None disables the check). On a dedup-key conflict the
+    posting is still being seen somewhere, so the existing row's
+    `last_seen_at`/`repost_count` are always touched; additionally:
+    - if a lower-priority source's row has no jd_text yet, its url/source are
+      upgraded to the better source (pre-M6.8 behavior, unchanged);
+    - if the existing row is RESOLVE_FAILED or CLOSED and hasn't been seen in
+      `reopen_days`, it's reset to DISCOVERED with a `reopened` flag — it was
+      either never actually evaluated, or died and is genuinely back. Other
+      terminal statuses (FILTERED_OUT/REJECTED/APPLIED/SCORED/SHORTLISTED/...)
+      stay untouched; recycled-content detection (against those) happens
+      post-resolution in freshness.find_content_repost, not here."""
     new_count_by_source: dict[str, int] = defaultdict(int)
     now = _utcnow_iso()
     for job in discovered:
         key = dedup_key(job.company, job.title, job.location)
         existing = conn.execute(
-            "SELECT id, source, jd_text FROM jobs WHERE dedup_key = ?", (key,)
+            "SELECT id, source, jd_text, status, last_seen_at FROM jobs WHERE dedup_key = ?", (key,)
         ).fetchone()
         if existing is None:
+            flags = None
+            if (
+                stale_days is not None
+                and job.date_posted is not None
+                and _is_older_than(job.date_posted, stale_days, now)
+            ):
+                flags = json.dumps(["stale_listing"])
             conn.execute(
                 """
                 INSERT INTO jobs (
                     dedup_key, company, title, location, url, source,
-                    date_posted, discovered_at, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    date_posted, discovered_at, status, flags, last_seen_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(dedup_key) DO NOTHING
                 """,
                 (
@@ -154,19 +181,60 @@ def insert_discovered(conn: sqlite3.Connection, discovered: list[DiscoveredJob])
                     job.date_posted,
                     now,
                     Status.DISCOVERED,
+                    flags,
+                    now,
                 ),
             )
             if conn.execute("SELECT changes()").fetchone()[0]:
                 new_count_by_source[job.source] += 1
             continue
 
-        if existing["jd_text"] is None and _source_rank(job.source) < _source_rank(existing["source"]):
+        prior_last_seen = existing["last_seen_at"]
+        conn.execute(
+            "UPDATE jobs SET last_seen_at = ?, repost_count = repost_count + 1 WHERE id = ?",
+            (now, existing["id"]),
+        )
+
+        if existing["status"] in (Status.RESOLVE_FAILED, Status.CLOSED) and _is_older_than(
+            prior_last_seen, reopen_days, now
+        ):
+            _reopen_row(conn, existing["id"], job.url, job.source, now)
+        elif existing["jd_text"] is None and _source_rank(job.source) < _source_rank(existing["source"]):
             conn.execute(
                 "UPDATE jobs SET url = ?, source = ? WHERE dedup_key = ?",
                 (job.url, job.source, key),
             )
     conn.commit()
     return dict(new_count_by_source)
+
+
+def _is_older_than(iso_ts: str | None, days: int, now_iso: str) -> bool:
+    """True if `iso_ts` is missing (never confirmed) or older than `days`
+    relative to `now_iso`. Both must be ISO-8601; date-only strings compare
+    fine against full datetimes since they share the YYYY-MM-DD prefix."""
+    if not iso_ts:
+        return True
+    then = datetime.fromisoformat(iso_ts)
+    now = datetime.fromisoformat(now_iso)
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    return (now - then).days >= days
+
+
+def _reopen_row(conn: sqlite3.Connection, job_id: int, url: str, source: str, now: str) -> None:
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    flags = json.loads(row["flags"]) if row["flags"] else []
+    if "reopened" not in flags:
+        flags.append("reopened")
+    conn.execute(
+        """
+        UPDATE jobs
+        SET status = ?, resolve_attempts = 0, filter_reason = NULL,
+            url = ?, source = ?, flags = ?
+        WHERE id = ?
+        """,
+        (Status.DISCOVERED, url, source, json.dumps(sorted(flags)), job_id),
+    )
 
 
 def record_run_source(
@@ -275,14 +343,21 @@ def reset_for_reresolution(conn: sqlite3.Connection, job_ids: list[int]) -> None
 def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -> None:
     """Set status=RESOLVED with the resolved JD text/resolver, and backfill
     title/location if they were still holding their inbox placeholder value
-    (title == the URL's hostname, or location NULL)."""
-    row = conn.execute("SELECT url, title, location FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    (title == the URL's hostname, or location NULL).
+
+    M6.8: merges (union) resolved.flags into whatever flags the row already
+    carried, rather than overwriting — otherwise a discovery-time
+    `stale_listing` or a resurfacing `reopened` flag is silently dropped the
+    moment the row resolves (same class of bug as the M6.2 prefilter fix)."""
+    row = conn.execute("SELECT url, title, location, flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
     title = row["title"]
     if resolved.raw_title and title == (urlparse(row["url"]).hostname or ""):
         title = resolved.raw_title
     location = row["location"]
     if resolved.raw_location and not location:
         location = resolved.raw_location
+    existing_flags = json.loads(row["flags"]) if row["flags"] else []
+    merged_flags = sorted(set(existing_flags) | set(resolved.flags or []))
 
     conn.execute(
         """
@@ -299,7 +374,7 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
             title,
             location,
             resolved.ats_url,
-            json.dumps(resolved.flags) if resolved.flags else None,
+            json.dumps(merged_flags) if merged_flags else None,
             resolved.jd_quality or "ats",
             resolved.notes,
             job_id,
@@ -320,3 +395,50 @@ def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> str:
     )
     conn.commit()
     return status
+
+
+def add_flag_and_note(conn: sqlite3.Connection, job_id: int, flag: str, note: str) -> None:
+    """M6.8: union `flag` into the row's flags and append `note` to its notes
+    (rather than overwrite — notes may already hold resolver-set text)."""
+    row = conn.execute("SELECT flags, notes FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    flags = json.loads(row["flags"]) if row["flags"] else []
+    if flag not in flags:
+        flags.append(flag)
+    notes = f"{row['notes']}; {note}" if row["notes"] else note
+    conn.execute(
+        "UPDATE jobs SET flags = ?, notes = ? WHERE id = ?",
+        (json.dumps(sorted(flags)), notes, job_id),
+    )
+    conn.commit()
+
+
+def mark_closed(conn: sqlite3.Connection, job_id: int, note: str) -> None:
+    """M6.8 liveness recheck: the posting 404/410'd. Terminal; never tailor
+    against a CLOSED row."""
+    row = conn.execute("SELECT notes FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    notes = f"{row['notes']}; {note}" if row["notes"] else note
+    conn.execute(
+        "UPDATE jobs SET status = ?, notes = ? WHERE id = ?",
+        (Status.CLOSED, notes, job_id),
+    )
+    conn.commit()
+
+
+def touch_last_seen(conn: sqlite3.Connection, job_id: int) -> None:
+    """M6.8 liveness recheck: the posting is still live — record that we just
+    confirmed it, so the next recheck waits a fresh `liveness_days`."""
+    conn.execute("UPDATE jobs SET last_seen_at = ? WHERE id = ?", (_utcnow_iso(), job_id))
+    conn.commit()
+
+
+def rows_needing_liveness_check(conn: sqlite3.Connection, cutoff_iso: str) -> list[sqlite3.Row]:
+    """M6.8: SHORTLISTED/TAILORED rows never checked, or not checked since
+    `cutoff_iso`."""
+    return conn.execute(
+        """
+        SELECT * FROM jobs
+        WHERE status IN (?, ?) AND (last_seen_at IS NULL OR last_seen_at < ?)
+        ORDER BY id
+        """,
+        (Status.SHORTLISTED, Status.TAILORED, cutoff_iso),
+    ).fetchall()

@@ -107,3 +107,68 @@ def test_write_digest_creates_file(tmp_path):
 
     assert path == tmp_path / "2026-07-05.md"
     assert path.read_text() == EXPECTED
+
+
+def test_build_digest_shows_recycled_and_reopened_rows():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+    conn.execute(
+        """
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, flags, notes)
+        VALUES ('k7', 'Theta Inc', 'Backend Engineer', 'Remote', 'https://theta.example/1', 'tracker_vansh',
+                '2026-07-05T00:00:00+00:00', 'RESOLVED', '["repost"]',
+                'recycled: you skipped job #5 (FILTERED_OUT) on 2026-06-01')
+        """
+    )
+    conn.commit()
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "## Recycled & reopened" in text
+    assert "Theta Inc" in text
+    assert "recycled: you skipped job #5 (FILTERED_OUT) on 2026-06-01" in text
+
+
+def test_build_digest_omits_recycled_section_when_no_matching_rows():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "## Recycled & reopened" not in text
+
+
+def test_build_digest_shows_closed_rows():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+    conn.execute(
+        """
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, notes)
+        VALUES ('k8', 'Iota LLC', 'Platform Engineer', 'Remote', 'https://iota.example/1', 'tracker_vansh',
+                '2026-07-05T00:00:00+00:00', 'CLOSED', 'liveness recheck: 404 on https://iota.example/1')
+        """
+    )
+    conn.commit()
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "## Closed (dead links)" in text
+    assert "Iota LLC" in text
+    assert "liveness recheck: 404" in text
+
+
+def test_build_digest_omits_closed_section_when_no_closed_rows():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "## Closed (dead links)" not in text
