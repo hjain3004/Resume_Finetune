@@ -1,0 +1,9 @@
+# I4 content-purity patterns (docs/SELF_HEALING.md §1). One regex per line,
+# case-insensitive. PROTECTED — extend only per the I4 triage playbook entry
+# (§2), never loosen an existing pattern without a DECISIONS.md entry.
+\d+ (minutes|hours|days) ago
+H1B Sponsor Likely
+Trends of Total Sponsorships
+Company data provided by
+^Funding$
+Recent News

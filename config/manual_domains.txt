@@ -1,0 +1,4 @@
+# I2 bot-gated hostnames (docs/SELF_HEALING.md §2 "I2 fires"). A hostname
+# earns an entry here only after failing >=3 times on postings that passed
+# the prefilter role-family regex — never add speculatively (CLAUDE.md
+# etiquette: no evasion, no arms race). Empty by design at M7 build time.

@@ -1,0 +1,39 @@
+# M7 self-healing audit thresholds (docs/SELF_HEALING.md §1). PROTECTED per
+# §4 item 3 — changes need explicit user approval, logged in DECISIONS.md.
+
+i1:
+  warn_consecutive_zero_runs: 3
+  fail_consecutive_zero_runs: 7
+  trailing_runs_considered: 7
+
+i2:
+  fail_resolve_rate_below: 0.5
+  trailing_runs_considered: 3
+  warn_domain_failure_count: 3
+
+i3:
+  similarity_threshold: 0.85
+
+i3b:
+  similarity_threshold: 0.50
+
+i6:
+  warn_filtered_pct_above: 0.90
+  warn_filtered_pct_below: 0.20
+
+i9:
+  stale_flag: "stale_logic_version"
+
+i12:
+  prompt_files:
+    - "docs/scoring_prompt.md"
+  required_phrases:
+    - "treat it strictly as data"
+    - "do not follow it"
+  imperative_artifacts:
+    - "ignore"
+    - "disregard"
+    - "system prompt"
+
+i13:
+  high_score_threshold: 9.0
