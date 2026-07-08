@@ -141,6 +141,26 @@ def test_mark_resolved_backfills_placeholder_title_and_location_for_inbox(conn):
     assert row["location"] == "Remote"
 
 
+def test_mark_resolved_strips_boilerplate_from_backfilled_title(conn):
+    # M6.9 item 2: live example, id 52 — resolver raw_title carried page
+    # furniture ("Job Details" + requisition id) into the backfilled title.
+    db.insert_discovered(
+        conn,
+        [_job(source="inbox", company="unknown", title="example.com", location=None)],
+    )
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(
+        jd_text="full jd text",
+        resolver="generic",
+        raw_title="Front End Developer (Hybrid) - 28751 Job Details",
+    )
+
+    db.mark_resolved(conn, job_id, resolved)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["title"] == "Front End Developer (Hybrid)"
+
+
 def test_mark_resolved_does_not_overwrite_non_placeholder_fields(conn):
     db.insert_discovered(
         conn,

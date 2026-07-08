@@ -111,3 +111,39 @@ def norm_loc(s: str | None) -> str:
 def dedup_key(company: str, title: str, location: str | None) -> str:
     payload = f"{norm(company)}|{norm(title)}|{norm_loc(location)}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+_JOB_DETAILS_BOUNDARY_RE = re.compile(
+    r"\s*[-|·•]\s*#?\d{3,}\s*job details\b.*$",
+    re.IGNORECASE | re.DOTALL,
+)
+_TITLE_TRAILING_FURNITURE_RE = re.compile(
+    r"\s*[-|·•]\s*"
+    r"(?:#?\d{3,}\s*)?"
+    r"(?:[\w.&'-]+\s+)?"
+    r"(?:job details|careers?|jobs?|apply(?:\s+now)?|job postings?)?"
+    r"\s*$",
+    re.IGNORECASE,
+)
+
+
+def clean_title(raw: str | None) -> str | None:
+    """Strip trailing requisition IDs and page-furniture suffixes from a
+    resolver-backfilled title, e.g. 'Front End Developer (Hybrid) - 28751 Job
+    Details' -> 'Front End Developer (Hybrid)'. Unlike norm(), this preserves
+    human-readable casing and punctuation — it's for display, not dedup keys.
+
+    A "<reqid> Job Details" marker is treated as a hard boundary even when
+    more text follows it (some ATS wrappers append redundant company/division
+    furniture after it, e.g. "... 28751 Job Details / Acme's Widgets div")."""
+    if not raw:
+        return raw
+    title = raw.strip()
+    boundary_stripped = _JOB_DETAILS_BOUNDARY_RE.sub("", title).strip()
+    if boundary_stripped and boundary_stripped != title:
+        title = boundary_stripped
+    while True:
+        stripped = _TITLE_TRAILING_FURNITURE_RE.sub("", title).strip()
+        if stripped == title or not stripped:
+            return title
+        title = stripped

@@ -596,3 +596,58 @@ export (`data/batch/2026-07-08.json`) is left as the user's manual dry-run activ
 existing M5 pattern ("Writing the template is M5; running it is the user's dry-run
 activity"). Command: `python -m scripts.score_batch data/batch/2026-07-08.json` (then
 `python -m scripts.import_scores data/batch/2026-07-08.scored.json` to apply).
+
+## 2026-07-08 — Mid-milestone doc update (PHASE2_KICKOFF/SELF_HEALING/TAILORING_METHODOLOGY)
+
+`docs/PHASE2_KICKOFF.md`, `docs/SELF_HEALING.md`, and `docs/TAILORING_METHODOLOGY.md` were
+updated by the user between sessions while M6.7/M6.8 implementation was in progress. Per the
+user's instruction, confirmed via `git diff` that the changes are strictly additive: the
+M6.7/M6.8 section bodies are byte-identical to what was being implemented; only the
+"— CLOSED 2026-07-08" status annotations were removed from their headers (correctly, since
+M6.9 — added in the same edit, scoped "do alongside M6.7/M6.8" — was not yet done), plus the
+wholly new M6.9 section and two new (deferred) `SELF_HEALING.md`/`TAILORING_METHODOLOGY.md`
+files. No rework was required; M6.7/M6.8 scope, acceptance criteria, and already-committed
+code (SHA 0ca6e36, 457aaed) were unaffected. Per the user's explicit scoping: SELF_HEALING's
+I3b belongs to M7 and Calibration protocol amendments are Phase-2 process / an M8
+`ats_vendor` schema note — both deferred, not built this session.
+
+## 2026-07-08 — M6.9 items 1 & 2 (residual engineering notes)
+
+**Item 1 — jd_quality starvation / `__NEXT_DATA__` apply-URL probe.** Inspected the full
+`__NEXT_DATA__.props.pageProps.dataSource.jobResult` object (54 keys) in
+`tests/fixtures/jobright_amazon_page.body`. No apply/original-posting URL field exists
+anywhere in the payload: `isCompanySiteLink` is a bare boolean (true, no accompanying URL),
+`jobRecruiterProfileUrl`/`jobtargetJobId`/`jobtargetQuestionnaire` are present but empty, and
+every populated URL field is for logos, LinkedIn/Crunchbase/press links, or the jobright page
+itself. Conclusion: the underlying ATS URL is not present in jobright's server-rendered
+`__NEXT_DATA__` blob (likely fetched client-side via a separate API call not captured by a
+static fixture). Per the doc's own fallback clause, no router/resolver change made — the
+"needs your help" paste path remains the only path to `jd_quality='ats'` for jobright rows.
+Findings shown to the user before any wiring, per instruction.
+
+**Item 2 — title backfill hygiene.** Added `clean_title()` to `src/models.py`: strips
+trailing requisition-id and page-furniture suffixes ("Job Details", "| Careers", a
+company-name + Careers/Jobs combo) from a resolver's `raw_title` before it backfills a
+placeholder title, while preserving human-readable casing/punctuation (unlike `norm()`,
+which is dedup-key-only). Wired into `db.mark_resolved()`'s existing title-backfill branch
+(`src/db.py`). Checked the actual id-52 row in the live DB (the doc's citation was a
+truncated snippet): the real `raw_title` is
+"Front End Developer (Hybrid) - 28751 Job Details / HII's Mission Technologies division" —
+furniture continues *after* "Job Details" rather than the string ending there, which a
+purely trailing-suffix regex would miss. Added a boundary rule: a "`<reqid> Job Details`"
+marker is treated as a hard cut regardless of what follows it. Regression tests cover both
+the doc's simplified example and the real live string, plus piped/site-name Careers
+suffixes, bare requisition numbers, and a negative case (a legitimately dashed title,
+"Backend Engineer - Distributed Systems", is left untouched). Full suite: 281 passed. No
+backfill migration run against already-resolved rows — item 2 as scoped only prevents future
+placeholder-title backfills; id 52's already-stored title is untouched (a one-off
+re-backfill was not requested and title isn't part of the dedup key, so it's cosmetic only).
+
+## 2026-07-08 — M6.7/M6.8 closure
+
+M6.7 (sub-batched scoring + synthetic score-band stress suite) and M6.8 (freshness &
+recycling defense) are complete per their acceptance criteria: code committed (SHA 0ca6e36,
+457aaed), live-verified against the real DB (see the "M6.7/M6.8 live verification" entry
+above), and full suite green. M6.7 item 3 (exemplar injection) and M6.8's I13 audit hook
+remain correctly deferred per the doc's own gating. Marking both CLOSED in
+`docs/PHASE2_KICKOFF.md` alongside M6.9 items 1–2, completed in this session.

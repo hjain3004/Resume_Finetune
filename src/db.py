@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, dedup_key
+from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, clean_title, dedup_key
 
 RESOLVE_FAILURE_LIMIT = 3
 
@@ -352,7 +352,7 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
     row = conn.execute("SELECT url, title, location, flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
     title = row["title"]
     if resolved.raw_title and title == (urlparse(row["url"]).hostname or ""):
-        title = resolved.raw_title
+        title = clean_title(resolved.raw_title)
     location = row["location"]
     if resolved.raw_location and not location:
         location = resolved.raw_location

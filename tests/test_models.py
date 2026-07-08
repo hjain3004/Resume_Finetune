@@ -1,4 +1,4 @@
-from src.models import dedup_key, norm, norm_loc
+from src.models import clean_title, dedup_key, norm, norm_loc
 
 
 def test_norm_lowercases_and_strips_punctuation():
@@ -57,3 +57,48 @@ def test_dedup_key_differs_on_title():
     a = dedup_key("Acme", "Software Engineer", "Remote")
     b = dedup_key("Acme", "Backend Engineer", "Remote")
     assert a != b
+
+
+def test_clean_title_strips_requisition_id_and_job_details_suffix():
+    # M6.9 item 2: live example, id 52.
+    assert (
+        clean_title("Front End Developer (Hybrid) - 28751 Job Details")
+        == "Front End Developer (Hybrid)"
+    )
+
+
+def test_clean_title_strips_job_details_boundary_even_with_trailing_text():
+    # Real live raw_title (id 52) has furniture appended even after
+    # "Job Details" ("... / HII's Mission Technologies division").
+    assert (
+        clean_title(
+            "Front End Developer (Hybrid) - 28751 Job Details / "
+            "HII's Mission Technologies division"
+        )
+        == "Front End Developer (Hybrid)"
+    )
+
+
+def test_clean_title_strips_piped_careers_suffix():
+    assert clean_title("Software Engineer | Careers") == "Software Engineer"
+
+
+def test_clean_title_strips_site_name_careers_suffix():
+    assert clean_title("Software Engineer - Amazon Careers") == "Software Engineer"
+
+
+def test_clean_title_strips_bare_trailing_requisition_number():
+    assert clean_title("Senior SWE - 12345") == "Senior SWE"
+
+
+def test_clean_title_leaves_clean_title_unchanged():
+    assert clean_title("Software Engineer") == "Software Engineer"
+
+
+def test_clean_title_preserves_legitimate_dashed_title():
+    assert clean_title("Backend Engineer - Distributed Systems") == "Backend Engineer - Distributed Systems"
+
+
+def test_clean_title_handles_none_and_empty():
+    assert clean_title(None) is None
+    assert clean_title("") == ""

@@ -293,6 +293,51 @@ columns `last_seen_at TEXT`, `repost_count INTEGER DEFAULT 0`; new terminal stat
    carrying `stale_listing` with fit_score ≥ 9 whose rationale doesn't mention staleness
    (prompt-adherence spot check).
 
+### M6.9 Residual engineering notes (small, do alongside M6.7/M6.8) — items 1–2 CLOSED 2026-07-08
+
+Item 1: no apply/original-posting URL field exists in jobright's `__NEXT_DATA__` payload —
+probed, no code change (see DECISIONS.md). Item 2: `clean_title()` added to
+`src/models.py`, wired into `db.mark_resolved()`'s title backfill — see DECISIONS.md. Item 3
+is a policy note, not a task; nothing to build.
+
+1. **jd_quality starvation — `__NEXT_DATA__` apply-URL probe.** Only 4/25 objects in the
+   2026-07-08 batch are jd_quality='ats'; Phase 3's gate needs a steady ats supply. The
+   jobright `__NEXT_DATA__` blob already parsed for JD fields very likely also carries an
+   apply/original-posting URL field (the M6.2 session extracted jobSummary/qualifications/
+   isH1bSponsor but did not probe for a URL). Inspect the saved fixture's full JSON for
+   any field resembling applyLink/originalUrl/jobUrl; if present, feed it to the router as
+   the ATS unwrap path (path 1), which should convert most jobright rows to 'ats'. If
+   absent, no change — the "needs your help" paste path remains the valve.
+2. **Title backfill hygiene.** Resolver raw_title backfill imports page furniture (live
+   example, id 52: "Front End Developer (Hybrid) - 28751 Job Details"). On backfill,
+   strip trailing requisition IDs and boilerplate suffixes ("Job Details", "| Careers",
+   site-name suffixes) using the same normalization family dedup already applies. Display
+   titles must be human-clean; dedup keys are unaffected (already normalized).
+3. **Do NOT prefilter front-end/embedded titles.** They pass via the role-family regex by
+   design; the anchored scale prices wrong-specialty at 3–4 and the scorer sees context
+   the regex can't. Revisit only if wrong-specialty rows exceed ~20% of scored volume.
+
+### Calibration protocol amendments (evidence-derived)
+
+- **Threshold asymmetry (apply during Step 5).** The costs are asymmetric: a mediocre
+  shortlist entry costs ~90 seconds of review; a missed strong job costs an opportunity —
+  and correlated algorithmic screening across employers (Bommasani et al., FAccT 2026)
+  makes breadth structurally more valuable than naive independence assumptions suggest
+  (~25 applications for the systemic-rejection risk that ~10 would give under independent
+  decisions). Therefore: when the calibration data leaves the threshold ambiguous between
+  two values, choose the LOWER one (favor recall); tune upward only if review burden
+  becomes real.
+- **Track disagreements by segment.** When logging calibration disagreements (Step 3),
+  tag each with role family (backend/ml/adjacent) and company type. Per-segment variance
+  is the expected failure shape (RecruitBench found large per-job variance in LLM
+  scoring); a segment-clustered disagreement pattern means the fix is a targeted
+  profile_summary note for that segment, not a global anchor change.
+- **Outcomes journal gains an `ats_vendor` column** (populate from the row's resolver /
+  ats_url host at APPLIED time; carried into Phase 3's D5 outcomes.csv). Rationale:
+  screening outcomes correlate within a vendor's stack (monoculture finding); after
+  sufficient volume, rejections clustering by vendor is actionable signal (diversify
+  where you apply) that per-company tracking cannot reveal.
+
 ---
 
 ## Phase 2 — Calibration protocol (human process, not code)
