@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "required": ["id", "row_ids", "company", "title", "locations", "flags", "jd_quality", "jd_text"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "integer", "minimum": 1},
+    "row_ids": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+    "company": {"type": "string"},
+    "title": {"type": "string"},
+    "locations": {"type": "array", "items": {"type": "string"}},
+    "flags": {"type": "array", "items": {"type": "string"}},
+    "jd_quality": {"type": "string", "enum": ["ats", "aggregator"]},
+    "jd_text": {"type": "string"}
+  }
+}

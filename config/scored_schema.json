@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "required": ["id", "row_ids", "fit_score", "base_variant", "missing_keywords", "rationale"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "integer", "minimum": 1},
+    "row_ids": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+    "fit_score": {"type": "number", "minimum": 0, "maximum": 10},
+    "base_variant": {"type": "string", "enum": ["backend", "ml"]},
+    "missing_keywords": {"type": "array", "items": {"type": "string"}},
+    "rationale": {"type": "string", "maxLength": 160}
+  }
+}
