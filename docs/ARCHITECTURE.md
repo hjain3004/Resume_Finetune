@@ -598,8 +598,10 @@ python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discove
   nonzero only on infrastructure errors (DB unwritable, all sources crashed).
 
 Idempotency requirement (testable): running the command twice back-to-back must produce a
-second `runs` row with `new_jobs=0` and no row modifications other than that `runs` row and
-legitimate resolve retries.
+second `runs` row with `new_jobs=0` and no row modifications other than that `runs` row,
+legitimate resolve retries, and (M6.8) `last_seen_at`/`repost_count` bumping by exactly the
+designed amount on rows whose posting is rediscovered (§7.5) — everything else must be
+byte-identical.
 
 ## 10. Scheduling (M4)
 
@@ -622,6 +624,27 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
   validates the JSON against a schema and writes scores back to SQLite (`SCORED`; ≥ threshold →
   `SHORTLISTED`). Claude never touches the DB directly — files in, files out, validation in
   between.
+- **Sub-batched scoring (M6.7 item 1, `scripts/score_batch.py`)**: rather than one Claude
+  invocation over the whole exported batch, `score_batch()` splits it into chunks of at most
+  6 objects (`CHUNK_SIZE`), writes each chunk to `data/batch/chunk_N.json`, and invokes
+  `claude -p` once per chunk with the same prompt body as `docs/scoring_prompt.md` (only the
+  file-path instructions are overridden — see `build_chunk_prompt()`). Chunk results are
+  concatenated into the same `*.scored.json` shape `import_scores.py` already validates
+  (row-coverage is checked across the concatenated whole, not per chunk). Rationale
+  (RecruitBench, Sood 2026): monolithic scoring of large pools under-scores true positives;
+  parallel ~6-object batches doubled recall at unchanged precision in that benchmark.
+- **Synthetic score-band stress suite (M6.7 item 2, `scripts/scoring_stress.py`)**: 10
+  synthetic JDs in `tests/fixtures/scoring_stress/cases.json`, each paired with an
+  `expected_band` derived from `docs/scoring_prompt.md`'s anchored scale (perfect backend/
+  LLM-agent match, strong-overlap-minor-gap, two partial-overlap variants, wrong specialty,
+  hard-requirement-miss-years, sponsorship-risk cap, keyword-stuffed, stale/vague — the last
+  two don't have doc-specified bands, so their bands were chosen by the implementer and
+  approved by the user; see DECISIONS.md). `scoring_stress.py` builds a batch from the
+  fixture, scores it via `score_batch.score_batch()`, and reports per-case band adherence.
+  Run at calibration start and after ANY change to `scoring_prompt.md`/`profile_summary.md`
+  (both are PROTECTED per `SELF_HEALING.md` §4 once calibration locks them).
+- **Exemplar injection (M6.7 item 3)**: deferred until ≥20 calibration labels exist (not
+  built in M6.7) — see `PHASE2_KICKOFF.md`.
 - **Tailoring**: see `docs/TAILORING_SPEC.md`.
 - **Gmail alerts adapter** (LinkedIn + Jobright alert emails): a future `discover/` adapter;
   same `DiscoveredJob` contract. Not in scope for M1–M5.

@@ -230,7 +230,11 @@ M6.6 acceptance: re-export the current DB → Neuralink ≤ 2 objects, Serco ≤
 match chrome patterns; every object carries locations/flags/jd_quality; research-role leak
 closed with a regression test.
 
-### M6.7 Scoring architecture amendment (evidence: RecruitBench, Sood 2026)
+### M6.7 Scoring architecture amendment (evidence: RecruitBench, Sood 2026) — CLOSED 2026-07-08
+
+Items 1 and 2 built (`scripts/score_batch.py`, `scripts/scoring_stress.py` +
+`tests/fixtures/scoring_stress/cases.json`); item 3 (exemplar injection) correctly deferred —
+see the "M6.7" entry in DECISIONS.md.
 
 Benchmark evidence (RecruitBench: outcome-grounded evaluation of LLM job-fit scoring
 against real interview progression) shows monolithic scoring of large pools under-scores

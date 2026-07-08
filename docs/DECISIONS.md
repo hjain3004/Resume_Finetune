@@ -510,3 +510,39 @@ loading, content-repost call in `run_resolution`, liveness recheck before digest
 `src/digest.py` (Recycled & reopened / Closed sections), `scripts/export_batch.py` (imports
 from `textsim` instead of defining its own copies), `docs/ARCHITECTURE.md` §4.1–4.3, §7.5
 (new), §8. Full suite: 259 passed.
+
+## M6.7 — Sub-batched scoring + synthetic stress suite (2026-07-08)
+
+**Synthetic JD bands not fully specified by the doc.** `PHASE2_KICKOFF.md` M6.7 item 2 names
+6 categories with explicit bands (perfect backend [8.5–10], hard-requirement miss [2.5–4.5],
+wrong specialty [3–4], sponsorship_risk [≤6 cap]) plus two more by name only
+("keyword-stuffed JD", "stale/vague JD") with no band. Per instruction, drafted all 10
+synthetic JDs against `docs/scoring_prompt.md`'s anchored scale and the candidate's actual
+profile (`config/profile_summary.md`: Java/Spring backend + Python/LLM-agent evidence,
+new-grad, San Jose), including two extra categories beyond the doc's 6 (an LLM-agent-match
+variant of "perfect," and an `ml`-track-stretch variant of "partial overlap") to reach 10 and
+give both `base_variant` values a positive case. Presented the full expected-band table to
+the user before writing any code (per instruction) — approved as-is, including the
+improvised bands for keyword-stuffed [3–5] and stale/vague [2–4]: low-confidence but not 0,
+since the anchored scale's 0–2 band is reserved for "hard disqualifier," not "insufficient
+information," and a scorer that zeroes vague JDs would incentivize the wrong caution.
+
+**Sub-batched scoring wrapper design.** `docs/scoring_prompt.md`'s prompt body assumes a
+single fixed workflow ("read the most recent file in `data/batch/`..."), which doesn't work
+per-chunk. Rather than fork the prompt file, `scripts/score_batch.py`'s
+`build_chunk_prompt()` reuses the prompt body verbatim (split at the `## Prompt` heading) and
+prepends a short override paragraph naming the chunk-local input/output file paths — "same
+prompt" per the spec, with only the file-path instructions swapped. `import_scores.py`
+needed no changes: `score_batch()` concatenates all chunk results into one array before
+writing the final `*.scored.json`, so row-coverage validation still runs over the whole
+batch as the M6.1 spec requires.
+
+**Exemplar injection (item 3) not built** — explicitly gated by the doc on ≥20 calibration
+labels existing, which isn't true yet (calibration hasn't started).
+
+**New files:** `scripts/score_batch.py`, `scripts/scoring_stress.py`,
+`tests/fixtures/scoring_stress/cases.json`, `tests/test_score_batch.py`,
+`tests/test_scoring_stress.py`. No `src/` changes (this is Phase-2 tooling, lives in
+`scripts/` per the existing `export_batch.py`/`import_scores.py` pattern — no LLM calls
+inside `src/`, per CLAUDE.md prime directive #7). `subprocess` is stdlib, and shelling out to
+the already-present `claude` CLI is not a new Python dependency. Full suite: 272 passed.
