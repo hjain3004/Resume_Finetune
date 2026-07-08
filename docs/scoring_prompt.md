@@ -23,9 +23,13 @@ summary. Do not invent facts about a job that aren't in its `jd_text`.
 1. Read `config/profile_summary.md` — this is the candidate's background,
    skills, and target roles.
 2. Read the most recent file in `data/batch/` named `YYYY-MM-DD.json` — a JSON
-   array of `{id, row_ids, company, title, jd_text}` objects. `row_ids` lists
-   every duplicate/near-duplicate row this one representative stands in for
-   (see M6.1) — copy it verbatim into your output for the same object.
+   array of `{id, row_ids, company, title, locations, flags, jd_quality,
+   jd_text}` objects. `row_ids` lists every duplicate/near-duplicate row this
+   one representative stands in for (see M6.1) — copy it verbatim into your
+   output for the same object. `locations` lists every distinct location seen
+   across the group. `flags` (e.g. `sponsor_likely`) and `jd_quality` (`ats`
+   or `aggregator`) describe the representative posting — see M6.4 for how to
+   weigh them when scoring.
 3. For every object in that array, score fit on a 0–10 scale (10 = excellent
    fit, 0 = no fit) based on how well the role matches the candidate's skills,
    experience level, and stated target roles in the profile summary.

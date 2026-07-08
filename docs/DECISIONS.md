@@ -272,3 +272,26 @@ the ~40 jobright rows already `RESOLVED` via the old generic resolver were left
 as-is — idempotency means they won't be reprocessed by the new resolver
 automatically. Reprocessing them (reset to `DISCOVERED`, documented one-off) is
 M6.6's job per its punch-list acceptance criteria, not M6.2's.
+
+## M6.3 — Export schema v2 (2026-07-08)
+
+PHASE2_KICKOFF.md specifies `locations` as an aggregate across a cluster's
+`row_ids` ("distinct locations across the group, in id order") but doesn't say
+whether `flags`/`jd_quality` should aggregate the same way or come from the
+representative row alone. Decision: `flags` and `jd_quality`, like `company`/
+`title`/`jd_text`, are taken from the representative row only, not unioned
+across the group. Rationale: the exported `jd_text` is always the
+representative's own text, so `jd_quality` describing "how clean is this
+jd_text" only makes sense tied to that same row — unioning in an aggregator
+flag from a sibling row whose text isn't shown would mislabel a genuinely
+`ats`-quality representative. `locations` is the one field the spec explicitly
+calls out as cluster-wide, because the whole point of clustering near-dup rows
+is that they differ mainly by location.
+
+`scripts/import_scores.py` was left unchanged. The scored-file schema (what
+Claude writes back) is a fixed, narrow contract — `id, row_ids, fit_score,
+base_variant, missing_keywords, rationale` — and `locations`/`flags`/
+`jd_quality` are batch-input context for scoring, not fields the scorer
+returns. `docs/scoring_prompt.md` step 2 now documents the v2 input shape;
+no validation changes were needed for `import_scores.py` to "match" it since
+its contract never included those fields.

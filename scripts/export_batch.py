@@ -64,11 +64,14 @@ class _Cluster:
     rep_company: str
     rep_title: str
     rep_jd_text: str
+    rep_flags: list[str]
+    rep_jd_quality: str
     company_norm: str
     title_norm: str
     content_hash: str
     shingles: set[str]
     row_ids: list[int] = field(default_factory=list)
+    locations: list[str] = field(default_factory=list)
 
 
 def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
@@ -80,6 +83,7 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
         title_norm = norm(row["title"])
         c_hash = content_hash(jd_text)
         shingles = _shingles(jd_text)
+        location = row["location"]
 
         match = None
         for cluster in clusters:
@@ -94,6 +98,8 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
 
         if match is not None:
             match.row_ids.append(row["id"])
+            if location and location not in match.locations:
+                match.locations.append(location)
         else:
             clusters.append(
                 _Cluster(
@@ -101,11 +107,14 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
                     rep_company=row["company"],
                     rep_title=row["title"],
                     rep_jd_text=jd_text,
+                    rep_flags=json.loads(row["flags"]) if row["flags"] else [],
+                    rep_jd_quality=row["jd_quality"] or "ats",
                     company_norm=company_norm,
                     title_norm=title_norm,
                     content_hash=c_hash,
                     shingles=shingles,
                     row_ids=[row["id"]],
+                    locations=[location] if location else [],
                 )
             )
     return clusters
@@ -119,7 +128,7 @@ def export_batch(
 ) -> Path:
     date_str = date_str or _today_iso()
     rows = conn.execute(
-        "SELECT id, company, title, jd_text FROM jobs WHERE status = ? ORDER BY id",
+        "SELECT id, company, title, jd_text, location, flags, jd_quality FROM jobs WHERE status = ? ORDER BY id",
         (Status.RESOLVED,),
     ).fetchall()
     clusters = _cluster_rows(rows)
@@ -129,6 +138,9 @@ def export_batch(
             "row_ids": sorted(cluster.row_ids),
             "company": cluster.rep_company,
             "title": cluster.rep_title,
+            "locations": cluster.locations,
+            "flags": cluster.rep_flags,
+            "jd_quality": cluster.rep_jd_quality,
             "jd_text": cluster.rep_jd_text[:JD_TEXT_TRUNCATE_LEN],
         }
         for cluster in clusters

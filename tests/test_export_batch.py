@@ -36,7 +36,10 @@ def test_export_batch_includes_only_resolved_rows(tmp_path):
     assert data[0]["title"] == "Backend Engineer"
     assert data[0]["jd_text"] == "short jd text"
     assert data[0]["row_ids"] == [data[0]["id"]]
-    assert set(data[0].keys()) == {"id", "row_ids", "company", "title", "jd_text"}
+    assert data[0]["locations"] == ["Remote"]
+    assert data[0]["flags"] == []
+    assert data[0]["jd_quality"] == "ats"
+    assert set(data[0].keys()) == {"id", "row_ids", "company", "title", "jd_text", "locations", "flags", "jd_quality"}
 
 
 def test_export_batch_truncates_jd_text_to_6000_chars(tmp_path):
@@ -157,3 +160,61 @@ def test_export_batch_collapses_near_duplicate_by_title_similarity(tmp_path):
     amazon_entry = next(d for d in data if d["company"] == "Amazon")
     assert sorted(neuralink_entry["row_ids"]) == [1, 2]
     assert amazon_entry["row_ids"] == [3]
+
+
+def test_export_batch_locations_distinct_across_group_in_id_order(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    base_jd = (
+        "We are looking for a driven software engineer to design build and scale "
+        "distributed backend systems handling millions of requests daily across "
+        "our microservices platform"
+    )
+    conn.executescript(
+        f"""
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k1', 'Neuralink', 'Software Engineer', 'Fremont, CA', 'https://neuralink.example/1', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', '{base_jd}');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k2', 'Neuralink', 'Software Engineer', 'Austin, TX', 'https://neuralink.example/2', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', '{base_jd} Location: Austin, TX.');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k3', 'Neuralink', 'Software Engineer', 'Fremont, CA', 'https://neuralink.example/3', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', '{base_jd} Location: Fremont, CA.');
+        """
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 1
+    assert data[0]["locations"] == ["Fremont, CA", "Austin, TX"]
+
+
+def test_export_batch_flags_and_jd_quality_come_from_representative_row(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    conn.executescript(
+        """
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text, flags, jd_quality)
+        VALUES ('k1', 'Relativity', 'Software Engineer', 'Chicago, IL', 'https://relativity.example/1', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Relativity · 3 hours ago\nBuild the future of legal tech.', '["sponsor_likely"]', 'aggregator');
+
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES ('k2', 'Relativity', 'Software Engineer', 'Remote', 'https://relativity.example/2', 'tracker_jobright', '2026-07-05T00:00:00+00:00', 'RESOLVED', 'Relativity · 9 hours ago\nBuild the future of legal tech.');
+        """
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 1
+    assert data[0]["id"] == 1
+    assert data[0]["flags"] == ["sponsor_likely"]
+    assert data[0]["jd_quality"] == "aggregator"
