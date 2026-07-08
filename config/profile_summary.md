@@ -72,3 +72,7 @@ Amdocs experience, different projects):
 - `ml` variant fits roles emphasizing applied ML/data science over pure
   backend engineering; use `backend` as the default when a posting doesn't
   clearly lean ML-specific.
+- Location: based in San Jose, CA. Remote-US and Bay Area postings are the
+  strongest location fit; other US metros are acceptable for a new grad.
+  Location alone should not sink an otherwise strong match, but weigh it
+  alongside stack/level fit.

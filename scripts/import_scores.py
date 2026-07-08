@@ -18,6 +18,7 @@ from src.run_ingest import load_filters_config
 REQUIRED_FIELDS = ("id", "row_ids", "fit_score", "base_variant", "missing_keywords", "rationale")
 RATIONALE_MAX_LEN = 160
 DEFAULT_THRESHOLD = 7.0
+ALLOWED_BASE_VARIANTS = ("backend", "ml")
 
 
 @dataclass(frozen=True)
@@ -57,8 +58,11 @@ def _validate_entry(conn: sqlite3.Connection, entry: dict) -> None:
     if not (0 <= fit_score <= 10):
         raise ValueError(f"'fit_score' must be between 0 and 10 for id {job_id}, got {fit_score!r}")
 
-    if not isinstance(entry["base_variant"], str) or not entry["base_variant"]:
-        raise ValueError(f"'base_variant' must be a non-empty string for id {job_id}")
+    base_variant = entry["base_variant"]
+    if base_variant not in ALLOWED_BASE_VARIANTS:
+        raise ValueError(
+            f"'base_variant' must be one of {ALLOWED_BASE_VARIANTS} for id {job_id}, got {base_variant!r}"
+        )
 
     missing_keywords = entry["missing_keywords"]
     if not isinstance(missing_keywords, list) or not all(isinstance(k, str) for k in missing_keywords):

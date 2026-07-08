@@ -106,6 +106,27 @@ def test_import_rejects_row_ids_missing_own_id():
         import_scores.import_scores(conn, [entry], threshold=7.0)
 
 
+def test_import_rejects_base_variant_outside_closed_enum():
+    conn = _conn()
+    entry = _valid_entry(base_variant="frontend")
+
+    with pytest.raises(ValueError, match="base_variant"):
+        import_scores.import_scores(conn, [entry], threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["status"] == Status.RESOLVED
+
+
+def test_import_accepts_ml_base_variant():
+    conn = _conn()
+    entry = _valid_entry(base_variant="ml")
+
+    import_scores.import_scores(conn, [entry], threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["base_variant"] == "ml"
+
+
 def test_import_rejects_rationale_too_long():
     conn = _conn()
     entry = _valid_entry(rationale="x" * 161)

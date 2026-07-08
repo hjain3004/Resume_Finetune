@@ -482,10 +482,11 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
 - **Scoring**: a script `scripts/export_batch.py` dumps all `RESOLVED` rows (id, company,
   title, jd_text truncated to ~6k chars each) to `data/batch/YYYY-MM-DD.json`. A headless
   Claude Code invocation reads that file plus `config/profile_summary.md` and writes
-  `data/batch/YYYY-MM-DD.scored.json` (`[{id, fit_score 0-10, base_variant, missing_keywords[],
-  rationale ≤160 chars}]`). A deterministic script validates the JSON against a schema and
-  writes scores back to SQLite (`SCORED`; ≥ threshold → `SHORTLISTED`). Claude never touches
-  the DB directly — files in, files out, validation in between.
+  `data/batch/YYYY-MM-DD.scored.json` (`[{id, row_ids, fit_score 0-10, base_variant (`backend`
+  or `ml`, closed enum), missing_keywords[], rationale ≤160 chars}]`). A deterministic script
+  validates the JSON against a schema and writes scores back to SQLite (`SCORED`; ≥ threshold →
+  `SHORTLISTED`). Claude never touches the DB directly — files in, files out, validation in
+  between.
 - **Tailoring**: see `docs/TAILORING_SPEC.md`.
 - **Gmail alerts adapter** (LinkedIn + Jobright alert emails): a future `discover/` adapter;
   same `DiscoveredJob` contract. Not in scope for M1–M5.

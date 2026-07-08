@@ -295,3 +295,31 @@ base_variant, missing_keywords, rationale` — and `locations`/`flags`/
 returns. `docs/scoring_prompt.md` step 2 now documents the v2 input shape;
 no validation changes were needed for `import_scores.py` to "match" it since
 its contract never included those fields.
+
+## M6.4 — Scoring prompt corrections (2026-07-08)
+
+`base_variant` is now a closed enum (`backend` or `ml`) enforced in
+`_validate_entry` via `ALLOWED_BASE_VARIANTS`, matching the two variants
+actually defined in `config/profile_summary.md` (the spec's `frontend`
+example never had a matching resume variant). This is the only code change;
+everything else in the spec — the anchored 0–10 scale, the location/flags
+weighting, ignoring residual aggregator noise, and the `sponsorship_risk`
+score cap — is guidance given to the headless Claude call in
+`docs/scoring_prompt.md`, not something `import_scores.py` re-derives or
+enforces from the DB. Rationale: the prompt already has full context
+(locations, flags, jd_quality, jd_text) to apply these judgment calls; adding
+a second, code-side enforcement layer (e.g. re-checking `sponsorship_risk`
+against the DB and clamping the score) would duplicate logic the deterministic
+layer has no principled way to apply consistently with the prompt's stated
+rationale requirement ("with the rationale noting it") without the DB write
+also rewriting `rationale` text — which is out of scope for what
+`import_scores.py` is meant to validate (structural/schema correctness), not
+rewrite. The `base_variant` enum is different: it's a closed, fully
+enumerable set with no judgment involved, so it belongs in the deterministic
+validator, same as the existing `fit_score` range and `rationale` length
+checks.
+
+`docs/scoring_prompt.md` also now tells Claude not to run
+`scripts/import_scores.py` itself — the wrapper runs it after the headless
+call returns, per the spec ("The wrapper (not Claude) runs `import_scores.py`
+after the headless call").
