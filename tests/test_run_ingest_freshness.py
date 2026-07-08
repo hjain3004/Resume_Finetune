@@ -26,7 +26,7 @@ def test_main_runs_liveness_recheck_and_closes_dead_shortlisted_row(tmp_path):
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "PoliteSession", return_value=mock_session),
     ):
-        assert run_ingest.main(["--db", db_path]) == 0
+        assert run_ingest.main(["--db", db_path, "--digest-dir", str(tmp_path / "digests")]) == 0
 
     conn = db.get_connection(db_path)
     row = conn.execute("SELECT * FROM jobs WHERE dedup_key = 'k1'").fetchone()

@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--discover-only", action="store_true", help="only run the discovery step")
     parser.add_argument("--limit", type=int, metavar="N", help="cap new insertions per source")
     parser.add_argument("--db", metavar="PATH", default="data/jobs.db", help="path to the SQLite database")
+    parser.add_argument(
+        "--digest-dir", metavar="DIR", default="data/digests", help="directory to write the digest markdown to"
+    )
     return parser
 
 
@@ -197,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             print(digest.build_digest(conn, run_row))
         else:
-            digest_path = digest.write_digest(conn, run_row)
+            digest_path = digest.write_digest(conn, run_row, base_dir=args.digest_dir)
             print(f"Digest written to {digest_path}")
 
     return 0

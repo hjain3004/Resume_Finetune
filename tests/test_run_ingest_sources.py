@@ -9,7 +9,7 @@ from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD
 
 
-def _run(db_path, jobs, *, resolve_result=None):
+def _run(db_path, jobs, *, resolve_result=None, digest_dir=None):
     with (
         patch.object(run_ingest, "discover_all", return_value=list(jobs)),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
@@ -17,7 +17,10 @@ def _run(db_path, jobs, *, resolve_result=None):
             run_ingest.resolve, "resolve", return_value=resolve_result or ResolvedJD("jd", "fixture")
         ),
     ):
-        run_ingest.main(["--db", db_path])
+        args = ["--db", db_path]
+        if digest_dir is not None:
+            args += ["--digest-dir", digest_dir]
+        run_ingest.main(args)
 
 
 def test_zero_discovery_source_is_recorded_not_silently_absent(tmp_path):
@@ -35,7 +38,7 @@ def test_zero_discovery_source_is_recorded_not_silently_absent(tmp_path):
             "tracker_simplify": {"enabled": True},
         },
     ):
-        _run(db_path, jobs)
+        _run(db_path, jobs, digest_dir=str(tmp_path / "digests"))
 
     conn = db.get_connection(db_path)
     run_id = conn.execute("SELECT id FROM runs ORDER BY id DESC LIMIT 1").fetchone()["id"]

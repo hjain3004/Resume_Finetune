@@ -546,3 +546,53 @@ labels existing, which isn't true yet (calibration hasn't started).
 `scripts/` per the existing `export_batch.py`/`import_scores.py` pattern — no LLM calls
 inside `src/`, per CLAUDE.md prime directive #7). `subprocess` is stdlib, and shelling out to
 the already-present `claude` CLI is not a new Python dependency. Full suite: 272 passed.
+
+## Test isolation bug found during M6.8/M6.7 live verification (2026-07-08)
+
+`tests/test_idempotency.py`, `tests/test_run_ingest_browser_resolver.py`, and
+`tests/test_run_ingest_sources.py` all called `run_ingest.main()` with a `--db` pointed at
+`tmp_path`, but no equivalent override for the digest — `digest.write_digest()` defaulted to
+the real `data/digests/` directory. Every pytest run of the full suite silently overwrote
+today's real digest file with fixture content (e.g. company "Acme"/"SWE"), which clobbered
+the evidence from this session's live M6.8 verification run before it could be inspected.
+Pre-existing bug (present since `test_idempotency.py`'s original M4 version), not introduced
+this session, but actively blocking a deliverable — fixed now rather than deferred. Added
+`--digest-dir` to `run_ingest.build_parser()` (default `data/digests`, unchanged), threaded
+into the `digest.write_digest()` call, and updated all three test files to pass a
+`tmp_path`-scoped digest dir. No test assertions changed; this only isolates side effects.
+
+## M6.7/M6.8 live verification (2026-07-08)
+
+Ran `python -m src.run_ingest --db data/jobs.db` live (backed up first to
+`data/jobs.db.pre-m6.7-m6.8-bak`). Discovery inserted 641 new rows (674 discovered total
+across tracker_jobright/tracker_simplify) and resolution reached 236 `RESOLVED` before the
+background process was interrupted (likely a harness wall-clock limit — resolving ~640 rows
+at the mandatory 2s-per-host throttle across hundreds of distinct ATS hosts is a long-running
+job; `runs.id=8` never reached `db.finish_run()`). Rather than discard the already-fetched
+work, completed the run administratively: ran `prefilter.run_prefilter()` (191 newly
+`FILTERED_OUT`) and `freshness.run_liveness_recheck()` (0 closed — no `SHORTLISTED`/`TAILORED`
+rows exist yet, scoring hasn't run) directly against the live DB, then called
+`db.finish_run()`/`digest.write_digest()` with the real resulting counts. `runs.notes` records
+that this run was completed administratively rather than end-to-end in one process.
+
+**M6.8 live evidence:** `data/digests/2026-07-08.md` shows a real `stale_listing` flag in the
+"New & resolved" table (Cisco — "Software Engineer Data/AI/Intelligent Systems 1", real
+`date_posted` older than 21 days) — 38 rows total carry it. `repost_count` bumped to 1 on 26
+rows via real dedup-key conflicts against already-known postings from earlier sessions,
+confirming the M6.8 item 2 bookkeeping fires live. No `repost`/`reopened` flag fired this run
+(would need a dedup-key conflict against a `RESOLVE_FAILED`/`CLOSED` row, or a genuine
+content-match against a `FILTERED_OUT`/`REJECTED`/`APPLIED`/`CLOSED` row at the same company —
+neither condition arose in this run's data), so the digest's "Recycled & reopened" section is
+correctly absent rather than fabricated. Also re-confirmed the M6.6 prefilter fix is still
+live-correct: "ByteDance — Graduate Research Scientist..." and "...Student Researcher..." both
+still filtered on `title_include`.
+
+**M6.7 live verification not completed:** the `claude` CLI (required by
+`scripts/score_batch.py` to actually invoke the headless scorer) is not present in this
+sandboxed execution environment — only inside Claude Code itself, which cannot shell out to a
+second copy of itself here. `scripts.score_batch`/`scripts.scoring_stress` are built and
+covered by mocked-subprocess tests, but running them for real against the live 31-object
+export (`data/batch/2026-07-08.json`) is left as the user's manual dry-run activity, per the
+existing M5 pattern ("Writing the template is M5; running it is the user's dry-run
+activity"). Command: `python -m scripts.score_batch data/batch/2026-07-08.json` (then
+`python -m scripts.import_scores data/batch/2026-07-08.scored.json` to apply).

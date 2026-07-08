@@ -28,26 +28,27 @@ def _resolve_side_effect(url, session, **kwargs):
     return ResolvedJD(jd_text="5 years is a plus, not required.", resolver="fixture")
 
 
-def _run_pipeline(db_path: str) -> int:
+def _run_pipeline(db_path: str, digest_dir: str) -> int:
     with (
         patch.object(run_ingest, "discover_all", return_value=list(FIXED_JOBS)),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest.resolve, "resolve", side_effect=_resolve_side_effect),
     ):
-        return run_ingest.main(["--db", db_path])
+        return run_ingest.main(["--db", db_path, "--digest-dir", digest_dir])
 
 
 def test_full_pipeline_run_twice_is_idempotent(tmp_path):
     db_path = str(tmp_path / "jobs.db")
+    digest_dir = str(tmp_path / "digests")
 
-    assert _run_pipeline(db_path) == 0
+    assert _run_pipeline(db_path, digest_dir) == 0
     conn = db.get_connection(db_path)
     first_run = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
     assert first_run["new_jobs"] == 2
     rows_after_first = [dict(r) for r in conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()]
     conn.close()
 
-    assert _run_pipeline(db_path) == 0
+    assert _run_pipeline(db_path, digest_dir) == 0
     conn = db.get_connection(db_path)
     second_run = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
     assert second_run["new_jobs"] == 0
