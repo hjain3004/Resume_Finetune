@@ -7,8 +7,11 @@ generation end-to-end.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
 
 import yaml
 
@@ -36,6 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", metavar="PATH", default="data/jobs.db", help="path to the SQLite database")
     parser.add_argument(
         "--digest-dir", metavar="DIR", default="data/digests", help="directory to write the digest markdown to"
+    )
+    parser.add_argument(
+        "--audit-dir", metavar="DIR", default="data/audit", help="directory to write the audit JSON to"
     )
     return parser
 
@@ -206,6 +212,13 @@ def main(argv: list[str] | None = None) -> int:
             freshness_config=freshness_cfg,
         )
         print(f"Audit: {audit_result.overall} ({len(audit_result.findings)} invariant(s) checked)")
+        if not args.dry_run:
+            audit_out_dir = Path(args.audit_dir)
+            audit_out_dir.mkdir(parents=True, exist_ok=True)
+            audit_date_str = datetime.now(timezone.utc).date().isoformat()
+            (audit_out_dir / f"{audit_date_str}.json").write_text(
+                json.dumps(audit_module.to_json_dict(audit_result, date_str=audit_date_str), indent=2)
+            )
 
     db.finish_run(
         conn,

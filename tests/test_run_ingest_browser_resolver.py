@@ -37,7 +37,11 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
         patch.object(run_ingest, "load_browser_resolver_flag", return_value=True),
         patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd", "browser")) as mock_resolve,
     ):
-        run_ingest.main(["--db", db_path, "--digest-dir", str(tmp_path / "digests")])
+        run_ingest.main([
+            "--db", db_path,
+            "--digest-dir", str(tmp_path / "digests"),
+            "--audit-dir", str(tmp_path / "audit"),
+        ])
 
     mock_resolve.assert_called_once_with(
         "https://boards.greenhouse.io/acme/jobs/1", mock_resolve.call_args.args[1], browser_resolver=True
