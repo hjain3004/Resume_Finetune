@@ -697,3 +697,82 @@ company-match gate still applies to the new signal). Full suite green aside from
 pre-existing, unrelated `tests/test_audit_cli.py` failures (I4/I5 already failing against
 the real repo's live `data/batch/2026-07-06.json` before this change, confirmed via
 `git stash`).
+
+## 2026-07-09 — Test-isolation fix: `tests/test_audit_cli.py` was reading real `data/batch/`
+
+The two `tests/test_audit_cli.py` failures noted above (M7's I3 extension) traced to a
+pre-existing bug in Task 12's own test design, not the I3 change itself:
+`test_main_writes_audit_json_and_returns_zero_on_pass` and
+`test_audit_runs_under_10s_on_10k_rows` both passed `--repo-root` pointed at the real
+project root, so `check_i3`/`check_i4`/`check_i5` read the repo's actual `data/batch/`
+directory instead of an isolated fixture. Once the archived `2026-07-06.json` (a known-bad
+batch, deliberately present for the M7 acceptance regression test) sat in that directory
+and I3 started catching it correctly, these two unrelated CLI-wiring tests went red for a
+reason that had nothing to do with what they were meant to verify (exit codes, JSON output
+shape, runtime budget). Fixed by pointing both tests at an isolated `tmp_path` root
+containing a copy of `config/` and `docs/scoring_prompt.md` but no `data/batch/` directory,
+so I3/I4/I5 correctly PASS vacuously (no batch file to check) — matching the tests' actual
+intent. No production code changed.
+
+## 2026-07-09 — M7 self-healing audit suite complete
+
+Implemented `scripts/audit.py` + `src/audit/` (I1-I13 per `docs/SELF_HEALING.md` §1) +
+`src/audit_schema.py` (hand-rolled JSON-schema-subset validator, no new dependency) +
+`src/llm_trace.py` (I11 shared trace helper, wired into `scripts/score_batch.py`) +
+`config/audit.yaml`/`chrome_patterns.txt`/`manual_domains.txt`/`batch_schema.json`/
+`scored_schema.json` + `resolve.LOGIC_VERSION` plumbing (I9, `jobs.resolved_logic_version`
+column — schema-change approval logged separately above, 2026-07-09) + manual_domains
+routing (I2, skips the resolve_attempts budget) + digest AUDIT section and FAIL banner +
+audit wired into `run_ingest.main()` right after the liveness recheck.
+
+Scoping decisions carried from the implementation plan: I7 (idempotency) is SKIP in the
+automatic per-run audit — a full double-pipeline run doesn't fit the <10s/10k-row budget
+and duplicates `tests/test_idempotency.py`; `invariants_db.diff_permitted_drift()` is
+exposed via `scripts.audit --db-before/--db-after` for the weekly cadence instead. I11 is
+a coarse "any trace file exists at all" check, not per-row trace linkage, since adding a
+`trace_id` FK would be a second PROTECTED schema change beyond what this session's
+instructions commissioned.
+
+**I3 acceptance-gate finding and fix (mid-build, this session):** the milestone's own
+acceptance test — the archived `2026-07-06.json` batch must fail I3, I4, and I5 — initially
+only held for I4/I5. Investigation found I3's Jaccard-similarity-only definition (≥0.85 on
+5-word shingles) did not catch the real historical Neuralink (ids 66/67/69, similarity
+0.6865–0.785) and Serco (ids 101/102, similarity 0.8397) near-dup pairs — all below
+threshold. `SELF_HEALING.md` §2's own I3 playbook suggested a "location-boilerplate,
+strip location lines before shingling" fix for the 0.70–0.85 band; inspecting the real
+`jd_text` content ruled this out — these are fully independent per-location AI paraphrases
+(no location-suffix text at all), the same root cause already documented and fixed for
+`scripts/export_batch.py`'s clustering in M6.6 via exact-(company,title)-match. With the
+user's explicit approval (I3's definition is PROTECTED per §4 item 3), extended `check_i3`
+to FAIL on EITHER the existing Jaccard≥threshold signal OR an exact `norm(company)` +
+`norm(title)` match, mirroring the M6.6 precedent. Regression-tested: existing
+Jaccard-based FAIL/PASS cases unchanged, new title-match FAIL case (low-Jaccard,
+exact-title, same-company) added, new cross-company-same-title PASS case added (the
+company-match gate still applies to the new signal).
+
+**Acceptance verified:** seeded-violation + clean fixture per invariant I1-I10
+(`pytest tests/test_audit_invariants_*.py`), the archived 2026-07-06 batch fixture now
+fails I3, I4, AND I5 (`tests/test_audit_2026_07_06_regression.py`, all 3 green), FAIL
+produces a nonzero exit and the digest banner (`tests/test_audit_cli.py`,
+`tests/test_digest.py`), full audit runs in <1s on a synthetic 10k-row DB (well under the
+10s budget; `tests/test_audit_cli.py::test_audit_runs_under_10s_on_10k_rows`). Full suite:
+`pytest -q` — 357 passed.
+
+**Live audit run against `data/jobs.db` (report only, not fixed this session per the
+user's instruction):** overall **FAIL**.
+- ✗ **I3 FAIL** — one near-duplicate pair not yet collapsed: ids 119/164, content
+  similarity 0.884 (above the 0.85 threshold — the existing Jaccard signal, not the new
+  title-match signal).
+- ✗ **I6a FAIL** — one row (id 257, "Software Integration Engineer") in a post-prefilter
+  status whose title/location would now be filtered by the `location` rule — a prefilter
+  leak.
+- ⚠ **I1 WARN** — `tracker_vansh` has reported 0 discoveries for 4 consecutive runs
+  (WARN threshold is 3; FAIL is 7).
+- ⚠ **I6b WARN** — the most recent run (id 9) filtered 0% of resolved rows, below the 20%
+  low-end sanity threshold.
+- ✓ I2, I3b, I4, I5, I8, I9, I10, I11, I12, I13 all PASS. I7 SKIP (by design — see above).
+
+Per CLAUDE.md's one-milestone-per-session rule and the user's explicit instruction, these
+live findings are next session's weekly-maintenance work (`SELF_HEALING.md` §6), triaged
+and fixed one invariant at a time per the §2 playbook, highest severity and lowest
+invariant number first (I3 FAIL before I6a FAIL before the two WARNs).
