@@ -115,8 +115,7 @@ def check_i9(conn, audit_config, filters_config, freshness_config, repo_root) ->
             fail_evidence.append({"id": row["id"], "resolved_logic_version": version})
         else:
             flags = sorted(set(flags) | {stale_flag})
-            conn.execute("UPDATE jobs SET flags = ? WHERE id = ?", (json.dumps(flags), row["id"]))
-            conn.commit()
+            db.set_flags(conn, row["id"], flags)
             warn_evidence.append({"id": row["id"], "resolved_logic_version": version})
 
     if fail_evidence:
@@ -129,15 +128,11 @@ def check_i9(conn, audit_config, filters_config, freshness_config, repo_root) ->
 def check_i10(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
     evidence = []
 
-    dup_keys = conn.execute(
-        "SELECT dedup_key, COUNT(*) c FROM jobs GROUP BY dedup_key HAVING c > 1"
-    ).fetchall()
+    dup_keys = db.duplicate_dedup_keys(conn)
     for row in dup_keys:
         evidence.append({"issue": "duplicate dedup_key", "dedup_key": row["dedup_key"]})
 
-    orphaned = conn.execute(
-        "SELECT rs.run_id, rs.source FROM run_sources rs LEFT JOIN runs r ON rs.run_id = r.id WHERE r.id IS NULL"
-    ).fetchall()
+    orphaned = db.orphaned_run_sources(conn)
     for row in orphaned:
         evidence.append({"issue": "orphaned run_sources row", "run_id": row["run_id"], "source": row["source"]})
 

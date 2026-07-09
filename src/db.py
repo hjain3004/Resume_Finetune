@@ -460,6 +460,44 @@ def touch_last_seen(conn: sqlite3.Connection, job_id: int) -> None:
     conn.commit()
 
 
+def set_flags(conn: sqlite3.Connection, job_id: int, flags: list[str]) -> None:
+    """M7 I9: overwrite a row's flags with `flags` (already-merged by the
+    caller), matching the `json.dumps(...) if flags else None` convention
+    used elsewhere in this module."""
+    conn.execute(
+        "UPDATE jobs SET flags = ? WHERE id = ?",
+        (json.dumps(flags) if flags else None, job_id),
+    )
+    conn.commit()
+
+
+def duplicate_dedup_keys(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """M7 I10: dedup_key values that appear on more than one row."""
+    return conn.execute(
+        "SELECT dedup_key, COUNT(*) c FROM jobs GROUP BY dedup_key HAVING c > 1"
+    ).fetchall()
+
+
+def orphaned_run_sources(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """M7 I10: run_sources rows whose run_id has no matching runs row."""
+    return conn.execute(
+        "SELECT rs.run_id, rs.source FROM run_sources rs LEFT JOIN runs r ON rs.run_id = r.id WHERE r.id IS NULL"
+    ).fetchall()
+
+
+def jd_text_by_id(conn: sqlite3.Connection, job_id: int) -> str | None:
+    row = conn.execute("SELECT jd_text FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    return row["jd_text"] if row else None
+
+
+def has_any_row_with_status(conn: sqlite3.Connection, statuses: tuple[str, ...]) -> bool:
+    row = conn.execute(
+        f"SELECT 1 FROM jobs WHERE status IN ({','.join('?' * len(statuses))}) LIMIT 1",
+        statuses,
+    ).fetchone()
+    return row is not None
+
+
 def rows_needing_liveness_check(conn: sqlite3.Connection, cutoff_iso: str) -> list[sqlite3.Row]:
     """M6.8: SHORTLISTED/TAILORED rows never checked, or not checked since
     `cutoff_iso`."""

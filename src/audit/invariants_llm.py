@@ -8,6 +8,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from src import db
 from src.audit import Finding
 from src.models import Status
 
@@ -15,10 +16,7 @@ _SCORED_STATUSES = (Status.SCORED, Status.SHORTLISTED, Status.TAILORED, Status.A
 
 
 def check_i11(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
-    has_scored_rows = conn.execute(
-        f"SELECT 1 FROM jobs WHERE status IN ({','.join('?' * len(_SCORED_STATUSES))}) LIMIT 1",
-        _SCORED_STATUSES,
-    ).fetchone()
+    has_scored_rows = db.has_any_row_with_status(conn, _SCORED_STATUSES)
     if not has_scored_rows:
         return Finding(invariant="I11", status="PASS")
 
@@ -76,7 +74,7 @@ def check_i13(conn, audit_config, filters_config, freshness_config, repo_root) -
     cutoff = (datetime.now(timezone.utc) - timedelta(days=liveness_days)).isoformat()
 
     evidence = []
-    for row in conn.execute("SELECT * FROM jobs WHERE status = ?", (Status.SHORTLISTED,)).fetchall():
+    for row in db.rows_by_status(conn, Status.SHORTLISTED):
         if row["last_seen_at"] is None or row["last_seen_at"] < cutoff:
             evidence.append({"id": row["id"], "issue": "liveness_overdue"})
 

@@ -10,7 +10,7 @@ import json
 import re
 from pathlib import Path
 
-from src import audit_schema
+from src import audit_schema, db
 from src.audit import Finding
 from src.models import norm
 from src.textsim import jaccard_similarity, shingles
@@ -84,9 +84,9 @@ def check_i3b(conn, audit_config, filters_config, freshness_config, repo_root) -
             continue
         texts = {}
         for row_id in row_ids:
-            row = conn.execute("SELECT jd_text FROM jobs WHERE id = ?", (row_id,)).fetchone()
-            if row and row["jd_text"]:
-                texts[row_id] = row["jd_text"]
+            jd_text = db.jd_text_by_id(conn, row_id)
+            if jd_text:
+                texts[row_id] = jd_text
         pairs = list(itertools.combinations(texts.items(), 2))
         matrix = []
         low_sim_found = False
