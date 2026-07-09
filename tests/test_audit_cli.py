@@ -1,7 +1,10 @@
 import json
+import shutil
 import sqlite3
 import time
 from pathlib import Path
+
+import pytest
 
 from scripts import audit as audit_cli
 from src import db
@@ -9,14 +12,30 @@ from src import db
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_main_writes_audit_json_and_returns_zero_on_pass(tmp_path):
+@pytest.fixture
+def isolated_repo_root(tmp_path):
+    """Build a repo-root-like directory containing only the config/docs the
+    audit's static checks (I4, I5, I12) need, WITHOUT the real repo's
+    data/batch/ directory. This keeps I3/I4/I5 (which read data/batch/*.json)
+    vacuously PASSing (no batch file present) instead of scanning the real,
+    intentionally-archived data/batch/2026-07-06.json fixture.
+    """
+    isolated_root = tmp_path / "isolated_repo"
+    shutil.copytree(_REPO_ROOT / "config", isolated_root / "config")
+    docs_dir = isolated_root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(_REPO_ROOT / "docs" / "scoring_prompt.md", docs_dir / "scoring_prompt.md")
+    return isolated_root
+
+
+def test_main_writes_audit_json_and_returns_zero_on_pass(tmp_path, isolated_repo_root):
     db_path = tmp_path / "jobs.db"
     conn = db.get_connection(str(db_path))
     conn.close()
     out_dir = tmp_path / "audit"
 
     code = audit_cli.main(
-        ["--db", str(db_path), "--out-dir", str(out_dir), "--repo-root", str(_REPO_ROOT)]
+        ["--db", str(db_path), "--out-dir", str(out_dir), "--repo-root", str(isolated_repo_root)]
     )
 
     assert code == 0
@@ -71,7 +90,7 @@ def test_diff_permitted_drift_cli_mode_fails_on_unpermitted_change(tmp_path):
     assert code == 1
 
 
-def test_audit_runs_under_10s_on_10k_rows(tmp_path):
+def test_audit_runs_under_10s_on_10k_rows(tmp_path, isolated_repo_root):
     db_path = tmp_path / "jobs.db"
     conn = db.get_connection(str(db_path))
     rows = [
@@ -87,7 +106,9 @@ def test_audit_runs_under_10s_on_10k_rows(tmp_path):
     conn.close()
 
     start = time.monotonic()
-    code = audit_cli.main(["--db", str(db_path), "--out-dir", str(tmp_path / "audit"), "--repo-root", str(_REPO_ROOT)])
+    code = audit_cli.main(
+        ["--db", str(db_path), "--out-dir", str(tmp_path / "audit"), "--repo-root", str(isolated_repo_root)]
+    )
     elapsed = time.monotonic() - start
 
     assert code == 0
