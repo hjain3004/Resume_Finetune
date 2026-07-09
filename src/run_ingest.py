@@ -12,7 +12,7 @@ from collections import Counter, defaultdict
 
 import yaml
 
-from src import db, digest, freshness, prefilter, resolve
+from src import audit as audit_module, db, digest, freshness, prefilter, resolve
 from src.discover import ADAPTERS, discover_all, inbox_manual
 from src.models import Status
 from src.resolve.base import PoliteSession
@@ -60,6 +60,13 @@ def load_browser_resolver_flag(path: str = "config/sources.yaml") -> bool:
 def load_freshness_config(path: str = "config/freshness.yaml") -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def load_audit_config(path: str = "config/audit.yaml") -> dict:
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+    cfg["current_logic_version"] = resolve.LOGIC_VERSION
+    return cfg
 
 
 def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
@@ -190,6 +197,16 @@ def main(argv: list[str] | None = None) -> int:
             closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
             print(f"Liveness recheck: {closed_count} job(s) closed.")
 
+    audit_result = None
+    if not args.discover_only and not args.resolve_only:
+        audit_result = audit_module.run_all(
+            conn,
+            audit_config=load_audit_config(),
+            filters_config=load_filters_config(),
+            freshness_config=freshness_cfg,
+        )
+        print(f"Audit: {audit_result.overall} ({len(audit_result.findings)} invariant(s) checked)")
+
     db.finish_run(
         conn,
         run_id,
@@ -205,9 +222,9 @@ def main(argv: list[str] | None = None) -> int:
     if not args.discover_only and not args.resolve_only:
         run_row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         if args.dry_run:
-            print(digest.build_digest(conn, run_row))
+            print(digest.build_digest(conn, run_row, audit_result=audit_result))
         else:
-            digest_path = digest.write_digest(conn, run_row, base_dir=args.digest_dir)
+            digest_path = digest.write_digest(conn, run_row, base_dir=args.digest_dir, audit_result=audit_result)
             print(f"Digest written to {digest_path}")
 
     return 0

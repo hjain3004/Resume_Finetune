@@ -149,7 +149,30 @@ def _per_source_table(conn: sqlite3.Connection, run_id: int) -> str:
     return "\n".join(lines)
 
 
-def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: str | None = None) -> str:
+def _audit_section(audit_result) -> str:
+    if audit_result is None:
+        return ""
+    lines = [
+        "",
+        "## Audit",
+        "",
+        "| Invariant | Status | Evidence |",
+        "|---|---|---|",
+    ]
+    for finding in audit_result.findings:
+        lines.append(f"| {finding.invariant} | {finding.status} | {len(finding.evidence)} |")
+    return "\n".join(lines)
+
+
+_FAIL_BANNER = (
+    "**⚠️ AUDIT FAILURES — see the Audit section below. The New & resolved section is "
+    "suppressed until the FAIL is cleared (docs/SELF_HEALING.md §3).**"
+)
+
+
+def build_digest(
+    conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: str | None = None, audit_result=None
+) -> str:
     date_str = date_str or _today_iso()
     needs_help = _needs_help_table(conn)
     needs_original = _needs_original_posting_table(conn)
@@ -157,6 +180,10 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
     closed = _closed_table(conn)
     needs_section = needs_help + ("\n" + needs_original if needs_original else "")
     needs_section += ("\n" + recycled if recycled else "") + ("\n" + closed if closed else "")
+
+    audit_failed = audit_result is not None and audit_result.overall == "FAIL"
+    new_and_resolved_body = _FAIL_BANNER if audit_failed else _new_and_resolved_table(conn)
+
     return (
         f"# Job Digest — {date_str}\n"
         "\n"
@@ -172,13 +199,14 @@ def build_digest(conn: sqlite3.Connection, run_row: sqlite3.Row, *, date_str: st
         f"{_per_source_table(conn, run_row['id'])}\n"
         "\n"
         "## New & resolved\n"
-        f"{_new_and_resolved_table(conn)}\n"
+        f"{new_and_resolved_body}\n"
         "\n"
         "## Needs your help\n"
         f"{needs_section}\n"
         "\n"
         "## Filtered out\n"
         f"{_filtered_out_list(conn)}\n"
+        f"{_audit_section(audit_result)}"
     )
 
 
@@ -188,10 +216,11 @@ def write_digest(
     *,
     base_dir: str | Path = "data/digests",
     date_str: str | None = None,
+    audit_result=None,
 ) -> Path:
     date_str = date_str or _today_iso()
     base = Path(base_dir)
     base.mkdir(parents=True, exist_ok=True)
     path = base / f"{date_str}.md"
-    path.write_text(build_digest(conn, run_row, date_str=date_str))
+    path.write_text(build_digest(conn, run_row, date_str=date_str, audit_result=audit_result))
     return path

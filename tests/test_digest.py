@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from src import digest
+from src.audit import AuditResult, Finding
 
 
 def _seed(conn: sqlite3.Connection) -> sqlite3.Row:
@@ -172,3 +173,57 @@ def test_build_digest_omits_closed_section_when_no_closed_rows():
     text = digest.build_digest(conn, run_row, date_str="2026-07-05")
 
     assert "## Closed (dead links)" not in text
+
+
+def test_audit_section_lists_every_finding():
+    result = AuditResult(
+        findings=[
+            Finding(invariant="I1", status="PASS", evidence=[]),
+            Finding(invariant="I4", status="FAIL", evidence=[{"id": 1}, {"id": 2}]),
+        ],
+        overall="FAIL",
+    )
+    section = digest._audit_section(result)
+    assert "I1" in section and "PASS" in section
+    assert "I4" in section and "FAIL" in section and "2" in section
+
+
+def test_build_digest_omits_audit_section_when_no_result_given():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "## Audit" not in text
+    assert text == EXPECTED
+
+
+def test_build_digest_shows_fail_banner_and_suppresses_new_and_resolved_when_audit_fails():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+    audit_result = AuditResult(findings=[Finding(invariant="I4", status="FAIL", evidence=[{"id": 1}])], overall="FAIL")
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05", audit_result=audit_result)
+
+    assert "AUDIT FAILURES" in text
+    assert "Acme Inc" not in text.split("## New & resolved")[1].split("## Needs your help")[0]
+    assert "## Audit" in text
+    assert "I4" in text and "FAIL" in text
+
+
+def test_build_digest_shows_new_and_resolved_when_audit_passes():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    run_row = _seed(conn)
+    audit_result = AuditResult(findings=[Finding(invariant="I1", status="PASS", evidence=[])], overall="PASS")
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05", audit_result=audit_result)
+
+    assert "AUDIT FAILURES" not in text
+    assert "Acme Inc" in text
+    assert "## Audit" in text
