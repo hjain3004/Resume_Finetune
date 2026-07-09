@@ -18,6 +18,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from src.llm_trace import write_trace
+
 CHUNK_SIZE = 6
 PROMPT_PATH = Path("docs/scoring_prompt.md")
 _PROMPT_HEADER_MARKER = "## Prompt"
@@ -64,7 +66,15 @@ def score_chunk(
         raise RuntimeError(f"chunk {index} scoring failed (exit {result.returncode}): {result.stderr}")
     if not chunk_output_path.exists():
         raise RuntimeError(f"chunk {index} scorer did not write {chunk_output_path}")
-    return json.loads(chunk_output_path.read_text())
+    raw_output = chunk_output_path.read_text()
+    write_trace(
+        invocation_type="scoring",
+        input_paths=[chunk_input_path],
+        raw_output=raw_output,
+        prompt_path=PROMPT_PATH,
+        model=claude_cmd[0],
+    )
+    return json.loads(raw_output)
 
 
 def score_batch(
