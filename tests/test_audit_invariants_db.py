@@ -2,7 +2,7 @@ import json
 import sqlite3
 
 from src import db
-from src.audit.invariants_db import check_i6a, check_i6b, check_i8, check_i9, check_i10
+from src.audit.invariants_db import check_i6a, check_i6b, check_i7, check_i8, check_i9, check_i10, diff_permitted_drift
 from src.models import Status
 
 _FILTERS_CFG = {
@@ -166,3 +166,30 @@ def test_i10_pass_for_clean_db():
     db.record_run_source(conn, run_id, "tracker_vansh", discovered=1)
     finding = check_i10(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
     assert finding.status == "PASS"
+
+
+def test_i7_check_is_skip_in_automatic_audit():
+    conn = _conn()
+    finding = check_i7(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    assert finding.status == "SKIP"
+
+
+def test_diff_permitted_drift_passes_for_identical_rows():
+    before = [{"id": 1, "status": "RESOLVED", "last_seen_at": "t1", "repost_count": 0}]
+    after = [{"id": 1, "status": "RESOLVED", "last_seen_at": "t1", "repost_count": 0}]
+    assert diff_permitted_drift(before, after) == []
+
+
+def test_diff_permitted_drift_ignores_last_seen_at_and_repost_count():
+    before = [{"id": 1, "status": "RESOLVED", "last_seen_at": "t1", "repost_count": 0}]
+    after = [{"id": 1, "status": "RESOLVED", "last_seen_at": "t2", "repost_count": 1}]
+    assert diff_permitted_drift(before, after) == []
+
+
+def test_diff_permitted_drift_flags_unexpected_mutation():
+    before = [{"id": 1, "status": "RESOLVED", "title": "Engineer"}]
+    after = [{"id": 1, "status": "FILTERED_OUT", "title": "Engineer"}]
+    diffs = diff_permitted_drift(before, after)
+    assert len(diffs) == 1
+    assert diffs[0]["id"] == 1
+    assert "status" in diffs[0]["changed_fields"]

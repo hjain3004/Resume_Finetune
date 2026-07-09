@@ -46,7 +46,39 @@ def check_i6b(conn, audit_config, filters_config, freshness_config, repo_root) -
 
 
 def check_i7(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
-    return Finding(invariant="I7", status="SKIP")
+    """I7 (docs/SELF_HEALING.md §1/§3): a full double-pipeline-run idempotency
+    check is a weekly/after-src-change action (tests/test_idempotency.py
+    already covers it in CI), not a per-run DB-state check — it can't fit the
+    <10s/10k-row automatic-audit budget alongside a real second pipeline run.
+    Always SKIP here; diff_permitted_drift() below is the reusable piece,
+    invoked by `python -m scripts.audit --db-before X --db-after Y`."""
+    return Finding(
+        invariant="I7", status="SKIP",
+        detail="run via tests/test_idempotency.py or `scripts.audit --db-before/--db-after` (weekly cadence, SELF_HEALING §3)",
+    )
+
+
+def diff_permitted_drift(
+    rows_before: list[dict],
+    rows_after: list[dict],
+    *,
+    permitted_drift: frozenset[str] = frozenset({"last_seen_at", "repost_count"}),
+) -> list[dict]:
+    by_id_before = {r["id"]: r for r in rows_before}
+    by_id_after = {r["id"]: r for r in rows_after}
+    diffs = []
+    for row_id, after in by_id_after.items():
+        before = by_id_before.get(row_id)
+        if before is None:
+            diffs.append({"id": row_id, "issue": "row appeared that wasn't in the before snapshot"})
+            continue
+        changed = [
+            field for field in after
+            if field not in permitted_drift and before.get(field) != after.get(field)
+        ]
+        if changed:
+            diffs.append({"id": row_id, "changed_fields": changed})
+    return diffs
 
 
 def check_i8(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
