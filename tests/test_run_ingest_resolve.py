@@ -202,7 +202,10 @@ def test_run_resolution_calls_resolve_normally_when_manual_domains_empty():
     )
     session = MagicMock()
 
-    with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
+    with (
+        patch.object(run_ingest.resolve, "load_manual_domains", return_value=set()),
+        patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve,
+    ):
         run_ingest.run_resolution(conn, session)
 
     mock_resolve.assert_called_once_with(
