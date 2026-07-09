@@ -89,7 +89,7 @@ def run_resolution(
         result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
         source = row["source"]
         if result is not None:
-            db.mark_resolved(conn, row["id"], result)
+            db.mark_resolved(conn, row["id"], result, logic_version=resolve.LOGIC_VERSION)
             prior_repost = freshness.find_content_repost(
                 conn, row["company"], result.jd_text, exclude_row_id=row["id"]
             )

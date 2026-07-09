@@ -557,3 +557,54 @@ def test_rows_needing_liveness_check_only_shortlisted_and_tailored_and_stale(con
     rows = db.rows_needing_liveness_check(conn, "2026-06-01T00:00:00+00:00")
 
     assert [r["id"] for r in rows] == [ids[0]]
+
+
+def test_mark_resolved_writes_logic_version(conn):
+    job = _job()
+    db.insert_discovered(conn, [job])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    resolved = ResolvedJD(jd_text="jd text", resolver="greenhouse")
+
+    db.mark_resolved(conn, job_id, resolved, logic_version=3)
+
+    row = conn.execute("SELECT resolved_logic_version FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["resolved_logic_version"] == 3
+
+
+def test_mark_resolved_defaults_logic_version_to_one(conn):
+    job = _job()
+    db.insert_discovered(conn, [job])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    db.mark_resolved(conn, job_id, ResolvedJD(jd_text="jd text", resolver="greenhouse"))
+
+    row = conn.execute("SELECT resolved_logic_version FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["resolved_logic_version"] == 1
+
+
+def test_mark_resolved_clears_stale_logic_version_flag(conn):
+    job = _job()
+    db.insert_discovered(conn, [job])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET flags = ? WHERE id = ?", (json.dumps(["stale_logic_version", "reopened"]), job_id)
+    )
+    conn.commit()
+
+    db.mark_resolved(conn, job_id, ResolvedJD(jd_text="jd text", resolver="greenhouse"), logic_version=2)
+
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert json.loads(row["flags"]) == ["reopened"]
+
+
+def test_record_resolve_failure_force_failed_sets_resolve_failed_immediately(conn):
+    job = _job()
+    db.insert_discovered(conn, [job])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    status = db.record_resolve_failure(conn, job_id, force_failed=True)
+
+    assert status == Status.RESOLVE_FAILED
+    row = conn.execute("SELECT status, resolve_attempts FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.RESOLVE_FAILED
+    assert row["resolve_attempts"] == 1

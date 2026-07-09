@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from src import db
+from src import db, resolve
 from src.models import DiscoveredJob, ResolvedJD
 
 SOURCE_NAME = "inbox"
@@ -120,6 +120,7 @@ def ingest(conn, config: dict) -> InboxResult:
                 ResolvedJD(
                     jd_text=jd_text, resolver="manual", raw_title=title, raw_location=location
                 ),
+                logic_version=resolve.LOGIC_VERSION,
             )
             new_pastes += 1
         processed_dir.mkdir(parents=True, exist_ok=True)

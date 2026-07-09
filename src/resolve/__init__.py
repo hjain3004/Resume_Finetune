@@ -8,6 +8,13 @@ from urllib.parse import urlparse
 from src.models import ResolvedJD
 from src.resolve import amazon_jobs, ashby, browser, generic, greenhouse, jobright, lever, workday, wrapper
 
+# I9 (docs/SELF_HEALING.md §1): bump whenever resolver/cleaner behavior
+# changes so active rows resolved under an older version get flagged for
+# re-resolution by the audit. PROTECTED-adjacent: bumping this is expected
+# maintenance (not a schema/threshold change), but do it deliberately — every
+# bump makes the next audit run WARN on every currently-active row.
+LOGIC_VERSION = 1
+
 _HOSTNAME_ROUTES = (
     ("greenhouse.io", greenhouse),
     ("lever.co", lever),

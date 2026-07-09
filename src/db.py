@@ -74,6 +74,8 @@ _JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
     # M6.8: freshness/recycling defense.
     ("last_seen_at", "TEXT"),
     ("repost_count", "INTEGER NOT NULL DEFAULT 0"),
+    # M7: I9 backfill-completeness tracking.
+    ("resolved_logic_version", "INTEGER"),
 )
 
 # M6.5: per-run tier-2 (browser resolver) observability counters.
@@ -340,7 +342,9 @@ def reset_for_reresolution(conn: sqlite3.Connection, job_ids: list[int]) -> None
     conn.commit()
 
 
-def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -> None:
+def mark_resolved(
+    conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD, *, logic_version: int = 1
+) -> None:
     """Set status=RESOLVED with the resolved JD text/resolver, and backfill
     title/location if they were still holding their inbox placeholder value
     (title == the URL's hostname, or location NULL).
@@ -348,7 +352,12 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
     M6.8: merges (union) resolved.flags into whatever flags the row already
     carried, rather than overwriting — otherwise a discovery-time
     `stale_listing` or a resurfacing `reopened` flag is silently dropped the
-    moment the row resolves (same class of bug as the M6.2 prefilter fix)."""
+    moment the row resolves (same class of bug as the M6.2 prefilter fix).
+
+    M7 (I9): records `logic_version` (the resolver logic version active at
+    resolve time — callers pass `resolve.LOGIC_VERSION`) and clears any
+    `stale_logic_version` flag the audit previously set, since this resolve
+    call is by definition re-deriving the row under the current version."""
     row = conn.execute("SELECT url, title, location, flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
     title = row["title"]
     if resolved.raw_title and title == (urlparse(row["url"]).hostname or ""):
@@ -357,13 +366,14 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
     if resolved.raw_location and not location:
         location = resolved.raw_location
     existing_flags = json.loads(row["flags"]) if row["flags"] else []
-    merged_flags = sorted(set(existing_flags) | set(resolved.flags or []))
+    merged_flags = sorted((set(existing_flags) | set(resolved.flags or [])) - {"stale_logic_version"})
 
     conn.execute(
         """
         UPDATE jobs
         SET status = ?, jd_text = ?, jd_resolved_at = ?, resolver = ?,
-            title = ?, location = ?, ats_url = ?, flags = ?, jd_quality = ?, notes = ?
+            title = ?, location = ?, ats_url = ?, flags = ?, jd_quality = ?, notes = ?,
+            resolved_logic_version = ?
         WHERE id = ?
         """,
         (
@@ -377,18 +387,21 @@ def mark_resolved(conn: sqlite3.Connection, job_id: int, resolved: ResolvedJD) -
             json.dumps(merged_flags) if merged_flags else None,
             resolved.jd_quality or "ats",
             resolved.notes,
+            logic_version,
             job_id,
         ),
     )
     conn.commit()
 
 
-def record_resolve_failure(conn: sqlite3.Connection, job_id: int) -> str:
-    """Increment resolve_attempts; mark RESOLVE_FAILED once the limit is hit.
-    Returns the resulting status so callers can tally permanent failures."""
+def record_resolve_failure(conn: sqlite3.Connection, job_id: int, *, force_failed: bool = False) -> str:
+    """Increment resolve_attempts; mark RESOLVE_FAILED once the limit is hit,
+    or immediately when `force_failed` (M7 I2: a manual_domains hit skips the
+    retry budget entirely — see resolve.is_manual_domain()). Returns the
+    resulting status so callers can tally permanent failures."""
     row = conn.execute("SELECT resolve_attempts FROM jobs WHERE id = ?", (job_id,)).fetchone()
     attempts = row["resolve_attempts"] + 1
-    status = Status.RESOLVE_FAILED if attempts >= RESOLVE_FAILURE_LIMIT else Status.DISCOVERED
+    status = Status.RESOLVE_FAILED if force_failed or attempts >= RESOLVE_FAILURE_LIMIT else Status.DISCOVERED
     conn.execute(
         "UPDATE jobs SET resolve_attempts = ?, status = ? WHERE id = ?",
         (attempts, status, job_id),

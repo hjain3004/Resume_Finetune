@@ -651,3 +651,14 @@ recycling defense) are complete per their acceptance criteria: code committed (S
 above), and full suite green. M6.7 item 3 (exemplar injection) and M6.8's I13 audit hook
 remain correctly deferred per the doc's own gating. Marking both CLOSED in
 `docs/PHASE2_KICKOFF.md` alongside M6.9 items 1–2, completed in this session.
+
+## 2026-07-09 — M7: jobs.resolved_logic_version schema addition (I9)
+
+New nullable `jobs.resolved_logic_version INTEGER` column, added via the standard idempotent
+`ALTER TABLE` migration. This is a DB schema change (SELF_HEALING §4 item 1, normally
+PROTECTED); approval for this specific addition is the user's M7 task instructions, which
+explicitly commissioned "LOGIC_VERSION plumbing for I9" — recorded here per §4's requirement
+that PROTECTED changes need an in-session approval entry. `resolve.LOGIC_VERSION` (currently
+`1`) is written by every `db.mark_resolved()` call; `mark_resolved()` also strips any
+`stale_logic_version` flag the audit previously set, since re-resolving is what clears
+staleness.
