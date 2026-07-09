@@ -273,6 +273,22 @@ def run_sources_for_run(conn: sqlite3.Connection, run_id: int) -> list[sqlite3.R
     ).fetchall()
 
 
+def recent_run_sources_by_source(conn: sqlite3.Connection, source: str, limit: int) -> list[sqlite3.Row]:
+    """Most-recent-first run_sources rows for one source, for I1's
+    consecutive-zero-discoveries check."""
+    return conn.execute(
+        "SELECT * FROM run_sources WHERE source = ? ORDER BY run_id DESC LIMIT ?", (source, limit)
+    ).fetchall()
+
+
+def distinct_run_sources(conn: sqlite3.Connection) -> list[str]:
+    return [row["source"] for row in conn.execute("SELECT DISTINCT source FROM run_sources ORDER BY source")]
+
+
+def recent_runs(conn: sqlite3.Connection, limit: int) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+
+
 def start_run(conn: sqlite3.Connection) -> int:
     cursor = conn.execute(
         "INSERT INTO runs (started_at) VALUES (?)", (_utcnow_iso(),)
