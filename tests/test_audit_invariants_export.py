@@ -41,6 +41,56 @@ def test_i3_fail_when_two_objects_are_near_duplicates(tmp_path):
     assert {1, 2} <= {i for e in finding.evidence for i in e["ids"]}
 
 
+def test_i3_fail_on_exact_title_match_despite_low_jaccard(tmp_path):
+    # Regression case for the real 2026-07-06 batch: jobright generates a
+    # genuinely independent AI paraphrase per location for the same posting,
+    # so two same-company/same-title objects can score well below the 0.85
+    # Jaccard threshold while still being the same leaked posting.
+    _write_batch(
+        tmp_path,
+        [
+            {
+                "id": 66, "row_ids": [66], "company": "Neuralink", "title": "Software Engineer, BCI Applications",
+                "locations": [], "flags": [], "jd_quality": "aggregator",
+                "jd_text": (
+                    "Neuralink is building a brain computer interface to help people with "
+                    "paralysis regain independence. As a software engineer on the BCI "
+                    "applications team you will design intuitive control software that "
+                    "translates neural signals into real world actions for our participants."
+                ),
+            },
+            {
+                "id": 67, "row_ids": [67], "company": "Neuralink", "title": "Software Engineer, BCI Applications",
+                "locations": [], "flags": [], "jd_quality": "aggregator",
+                "jd_text": (
+                    "Join Neuralink's mission to restore autonomy for people living with "
+                    "paralysis. This role focuses on crafting the application layer that "
+                    "turns decoded neural activity into responsive, reliable commands for "
+                    "assistive devices used every day by our participants."
+                ),
+            },
+        ],
+    )
+    finding = check_i3(_conn(), _AUDIT_CFG, {}, {}, tmp_path)
+    assert finding.status == "FAIL"
+    assert {66, 67} <= {i for e in finding.evidence for i in e["ids"]}
+    entry = next(e for e in finding.evidence if set(e["ids"]) == {66, 67})
+    assert entry["matched_on"] == "title"
+    assert entry["similarity"] < _AUDIT_CFG["i3"]["similarity_threshold"]
+
+
+def test_i3_pass_for_same_title_different_company(tmp_path):
+    _write_batch(
+        tmp_path,
+        [
+            {"id": 1, "row_ids": [1], "company": "Acme", "title": "Software Engineer", "locations": [], "flags": [], "jd_quality": "ats", "jd_text": "Backend engineer building distributed systems in Java and Kafka."},
+            {"id": 2, "row_ids": [2], "company": "Beta", "title": "Software Engineer", "locations": [], "flags": [], "jd_quality": "ats", "jd_text": "Warehouse associate needed for logistics operations in Seattle."},
+        ],
+    )
+    finding = check_i3(_conn(), _AUDIT_CFG, {}, {}, tmp_path)
+    assert finding.status == "PASS"
+
+
 def test_i3_pass_for_unrelated_objects(tmp_path):
     _write_batch(
         tmp_path,

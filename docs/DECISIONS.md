@@ -662,3 +662,38 @@ that PROTECTED changes need an in-session approval entry. `resolve.LOGIC_VERSION
 `1`) is written by every `db.mark_resolved()` call; `mark_resolved()` also strips any
 `stale_logic_version` flag the audit previously set, since re-resolving is what clears
 staleness.
+
+## 2026-07-09 — M7: I3 definition extended with exact-(company,title)-match trigger
+
+Verified against the real archived `data/batch/2026-07-06.json` (copied to
+`tests/fixtures/audit_2026_07_06_batch.json`) that `check_i3`'s Jaccard-only definition
+missed a real, already-documented leakage pattern: jobright generates a genuinely
+independent AI paraphrase of the same posting per location (different wording throughout,
+not a location-suffix difference), so two batch objects for the same underlying posting can
+score well below the 0.85 threshold — e.g. ids 66/67/69 (Neuralink — Software Engineer, BCI
+Applications) scored 0.6865–0.785 Jaccard, and ids 101/102 (Serco — Software Engineer)
+scored 0.8397, all below threshold, so I3 PASSed on a batch that plainly leaked duplicates.
+Two rounds of investigation first ruled out the location-boilerplate explanation that I3's
+own playbook (`docs/SELF_HEALING.md` §"I3 fires →") originally suggested as the fix path —
+these pairs differ throughout the body text, not just in a trailing location clause.
+
+Fix: `check_i3` (`src/audit/invariants_export.py`) now FAILs a pair when EITHER the existing
+`same-company AND jaccard >= threshold` condition holds, OR a new `same-company AND
+norm(title_a) == norm(title_b)` condition holds (using `src.models.norm` on both sides).
+This exact-title-match signal mirrors the already-proven M6.6 fix in
+`scripts/export_batch.py`'s `_cluster_rows()` (see above), which added the identical
+company+title exact-match trigger to the *export-time* clustering logic for the same
+underlying reason. Evidence entries now include a `matched_on` key (`"content"` or
+`"title"`) alongside `similarity`, which is still reported (even below threshold) on
+title-match-only triggers so the evidence stays informative.
+
+This is a PROTECTED invariant-definition change (`docs/SELF_HEALING.md` §4 item 3).
+Approved in-session by the user, explicitly scoped as an extension of Task 8's I3 check,
+after the real-batch investigation above ruled out a non-PROTECTED fix. Regression coverage:
+`tests/test_audit_2026_07_06_regression.py::test_archived_2026_07_06_batch_fails_i3` (real
+batch), plus new unit tests in `tests/test_audit_invariants_export.py` covering the
+low-Jaccard/exact-title FAIL case and a same-title/different-company PASS case (the
+company-match gate still applies to the new signal). Full suite green aside from two
+pre-existing, unrelated `tests/test_audit_cli.py` failures (I4/I5 already failing against
+the real repo's live `data/batch/2026-07-06.json` before this change, confirmed via
+`git stash`).

@@ -43,6 +43,14 @@ def _load_scored(repo_root: Path) -> list[dict] | None:
 
 
 def check_i3(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+    """I3 fires on either of two independent signals within the same company:
+    (1) content similarity >= threshold, or (2) an exact title match. Signal
+    (2) mirrors scripts/export_batch.py's M6.6 _cluster_rows() fix: aggregator
+    resolvers like jobright generate a differently-worded AI summary per
+    location for the same posting, so same-company+same-title objects can
+    legitimately score below any reasonable shingle-similarity threshold. An
+    exact title match within a company is itself strong evidence of the same
+    posting leaking through as two batch objects. See DECISIONS.md."""
     threshold = audit_config.get("i3", {}).get("similarity_threshold", 0.85)
     batch = _load_batch(Path(repo_root))
     if not batch:
@@ -53,8 +61,11 @@ def check_i3(conn, audit_config, filters_config, freshness_config, repo_root) ->
         if norm(a["company"]) != norm(b["company"]):
             continue
         sim = jaccard_similarity(shingles(a["jd_text"]), shingles(b["jd_text"]))
-        if sim >= threshold:
-            evidence.append({"ids": [a["id"], b["id"]], "similarity": sim})
+        content_match = sim >= threshold
+        title_match = norm(a["title"]) == norm(b["title"])
+        if content_match or title_match:
+            matched_on = "content" if content_match else "title"
+            evidence.append({"ids": [a["id"], b["id"]], "similarity": sim, "matched_on": matched_on})
 
     status = "FAIL" if evidence else "PASS"
     return Finding(invariant="I3", status=status, evidence=evidence)
