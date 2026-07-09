@@ -98,3 +98,24 @@ def test_i2_warn_domain_with_three_failures_on_role_matching_titles():
 
     assert finding.status == "WARN"
     assert any(e.get("domain") == "gated.example.com" for e in finding.evidence)
+
+
+def test_i2_does_not_warn_when_domain_failures_have_excluded_titles():
+    """Negative test: 3 RESOLVE_FAILED at same domain with titles excluded by prefilter should NOT trigger WARN."""
+    conn = _conn()
+    conn.executescript(
+        """
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k4', 'Acme', 'Senior Software Engineer', 'https://excluded.example.com/1', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k5', 'Beta', 'Senior Backend Engineer', 'https://excluded.example.com/2', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k6', 'Gamma', 'Staff Software Engineer', 'https://excluded.example.com/3', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        """
+    )
+    conn.commit()
+
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+
+    assert finding.status == "PASS"
+    assert not any(e.get("domain") == "excluded.example.com" for e in finding.evidence)
