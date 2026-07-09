@@ -253,3 +253,27 @@ def test_resolve_passes_browser_resolver_toggle_through_to_jobright():
         "https://jobright.ai/jobs/info/abc", "<html>jobright page</html>", session, browser_resolver=True
     )
     assert result == "JOBRIGHT_RESOLVED"
+
+
+# --- M7 I2: manual_domains.txt routing ---------------------------------------
+
+
+def test_is_manual_domain_true_for_listed_hostname():
+    assert resolve.is_manual_domain(
+        "https://careers.example.com/job/1", manual_domains={"careers.example.com"}
+    )
+
+
+def test_is_manual_domain_false_for_unlisted_hostname():
+    assert not resolve.is_manual_domain(
+        "https://boards.greenhouse.io/acme/jobs/1", manual_domains={"careers.example.com"}
+    )
+
+
+def test_load_manual_domains_skips_comments_and_blanks(tmp_path):
+    path = tmp_path / "manual_domains.txt"
+    path.write_text("# comment\n\ncareers.example.com\n  other.example.com  \n")
+
+    domains = resolve.load_manual_domains(str(path))
+
+    assert domains == {"careers.example.com", "other.example.com"}

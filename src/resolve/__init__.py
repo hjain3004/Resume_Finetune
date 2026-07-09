@@ -64,3 +64,27 @@ def resolve(url: str, session, *, browser_resolver: bool = False) -> ResolvedJD 
     if module is jobright:
         return jobright.resolve(final_url, response.text, session, browser_resolver=browser_resolver)
     return module.resolve(final_url, session)
+
+
+MANUAL_DOMAINS_PATH = "config/manual_domains.txt"
+
+
+def load_manual_domains(path: str = MANUAL_DOMAINS_PATH) -> set[str]:
+    domains: set[str] = set()
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                domains.add(line)
+    return domains
+
+
+def is_manual_domain(url: str, manual_domains: set[str] | None = None) -> bool:
+    """I2 (docs/SELF_HEALING.md §2 'I2 fires' step 3): a hostname listed in
+    config/manual_domains.txt is known bot-gated — routes straight to the
+    digest's 'needs your help' section without spending the resolve_attempts
+    retry budget. run_ingest.run_resolution() checks this before calling
+    resolve()."""
+    manual_domains = load_manual_domains() if manual_domains is None else manual_domains
+    hostname = urlparse(url).hostname or ""
+    return hostname in manual_domains

@@ -190,3 +190,44 @@ def test_run_resolution_flags_content_repost_against_terminal_row():
 
     assert json.loads(new_row["flags"]) == ["repost"]
     assert f"job #{old_id}" in new_row["notes"]
+
+
+# --- M7 I2: manual_domains.txt routing ---------------------------------------
+
+
+def test_run_resolution_calls_resolve_normally_when_manual_domains_empty():
+    conn = _conn()
+    db.insert_discovered(
+        conn, [DiscoveredJob("Acme", "SWE", "Remote", "https://careers.example.com/job/1", "tracker_vansh", None)]
+    )
+    session = MagicMock()
+
+    with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
+        run_ingest.run_resolution(conn, session)
+
+    mock_resolve.assert_called_once_with(
+        "https://careers.example.com/job/1", session, browser_resolver=False
+    )
+
+
+def test_run_resolution_skips_resolve_call_for_manual_domain():
+    conn = _conn()
+    db.insert_discovered(
+        conn, [DiscoveredJob("Acme", "SWE", "Remote", "https://careers.example.com/job/1", "tracker_vansh", None)]
+    )
+    session = MagicMock()
+
+    with (
+        patch.object(run_ingest.resolve, "load_manual_domains", return_value={"careers.example.com"}),
+        patch.object(run_ingest.resolve, "resolve") as mock_resolve,
+    ):
+        resolved_count, failed_count, per_source, tiers = run_ingest.run_resolution(conn, session)
+
+    mock_resolve.assert_not_called()
+    assert resolved_count == 0
+    assert failed_count == 1
+    assert per_source == {"tracker_vansh": {"resolved": 0, "failed": 1}}
+    assert tiers == {"tier1": 0, "tier2": 0, "manual": 1}
+    row = db.get_by_url(conn, "https://careers.example.com/job/1")
+    assert row["status"] == Status.RESOLVE_FAILED
+    assert row["resolve_attempts"] == 1

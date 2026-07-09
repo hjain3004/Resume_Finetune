@@ -85,9 +85,16 @@ def run_resolution(
     failed_count = 0
     per_source: dict[str, dict[str, int]] = defaultdict(lambda: {"resolved": 0, "failed": 0})
     tiers = {"tier1": 0, "tier2": 0, "manual": 0}
+    manual_domains = resolve.load_manual_domains()
     for row in db.rows_by_status(conn, Status.DISCOVERED):
-        result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
         source = row["source"]
+        if resolve.is_manual_domain(row["url"], manual_domains):
+            db.record_resolve_failure(conn, row["id"], force_failed=True)
+            failed_count += 1
+            per_source[source]["failed"] += 1
+            tiers["manual"] += 1
+            continue
+        result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
         if result is not None:
             db.mark_resolved(conn, row["id"], result, logic_version=resolve.LOGIC_VERSION)
             prior_repost = freshness.find_content_repost(
