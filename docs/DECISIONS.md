@@ -776,3 +776,54 @@ Per CLAUDE.md's one-milestone-per-session rule and the user's explicit instructi
 live findings are next session's weekly-maintenance work (`SELF_HEALING.md` §6), triaged
 and fixed one invariant at a time per the §2 playbook, highest severity and lowest
 invariant number first (I3 FAIL before I6a FAIL before the two WARNs).
+
+## 2026-07-12 — M7 weekly maintenance: I6a FAIL + I6b WARN, one root cause
+
+**User-approved deviation from the §2 "one invariant per session" playbook default:**
+findings I6a (FAIL, id 257 leaked past the `location` prefilter rule) and I6b (WARN, run 9
+filtered 0% of resolved rows) were treated as a single fix in one session because
+investigation showed they share one root cause. Approved explicitly by the user in-session.
+
+**Root cause:** `src/run_ingest.py::main()` gated the call to `prefilter.run_prefilter()`
+behind `if not args.resolve_only:` (previously ~line 198). `prefilter.run_prefilter()`
+itself is already correctly stateful — it queries `WHERE status = RESOLVED AND
+filter_reason IS NULL`, so it will catch *any* eligible row regardless of which run
+resolved it — but the CLI wiring skipped calling it at all during a `--resolve-only`
+invocation. Run id 9 (2026-07-08) was exactly such a run ("resolve-only smoke run for
+M6.9 title-hygiene verification... interrupted administratively," per its `runs.notes`):
+it resolved id 257 (Cubic, "Software Integration Engineer", San Diego, CA — outside
+`config/filters.yaml`'s `location_allow` list) but never swept it, and no full
+(non-`--resolve-only`) run has executed since to catch up. That single gap explains both
+I6a (the row still sits RESOLVED with `filter_reason IS NULL` days later) and I6b (run 9's
+0%-filtered stat, which reflects prefilter never running that run, not the rules
+behaving oddly).
+
+**Fix (`src/run_ingest.py`):** moved the `prefilter.run_prefilter()` call out from behind
+the `if not args.resolve_only:` guard so it runs on every invocation that can produce
+RESOLVED rows (i.e., whenever `not args.discover_only`), matching prefilter's own
+already-stateful design instead of gating it on run mode. The liveness recheck
+(`freshness.run_liveness_recheck`) stays behind `--resolve-only` unchanged — this fix is
+scoped to the prefilter-skip bug only.
+
+**Regression tests:**
+- `tests/test_prefilter.py::test_evaluate_title_location_years_cases` — added id 257's
+  exact title/location ("Software Integration Engineer", "San Diego, CA") as a new
+  parametrized case, asserting `location` filter reason.
+- `tests/test_run_ingest_prefilter.py::test_resolve_only_run_still_filters_newly_resolved_rows`
+  (new file) — seeds id 257's exact company/title/location/URL as DISCOVERED, mocks
+  resolution, runs `run_ingest.main([..., "--resolve-only", ...])`, and asserts the row
+  ends FILTERED_OUT with `filter_reason == "location"` — proving a resolve-only run alone
+  no longer leaves a row unfiltered.
+
+**Verified:** full suite green (`pytest -q` — 360 passed). Retroactive fix confirmed
+directly against a copy of `data/jobs.db`: running `prefilter.run_prefilter()` (the code
+path the CLI now always reaches) flips id 257 from `RESOLVED`/`filter_reason=NULL` to
+`FILTERED_OUT`/`filter_reason='location'`. Did not run the live pipeline end-to-end against
+`data/jobs.db` (443 DISCOVERED rows would trigger live network resolution, unnecessary to
+verify this fix and outside this session's scope) — the next scheduled/manual run will
+apply it in production.
+
+**Not changed (still open, separate sessions per user's instruction):** I3 FAIL (Cisco
+duplicate ids 119/164 — DB-wide check vs. export-batch clustering scope question, plus
+whether URL req-ID extraction is a cheaper fix) and I1 WARN (`tracker_vansh` 4 consecutive
+zero-discovery runs, per the four-step I1 playbook).

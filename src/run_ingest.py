@@ -195,11 +195,15 @@ def main(argv: list[str] | None = None) -> int:
                 conn, run_id, source, resolved=counts["resolved"], failed=counts["failed"]
             )
 
-        if not args.resolve_only:
-            filters_cfg = load_filters_config()
-            filtered_count = prefilter.run_prefilter(conn, filters_cfg)
-            print(f"Filtered out {filtered_count} job(s).")
+        # I6a: prefilter eligibility is a state condition (RESOLVED rows lacking
+        # a filter_reason verdict), not a step gated on run mode. A --resolve-only
+        # run must still sweep it, or rows it resolves sit unfiltered until
+        # someone remembers to run a full pipeline (see DECISIONS.md 2026-07-12).
+        filters_cfg = load_filters_config()
+        filtered_count = prefilter.run_prefilter(conn, filters_cfg)
+        print(f"Filtered out {filtered_count} job(s).")
 
+        if not args.resolve_only:
             closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
             print(f"Liveness recheck: {closed_count} job(s) closed.")
 

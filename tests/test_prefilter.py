@@ -46,6 +46,10 @@ CONFIG = {
         # they aren't software roles.
         ("Graduate Research Scientist", "Remote", "", True, "title_include"),
         ("Student Researcher", "Remote", "", True, "title_include"),
+        # M7 I6a regression: id 257 (Cubic, "Software Integration Engineer",
+        # San Diego, CA) leaked into RESOLVED with no filter verdict because
+        # a --resolve-only run never swept it (see DECISIONS.md 2026-07-12).
+        ("Software Integration Engineer", "San Diego, CA", "", True, "location"),
     ],
 )
 def test_evaluate_title_location_years_cases(
