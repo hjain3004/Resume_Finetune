@@ -254,3 +254,103 @@ def test_export_batch_collapses_same_title_even_below_similarity_threshold(tmp_p
     ) < 0.85
     assert len(data) == 1
     assert sorted(data[0]["row_ids"]) == [1, 2]
+
+
+def test_export_batch_collapses_high_similarity_pair_with_different_titles(tmp_path):
+    """M7 I3 fix, 2026-07-12: check_i3 flags same-company pairs with Jaccard
+    content similarity >= 0.85 even when titles differ exactly. Live evidence:
+    Cisco ids 119/164, "...Systems I (Full Time)" vs "...Systems 1", similarity
+    0.884 — the same posting discovered twice, worded slightly differently,
+    with a title variant that doesn't match exactly. _cluster_rows() had no
+    merge path for this (M6.6 removed the Jaccard signal in favor of exact
+    title match); restoring it as an additional signal closes the gap. See
+    DECISIONS.md."""
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    jd_a = (
+        "Software Engineer Data AI Intelligent Systems role building large scale "
+        "distributed machine learning platforms used by millions of customers "
+        "across our global cloud infrastructure and networking products full time position"
+    )
+    jd_b = (
+        "Software Engineer Data AI Intelligent Systems role building large scale "
+        "distributed machine learning platforms used by millions of customers "
+        "across our global cloud infrastructure and networking products"
+    )
+    similarity = export_batch.jaccard_similarity(export_batch._shingles(jd_a), export_batch._shingles(jd_b))
+    assert similarity >= 0.85
+
+    conn.execute(
+        "INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text) "
+        "VALUES ('k1', 'Cisco', 'Software Engineer Data/AI/Intelligent Systems I (Full Time)', 'Austin, TX', "
+        "'https://careers.cisco.com/global/en/job/2000073/x', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'RESOLVED', ?)",
+        (jd_a,),
+    )
+    conn.execute(
+        "INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text) "
+        "VALUES ('k2', 'Cisco', 'Software Engineer Data/AI/Intelligent Systems 1', 'Boston, MA', "
+        "'https://careers.cisco.com/global/en/job/2000073', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'RESOLVED', ?)",
+        (jd_b,),
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 1
+    assert sorted(data[0]["row_ids"]) == [1, 2]
+
+
+def test_export_batch_does_not_merge_different_roles_at_same_company(tmp_path):
+    """Negative case for the M7 I3 fix: two genuinely different roles at the
+    same company, sharing a boilerplate company-description paragraph, must
+    stay below the 0.85 threshold and NOT merge. Guards against the Jaccard
+    signal over-merging distinct postings that happen to share a lot of
+    company boilerplate text."""
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    from src.db import init_db
+
+    init_db(conn)
+    boilerplate = (
+        "Cisco powers the internet and helps customers reimagine applications "
+        "secure their enterprise transform infrastructure and meet sustainability "
+        "goals as part of our commitment to a more inclusive future for all."
+    )
+    jd_backend = (
+        f"{boilerplate} We are hiring a backend software engineer to design and "
+        "scale distributed microservices handling billions of API requests daily "
+        "using Java, Kafka, and Kubernetes across our data center fabric."
+    )
+    jd_frontend = (
+        f"{boilerplate} We are hiring a frontend software engineer to build "
+        "accessible React and TypeScript interfaces for our network management "
+        "dashboard used by enterprise customers worldwide."
+    )
+    similarity = export_batch.jaccard_similarity(
+        export_batch._shingles(jd_backend), export_batch._shingles(jd_frontend)
+    )
+    assert similarity < 0.85
+
+    conn.execute(
+        "INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text) "
+        "VALUES ('k1', 'Cisco', 'Backend Software Engineer', 'Remote', "
+        "'https://careers.cisco.com/global/en/job/3000001', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'RESOLVED', ?)",
+        (jd_backend,),
+    )
+    conn.execute(
+        "INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, jd_text) "
+        "VALUES ('k2', 'Cisco', 'Frontend Software Engineer', 'Remote', "
+        "'https://careers.cisco.com/global/en/job/3000002', 'tracker_vansh', '2026-07-05T00:00:00+00:00', 'RESOLVED', ?)",
+        (jd_frontend,),
+    )
+    conn.commit()
+
+    path = export_batch.export_batch(conn, base_dir=tmp_path, date_str="2026-07-05")
+
+    data = json.loads(path.read_text())
+    assert len(data) == 2
+    assert sorted(d["row_ids"][0] for d in data) == [1, 2]

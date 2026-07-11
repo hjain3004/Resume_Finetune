@@ -827,3 +827,51 @@ apply it in production.
 duplicate ids 119/164 — DB-wide check vs. export-batch clustering scope question, plus
 whether URL req-ID extraction is a cheaper fix) and I1 WARN (`tracker_vansh` 4 consecutive
 zero-discovery runs, per the four-step I1 playbook).
+
+## 2026-07-12 — M7 weekly maintenance: I3 FAIL (Cisco duplicate ids 119/164)
+
+**Investigation (per the user's instruction to propose before implementing):** I3 does not
+run a separate "DB-wide" duplicate check — `check_i3` (`src/audit/invariants_export.py`)
+reads the *exported batch* (`_load_batch()` → `data/batch/*.json`), so it audits whether
+`scripts/export_batch.py`'s `_cluster_rows()` clustered correctly. The real gap: M6.6
+removed Jaccard-similarity clustering from `_cluster_rows()` entirely (kept only exact
+`content_hash` match and exact normalized-title match), because jobright generates a
+differently-worded AI summary per location for the *same title* — but `check_i3` never
+stopped checking for Jaccard similarity >= 0.85 as an independent FAIL signal. Ids 119/164
+(Cisco, "...Systems I (Full Time)" vs "...Systems 1", content similarity 0.884) have neither
+matching content_hash nor matching normalized title, so `_cluster_rows()` had no path to
+merge them — not a code defect, but a structural mismatch between what the audit checks for
+and what the clusterer implements.
+
+**Options considered:** (A) restore Jaccard similarity as an *additional* merge signal in
+`_cluster_rows()` (same 0.85 threshold `check_i3` already uses), closing the check_i3/
+clusterer definition gap generally; (B) extract a req/job ID from the URL (both Cisco URLs
+contain `2000073`) as a third exact-match signal, cheaper and zero fuzzy-matching risk but
+Cisco-specific unless generalized into a URL-pattern registry (rejected per CLAUDE.md's
+no-arms-race stance on per-domain special-casing — wrapper_map/manual_domains entries are
+earned only after >=3 failures, and this is a single observed case).
+
+**User approved Option A.** Implemented: `_cluster_rows()` now also merges same-company
+rows when `jaccard_similarity(shingles(a), shingles(b)) >= SIMILARITY_THRESHOLD` (module
+constant `SIMILARITY_THRESHOLD = 0.85` in `scripts/export_batch.py`, kept in sync with
+`config/audit.yaml`'s `i3.similarity_threshold` — PROTECTED per `SELF_HEALING.md` §4 item 3;
+no threshold VALUE changed, only a second consumer added for the same already-approved
+number). This only *adds* merge opportunities on top of the exact-hash/exact-title paths
+(never removes one), so it cannot reintroduce the M6.6 aggregator-per-location false
+negative.
+
+**Regression tests (`tests/test_export_batch.py`):**
+- `test_export_batch_collapses_high_similarity_pair_with_different_titles` — reproduces the
+  live Cisco shape (same company, similarity >= 0.85, differently-worded titles) and asserts
+  the two rows collapse into one batch object.
+- `test_export_batch_does_not_merge_different_roles_at_same_company` — negative fixture:
+  two distinct roles (backend vs. frontend) at the same company sharing a boilerplate
+  company-description paragraph; asserts similarity stays below 0.85 and the rows do NOT
+  merge, guarding against over-merging on shared boilerplate.
+
+**Verified:** full suite green (`pytest -q` — 362 passed). Re-exported the live
+`data/jobs.db` (via a scratch copy) and re-ran the full audit: ids 119/164 now merge into
+one batch object (`id 119, row_ids [119, 164]`), and I3 flips from FAIL to PASS. I6a/I6b/I1
+in that same scratch run reflect the scratch copy's own state (I6a still shows the id-257
+FAIL there because the prefilter fix from the earlier finding-group wasn't re-run against
+that particular scratch copy) — unrelated to this fix and not re-verified here.

@@ -18,6 +18,11 @@ from src.textsim import content_hash, jaccard_similarity, normalize_jd, shingles
 
 JD_TEXT_TRUNCATE_LEN = 6000
 
+# M7 I3 fix (2026-07-12): kept in sync with config/audit.yaml's i3.similarity_threshold
+# (PROTECTED per docs/SELF_HEALING.md §4 item 3) — both check_i3 and _cluster_rows must
+# agree on what counts as a near-duplicate. See DECISIONS.md for the approval.
+SIMILARITY_THRESHOLD = 0.85
+
 
 def _today_iso() -> str:
     return datetime.now(timezone.utc).date().isoformat()
@@ -39,19 +44,25 @@ class _Cluster:
 
 
 def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
-    """Group RESOLVED rows into duplicate clusters: exact content-hash match,
-    or exact (company, title) match (M6.6: dropped the Jaccard-similarity gate
-    on the title-match path — aggregator resolvers like jobright generate a
-    differently-worded AI summary per location for the same posting, so
-    same-company+same-title rows can legitimately score below any reasonable
-    shingle-similarity threshold. An exact title match within a company is
-    itself strong enough evidence of the same posting; see DECISIONS.md."""
+    """Group RESOLVED rows into duplicate clusters within the same company, on
+    any of three signals: (1) exact content-hash match, (2) exact title match
+    (M6.6: aggregator resolvers like jobright generate a differently-worded AI
+    summary per location for the same posting, so same-company+same-title rows
+    can legitimately score well below any reasonable shingle-similarity
+    threshold — an exact title match is itself strong enough evidence), or
+    (3) Jaccard content similarity >= SIMILARITY_THRESHOLD (M7 I3 fix,
+    2026-07-12: restores the fuzzy-match path M6.6 removed, as an ADDITIONAL
+    signal alongside the exact-title path rather than a replacement — closes
+    the gap where check_i3 flagged same-company pairs with high content
+    similarity but differently-worded titles that this function had no way to
+    merge; see DECISIONS.md)."""
     clusters: list[_Cluster] = []
     for row in rows:
         jd_text = row["jd_text"] or ""
         company_norm = norm(row["company"])
         title_norm = norm(row["title"])
         c_hash = content_hash(jd_text)
+        row_shingles = _shingles(jd_text)
         location = row["location"]
 
         match = None
@@ -62,6 +73,9 @@ def _cluster_rows(rows: list[sqlite3.Row]) -> list[_Cluster]:
                 match = cluster
                 break
             if cluster.title_norm == title_norm:
+                match = cluster
+                break
+            if jaccard_similarity(row_shingles, _shingles(cluster.rep_jd_text)) >= SIMILARITY_THRESHOLD:
                 match = cluster
                 break
 
