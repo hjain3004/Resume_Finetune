@@ -875,3 +875,62 @@ one batch object (`id 119, row_ids [119, 164]`), and I3 flips from FAIL to PASS.
 in that same scratch run reflect the scratch copy's own state (I6a still shows the id-257
 FAIL there because the prefilter fix from the earlier finding-group wasn't re-run against
 that particular scratch copy) — unrelated to this fix and not re-verified here.
+
+## 2026-07-12 — M7 weekly maintenance: I1 WARN (`tracker_vansh` silent for 4 runs)
+
+**Playbook investigation (per §2 I1, in order):** (1) `config/sources.yaml` has
+`tracker_vansh: {enabled: true}` — not disabled. (2) Ran the adapter standalone with DEBUG
+logging: the raw fetch (`fetch_json_listings` against
+`vanshb03/New-Grad-2027`/`dev`/`.github/scripts/listings.json`) succeeded (200, 1122
+entries, 639 after `active`/`is_visible` filtering) — the upstream source is not gone and
+not renamed/moved (rules out step 3). (4) Cross-referenced the 639 currently-live postings
+against the DB's actual `tracker_vansh` dedup_keys (the real ledger): **608 of them had
+never been inserted into the DB at all**, even though the on-disk snapshot
+(`snapshots/tracker_vansh.json`) already had nearly all of them marked "seen." That is
+exactly the §2 I1 failure mode: *"snapshot file corrupt/marking everything seen."* The
+adapter code itself is correct — proven by a real discovery run below inserting the missing
+rows cleanly on the first pass and finding zero on an immediate re-run (idempotent).
+
+Root cause of how the snapshot got that far ahead of the DB isn't fully forensically
+pinned down (no `runs` row shows a matching bulk-discovery event), but the mechanism is
+clear and reproducible: `tracker_common.diff_new_jobs()` overwrites its snapshot file as a
+side effect on every call, and it does this unconditionally — `discover(config)`'s
+`dry_run=True` path reads the snapshot without writing it, but any direct/interactive call
+to `diff_new_jobs()` (or `discover()` with `dry_run` falsy) against the real
+`snapshots/` directory permanently marks whatever it saw as "seen," whether or not those
+jobs ever reach the DB. This is consistent with earlier sessions' documented pattern of
+"reproduce interactively" debugging (e.g., M6.0's ashby-bug reproduction) very plausibly
+having done exactly this against production snapshots at some point.
+
+**This session compounded it, transparently disclosed:** while executing playbook step (2),
+I called `tracker_vansh.diff_new_jobs()` directly against the real
+`snapshots/tracker_vansh.json` (not an isolated copy) to check the fetch/parse path. That
+call's side effect marked ~6 more postings "seen" without inserting them, on top of the
+pre-existing ~602-posting drift. I hadn't copied the file first. Since the correct fix was a
+full snapshot reset regardless, this didn't change the remediation, but it was a process
+mistake — backed up the (already-mutated) file to the scratchpad before proceeding, for the
+record.
+
+**Fix (permitted per §2 I1: "snapshot reset"):** deleted `snapshots/tracker_vansh.json`.
+With the user's explicit go-ahead, ran the real backfill:
+`python -m src.run_ingest --source tracker_vansh --discover-only` — discovered 639,
+inserted 583 new rows (the ~25-row gap from 608 vs. 583 is intra-batch duplicate
+dedup_keys within the same 639-entry fetch, correctly collapsed by `insert_discovered`'s
+existing uniqueness handling). An immediate second run of the same command found 0 new,
+confirming idempotency. Also added a warning docstring to
+`tracker_common.diff_new_jobs()` (`src/discover/tracker_common.py`) flagging its
+snapshot-overwrite side effect and pointing future debugging sessions at `dry_run=True` or
+a `tmp_path` copy instead, to reduce recurrence risk. No test added beyond this — there is
+no code defect to regression-test; the adapter behaved correctly once given a
+non-corrupted snapshot, which the live backfill run itself demonstrates.
+
+**Also applied this session's earlier-committed I3/I6a fixes to production state** (both
+were only verified against scratch copies until now): ran `prefilter.run_prefilter()`
+directly against `data/jobs.db` (filtered id 257 — `location`), and re-ran
+`scripts.export_batch` to regenerate `data/batch/2026-07-12.json` with the restored
+Jaccard clustering signal (collapses ids 119/164).
+
+**Verified:** `python -m scripts.audit` against the live `data/jobs.db` now reports
+**Overall: PASS** across all 14 invariants (I1 PASS, I3 PASS, I6a PASS, I6b PASS; I7 SKIP by
+design). Full test suite: `pytest -q` — 362 passed. This closes every finding from the
+2026-07-11 live audit run.
