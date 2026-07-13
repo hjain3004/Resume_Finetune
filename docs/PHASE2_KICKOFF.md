@@ -230,11 +230,7 @@ M6.6 acceptance: re-export the current DB → Neuralink ≤ 2 objects, Serco ≤
 match chrome patterns; every object carries locations/flags/jd_quality; research-role leak
 closed with a regression test.
 
-### M6.7 Scoring architecture amendment (evidence: RecruitBench, Sood 2026) — CLOSED 2026-07-08
-
-Items 1 and 2 built (`scripts/score_batch.py`, `scripts/scoring_stress.py` +
-`tests/fixtures/scoring_stress/cases.json`); item 3 (exemplar injection) correctly deferred —
-see the "M6.7" entry in DECISIONS.md.
+### M6.7 Scoring architecture amendment (evidence: RecruitBench, Sood 2026)
 
 Benchmark evidence (RecruitBench: outcome-grounded evaluation of LLM job-fit scoring
 against real interview progression) shows monolithic scoring of large pools under-scores
@@ -258,10 +254,7 @@ Amendments:
    as few-shot exemplars, selected by shingle similarity of JD texts. Gate: only after
    calibration Step 5 completes once; log exemplar ids in the trace (I11).
 
-### M6.8 Freshness & recycling defense (stale/reposted jobs) — CLOSED 2026-07-08
-
-See the "M6.8" entry in DECISIONS.md for what was built, the I7 idempotency-test update it
-required, and the scope decisions (liveness recheck limited to 404/410; I13 deferred to M7).
+### M6.8 Freshness & recycling defense (stale/reposted jobs)
 
 Observed problems: aggregators recycle old postings as new; postings die within days
 (link-rot finding, M6.0); exact reposts are silently suppressed forever (correct for
@@ -293,12 +286,7 @@ columns `last_seen_at TEXT`, `repost_count INTEGER DEFAULT 0`; new terminal stat
    carrying `stale_listing` with fit_score ≥ 9 whose rationale doesn't mention staleness
    (prompt-adherence spot check).
 
-### M6.9 Residual engineering notes (small, do alongside M6.7/M6.8) — items 1–2 CLOSED 2026-07-08
-
-Item 1: no apply/original-posting URL field exists in jobright's `__NEXT_DATA__` payload —
-probed, no code change (see DECISIONS.md). Item 2: `clean_title()` added to
-`src/models.py`, wired into `db.mark_resolved()`'s title backfill — see DECISIONS.md. Item 3
-is a policy note, not a task; nothing to build.
+### M6.9 Residual engineering notes (small, do alongside M6.7/M6.8)
 
 1. **jd_quality starvation — `__NEXT_DATA__` apply-URL probe.** Only 4/25 objects in the
    2026-07-08 batch are jd_quality='ats'; Phase 3's gate needs a steady ats supply. The
@@ -337,6 +325,12 @@ is a policy note, not a task; nothing to build.
   screening outcomes correlate within a vendor's stack (monoculture finding); after
   sufficient volume, rejections clustering by vendor is actionable signal (diversify
   where you apply) that per-company tracking cannot reveal.
+
+### M9 — MOVED
+
+The latency package (cadence, watchlist ATS adapter, hot lane) now lives in
+`docs/UPGRADE_PLAN.md` as M9, alongside M10–M12. This document now covers only M6.x and
+the Phase 2 calibration protocol.
 
 ---
 
