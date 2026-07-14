@@ -39,16 +39,17 @@ unblocked now that M7 is complete; M9 item 3 (hot lane) is gated on Phase 2 exit
 by appetite/trigger.
 
 ## Hybrid Discovery v2 (M9D)
-**Status: APPROVED DESIGN; NOT IMPLEMENTED.**
+**Status: M9D-0 COMPLETE; M9D-1..M9D-5 NOT IMPLEMENTED.**
 The current three-tracker discovery layer is not considered the final coverage architecture.
-M9D adds source/checkpoint hardening, multi-source provenance, direct ATS and authorized
-alert sources, a bounded crawler bake-off, and an agentic source scout operating in shadow
-mode behind a deterministic acceptance gateway. Detailed design:
+M9D-0 added checkpoint/source-failure correctness and baseline reporting. Remaining M9D work
+adds multi-source provenance, direct ATS and authorized alert sources, a bounded crawler
+bake-off, and an agentic source scout operating in shadow mode behind a deterministic
+acceptance gateway. Detailed design:
 `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
 
 M9D is a family of one-session sub-milestones, not one giant implementation session. Before
-coding, create and approve a dedicated plan for M9D-0 only. M8 remains governed by its Phase
-2 gate; discovery work does not silently unlock or implement M8.
+starting M9D-1, create and approve a dedicated plan for M9D-1 only. M8 remains governed by
+its Phase 2 gate; discovery work does not silently unlock or implement M8.
 
 ## Not yet specified (future, not gated — just not designed)
 Notion sync; Claude-in-Chrome JD capture; automated gap→project pipeline. Alert-email
@@ -61,3 +62,7 @@ rejected; LinkedIn alert emails remain permitted.
   memory or chat claims.
 - 2026-07-14: Hybrid Discovery v2 approved as a planned M9D track. No M9D code or dependency
   was added by the documentation change.
+- 2026-07-14: M9D-0 completed. Tracker checkpoints now prepare before DB insertion and
+  atomically commit only after durable insertion; `--limit` drains `pending_keys`; adapter
+  fetch/checkpoint issues are structured in run notes/digest warnings; source-yield/backlog
+  baseline captured read-only. M9D-1 through M9D-5 remain unimplemented.

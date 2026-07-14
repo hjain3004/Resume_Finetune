@@ -109,12 +109,16 @@ severity first (FAIL > WARN, lower invariant number first). Every fix ships with
 regression test reproducing the violation from a fixture. Log every fix in
 `docs/DECISIONS.md` (date, invariant, root cause, fix, test name).
 
-**I1 fires →** Check in order: (1) adapter enabled in sources.yaml? (2) run adapter
-standalone with DEBUG — does the fetch succeed? (3) upstream repo moved/renamed its data
-file or changed branch (fetch the repo page, compare against fixture)? (4) snapshot file
-corrupt/marking everything seen (inspect; if corrupt, delete snapshot and document — the
-dedup layer makes re-discovery safe). Permitted: adapter parsing fixes, snapshot reset,
-config path updates. Forbidden: deleting DB rows; disabling the adapter to silence the alarm.
+**I1 fires →** Check in order: (1) adapter enabled in sources.yaml? (2) inspect the latest
+`runs.notes`/digest warnings — a recorded `fetch` or `checkpoint` issue is not a legitimate
+zero-yield run; fix that failure first. (3) run the adapter with an isolated `--snapshot-dir`
+or temp snapshot copy — does the fetch succeed and does it produce a pending checkpoint?
+(4) upstream repo moved/renamed its data file or changed branch (fetch the repo page,
+compare against fixture)? (5) snapshot file corrupt/marking everything seen (inspect; if
+corrupt, delete snapshot and document — the dedup layer makes re-discovery safe). Permitted:
+adapter parsing fixes, isolated snapshot inspection/reset, config path updates. Forbidden:
+deleting DB rows; disabling the adapter to silence the alarm; direct exploratory writes to
+production `snapshots/`.
 
 **I2 fires →** (1) Group failures by domain. (2) For the top domain, reproduce one fetch
 interactively; log status code + first 500 bytes. (3) Classify: 403/429 → bot-gated: add

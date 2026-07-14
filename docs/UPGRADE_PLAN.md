@@ -47,7 +47,7 @@ approved companies; hot-lane at-most-once verified over two cycles on the same f
 row (exactly one notification); per-source digest line shows watchlist counts (I1 covers
 liveness automatically).
 
-## M9D — Hybrid Discovery v2 (approved design; not implemented)
+## M9D — Hybrid Discovery v2 (M9D-0 complete; M9D-1..5 not implemented)
 
 Goal: replace the three-correlated-tracker ceiling with multiple independent source classes
 and agent-assisted source reconnaissance while preserving deterministic production writes.
@@ -56,8 +56,10 @@ The authoritative design is
 
 Sub-milestones, each requiring its own implementation plan and session:
 
-1. **M9D-0 correctness baseline:** make tracker checkpoints unable to advance past durable
-   DB acceptance; record backlog and per-source yield baselines.
+1. **M9D-0 correctness baseline — COMPLETE 2026-07-14:** tracker checkpoints cannot advance
+   past durable DB acceptance; `--limit` preserves deferred rows through `pending_keys`;
+   fetch/checkpoint failures are structured in run notes/digest warnings; backlog and
+   per-source yield baselines are recorded read-only.
 2. **M9D-1 provenance foundation:** source registry, staged candidates, source runs, and
    many-to-one job observations through an idempotent migration.
 3. **M9D-2 direct-source breadth:** approved ATS watchlists and authorized alert emails.

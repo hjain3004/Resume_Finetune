@@ -1116,3 +1116,63 @@ work queue. The documentation distinguishes CURRENT code from TARGET M9D so no f
 the feature is live. No production code, database schema, dependency, source configuration,
 or runtime behavior changed in this documentation session. Detailed design:
 `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+
+## 2026-07-14 — M9D-0 discovery correctness baseline implemented
+
+M9D-0 fixed the tracker snapshot failure mode documented earlier in this file. The previous
+implementation let `tracker_common.diff_new_jobs()` overwrite `snapshots/{source}.json`
+before `db.insert_discovered()` completed, and `discover_all()` applied `--limit` after the
+adapter had already written the full upstream key set. That meant a DB failure or a limited
+run could mark rows seen without durable job rows.
+
+**Implemented boundary:** tracker adapters now return `AdapterDiscovery(jobs,
+PendingCheckpoint)` without writing snapshots. `run_ingest.persist_discovery()` inserts jobs
+first, then commits checkpoints with sibling temp file plus `os.replace`. A failed DB insert
+makes zero checkpoint calls. A checkpoint failure leaves inserted rows durable, leaves the
+old snapshot intact, records a structured `checkpoint` issue, and returns nonzero. Legacy
+snapshots without `pending_keys` load with empty pending sets.
+
+**Limit semantics:** `--limit N` is per source. Unselected candidates are stored as
+`pending_keys` and stay eligible on the next run. Isolated live smoke used
+`/tmp/job-pipeline-m9d0.SuBvhS`:
+
+- First run: `tracker_vansh --discover-only --limit 2` inserted Qualcomm and Qualtrics.
+- Second run against the same temp DB/snapshot dir inserted Amazon and Roblox.
+- Final temp DB count: 4.
+
+Production `data/jobs.db` and production `snapshots/` were not used for the smoke.
+
+**Source failure visibility:** adapter exceptions are preserved as structured
+`DiscoveryIssue` rows in `runs.notes` and render in the digest as `Run warnings`. A valid zero
+yield is now distinguishable from a fetch/checkpoint failure. Partial source failure remains
+nonfatal; all selected sources failing returns nonzero with a finished run record.
+
+**Read-only baseline captured:** `scripts.source_baseline` opens SQLite with `mode=ro`, adds
+no schema, and writes ignored report `data/metrics/m9d-0-source-baseline.json`.
+
+- Generated at: `2026-07-14T19:20:27.376129+00:00`, trailing finished runs window: 30.
+- Totals: discovered 1373, credited unique insertions 1284, resolved 57, failed 89,
+  source-run observations 14.
+- inbox: runs 2, discovered 0, credited unique insertions 0, resolved 0, failed 0.
+- tracker_jobright: runs 2, discovered 456, credited unique insertions 432,
+  credited unique rate 0.9473684210526315, resolved 30, failed 0, resolution rate 1.0.
+- tracker_simplify: runs 4, discovered 278, credited unique insertions 269,
+  credited unique rate 0.9676258992805755, resolved 24, failed 21,
+  resolution rate 0.5333333333333333.
+- tracker_vansh: runs 6, discovered 639, credited unique insertions 583,
+  credited unique rate 0.9123630672926447, resolved 3, failed 68,
+  resolution rate 0.04225352112676056.
+- Status backlog: DISCOVERED 1047 (oldest `2026-07-04T15:43:16.283331+00:00`);
+  FILTERED_OUT 288 (oldest `2026-07-04T15:43:16.283331+00:00`); RESOLVE_FAILED 6
+  (oldest `2026-07-05T12:33:31.339457+00:00`); SCORED 27 (oldest
+  `2026-07-04T20:57:38.154506+00:00`); SHORTLISTED 18 (oldest
+  `2026-07-04T20:57:38.154506+00:00`).
+
+The baseline's `credited_unique_insertions` metric is source-order attribution after
+deduplication. It is not causal or Shapley marginal contribution, so it is a starting point
+for M9D source evaluation, not proof that a source independently caused those unique jobs.
+
+**Verification:** `.venv/bin/pytest -q` passed with 411 tests; `git diff --check` passed.
+`rg -n "crawlee|apify|mcp" src scripts pyproject.toml` returned no matches. No schema,
+dependency, crawler, agent, Apify, or new-source work entered M9D-0. M9D-1 through M9D-5
+remain unimplemented.

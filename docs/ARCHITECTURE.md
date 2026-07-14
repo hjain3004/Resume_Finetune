@@ -5,9 +5,9 @@ says otherwise. Implementation questions not answered here should be raised to t
 guessed.
 
 Implementation notation: sections labeled **CURRENT** describe deployed code. Sections
-labeled **TARGET — M9D** are approved architecture but not yet implemented. A target section
-does not authorize skipping its implementation milestone, migration, tests, or user smoke
-gate. The detailed target design is
+labeled **TARGET — M9D** are approved architecture not yet implemented beyond the explicitly
+marked M9D-0 checkpoint-correctness baseline. A target section does not authorize skipping
+its implementation milestone, migration, tests, or user smoke gate. The detailed target design is
 `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
 
 ---
@@ -300,12 +300,13 @@ Each adapter module exposes:
 
 ```python
 SOURCE_NAME: str
-def discover(config: dict) -> list[DiscoveredJob]: ...
+def discover(config: dict) -> AdapterDiscovery: ...
 ```
 
-`discover_all()` in `discover/__init__.py` iterates enabled adapters from `config/sources.yaml`,
-concatenates results, and never lets one adapter's exception kill the run: catch, log,
-record in the `runs.notes`, continue.
+`AdapterDiscovery` contains immutable `jobs` plus a `PendingCheckpoint`. `discover_all()` in
+`discover/__init__.py` iterates enabled adapters from `config/sources.yaml`, returns a
+`DiscoveryResult` containing jobs, checkpoints, succeeded sources, and structured issues, and
+never lets one adapter's exception kill the run: catch, log, record in `runs.notes`, continue.
 
 ### 5.2 GitHub tracker adapters (vansh, simplify, jobright)
 
@@ -321,11 +322,19 @@ Shared strategy, implemented once in a helper and parameterized per repo:
    Location, Application/Link, Date Posted. Extract the apply URL from the markdown link or
    `<a href>` in the cell. Rows using `↳` or empty company cells inherit the company from the
    previous row. Skip rows marked closed (🔒 or struck-through).
-3. **Diff against snapshot.** After parsing, compute the set of `dedup_key`s; compare with
-   `snapshots/{source}.json` (previous run's keys + parsed rows). Only rows with new keys are
-   returned. Then overwrite the snapshot. First-ever run: treat everything as new but cap via
-   `--limit` (see CLI) so the user isn't flooded; the plan's M1 acceptance covers this.
-4. Send header `User-Agent: job-pipeline (personal use)` and, if `GITHUB_TOKEN` is present in
+3. **Prepare checkpoint diff.** After parsing, compute the set of `dedup_key`s; compare with
+   `snapshots/{source}.json` (`keys` plus M9D-0 `pending_keys`). Only rows with new keys or
+   deferred pending keys are returned. The adapter does **not** write the snapshot. It returns
+   a pending checkpoint to `run_ingest.py`.
+4. **Commit only after durable insert.** `run_ingest.py` inserts accepted jobs into SQLite
+   first. Only after `db.insert_discovered()` succeeds does it atomically replace the snapshot
+   via sibling temp file plus `os.replace`. A crash may leave the checkpoint behind SQLite;
+   it must never advance ahead of SQLite. Legacy snapshots containing only `{keys,
+   source_path}` load with empty `pending_keys`.
+5. **Limit handling.** `--limit N` is per source. Unselected candidates are kept in
+   `pending_keys`, so repeated limited runs drain the same fetched snapshot instead of marking
+   uninserted rows permanently seen.
+6. Send header `User-Agent: job-pipeline (personal use)` and, if `GITHUB_TOKEN` is present in
    env, an auth header (raises rate limits; optional).
 
 Configured repos (in `config/sources.yaml`, user-editable):
@@ -647,7 +656,9 @@ day). Sections, in order:
 1. **Run summary** — counts from the `runs` row (discovered / resolved / failed / filtered),
    plus a **Resolution tiers** line (M6.5): `t1: N, t2: N, manual: N` from
    `tier1_resolved`/`tier2_resolved`/`manual_failed`, so the user can see at a glance whether
-   tier 2 (the browser resolver) is earning its cost. Followed by a **Per-source** table
+   tier 2 (the browser resolver) is earning its cost. If `runs.notes` contains structured
+   M9D-0 discovery issues, a **Run warnings** block follows with `source [stage/type]:
+   message`; legacy non-JSON notes render as a raw warning line. Followed by a **Per-source** table
    (M6.0(3)) from `run_sources`: Source | Discovered | Inserted | Resolved | Failed, one row
    per enabled adapter for this run — a source contributing zero rows is a visible `0` row,
    not an absent one.
@@ -668,15 +679,20 @@ day). Sections, in order:
 
 ```
 python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discover-only]
-                         [--limit N] [--db PATH]
+                         [--limit N] [--db PATH] [--snapshot-dir DIR]
 ```
 
 - Default: discover → dedupe/insert → resolve (all `DISCOVERED` with attempts < 3) →
   prefilter → digest. Log to stderr (INFO), plus a `runs` row.
 - `--dry-run`: full pipeline, no DB writes, no snapshot writes; print would-be digest to stdout.
-- `--limit N`: cap new insertions per source (protects the first-ever run).
+- `--limit N`: cap new insertions per source; deferred rows remain eligible through
+  `pending_keys`.
+- `--snapshot-dir DIR`: override tracker checkpoint location, primarily for isolated smoke
+  runs and tests.
 - Exit code 0 on success even if some resolutions failed (failures are data, not errors);
-  nonzero only on infrastructure errors (DB unwritable, all sources crashed).
+  nonzero on infrastructure errors, all selected discovery sources failing, or checkpoint
+  commit failure after durable insert. Partial source failure is nonfatal and visible in
+  `runs.notes`/digest warnings.
 
 Idempotency requirement (testable): running the command twice back-to-back must produce a
 second `runs` row with `new_jobs=0` and no row modifications other than that `runs` row,
