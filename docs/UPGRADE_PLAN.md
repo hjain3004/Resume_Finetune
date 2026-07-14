@@ -1,4 +1,4 @@
-# UPGRADE_PLAN.md — M9–M12: Latency & Research-Driven Upgrades
+# UPGRADE_PLAN.md — M9–M12: Discovery, Latency & Research-Driven Upgrades
 
 Scope: post-M7 upgrades. M9 (moved here from PHASE2_KICKOFF.md, which now contains only
 M6.x + the calibration protocol) plus milestones derived from the July 2026
@@ -7,8 +7,9 @@ this project's constraints (Pro-subscription cost model, etiquette rules, depend
 discipline, solo-maintainer budget); §5 records what was evaluated and REJECTED so
 decisions aren't re-litigated.
 
-Sequencing: M7 → M9 items 1–2 → Phase 2 calibration → M9 item 3 (hot lane needs a
-calibrated threshold) → M10 (MUST precede M8's render build) → M8 → M11 → M12 by appetite.
+Sequencing: M7 → M9 items 1–2 and/or one approved M9D sub-milestone per session → Phase 2
+calibration → M9 item 3 (hot lane needs a calibrated threshold) → M10 (MUST precede M8's
+render build) → M8 → M11 → M12 by appetite. Discovery work does not bypass M8's gate.
 
 ---
 
@@ -45,6 +46,33 @@ inserts 0); watchlist fixture test (one board JSON → normalized rows) + live s
 approved companies; hot-lane at-most-once verified over two cycles on the same fixture
 row (exactly one notification); per-source digest line shows watchlist counts (I1 covers
 liveness automatically).
+
+## M9D — Hybrid Discovery v2 (approved design; not implemented)
+
+Goal: replace the three-correlated-tracker ceiling with multiple independent source classes
+and agent-assisted source reconnaissance while preserving deterministic production writes.
+The authoritative design is
+`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+
+Sub-milestones, each requiring its own implementation plan and session:
+
+1. **M9D-0 correctness baseline:** make tracker checkpoints unable to advance past durable
+   DB acceptance; record backlog and per-source yield baselines.
+2. **M9D-1 provenance foundation:** source registry, staged candidates, source runs, and
+   many-to-one job observations through an idempotent migration.
+3. **M9D-2 direct-source breadth:** approved ATS watchlists and authorized alert emails.
+4. **M9D-3 crawler bake-off:** test bounded Crawl4AI deep crawl against Crawlee Python on
+   fixtures and an approved live sample. Crawlee is added only if it materially wins on
+   queues/routing/recovery; the JavaScript Crawlee package is not the default.
+5. **M9D-4 agentic scout shadow:** versioned proposal contract, budgets, provenance,
+   prompt-injection isolation, deterministic verifier, and zero canonical job writes.
+6. **M9D-5 controlled external execution:** optional allowlisted/version-pinned Apify Actor
+   runs and explicit user source promotion, only when shadow metrics justify them.
+
+Cross-cutting acceptance: tests never touch the network; all candidate imports are
+reject-on-any-error; replay is idempotent; crawl policy is enforced for every transport;
+source value is reported as marginal unique jobs, freshness, precision, ATS-quality rate,
+duplicates, failures, cost, and downstream application yield.
 
 ## M10 — Rendering decision gate + parseability CI  (BLOCKS M8's render step)
 
@@ -97,11 +125,13 @@ known counts.
 
 ## M12 — Deferred bucket (adopt only on trigger)
 
-- **Aggregator APIs (Adzuna / Arbeitnow / JSearch).** Deferred. Honest fit assessment:
+- **Aggregator APIs (Adzuna / Arbeitnow / JSearch).** Deferred from the first deterministic
+  build, but eligible for M9D shadow evaluation. Honest fit assessment:
   USAJobs is federal (citizenship-gated — near-zero value for this candidate); Arbeitnow
   is EU-weighted; Adzuna's free tier (~250 calls/month) adds little over tracker + ATS +
   watchlist coverage for US new-grad SWE. Trigger: calibration reveals whole segments of
-  wanted jobs the current sources never surface.
+  wanted jobs the current sources never surface. Adoption still requires measured marginal
+  novelty and acceptable cost rather than source count alone.
 - **Cross-model golden-set judge.** Monoculture research argues for a second judge model;
   a genuinely independent second provider means new accounts/costs. Cheap partial hedge
   when D2 runs: execute the critic pass with a different Claude model tier on the golden
@@ -124,6 +154,9 @@ known counts.
   §6) and ToS asymmetry; the benchmark's own findings (AIHawk archived after platform
   detection and quality collapse; ban risk real even if thinly documented) reinforce the
   standing decision. LinkedIn remains manual inbox + alert emails.
+- **Dynamic unattended Apify Actor selection.** Rejected. Interactive MCP research is
+  permitted, and a recurring Actor may be approved under M9D only when its ID/build is pinned,
+  its permissions and budget are bounded, and its output enters deterministic staging.
 - **Instructor / SDK structured outputs.** Rejected for now: they wrap API clients, and
   our LLM boundary is the headless `claude -p` CLI under the Pro subscription. Switching
   to the API changes the cost model from flat-rate to per-token for zero quality gain —

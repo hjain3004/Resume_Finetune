@@ -7,7 +7,7 @@ build it — check the exit criteria with the user instead.
 
 ## Phase 1 — Ingestion, Filtering & Self-Healing (M0–M7, M6.x)
 **Status: COMPLETE (2026-07-14).**
-Deterministic discovery (trackers, inbox, wrapper unwrapping), resolution (tier-1 ATS
+Current deterministic discovery (three trackers, inbox, wrapper unwrapping), resolution (tier-1 ATS
 APIs, tier-2 browser, manual), prefilter, dedup + export-time clustering, freshness/
 recycling defense, digest, scheduling, and the M7 audit suite (14 invariants, PASS on
 live DB). Scoring I/O contract reworked 2026-07-14: model is pure text-in/text-out, the
@@ -38,12 +38,26 @@ unblocked now that M7 is complete; M9 item 3 (hot lane) is gated on Phase 2 exit
 (render bake-off + L7 parseability gate) must complete before M8's render step. M11–M12
 by appetite/trigger.
 
+## Hybrid Discovery v2 (M9D)
+**Status: APPROVED DESIGN; NOT IMPLEMENTED.**
+The current three-tracker discovery layer is not considered the final coverage architecture.
+M9D adds source/checkpoint hardening, multi-source provenance, direct ATS and authorized
+alert sources, a bounded crawler bake-off, and an agentic source scout operating in shadow
+mode behind a deterministic acceptance gateway. Detailed design:
+`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+
+M9D is a family of one-session sub-milestones, not one giant implementation session. Before
+coding, create and approve a dedicated plan for M9D-0 only. M8 remains governed by its Phase
+2 gate; discovery work does not silently unlock or implement M8.
+
 ## Not yet specified (future, not gated — just not designed)
-Gmail alert-email adapter; Notion sync; Claude-in-Chrome JD capture; automated
-gap→project pipeline; Apify LinkedIn experiment (Phase 2.5, optional, per prior
-decision).
+Notion sync; Claude-in-Chrome JD capture; automated gap→project pipeline. Alert-email
+ingestion and controlled Apify evaluation now belong to M9D. LinkedIn scraping remains
+rejected; LinkedIn alert emails remain permitted.
 
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from
   memory or chat claims.
+- 2026-07-14: Hybrid Discovery v2 approved as a planned M9D track. No M9D code or dependency
+  was added by the documentation change.

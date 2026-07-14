@@ -1,8 +1,8 @@
-# CLAUDE.md — job-pipeline
+# AGENTS.md — job-pipeline
 
 Personal job-discovery pipeline. The implemented ingestion path is deterministic. The
 approved M9D target adds an agentic discovery control plane whose outputs remain staged
-until deterministic validation and user/policy approval. Claude is also used for scoring
+until deterministic validation and user/policy approval. Codex is also used for scoring
 and tailoring through explicit file contracts. You (the coding agent) are the implementer;
 the current/target boundary is fixed in `docs/ARCHITECTURE.md`, the phase status is in
 `docs/ROADMAP.md`, and milestone work is indexed in `docs/IMPLEMENTATION_PLAN.md`.

@@ -6,7 +6,9 @@ previously required a human/architect loop into (a) machine-checkable invariants
 triage playbook with bounded fixes, and (c) change-control guardrails.
 
 Design principle: **judgment drifts; checks don't.** The pipeline audits itself with
-deterministic code. The model's role is executing the playbook, never inventing policy.
+deterministic code. The repair model's role is executing the playbook, never inventing
+policy. This does not prohibit the separately approved M9D source scout from proposing new
+sources; the scout cannot promote proposals, change policy, or write the production DB.
 
 Implementation milestone: **M7** (spec in §5). Read this whole file before implementing it.
 

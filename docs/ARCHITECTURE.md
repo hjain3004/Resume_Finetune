@@ -4,12 +4,18 @@ Status: authoritative. If code and this document disagree, this document wins un
 says otherwise. Implementation questions not answered here should be raised to the user, not
 guessed.
 
+Implementation notation: sections labeled **CURRENT** describe deployed code. Sections
+labeled **TARGET — M9D** are approved architecture but not yet implemented. A target section
+does not authorize skipping its implementation milestone, migration, tests, or user smoke
+gate. The detailed target design is
+`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+
 ---
 
 ## 1. System overview
 
 ```
-                 DISCOVERY (daily, deterministic)
+       CURRENT DISCOVERY (implemented through M7; deterministic)
   ┌──────────────┬──────────────┬───────────────┬─────────────┐
   │ GitHub       │ GitHub       │ GitHub        │ Manual      │
   │ tracker:     │ tracker:     │ trackers:     │ inbox:      │
@@ -41,8 +47,21 @@ guessed.
                  HUMAN REVIEW                        → APPLIED / REJECTED
 ```
 
-Phase 0–1 (this build) implements everything above the double line. The DB schema and status
-machine are designed for the full lifecycle from day one so later phases need no migration.
+Phase 0–1 (this build) implements everything above the double line. The original DB schema
+and status machine cover the planned lifecycle through M8. The separately approved M9D
+provenance model requires its own idempotent migration; target fields are not present today.
+
+**TARGET — M9D:** discovery becomes hybrid without weakening the commit boundary. Approved
+deterministic adapters, bounded crawlers, and an agentic scout may all produce staged
+candidates. The scout produces versioned proposals only. Deterministic validation, policy,
+provenance, canonicalization, and deduplication remain the only path into SQLite.
+
+```text
+deterministic sources ─┐
+bounded crawlers ──────┼──> candidate staging -> deterministic verifier -> observations/jobs
+agentic scout ─────────┘             ^
+                              user/policy promotion
+```
 
 ## 2. Repository layout
 
@@ -94,21 +113,28 @@ job-pipeline/
 └── .gitignore
 ```
 
-## 3. Dependencies (exhaustive — do not add others without asking)
+## 3. Dependencies (CURRENT; exhaustive — do not add others without asking)
 
 - `requests` — HTTP
 - `trafilatura` — main-content extraction for generic resolver
 - `PyYAML` — config files
 - `pytest` — testing
 - `crawl4ai` (M6.5) — deterministic headless-browser rendering/markdown for the tier-2
-  resolver only (`resolve/browser.py`); brings Playwright + Chromium. LLM-extraction
-  strategies are forbidden in this repo (see §6.4).
+  resolver (`resolve/browser.py`). M9D may also evaluate its bounded deep-crawl mode on
+  approved careers domains. Its LLM-extraction strategies remain forbidden in the
+  deterministic data plane (see §6.4).
 - Standard library for everything else (`sqlite3`, `hashlib`, `re`, `dataclasses`,
   `argparse`, `logging`, `datetime`, `json`, `pathlib`, `asyncio`).
 
 No ORM (raw `sqlite3` with helper functions). No async in the pipeline proper (daily batch
 job; simplicity wins) — `resolve/browser.py` is the one exception, and it contains its
 async usage entirely behind a synchronous `asyncio.run()` wrapper.
+
+**TARGET — M9D dependency gate:** Crawlee Python and Apify are candidates, not approved
+dependencies. First evaluate Crawl4AI deep crawling against saved fixtures. Add Crawlee only
+if persistent queues, route handlers, or crash recovery show a material advantage. Apify MCP
+is an interactive scout integration; unattended runs require allowlisted, version-pinned
+Actors and deterministic local validation. No JavaScript sidecar is the default design.
 
 ## 4. Data model
 
@@ -250,6 +276,22 @@ class ResolvedJD:
     raw_location: str | None
 ```
 
+### 4.5 Hybrid discovery records (TARGET — M9D)
+
+M9D introduces four logical records through an idempotent, separately approved migration:
+
+- `source_registry`: proposed/approved/quarantined/disabled source configuration, domains,
+  cadence, extractor or Actor version, and health.
+- `discovery_candidates`: raw staged candidate/proposal, normalization, provenance,
+  validation state, evidence, and rejection reason.
+- `job_observations`: every source observation of a canonical job. `jobs` remains the
+  lifecycle record; one source must no longer erase multi-source provenance.
+- `scout_runs`: agent/model/tool versions, input hash, budgets, proposal artifact, and status.
+
+Existing `run_sources` either evolves into the source-run ledger or is migrated to one
+unambiguous successor; the implementation must not maintain competing counters. Existing
+`jobs.source` values remain valid and are backfilled as one historical observation per row.
+
 ## 5. Discovery adapters
 
 ### 5.1 Adapter contract (`discover/base.py`)
@@ -322,6 +364,45 @@ once, hardcode per-repo config, and save a real README as a test fixture.
 - After successful ingestion, move processed files to `inbox/processed/` (create it), and
   rewrite `urls.txt` keeping only unprocessed lines (a line is processed once its job row
   exists). Never delete user files; move them.
+
+### 5.4 Hybrid Discovery v2 (TARGET — M9D)
+
+M9D broadens discovery through independent source classes while keeping acceptance
+deterministic:
+
+1. direct ATS watchlists (Greenhouse, Lever, Ashby first; expand from measured demand);
+2. authorized company/aggregator alert emails;
+3. existing GitHub trackers;
+4. public RSS, sitemaps, JSON-LD, and careers APIs;
+5. selected public/licensed aggregators that prove marginal value in shadow evaluation;
+6. approved-domain bounded crawling; and
+7. an agentic scout that proposes companies, board tokens, source configurations, and
+   candidate URLs through a versioned file contract.
+
+The agentic scout is a control-plane tool outside `src.run_ingest`. It cannot call `src.db`,
+edit approved config, promote its own source, or write canonical jobs. Initially every source
+promotion requires user approval. Its proposal must include provenance, evidence URLs,
+confidence, domains, source kind, suggested cadence, and recorded tool/model versions.
+
+Transport selection is exclusive per fetch:
+
+| Fetch purpose | Owner |
+|---|---|
+| structured ATS/API | `requests` + typed adapter |
+| static leaf job page | existing HTTP/generic resolver |
+| JS-heavy leaf page | Crawl4AI tier-2 resolver |
+| bounded small-site traversal | evaluate Crawl4AI deep crawl first |
+| durable multi-page queue/routing | Crawlee Python only if the M9D bake-off wins |
+| cloud execution | allowlisted, pinned Apify Actor -> staging only |
+
+Crawlee and Crawl4AI do not fetch the same URL in the same stage. All crawls have explicit
+domain/path allowlists and page/depth/time/byte/cost budgets. The ≥2-second same-host delay,
+honest User-Agent, no-login, and no-evasion rules apply regardless of library or platform.
+
+The deterministic acceptance gateway validates schemas and URLs, applies policy, checks
+content quality, canonicalizes, deduplicates, and atomically writes observations/jobs.
+Snapshots/checkpoints advance only after durable acceptance or through a replayable protocol
+that cannot outrun SQLite.
 
 ## 6. Resolution layer
 
@@ -646,13 +727,23 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
 - **Exemplar injection (M6.7 item 3)**: deferred until ≥20 calibration labels exist (not
   built in M6.7) — see `PHASE2_KICKOFF.md`.
 - **Tailoring**: see `docs/TAILORING_SPEC.md`.
-- **Gmail alerts adapter** (LinkedIn + Jobright alert emails): a future `discover/` adapter;
-  same `DiscoveredJob` contract. Not in scope for M1–M5.
+- **Authorized alert-email adapter** (company, LinkedIn, Indeed, Jobright, and similar alerts):
+  an M9D deterministic adapter using the same staged-candidate/`DiscoveredJob` boundary.
+  Receiving user-authorized alerts is permitted; scraping those platforms is not.
+- **Agentic source scout** (M9D): separate control-plane invocation writes versioned source
+  proposals and candidate artifacts. A deterministic importer rejects malformed, untrusted,
+  unapproved, or out-of-budget output before any database write.
 
 ## 12. Security & etiquette (hard rules)
 
 - Never scrape LinkedIn. LinkedIn jobs enter only via the manual inbox or (later) alert emails.
 - Never bypass auth, CAPTCHAs, or bot detection anywhere.
+- Do not use proxy/session/fingerprint features to evade resistance, even if a selected
+  crawler or Actor supports them.
 - Respect the rate limits in §6.2 even when it makes runs slower.
+- Treat all page text and Actor output as untrusted data, never tool instructions. The scout
+  receives least privilege, explicit budgets, and no direct DB credentials.
+- Public Apify Actors are never selected dynamically in unattended production. Recurring use
+  requires an allowlisted Actor and recorded build/version/input/run/dataset metadata.
 - `data/`, `snapshots/`, `inbox/processed/`, `.env` are gitignored. No tokens in code.
 - All timestamps stored in UTC ISO-8601; the digest may render local time.

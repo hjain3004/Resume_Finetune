@@ -1081,3 +1081,38 @@ batch (or a re-run of this one), not done in this session.
 **Verified:** `pytest -q` — 385 passed (no test asserted the old cap behavior by name, so
 none needed updating). No DB writes; both edits are to `docs/scoring_prompt.md` and
 `config/profile_summary.md` only.
+
+## 2026-07-14 — Hybrid Discovery v2 approved as an agentic control plane with a
+## deterministic acceptance boundary
+
+The user rejected the current three-tracker discovery architecture as the final design and
+asked for broad, hybrid deterministic/agentic discovery, specifically raising Crawl4AI,
+Crawlee, and Apify. Repository review confirmed that the existing resolver breadth does not
+equal discovery breadth: Crawl4AI currently resolves an already-known URL, while automatic
+URL acquisition is limited to the Vansh, Simplify, and Jobright GitHub trackers.
+
+**Approved direction:** agents may research companies, find career boards/ATS tokens, and
+propose sources or candidate URLs, but their output is staged through a versioned file
+contract. Deterministic code remains the sole authority for schema validation, crawl policy,
+provenance, canonicalization, deduplication, source promotion, and SQLite writes. Initial
+source promotion is user-approved; no agent may approve its own proposal. This replaces the
+old blanket “no agentic discovery” architecture while retaining deterministic production
+acceptance.
+
+**Tool boundary:** Crawl4AI remains the leaf-page browser fallback and is evaluated first for
+bounded small-site crawling. Crawlee Python—not the linked JavaScript package—is considered
+only if a fixture/live bake-off proves that persistent queues, route handlers, or crash
+recovery add material value. If adopted, Crawlee discovers leaf URLs and does not duplicate
+Crawl4AI's fetch in the same stage. Apify MCP is permitted for interactive research; an
+unattended Actor must be allowlisted and version-pinned, with its output staged and locally
+validated. Dynamic unattended selection of arbitrary public Actors is rejected.
+
+**Still prohibited:** LinkedIn/Indeed scraping, login/CAPTCHA bypass, anti-bot evasion,
+proxy rotation for circumvention, automated applications, direct agent DB writes, and
+unbounded crawling. Authorized alert emails from those platforms are allowed as input.
+
+This is not a purely additive clarification: it changes the target architecture and future
+work queue. The documentation distinguishes CURRENT code from TARGET M9D so no file claims
+the feature is live. No production code, database schema, dependency, source configuration,
+or runtime behavior changed in this documentation session. Detailed design:
+`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.

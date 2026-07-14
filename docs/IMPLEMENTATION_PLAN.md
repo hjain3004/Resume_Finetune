@@ -1,6 +1,12 @@
 # IMPLEMENTATION_PLAN.md — Milestones & Acceptance Criteria
 
-Rules of engagement for the implementer (Sonnet):
+Status note (2026-07-14): M0–M7 are implemented history. Phase status is authoritative in
+`docs/ROADMAP.md`. Hybrid Discovery v2 is an approved target, not implemented code; its
+design is `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`. Before starting it,
+write and approve a detailed plan for **M9D-0 only**. Do not treat the design document's
+rollout list as executable coding instructions.
+
+Rules of engagement for the implementer:
 
 - Build **one milestone per session**, in order. Read `docs/ARCHITECTURE.md` first, every time.
 - A milestone is done only when every acceptance criterion passes and `pytest` is green.
@@ -11,6 +17,10 @@ Rules of engagement for the implementer (Sonnet):
 - Tests never hit the live network. Use `scripts/record_fixture.py` (built in M1) to capture
   real responses once, commit them under `tests/fixtures/`, and test against those.
 - Keep functions small and typed. No cleverness. Another model designed this; a human reviews it.
+
+For M9D, “one milestone” means exactly one of M9D-0 through M9D-5. Later M9D work may not
+start in the same session. Crawlee, Apify runtime integration, and schema changes require
+the explicit gates recorded in the M9D design and `SELF_HEALING.md`.
 
 ---
 
