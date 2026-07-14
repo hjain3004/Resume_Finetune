@@ -76,6 +76,9 @@ _JOBS_MIGRATIONS: tuple[tuple[str, str], ...] = (
     ("repost_count", "INTEGER NOT NULL DEFAULT 0"),
     # M7: I9 backfill-completeness tracking.
     ("resolved_logic_version", "INTEGER"),
+    # Phase 2 calibration (2026-07-14): self-consistency median within
+    # BORDERLINE_MARGIN of shortlist_threshold (scripts/score_batch.py).
+    ("borderline", "INTEGER NOT NULL DEFAULT 0"),
 )
 
 # M6.5: per-run tier-2 (browser resolver) observability counters.

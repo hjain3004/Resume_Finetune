@@ -70,7 +70,90 @@ def test_strip_json_fences_leaves_bare_json_untouched():
     assert score_batch.strip_json_fences(bare) == bare
 
 
-def test_score_chunk_embeds_content_invokes_claude_with_no_permission_flags(tmp_path, monkeypatch):
+def _entry(**overrides) -> dict:
+    entry = {
+        "id": 1,
+        "row_ids": [1],
+        "fit_score": 8.0,
+        "base_variant": "backend",
+        "missing_keywords": [],
+        "rationale": "x",
+    }
+    entry.update(overrides)
+    return entry
+
+
+def test_majority_vote_variant_picks_the_2_of_3_winner():
+    assert score_batch.majority_vote_variant(["backend", "ml", "backend"]) == "backend"
+    assert score_batch.majority_vote_variant(["ml", "ml", "backend"]) == "ml"
+
+
+def test_majority_vote_variant_falls_back_to_backend_on_tie():
+    assert score_batch.majority_vote_variant(["ml", "backend"]) == "backend"
+    assert score_batch.majority_vote_variant(["frontend", "ml"]) == "backend"
+
+
+def test_aggregate_self_consistency_runs_takes_median_score_and_median_run_fields():
+    chunk = [{"id": 1, "row_ids": [1]}]
+    runs = [
+        [_entry(id=1, fit_score=6.0, rationale="low run", missing_keywords=["a"])],
+        [_entry(id=1, fit_score=8.0, rationale="median run", missing_keywords=["b"])],
+        [_entry(id=1, fit_score=9.0, rationale="high run", missing_keywords=["c"])],
+    ]
+
+    aggregated = score_batch.aggregate_self_consistency_runs(chunk, runs, threshold=7.0)
+
+    assert len(aggregated) == 1
+    entry = aggregated[0]
+    assert entry["fit_score"] == 8.0
+    assert entry["rationale"] == "median run"
+    assert entry["missing_keywords"] == ["b"]
+
+
+def test_aggregate_self_consistency_runs_majority_votes_base_variant():
+    chunk = [{"id": 1, "row_ids": [1]}]
+    runs = [
+        [_entry(id=1, fit_score=7.0, base_variant="backend")],
+        [_entry(id=1, fit_score=7.0, base_variant="ml")],
+        [_entry(id=1, fit_score=7.0, base_variant="backend")],
+    ]
+
+    aggregated = score_batch.aggregate_self_consistency_runs(chunk, runs, threshold=7.0)
+
+    assert aggregated[0]["base_variant"] == "backend"
+
+
+def test_aggregate_self_consistency_runs_sets_borderline_within_margin():
+    chunk = [{"id": 1, "row_ids": [1]}, {"id": 2, "row_ids": [2]}]
+    runs = [
+        [_entry(id=1, fit_score=7.4), _entry(id=2, fit_score=9.0)],
+        [_entry(id=1, fit_score=7.4), _entry(id=2, fit_score=9.0)],
+        [_entry(id=1, fit_score=7.4), _entry(id=2, fit_score=9.0)],
+    ]
+
+    aggregated = score_batch.aggregate_self_consistency_runs(chunk, runs, threshold=7.0)
+
+    by_id = {e["id"]: e for e in aggregated}
+    assert by_id[1]["borderline"] is True  # |7.4 - 7.0| = 0.4 <= 0.5
+    assert by_id[2]["borderline"] is False  # |9.0 - 7.0| = 2.0 > 0.5
+
+
+def test_aggregate_self_consistency_runs_raises_on_missing_entry():
+    chunk = [{"id": 1, "row_ids": [1]}]
+    runs = [
+        [_entry(id=1, fit_score=7.0)],
+        [],  # this run returned nothing for id 1
+        [_entry(id=1, fit_score=7.0)],
+    ]
+
+    try:
+        score_batch.aggregate_self_consistency_runs(chunk, runs, threshold=7.0)
+        assert False, "expected RuntimeError"
+    except RuntimeError as exc:
+        assert "id 1" in str(exc)
+
+
+def test_score_chunk_invokes_claude_k_times_with_no_permission_flags(tmp_path, monkeypatch):
     # chdir so score_chunk's write_trace() call (default trace_dir="data/traces",
     # relative to cwd) lands under tmp_path instead of the repo's real data/traces/ —
     # see bbb2559 for the same class of bug with data/digests/. PROMPT_PATH is
@@ -84,24 +167,26 @@ def test_score_chunk_embeds_content_invokes_claude_with_no_permission_flags(tmp_
     monkeypatch.setattr(score_batch, "PROMPT_PATH", prompt_path)
     monkeypatch.setattr(score_batch, "PROFILE_SUMMARY_PATH", profile_path)
     chunk = [{"id": 1, "row_ids": [1], "company": "Acme"}]
-    scored = [{"id": 1, "row_ids": [1], "fit_score": 8.0, "base_variant": "backend", "missing_keywords": [], "rationale": "x"}]
+    scored = [_entry(id=1, fit_score=8.0)]
 
     def fake_run(cmd, **kwargs):
         return MagicMock(returncode=0, stderr="", stdout=json.dumps(scored))
 
     with patch.object(score_batch.subprocess, "run", side_effect=fake_run) as mock_run:
         result = score_batch.score_chunk(
-            chunk, work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT
+            chunk, work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT, threshold=7.0
         )
 
-    assert result == scored
+    assert len(result) == 1
+    assert result[0]["fit_score"] == 8.0
     # archived for I11 traceability, but never referenced in the invoked command
     assert json.loads((tmp_path / "chunk_0.json").read_text()) == chunk
-    mock_run.assert_called_once()
-    invoked_cmd = mock_run.call_args.args[0]
-    assert invoked_cmd[:2] == ["claude", "-p"]
-    assert not any(flag.startswith("--permission") or flag.startswith("--allowed") for flag in invoked_cmd)
-    assert mock_run.call_args.kwargs["timeout"] == score_batch._CLAUDE_TIMEOUT_SECONDS
+    assert mock_run.call_count == score_batch.SELF_CONSISTENCY_K
+    for call in mock_run.call_args_list:
+        invoked_cmd = call.args[0]
+        assert invoked_cmd[:2] == ["claude", "-p"]
+        assert not any(flag.startswith("--permission") or flag.startswith("--allowed") for flag in invoked_cmd)
+        assert call.kwargs["timeout"] == score_batch._CLAUDE_TIMEOUT_SECONDS
 
 
 def test_score_chunk_strips_fences_from_stdout(tmp_path, monkeypatch):
@@ -112,17 +197,22 @@ def test_score_chunk_strips_fences_from_stdout(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(score_batch, "PROMPT_PATH", prompt_path)
     monkeypatch.setattr(score_batch, "PROFILE_SUMMARY_PATH", profile_path)
-    scored = [{"id": 1, "row_ids": [1], "fit_score": 8.0, "base_variant": "backend", "missing_keywords": [], "rationale": "x"}]
+    scored = [_entry(id=1, fit_score=8.0)]
     fenced_stdout = "```json\n" + json.dumps(scored) + "\n```"
 
     with patch.object(
         score_batch.subprocess, "run", return_value=MagicMock(returncode=0, stderr="", stdout=fenced_stdout)
     ):
         result = score_batch.score_chunk(
-            [{"id": 1}], work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT
+            [{"id": 1, "row_ids": [1]}],
+            work_dir=tmp_path,
+            index=0,
+            prompt_text=PROMPT_TEXT,
+            profile_text=PROFILE_TEXT,
+            threshold=7.0,
         )
 
-    assert result == scored
+    assert result[0]["fit_score"] == 8.0
 
 
 def test_score_chunk_raises_on_nonzero_exit(tmp_path):
@@ -131,7 +221,11 @@ def test_score_chunk_raises_on_nonzero_exit(tmp_path):
     ):
         try:
             score_batch.score_chunk(
-                [{"id": 1}], work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT
+                [{"id": 1, "row_ids": [1]}],
+                work_dir=tmp_path,
+                index=0,
+                prompt_text=PROMPT_TEXT,
+                profile_text=PROFILE_TEXT,
             )
             assert False, "expected RuntimeError"
         except RuntimeError as exc:
@@ -144,7 +238,11 @@ def test_score_chunk_raises_when_stdout_empty(tmp_path):
     ):
         try:
             score_batch.score_chunk(
-                [{"id": 1}], work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT
+                [{"id": 1, "row_ids": [1]}],
+                work_dir=tmp_path,
+                index=0,
+                prompt_text=PROMPT_TEXT,
+                profile_text=PROFILE_TEXT,
             )
             assert False, "expected RuntimeError"
         except RuntimeError as exc:
@@ -160,8 +258,8 @@ def test_score_batch_chunks_invokes_per_chunk_and_concatenates(tmp_path):
     profile_path = tmp_path / "profile.md"
     profile_path.write_text(PROFILE_TEXT)
 
-    def fake_score_chunk(chunk, *, work_dir, index, prompt_text, profile_text, claude_cmd):
-        return [{"id": obj["id"], "row_ids": obj["row_ids"], "fit_score": 5.0, "base_variant": "backend", "missing_keywords": [], "rationale": "x"} for obj in chunk]
+    def fake_score_chunk(chunk, *, work_dir, index, prompt_text, profile_text, claude_cmd, k, threshold):
+        return [_entry(id=obj["id"], row_ids=obj["row_ids"], fit_score=5.0) for obj in chunk]
 
     with patch.object(score_batch, "score_chunk", side_effect=fake_score_chunk) as mock_score_chunk:
         out_path = score_batch.score_batch(batch_path, prompt_path=prompt_path, profile_path=profile_path)
@@ -172,7 +270,7 @@ def test_score_batch_chunks_invokes_per_chunk_and_concatenates(tmp_path):
     assert out_path == tmp_path / "2026-07-08.scored.json"
 
 
-def test_score_chunk_writes_a_trace_covering_chunk_and_profile(tmp_path, monkeypatch):
+def test_score_chunk_writes_a_trace_per_self_consistency_run(tmp_path, monkeypatch):
     # chdir so the real write_trace() (default trace_dir="data/traces", relative
     # to cwd) lands under tmp_path rather than the repo's real data/traces/.
     prompt_path = tmp_path / "prompt.md"
@@ -184,24 +282,24 @@ def test_score_chunk_writes_a_trace_covering_chunk_and_profile(tmp_path, monkeyp
     monkeypatch.setattr(score_batch, "PROFILE_SUMMARY_PATH", profile_path)
     chunk = [{"id": 1, "row_ids": [1]}]
 
+    def fake_run(cmd, **kwargs):
+        return MagicMock(returncode=0, stderr="", stdout=json.dumps([_entry(id=1, fit_score=8.0)]))
+
     with (
-        patch.object(
-            score_batch.subprocess,
-            "run",
-            return_value=MagicMock(returncode=0, stderr="", stdout=json.dumps([{"id": 1}])),
-        ),
+        patch.object(score_batch.subprocess, "run", side_effect=fake_run),
         patch.object(score_batch, "write_trace", wraps=llm_trace.write_trace) as spy,
     ):
         score_batch.score_chunk(
-            chunk, work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT
+            chunk, work_dir=tmp_path, index=0, prompt_text=PROMPT_TEXT, profile_text=PROFILE_TEXT, threshold=7.0
         )
 
-    spy.assert_called_once()
-    assert spy.call_args.kwargs["invocation_type"] == "scoring"
-    assert spy.call_args.kwargs["input_paths"] == [tmp_path / "chunk_0.json", profile_path]
-    assert spy.call_args.kwargs["prompt_path"] == prompt_path
+    assert spy.call_count == score_batch.SELF_CONSISTENCY_K
+    for call in spy.call_args_list:
+        assert call.kwargs["invocation_type"] == "scoring"
+        assert call.kwargs["input_paths"] == [tmp_path / "chunk_0.json", profile_path]
+        assert call.kwargs["prompt_path"] == prompt_path
     traced_files = list((tmp_path / "data" / "traces").glob("**/*.json"))
-    assert len(traced_files) == 1
+    assert len(traced_files) == score_batch.SELF_CONSISTENCY_K
 
 
 def test_main_writes_scored_file_and_invokes_import(tmp_path, monkeypatch):
@@ -213,6 +311,7 @@ def test_main_writes_scored_file_and_invokes_import(tmp_path, monkeypatch):
     with (
         patch.object(score_batch, "score_batch", return_value=scored_path) as mock_score_batch,
         patch.object(score_batch.import_scores, "main", return_value=0) as mock_import_main,
+        patch.object(score_batch, "load_filters_config", return_value={"score_threshold": 7.0}),
     ):
         scored_path.write_text("[]")
         exit_code = score_batch.main([str(batch_path), "--db", "data/jobs.db"])
@@ -231,6 +330,7 @@ def test_main_skip_import_does_not_call_import_scores(tmp_path, monkeypatch):
     with (
         patch.object(score_batch, "score_batch", return_value=scored_path),
         patch.object(score_batch.import_scores, "main") as mock_import_main,
+        patch.object(score_batch, "load_filters_config", return_value={"score_threshold": 7.0}),
     ):
         scored_path.write_text("[]")
         exit_code = score_batch.main([str(batch_path), "--skip-import"])

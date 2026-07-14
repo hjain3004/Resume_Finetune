@@ -179,3 +179,32 @@ def test_import_rejects_row_id_covered_by_two_entries():
     row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
     assert row1["status"] == Status.RESOLVED
     assert row1["fit_score"] is None
+
+
+def test_import_persists_borderline_flag_when_present():
+    conn = _conn()
+    entry = _valid_entry(id=1, row_ids=[1], fit_score=7.2, borderline=True)
+
+    import_scores.import_scores(conn, [entry], threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["borderline"] == 1
+
+
+def test_import_defaults_borderline_to_false_when_absent():
+    conn = _conn()
+    entry = _valid_entry(id=1, row_ids=[1], fit_score=8.5)
+    assert "borderline" not in entry
+
+    import_scores.import_scores(conn, [entry], threshold=7.0)
+
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["borderline"] == 0
+
+
+def test_import_rejects_non_boolean_borderline():
+    conn = _conn()
+    entry = _valid_entry(borderline="yes")
+
+    with pytest.raises(ValueError, match="borderline"):
+        import_scores.import_scores(conn, [entry], threshold=7.0)

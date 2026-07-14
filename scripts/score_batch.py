@@ -14,6 +14,14 @@ Motivation for sub-batching (RecruitBench, Sood 2026): scoring a large pool
 in one prompt under-scores true positives (lost-in-the-middle); parallel
 batches of ~6 doubled recall at unchanged precision.
 
+Self-consistency (2026-07-14, see DECISIONS.md): a single scoring pass on the
+same chunk showed real run-to-run variance (mean |delta| 0.67, max 2.0, 2/30
+threshold flips on the 2026-07-12 batch). Each chunk is now scored
+SELF_CONSISTENCY_K independent times; results are combined per job via
+`aggregate_self_consistency_runs()` (median fit_score, majority-vote
+base_variant, missing_keywords/rationale from the median run). Every one of
+the k raw invocations gets its own I11 trace.
+
 Usage: python -m scripts.score_batch data/batch/2026-07-08.json
 """
 
@@ -22,13 +30,18 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import statistics
 import subprocess
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from scripts import import_scores
 from src.llm_trace import write_trace
+from src.run_ingest import load_filters_config
 
 CHUNK_SIZE = 6
+SELF_CONSISTENCY_K = 3
+BORDERLINE_MARGIN = 0.5
 PROMPT_PATH = Path("docs/scoring_prompt.md")
 PROFILE_SUMMARY_PATH = Path("config/profile_summary.md")
 _PROMPT_HEADER_MARKER = "## Prompt"
@@ -63,6 +76,68 @@ def strip_json_fences(text: str) -> str:
     return _FENCE_RE.sub("", text.strip()).strip()
 
 
+def majority_vote_variant(variants: list[str]) -> str:
+    """Majority-vote across the k runs' base_variant calls.
+
+    A genuine tie can't occur at k=3 with the 2-value ALLOWED_BASE_VARIANTS
+    enum (2-1 or 3-0 always resolves), but a tie is handled anyway in case a
+    run returns something outside the enum. There is no coverage-table
+    lookup implemented at scoring time to break a tie by "which variant has
+    more resume content" (see DECISIONS.md 2026-07-14) — the fallback is the
+    'backend' profile default.
+    """
+    counts = Counter(variants)
+    ranked = counts.most_common()
+    if len(ranked) == 1 or ranked[0][1] > ranked[1][1]:
+        return ranked[0][0]
+    return "backend"
+
+
+def aggregate_self_consistency_runs(
+    chunk: list[dict],
+    runs: list[list[dict]],
+    *,
+    threshold: float,
+    margin: float = BORDERLINE_MARGIN,
+) -> list[dict]:
+    """Combine SELF_CONSISTENCY_K independent scoring runs of the same chunk.
+
+    Per job: median fit_score; majority-vote base_variant; missing_keywords
+    and rationale taken from whichever run produced the median fit_score
+    (the middle entry once runs are sorted by score); borderline is set when
+    the median lands within `margin` of `threshold`.
+    """
+    by_id: dict[int, list[dict]] = defaultdict(list)
+    for run in runs:
+        for entry in run:
+            by_id[entry["id"]].append(entry)
+
+    aggregated: list[dict] = []
+    for obj in chunk:
+        job_id = obj["id"]
+        entries = by_id.get(job_id, [])
+        if len(entries) != len(runs):
+            raise RuntimeError(
+                f"id {job_id}: expected a scored entry from each of {len(runs)} "
+                f"self-consistency runs, got {len(entries)}"
+            )
+        ordered = sorted(entries, key=lambda e: e["fit_score"])
+        median_entry = ordered[len(ordered) // 2]
+        median_score = statistics.median(e["fit_score"] for e in entries)
+        aggregated.append(
+            {
+                "id": job_id,
+                "row_ids": median_entry["row_ids"],
+                "fit_score": median_score,
+                "base_variant": majority_vote_variant([e["base_variant"] for e in entries]),
+                "missing_keywords": median_entry["missing_keywords"],
+                "rationale": median_entry["rationale"],
+                "borderline": abs(median_score - threshold) <= margin,
+            }
+        )
+    return aggregated
+
+
 def score_chunk(
     chunk: list[dict],
     *,
@@ -71,6 +146,8 @@ def score_chunk(
     prompt_text: str,
     profile_text: str,
     claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
+    k: int = SELF_CONSISTENCY_K,
+    threshold: float = import_scores.DEFAULT_THRESHOLD,
 ) -> list[dict]:
     # Archived by the wrapper for I11 traceability only — never passed to the
     # nested call, which receives this same content embedded in the prompt.
@@ -78,22 +155,29 @@ def score_chunk(
     chunk_input_path.write_text(json.dumps(chunk, indent=2))
 
     prompt = build_chunk_prompt(prompt_text, chunk, profile_text)
-    result = subprocess.run(
-        [*claude_cmd, prompt], capture_output=True, text=True, timeout=_CLAUDE_TIMEOUT_SECONDS
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"chunk {index} scoring failed (exit {result.returncode}): {result.stderr}")
-    raw_output = strip_json_fences(result.stdout)
-    if not raw_output:
-        raise RuntimeError(f"chunk {index} scorer returned no output (stderr: {result.stderr})")
-    write_trace(
-        invocation_type="scoring",
-        input_paths=[chunk_input_path, PROFILE_SUMMARY_PATH],
-        raw_output=raw_output,
-        prompt_path=PROMPT_PATH,
-        model=claude_cmd[0],
-    )
-    return json.loads(raw_output)
+
+    runs: list[list[dict]] = []
+    for run_index in range(k):
+        result = subprocess.run(
+            [*claude_cmd, prompt], capture_output=True, text=True, timeout=_CLAUDE_TIMEOUT_SECONDS
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"chunk {index} run {run_index} scoring failed (exit {result.returncode}): {result.stderr}"
+            )
+        raw_output = strip_json_fences(result.stdout)
+        if not raw_output:
+            raise RuntimeError(f"chunk {index} run {run_index} scorer returned no output (stderr: {result.stderr})")
+        write_trace(
+            invocation_type="scoring",
+            input_paths=[chunk_input_path, PROFILE_SUMMARY_PATH],
+            raw_output=raw_output,
+            prompt_path=PROMPT_PATH,
+            model=claude_cmd[0],
+        )
+        runs.append(json.loads(raw_output))
+
+    return aggregate_self_consistency_runs(chunk, runs, threshold=threshold)
 
 
 def score_batch(
@@ -104,6 +188,8 @@ def score_batch(
     claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
     prompt_path: Path = PROMPT_PATH,
     profile_path: Path = PROFILE_SUMMARY_PATH,
+    k: int = SELF_CONSISTENCY_K,
+    threshold: float = import_scores.DEFAULT_THRESHOLD,
 ) -> Path:
     batch_path = Path(batch_path)
     objects = json.loads(batch_path.read_text())
@@ -122,6 +208,8 @@ def score_batch(
                 prompt_text=prompt_text,
                 profile_text=profile_text,
                 claude_cmd=claude_cmd,
+                k=k,
+                threshold=threshold,
             )
         )
 
@@ -155,7 +243,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    out_path = score_batch(args.batch_file, chunk_size=args.chunk_size)
+    threshold = args.threshold
+    if threshold is None:
+        threshold = load_filters_config().get("score_threshold", import_scores.DEFAULT_THRESHOLD)
+    out_path = score_batch(args.batch_file, chunk_size=args.chunk_size, threshold=threshold)
     print(f"Scored batch written to {out_path}")
     if args.skip_import:
         return 0

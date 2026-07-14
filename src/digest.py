@@ -82,6 +82,34 @@ def _needs_original_posting_table(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
+def _borderline_table(conn: sqlite3.Connection) -> str:
+    """Phase 2 calibration (2026-07-14): scored/shortlisted rows whose
+    self-consistency median fit_score landed within BORDERLINE_MARGIN of
+    shortlist_threshold (scripts/score_batch.py) — the calls worth double-
+    checking by hand during calibration."""
+    rows = conn.execute(
+        "SELECT company, title, fit_score, base_variant FROM jobs "
+        "WHERE borderline = 1 AND status IN (?, ?) ORDER BY fit_score DESC",
+        (Status.SCORED, Status.SHORTLISTED),
+    ).fetchall()
+    if not rows:
+        return ""
+    lines = [
+        "",
+        "## Borderline calls",
+        "",
+        "Self-consistency median landed within 0.5 of the shortlist threshold — worth a",
+        "second look.",
+        "",
+        "| Company | Title | Fit score | Variant |",
+        "|---|---|---|---|",
+    ]
+    lines.extend(
+        f"| {row['company']} | {row['title']} | {row['fit_score']} | {row['base_variant']} |" for row in rows
+    )
+    return "\n".join(lines)
+
+
 def _recycled_table(conn: sqlite3.Connection) -> str:
     """M6.8: RESOLVED rows carrying `repost` (content-matched a prior
     terminal decision) or `reopened` (resurfaced after RESOLVE_FAILED/CLOSED)
@@ -178,8 +206,10 @@ def build_digest(
     needs_original = _needs_original_posting_table(conn)
     recycled = _recycled_table(conn)
     closed = _closed_table(conn)
+    borderline = _borderline_table(conn)
     needs_section = needs_help + ("\n" + needs_original if needs_original else "")
     needs_section += ("\n" + recycled if recycled else "") + ("\n" + closed if closed else "")
+    needs_section += "\n" + borderline if borderline else ""
 
     audit_failed = audit_result is not None and audit_result.overall == "FAIL"
     new_and_resolved_body = _FAIL_BANNER if audit_failed else _new_and_resolved_table(conn)

@@ -76,6 +76,12 @@ def _validate_entry(conn: sqlite3.Connection, entry: dict) -> None:
             f"'rationale' must be at most {RATIONALE_MAX_LEN} chars for id {job_id}, got {len(rationale)}"
         )
 
+    # Optional: set by score_batch.py's self-consistency aggregation (2026-07-14) when
+    # the median fit_score lands within BORDERLINE_MARGIN of the threshold. Absent for
+    # scored files produced before self-consistency (e.g. scoring_stress fixtures).
+    if "borderline" in entry and not isinstance(entry["borderline"], bool):
+        raise ValueError(f"'borderline' must be a boolean for id {job_id}, got {entry['borderline']!r}")
+
 
 def import_scores(
     conn: sqlite3.Connection,
@@ -97,11 +103,13 @@ def import_scores(
     shortlisted = 0
     for entry in scored:
         status = Status.SHORTLISTED if entry["fit_score"] >= threshold else Status.SCORED
+        borderline = bool(entry.get("borderline", False))
         for row_id in entry["row_ids"]:
             conn.execute(
                 """
                 UPDATE jobs
-                SET status = ?, fit_score = ?, fit_rationale = ?, base_variant = ?, missing_keywords = ?
+                SET status = ?, fit_score = ?, fit_rationale = ?, base_variant = ?, missing_keywords = ?,
+                    borderline = ?
                 WHERE id = ?
                 """,
                 (
@@ -110,6 +118,7 @@ def import_scores(
                     entry["rationale"],
                     entry["base_variant"],
                     json.dumps(entry["missing_keywords"]),
+                    borderline,
                     row_id,
                 ),
             )

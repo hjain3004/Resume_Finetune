@@ -6,6 +6,13 @@ returned fit_score falls within its documented expected band. Run at
 calibration start and after ANY change to docs/scoring_prompt.md or
 config/profile_summary.md.
 
+PROVISIONAL bands (2026-07-14, see DECISIONS.md): every `expected_band` in
+cases.json (marked `"band_status": "PROVISIONAL"` on each case) is an
+unvalidated pre-calibration guess by the implementer, not a value derived
+from real user judgments. The M8 gate's band-adherence condition is waived
+until Phase 2 calibration produces real disagreement data to re-anchor these
+bands against — treat a FAIL here as informational, not blocking, until then.
+
 Usage: python -m scripts.scoring_stress [--out-dir DIR]
 """
 
