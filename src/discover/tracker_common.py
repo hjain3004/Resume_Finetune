@@ -10,11 +10,13 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 
+from src.discover.base import AdapterDiscovery, PendingCheckpoint, SnapshotState
 from src.models import DiscoveredJob, dedup_key
 
 USER_AGENT = "job-pipeline (personal use)"
@@ -226,11 +228,67 @@ def _snapshot_path(snapshot_dir: str | Path, source_name: str) -> Path:
     return Path(snapshot_dir) / f"{source_name}.json"
 
 
-def load_snapshot_keys(snapshot_dir: str | Path, source_name: str) -> set[str]:
+def load_snapshot_state(snapshot_dir: str | Path, source_name: str) -> SnapshotState:
     path = _snapshot_path(snapshot_dir, source_name)
     if not path.exists():
-        return set()
-    return set(json.loads(path.read_text()).get("keys", []))
+        return SnapshotState(frozenset(), frozenset())
+    payload = json.loads(path.read_text())
+    return SnapshotState(
+        frozenset(payload.get("keys", [])),
+        frozenset(payload.get("pending_keys", [])),
+    )
+
+
+def load_snapshot_keys(snapshot_dir: str | Path, source_name: str) -> set[str]:
+    return set(load_snapshot_state(snapshot_dir, source_name).keys)
+
+
+def prepare_snapshot_diff(
+    jobs: list[DiscoveredJob],
+    snapshot_dir: str | Path,
+    source_path: str,
+    source_name: str,
+    *,
+    limit: int | None = None,
+) -> AdapterDiscovery:
+    previous = load_snapshot_state(snapshot_dir, source_name)
+    current_keys: set[str] = set()
+    candidate_keys: set[str] = set()
+    candidates: list[DiscoveredJob] = []
+    for item in jobs:
+        item_key = dedup_key(item.company, item.title, item.location)
+        current_keys.add(item_key)
+        if item_key in candidate_keys:
+            continue
+        if item_key not in previous.keys or item_key in previous.pending_keys:
+            candidate_keys.add(item_key)
+            candidates.append(item)
+    selected = candidates if limit is None else candidates[:limit]
+    deferred = candidates[len(selected) :]
+    checkpoint = PendingCheckpoint(
+        source_name,
+        _snapshot_path(snapshot_dir, source_name),
+        source_path,
+        frozenset(current_keys),
+        frozenset(dedup_key(j.company, j.title, j.location) for j in deferred),
+    )
+    return AdapterDiscovery(source_name, tuple(selected), checkpoint)
+
+
+def commit_checkpoint(checkpoint: PendingCheckpoint) -> None:
+    path = checkpoint.path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    payload = {
+        "keys": sorted(checkpoint.keys),
+        "pending_keys": sorted(checkpoint.pending_keys),
+        "source_path": checkpoint.source_path,
+    }
+    try:
+        temporary.write_text(json.dumps(payload, indent=2) + "\n")
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def save_snapshot_keys(
