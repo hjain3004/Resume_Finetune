@@ -72,8 +72,10 @@ Instructions:
    - **0–2**: no meaningful overlap or hard disqualifier (clearance-required,
      licensure, etc.).
 
-   If `flags` includes `sponsorship_risk`, CAP the score at 6 and note this in
-   the rationale — never silently zero it; the user decides on those.
+   If `flags` includes `sponsorship_risk`, do NOT cap the score — the
+   candidate has confirmed (2026-07-14, see DECISIONS.md) they want to apply
+   to these regardless of visa-sponsorship uncertainty. Score on fit alone,
+   but always note the flag in the rationale so it stays visible for review.
 4. Choose `base_variant` from the resume variants named in the profile
    summary — EXACTLY `backend` or `ml`. `import_scores.py` rejects any other
    value.

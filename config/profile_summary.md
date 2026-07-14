@@ -76,3 +76,13 @@ Amdocs experience, different projects):
   strongest location fit; other US metros are acceptable for a new grad.
   Location alone should not sink an otherwise strong match, but weigh it
   alongside stack/level fit.
+- Well-known/large employers (e.g. Amazon, TikTok, and similarly prominent
+  tech companies): the candidate is more inclined to apply here even without
+  an exact stack match. For these employers, weigh genuinely-held
+  transferable/adjacent skills (e.g., distributed systems, backend services,
+  Kafka/event-driven experience, PyTorch/ML pipeline work) more heavily than
+  literal keyword overlap when scoring fit — do not require an exact stack
+  match to reach the 7–8 band. This only affects fit_score; it is not
+  permission to claim skills the candidate doesn't have (see
+  `docs/TAILORING_METHODOLOGY.md`'s anti-fabrication rules for tailoring,
+  which is separate, later-phase work).

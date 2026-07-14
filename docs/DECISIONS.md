@@ -1027,3 +1027,57 @@ threshold disagreements.
 **Verified:** `pytest -q` — 385 passed. Live: two real k=3 re-score runs against
 `data/batch/2026-07-12.json` (scratch copies, `--skip-import`), one real import against
 `data/jobs.db`, one real `calibration_report.py` run against the live DB.
+
+## 2026-07-14 — Phase 2 Step 4, first pass: sponsorship_risk cap removed;
+## transferable-skill weighting added for well-known employers
+
+Working through the 15 disagreements from the same-day calibration_report.py run (above),
+split into two buckets before asking the user anything:
+
+- **9 of the 15** (ids 32, 66, 94, 101, 135, 145, 146, 148, 390) are cases where the model
+  read a real, hard disqualifier straight out of `jd_text` (DoD/security clearance, US
+  citizenship, native-mobile/low-level-OS stack, legacy frontend stack, required C++
+  distributed-systems experience, 3+ yrs experience, QA/UI-test focus, frontend/React
+  focus) that the user could not have seen at blind-baseline time (Step 1 is
+  company/title/flags only, explicitly forbidding the JD text). **Judged: not
+  disagreements to fix.** The blind baseline did its job — it surfaced that "this
+  company/title sounds appealing" and "the actual posting is a fit" are different
+  questions — and the model's score is correct in all 9. `profile_summary.md` changes
+  wouldn't move any of these; the gaps are real. No action taken on this bucket.
+- **6 of the 15** (ids 50, 76, 105, 113, 131, 152) are genuine judgment calls: two
+  (113 mthree, 131 Affirm) were hard-capped at 6 by the `sponsorship_risk` rule; the other
+  four (50 Paylocity, 76 CLEAR, 105 TikTok, 152 Amazon) scored 5.5–6.5 on adjacent-but-not-
+  exact stack overlap. Brought both patterns to the user for a decision (this is Step 4's
+  "user decides which cause" — not something to resolve unilaterally).
+
+**User's rulings, both applied to PROTECTED files with explicit approval in this session:**
+
+1. **Remove the `sponsorship_risk` hard cap.** The user confirmed they want to apply to
+   `sponsorship_risk`-flagged roles regardless of visa-sponsorship uncertainty.
+   `docs/scoring_prompt.md` §3 changed from "CAP the score at 6" to "do NOT cap the
+   score... score on fit alone, but always note the flag in the rationale." This directly
+   un-caps ids 113 and 131 on the next scoring pass (both were capped, not naturally low).
+
+2. **Weigh genuine transferable skills more heavily for well-known/large employers.**
+   Scoped narrowly after an explicit clarifying question, because the user's initial
+   phrasing ("add the closest skills in my resume which will match the JD") was ambiguous
+   between three very different things: (a) score-only credit for real transferable
+   skills, (b) resume-tailoring emphasis (Phase 3/M8, LOCKED, out of scope this session),
+   or (c) fabricating skills the user doesn't have. The user confirmed (a) — score only,
+   real skills, no resume-content change. Added a `profile_summary.md` Notes bullet: for
+   employers like Amazon/TikTok "and similarly prominent tech companies," weigh genuinely-
+   held transferable/adjacent skills (distributed systems, backend services, Kafka/
+   event-driven, PyTorch/ML pipeline work) above literal keyword overlap, without requiring
+   an exact stack match for the 7–8 band. The bullet explicitly disclaims that this is not
+   permission to claim skills the candidate doesn't have, and points at
+   `TAILORING_METHODOLOGY.md`'s anti-fabrication rules for the separate, later tailoring
+   phase. Option (b) is noted here so it isn't lost: once Phase 3/M8 unlocks, tailoring
+   should foreground the candidate's closest *real* matching bullets per JD — this is
+   already what S1→S2→S3 is designed to do, no new instruction needed there.
+
+**Not yet re-scored against these changes** — that's the next Step 2/3/4 cycle, on a future
+batch (or a re-run of this one), not done in this session.
+
+**Verified:** `pytest -q` — 385 passed (no test asserted the old cap behavior by name, so
+none needed updating). No DB writes; both edits are to `docs/scoring_prompt.md` and
+`config/profile_summary.md` only.
