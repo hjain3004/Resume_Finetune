@@ -200,6 +200,37 @@ def test_build_digest_omits_audit_section_when_no_result_given():
     assert text == EXPECTED
 
 
+def test_build_digest_shows_run_warnings_from_structured_notes():
+    import src.db as db
+
+    conn = db.get_connection(":memory:")
+    _seed(conn)
+    conn.execute(
+        "UPDATE runs SET notes = ? WHERE id = 1",
+        (
+            json.dumps(
+                {
+                    "discovery_issues": [
+                        {
+                            "source": "tracker_simplify",
+                            "stage": "fetch",
+                            "error_type": "RuntimeError",
+                            "message": "boom",
+                        }
+                    ]
+                }
+            ),
+        ),
+    )
+    conn.commit()
+    run_row = conn.execute("SELECT * FROM runs WHERE id = 1").fetchone()
+
+    text = digest.build_digest(conn, run_row, date_str="2026-07-05")
+
+    assert "### Run warnings" in text
+    assert "- tracker_simplify [fetch/RuntimeError]: boom" in text
+
+
 def test_build_digest_shows_fail_banner_and_suppresses_new_and_resolved_when_audit_fails():
     import src.db as db
 

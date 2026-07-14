@@ -9,6 +9,7 @@ discovering the same still-open postings is expected to touch them."""
 from unittest.mock import patch
 
 from src import db, run_ingest
+from src.discover.base import DiscoveryResult
 from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD
 
@@ -30,7 +31,11 @@ def _resolve_side_effect(url, session, **kwargs):
 
 def _run_pipeline(db_path: str, digest_dir: str, audit_dir: str) -> int:
     with (
-        patch.object(run_ingest, "discover_all", return_value=list(FIXED_JOBS)),
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult(tuple(FIXED_JOBS), (), ("tracker_vansh",), ()),
+        ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest.resolve, "resolve", side_effect=_resolve_side_effect),
     ):

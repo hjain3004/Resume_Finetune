@@ -177,6 +177,25 @@ def _per_source_table(conn: sqlite3.Connection, run_id: int) -> str:
     return "\n".join(lines)
 
 
+def _run_warnings(run_row: sqlite3.Row) -> str:
+    notes = run_row["notes"]
+    if not notes:
+        return ""
+    try:
+        payload = json.loads(notes)
+    except json.JSONDecodeError:
+        return f"### Run warnings\n- {notes}"
+    issues = payload.get("discovery_issues") if isinstance(payload, dict) else None
+    if not issues:
+        return ""
+    lines = ["### Run warnings"]
+    for issue in issues:
+        lines.append(
+            f"- {issue['source']} [{issue['stage']}/{issue['error_type']}]: {issue['message']}"
+        )
+    return "\n".join(lines)
+
+
 def _audit_section(audit_result) -> str:
     if audit_result is None:
         return ""
@@ -213,6 +232,8 @@ def build_digest(
 
     audit_failed = audit_result is not None and audit_result.overall == "FAIL"
     new_and_resolved_body = _FAIL_BANNER if audit_failed else _new_and_resolved_table(conn)
+    run_warnings = _run_warnings(run_row)
+    warning_section = f"\n{run_warnings}\n" if run_warnings else "\n"
 
     return (
         f"# Job Digest — {date_str}\n"
@@ -224,7 +245,7 @@ def build_digest(
         f"- Filtered out: {run_row['filtered_out']}\n"
         f"- Resolution tiers — t1: {run_row['tier1_resolved']}, t2: {run_row['tier2_resolved']}, "
         f"manual: {run_row['manual_failed']}\n"
-        "\n"
+        f"{warning_section}"
         "### Per-source\n"
         f"{_per_source_table(conn, run_row['id'])}\n"
         "\n"

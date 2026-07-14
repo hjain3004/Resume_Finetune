@@ -10,6 +10,7 @@ import argparse
 import json
 import logging
 from collections import Counter, defaultdict
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,6 +18,8 @@ import yaml
 
 from src import audit as audit_module, db, digest, freshness, prefilter, resolve
 from src.discover import ADAPTERS, discover_all, inbox_manual
+from src.discover import tracker_common
+from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
 from src.resolve.base import PoliteSession
 
@@ -37,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--discover-only", action="store_true", help="only run the discovery step")
     parser.add_argument("--limit", type=int, metavar="N", help="cap new insertions per source")
     parser.add_argument("--db", metavar="PATH", default="data/jobs.db", help="path to the SQLite database")
+    parser.add_argument(
+        "--snapshot-dir",
+        metavar="DIR",
+        help="override tracker snapshot directory",
+    )
     parser.add_argument(
         "--digest-dir", metavar="DIR", default="data/digests", help="directory to write the digest markdown to"
     )
@@ -85,6 +93,54 @@ def _select_sources(sources_cfg: dict, source_name: str | None) -> dict:
     return {
         name: cfg for name, cfg in sources_cfg.items() if cfg.get("enabled") and name in ADAPTERS
     }
+
+
+def _with_snapshot_dir(selected: dict, snapshot_dir: str | None) -> dict:
+    if snapshot_dir is None:
+        return {name: dict(cfg) for name, cfg in selected.items()}
+    return {name: dict(cfg, snapshot_dir=snapshot_dir) for name, cfg in selected.items()}
+
+
+def _serialize_discovery_issues(issues: tuple[DiscoveryIssue, ...]) -> str | None:
+    if not issues:
+        return None
+    return json.dumps(
+        {"discovery_issues": [asdict(issue) for issue in issues]},
+        sort_keys=True,
+    )
+
+
+def persist_discovery(
+    conn,
+    result: DiscoveryResult,
+    *,
+    stale_days: int,
+    reopen_days: int,
+    dry_run: bool,
+) -> tuple[dict[str, int], tuple[DiscoveryIssue, ...]]:
+    inserted = db.insert_discovered(
+        conn,
+        list(result.jobs),
+        stale_days=stale_days,
+        reopen_days=reopen_days,
+    )
+    if dry_run:
+        return inserted, ()
+    issues = []
+    for checkpoint in result.checkpoints:
+        try:
+            tracker_common.commit_checkpoint(checkpoint)
+        except OSError as exc:
+            logger.exception("checkpoint commit failed for %s", checkpoint.source)
+            issues.append(
+                DiscoveryIssue(
+                    checkpoint.source,
+                    "checkpoint",
+                    type(exc).__name__,
+                    str(exc)[:500],
+                )
+            )
+    return inserted, tuple(issues)
 
 
 def run_resolution(
@@ -144,14 +200,20 @@ def main(argv: list[str] | None = None) -> int:
     freshness_cfg = load_freshness_config()
 
     new_count = 0
+    discovery_result = DiscoveryResult((), (), (), ())
+    discovery_issues: tuple[DiscoveryIssue, ...] = ()
     if not args.resolve_only:
-        discovered = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
-        inserted_by_source = db.insert_discovered(
+        selected = _with_snapshot_dir(selected, args.snapshot_dir)
+        discovery_result = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
+        inserted_by_source, checkpoint_issues = persist_discovery(
             conn,
-            discovered,
+            discovery_result,
             stale_days=freshness_cfg["stale_days"],
             reopen_days=freshness_cfg["reopen_days"],
+            dry_run=args.dry_run,
         )
+        discovery_issues = discovery_result.issues + checkpoint_issues
+        discovered = discovery_result.jobs
         new_count = sum(inserted_by_source.values())
         print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
         for job in discovered:
@@ -177,6 +239,12 @@ def main(argv: list[str] | None = None) -> int:
             db.record_run_source(
                 conn, run_id, INBOX_SOURCE_NAME, discovered=inbox_new, inserted=inbox_new
             )
+
+    all_selected_failed = (
+        not args.resolve_only and bool(selected) and not discovery_result.succeeded_sources
+    )
+    checkpoint_failed = any(issue.stage == "checkpoint" for issue in discovery_issues)
+    run_notes = _serialize_discovery_issues(discovery_issues)
 
     resolved_count = 0
     failed_count = 0
@@ -234,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
         tier1_resolved=tiers["tier1"],
         tier2_resolved=tiers["tier2"],
         manual_failed=tiers["manual"],
+        notes=run_notes,
     )
 
     if not args.discover_only and not args.resolve_only:
@@ -244,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
             digest_path = digest.write_digest(conn, run_row, base_dir=args.digest_dir, audit_result=audit_result)
             print(f"Digest written to {digest_path}")
 
-    return 0
+    return 1 if all_selected_failed or checkpoint_failed else 0
 
 
 if __name__ == "__main__":
