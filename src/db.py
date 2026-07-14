@@ -208,8 +208,18 @@ def insert_discovered(
             (now, existing["id"]),
         )
 
-        if existing["status"] in (Status.RESOLVE_FAILED, Status.CLOSED) and _is_older_than(
-            prior_last_seen, reopen_days, now
+        # prior_last_seen is None for any row inserted before last_seen_at existed
+        # (pre-M6.8) that hasn't been re-seen since. _is_older_than() treats a
+        # missing timestamp as "definitely old enough", which reopened rows on
+        # their very first post-M6.8 sighting regardless of how recently they
+        # actually failed (found 2026-07-15: 21 rows reopened same-week instead
+        # of after reopen_days). Require a real prior timestamp before reopening;
+        # last_seen_at is always backfilled above, so the next sighting is judged
+        # correctly.
+        if (
+            existing["status"] in (Status.RESOLVE_FAILED, Status.CLOSED)
+            and prior_last_seen is not None
+            and _is_older_than(prior_last_seen, reopen_days, now)
         ):
             _reopen_row(conn, existing["id"], job.url, job.source, now)
         elif existing["jd_text"] is None and _source_rank(job.source) < _source_rank(existing["source"]):

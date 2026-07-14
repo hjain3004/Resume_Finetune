@@ -473,6 +473,27 @@ def test_insert_discovered_does_not_reopen_recently_seen_resolve_failed_row(conn
     assert row["status"] == Status.RESOLVE_FAILED
 
 
+def test_insert_discovered_does_not_reopen_resolve_failed_row_with_null_last_seen_at(conn):
+    # Regression for the bug found 2026-07-15: rows inserted before last_seen_at
+    # existed (pre-M6.8) have last_seen_at = NULL. _is_older_than() treated that
+    # as "definitely old enough", reopening on the very first re-sighting instead
+    # of after reopen_days. This is exactly what happened to 21 real tracker_vansh
+    # rows on 2026-07-12.
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute(
+        "UPDATE jobs SET status = ?, resolve_attempts = 3, last_seen_at = NULL WHERE id = ?",
+        (Status.RESOLVE_FAILED, job_id),
+    )
+    conn.commit()
+
+    db.insert_discovered(conn, [_job()], reopen_days=45)
+
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.RESOLVE_FAILED
+    assert row["last_seen_at"] is not None  # backfilled for next time
+
+
 def test_insert_discovered_does_not_reopen_other_terminal_statuses(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
