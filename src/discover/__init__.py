@@ -1,8 +1,8 @@
 """Discovery adapter registry per ARCHITECTURE §5.1.
 
 `discover_all()` iterates enabled, implemented adapters, concatenates their
-results, and isolates each adapter's exceptions so one broken source never
-kills the run. The manual inbox adapter is intentionally not part of this
+prepared results, and isolates each adapter's exceptions so one broken source
+never kills the run. The manual inbox adapter is intentionally not part of this
 registry — see `inbox_manual.py`'s module docstring for why.
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 
 from src.discover import tracker_jobright, tracker_simplify, tracker_vansh
-from src.models import DiscoveredJob
+from src.discover.base import DiscoveryIssue, DiscoveryResult
 
 logger = logging.getLogger(__name__)
 
@@ -23,23 +23,33 @@ ADAPTERS = {
 
 
 def discover_all(
-    sources_cfg: dict, *, limit: int | None = None, dry_run: bool = False
-) -> list[DiscoveredJob]:
+    sources_cfg: dict,
+    *,
+    limit: int | None = None,
+    dry_run: bool = False,
+    adapters=None,
+) -> DiscoveryResult:
     """Run every enabled adapter named in `sources_cfg` that's implemented in
     ADAPTERS. An adapter raising an exception is logged and skipped; it does
     not prevent the other adapters from contributing their jobs."""
-    all_jobs: list[DiscoveredJob] = []
+    registry = ADAPTERS if adapters is None else adapters
+    jobs = []
+    checkpoints = []
+    succeeded = []
+    issues = []
     for name, cfg in sources_cfg.items():
-        if not cfg.get("enabled") or name not in ADAPTERS:
+        if not cfg.get("enabled") or name not in registry:
             continue
-        adapter = ADAPTERS[name]
-        adapter_cfg = dict(cfg, dry_run=dry_run)
+        adapter = registry[name]
+        adapter_cfg = dict(cfg, dry_run=dry_run, limit=limit)
         try:
-            jobs = adapter.discover(adapter_cfg)
-        except Exception:
+            prepared = adapter.discover(adapter_cfg)
+        except Exception as exc:
             logger.exception("discovery failed for source %s", name)
+            issues.append(DiscoveryIssue(name, "fetch", type(exc).__name__, str(exc)[:500]))
             continue
-        if limit is not None:
-            jobs = jobs[:limit]
-        all_jobs.extend(jobs)
-    return all_jobs
+        jobs.extend(prepared.jobs)
+        if prepared.checkpoint is not None:
+            checkpoints.append(prepared.checkpoint)
+        succeeded.append(name)
+    return DiscoveryResult(tuple(jobs), tuple(checkpoints), tuple(succeeded), tuple(issues))

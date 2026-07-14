@@ -15,12 +15,11 @@ since the user may add repos later with a different default branch.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import requests
 
 from src.discover import tracker_common as common
-from src.models import DiscoveredJob, dedup_key
+from src.discover.base import AdapterDiscovery
+from src.models import DiscoveredJob
 
 SOURCE_NAME = "tracker_jobright"
 JSON_LISTINGS_PATH = ".github/scripts/listings.json"
@@ -34,12 +33,6 @@ def parse_readme_table(text: str) -> list[DiscoveredJob]:
     return common.parse_readme_table(text, SOURCE_NAME)
 
 
-def diff_new_jobs(
-    jobs: list[DiscoveredJob], snapshot_dir: str | Path, source_path: str
-) -> list[DiscoveredJob]:
-    return common.diff_new_jobs(jobs, snapshot_dir, source_path, SOURCE_NAME)
-
-
 def _discover_repo(repo: str, session: requests.Session) -> tuple[list[DiscoveredJob], str]:
     branch = common.fetch_default_branch(repo, session, fallback="master")
     json_entries = common.fetch_json_listings(repo, branch, JSON_LISTINGS_PATH, session)
@@ -49,11 +42,10 @@ def _discover_repo(repo: str, session: requests.Session) -> tuple[list[Discovere
     return parse_readme_table(readme_text), f"{repo}:README.md"
 
 
-def discover(config: dict) -> list[DiscoveredJob]:
+def discover(config: dict) -> AdapterDiscovery:
     repos = config["repos"]
     snapshot_dir = config.get("snapshot_dir", "snapshots")
     session = config.get("session") or requests.Session()
-    dry_run = config.get("dry_run", False)
 
     jobs: list[DiscoveredJob] = []
     source_paths = []
@@ -63,9 +55,10 @@ def discover(config: dict) -> list[DiscoveredJob]:
         source_paths.append(source_path)
     combined_source_path = "; ".join(source_paths)
 
-    if dry_run:
-        previous_keys = common.load_snapshot_keys(snapshot_dir, SOURCE_NAME)
-        return [
-            j for j in jobs if dedup_key(j.company, j.title, j.location) not in previous_keys
-        ]
-    return diff_new_jobs(jobs, snapshot_dir, combined_source_path)
+    return common.prepare_snapshot_diff(
+        jobs,
+        snapshot_dir,
+        combined_source_path,
+        SOURCE_NAME,
+        limit=config.get("limit"),
+    )

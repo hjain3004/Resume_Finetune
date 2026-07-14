@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from src.discover import tracker_jobright
+from src.discover import tracker_common, tracker_jobright
+from src.models import dedup_key
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -24,8 +25,14 @@ def test_parse_readme_table_extracts_link_from_title_cell():
     assert carollo.location == "Walnut Creek, CA, US"
 
 
-def test_snapshot_diff_first_run_returns_all(tmp_path):
+def test_prepare_snapshot_first_run_returns_all_without_writing(tmp_path):
     text = (FIXTURES / "jobright_readme.md").read_text()
     jobs = tracker_jobright.parse_readme_table(text)
-    new_jobs = tracker_jobright.diff_new_jobs(jobs, tmp_path, "README.md")
-    assert len(new_jobs) == len(jobs)
+    prepared = tracker_common.prepare_snapshot_diff(
+        jobs, tmp_path, "README.md", tracker_jobright.SOURCE_NAME
+    )
+    unique_keys = {dedup_key(j.company, j.title, j.location) for j in jobs}
+    assert len(prepared.jobs) == len(unique_keys)
+    assert not (tmp_path / "tracker_jobright.json").exists()
+    tracker_common.commit_checkpoint(prepared.checkpoint)
+    assert (tmp_path / "tracker_jobright.json").exists()

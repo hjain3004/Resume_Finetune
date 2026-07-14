@@ -290,33 +290,3 @@ def commit_checkpoint(checkpoint: PendingCheckpoint) -> None:
     finally:
         temporary.unlink(missing_ok=True)
 
-
-def save_snapshot_keys(
-    snapshot_dir: str | Path, source_name: str, keys: set[str], source_path: str
-) -> None:
-    path = _snapshot_path(snapshot_dir, source_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"keys": sorted(keys), "source_path": source_path}, indent=2))
-
-
-def diff_new_jobs(
-    jobs: list[DiscoveredJob], snapshot_dir: str | Path, source_path: str, source_name: str
-) -> list[DiscoveredJob]:
-    """Compare parsed jobs against the previous snapshot's dedup_key set,
-    return only the new ones, then overwrite the snapshot with the full set.
-
-    WARNING: this call has a side effect — it overwrites snapshot_dir's file
-    for source_name unconditionally. Never call this directly against the
-    real `snapshots/` dir for ad hoc inspection/debugging; use a tmp_path copy
-    or `discover(config)` with `dry_run=True` (which reads the snapshot but
-    never writes it). A direct interactive call against production snapshots
-    is the confirmed root cause of an M7 I1 incident (2026-07-12, see
-    DECISIONS.md): jobs got marked "seen" without ever being inserted into the
-    DB, silently starving discovery for ~608 real postings."""
-    previous_keys = load_snapshot_keys(snapshot_dir, source_name)
-    current_keys = {dedup_key(j.company, j.title, j.location) for j in jobs}
-    new_jobs = [
-        j for j in jobs if dedup_key(j.company, j.title, j.location) not in previous_keys
-    ]
-    save_snapshot_keys(snapshot_dir, source_name, current_keys, source_path)
-    return new_jobs
