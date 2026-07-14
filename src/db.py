@@ -8,7 +8,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, clean_title, dedup_key
 
@@ -100,6 +100,14 @@ def get_connection(db_path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     init_db(conn)
+    return conn
+
+
+def get_readonly_connection(db_path: str | Path) -> sqlite3.Connection:
+    path = Path(db_path).resolve()
+    uri = f"file:{quote(str(path), safe='/')}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    conn.row_factory = sqlite3.Row
     return conn
 
 
@@ -290,6 +298,35 @@ def distinct_run_sources(conn: sqlite3.Connection) -> list[str]:
 
 def recent_runs(conn: sqlite3.Connection, limit: int) -> list[sqlite3.Row]:
     return conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+
+
+def source_yield_summary(conn: sqlite3.Connection, trailing_runs: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        WITH selected_runs AS (
+            SELECT id FROM runs WHERE finished_at IS NOT NULL
+            ORDER BY id DESC LIMIT ?
+        )
+        SELECT rs.source, COUNT(*) AS runs_observed,
+               SUM(rs.discovered) AS discovered,
+               SUM(rs.inserted) AS inserted,
+               SUM(rs.resolved) AS resolved,
+               SUM(rs.failed) AS failed
+        FROM run_sources rs JOIN selected_runs sr ON sr.id = rs.run_id
+        GROUP BY rs.source ORDER BY rs.source
+        """,
+        (trailing_runs,),
+    ).fetchall()
+
+
+def status_summary(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT status, COUNT(*) AS count,
+               MIN(discovered_at) AS oldest_discovered_at
+        FROM jobs GROUP BY status ORDER BY status
+        """
+    ).fetchall()
 
 
 def start_run(conn: sqlite3.Connection) -> int:
