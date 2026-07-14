@@ -5,6 +5,7 @@ through to resolve.resolve() and record the resulting tier counts."""
 from unittest.mock import MagicMock, patch
 
 from src import db, run_ingest
+from src.discover.base import DiscoveryResult
 from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD
 
@@ -32,7 +33,11 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
     ]
 
     with (
-        patch.object(run_ingest, "discover_all", return_value=list(jobs)),
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult(tuple(jobs), (), ("tracker_vansh",), ()),
+        ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "load_browser_resolver_flag", return_value=True),
         patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd", "browser")) as mock_resolve,

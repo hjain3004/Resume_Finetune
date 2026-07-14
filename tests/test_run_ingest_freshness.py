@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from src import db, run_ingest
+from src.discover.base import DiscoveryResult
 from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, Status
 
@@ -22,7 +23,11 @@ def test_main_runs_liveness_recheck_and_closes_dead_shortlisted_row(tmp_path):
     mock_session.get.return_value = MagicMock(status_code=404)
 
     with (
-        patch.object(run_ingest, "discover_all", return_value=[]),
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult((), (), ("tracker_vansh",), ()),
+        ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "PoliteSession", return_value=mock_session),
     ):
@@ -43,7 +48,11 @@ def test_main_threads_freshness_config_stale_days_into_insert_discovered(tmp_pat
     old_job = DiscoveredJob("Acme", "Backend Engineer", "Remote", "https://acme.example/1", "tracker_vansh", "2026-01-01")
 
     with (
-        patch.object(run_ingest, "discover_all", return_value=[old_job]),
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult((old_job,), (), ("tracker_vansh",), ()),
+        ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "PoliteSession", return_value=MagicMock()),
         patch.object(run_ingest.resolve, "resolve", return_value=None),

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from src import db, run_ingest
+from src.discover.base import DiscoveryResult
 from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD, Status
 
@@ -31,7 +32,11 @@ def test_resolve_only_run_still_filters_newly_resolved_rows(tmp_path):
     conn.close()
 
     with (
-        patch.object(run_ingest, "discover_all", return_value=[]),
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult((), (), ("tracker_vansh",), ()),
+        ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "PoliteSession", return_value=MagicMock()),
         patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd text", "workday")),
