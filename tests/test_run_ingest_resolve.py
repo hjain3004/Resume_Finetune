@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from src import db, run_ingest
 from src.models import DiscoveredJob, ResolvedJD, Status
 
@@ -87,6 +89,40 @@ def test_run_resolution_sets_resolve_failed_after_three_runs():
     row = db.get_by_url(conn, "https://example.com/job/1")
     assert row["status"] == Status.RESOLVE_FAILED
     assert row["resolve_attempts"] == 3
+
+
+def test_run_resolution_treats_network_exception_as_a_resolve_failure():
+    # Regression for 2026-07-15: an unhandled ConnectionError from
+    # resolve.resolve() (a plain requests.get under the hood) propagated all
+    # the way out of run_resolution()/main(), killing an in-progress backlog
+    # clear at row 181/1047. One flaky request must be isolated to that row,
+    # not abort the whole batch -- matching discover_all()'s per-adapter
+    # exception isolation.
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/job/1", "tracker_vansh", None),
+            DiscoveredJob("Beta", "SWE 2", "Remote", "https://example.com/job/2", "tracker_vansh", None),
+        ],
+    )
+    session = MagicMock()
+
+    def _side_effect(url, session, **kwargs):
+        if "job/1" in url:
+            raise requests.exceptions.ConnectionError("Connection aborted.")
+        return ResolvedJD("jd text", "greenhouse")
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
+        resolved_count, failed_count, _by_source, _tiers = run_ingest.run_resolution(conn, session)
+
+    assert resolved_count == 1
+    assert failed_count == 1
+    row1 = db.get_by_url(conn, "https://example.com/job/1")
+    assert row1["status"] == Status.DISCOVERED
+    assert row1["resolve_attempts"] == 1
+    row2 = db.get_by_url(conn, "https://example.com/job/2")
+    assert row2["status"] == Status.RESOLVED
 
 
 def test_run_resolution_only_processes_discovered_rows():

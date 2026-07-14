@@ -14,6 +14,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
 import yaml
 
 from src import audit as audit_module, db, digest, freshness, prefilter, resolve
@@ -163,7 +164,17 @@ def run_resolution(
             per_source[source]["failed"] += 1
             tiers["manual"] += 1
             continue
-        result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
+        # A transient network error (connection reset, timeout) from
+        # session.get() inside resolve.resolve() previously propagated
+        # uncaught all the way out of main(), killing the whole batch after
+        # one bad request (found 2026-07-15: crashed 181/1047 rows into a
+        # backlog clear). Treat it like any other per-row resolve failure —
+        # same isolation the discovery layer already applies per adapter.
+        try:
+            result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
+        except requests.exceptions.RequestException as exc:
+            logger.warning("resolve failed for row %s (%s): %s", row["id"], row["url"], exc)
+            result = None
         if result is not None:
             db.mark_resolved(conn, row["id"], result, logic_version=resolve.LOGIC_VERSION)
             prior_repost = freshness.find_content_repost(
