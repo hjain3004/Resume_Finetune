@@ -29,9 +29,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import random
 import re
 import statistics
 import subprocess
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -39,9 +42,18 @@ from scripts import import_scores
 from src.llm_trace import write_trace
 from src.run_ingest import load_filters_config
 
+logger = logging.getLogger(__name__)
+
 CHUNK_SIZE = 6
 SELF_CONSISTENCY_K = 3
 BORDERLINE_MARGIN = 0.5
+# Resilience for the nested `claude -p` call. A single invocation is one of
+# k*num_chunks per run, so any transient failure (silent exit-1, malformed
+# JSON) that isn't retried aborts the whole batch and discards every chunk
+# already scored. Retry the *invocation* only — the scoring logic is unchanged.
+SCORE_MAX_ATTEMPTS = 3
+SCORE_RETRY_BASE_DELAY = 2.0  # seconds; exponential backoff with jitter
+SCORE_RETRY_MAX_JITTER = 1.0  # seconds added to each backoff to de-correlate calls
 PROMPT_PATH = Path("docs/scoring_prompt.md")
 PROFILE_SUMMARY_PATH = Path("config/profile_summary.md")
 _PROMPT_HEADER_MARKER = "## Prompt"
@@ -74,6 +86,48 @@ def build_chunk_prompt(prompt_text: str, chunk: list[dict], profile_text: str) -
 def strip_json_fences(text: str) -> str:
     """Remove accidental markdown code fences around a JSON response."""
     return _FENCE_RE.sub("", text.strip()).strip()
+
+
+# Matches a comma that is followed only by whitespace before a closing ] or }.
+# Observed twice from the nested scorer (see DECISIONS.md 2026-07-14): a valid
+# response with a stray trailing comma, e.g. `{"a": 1,}` or `[1, 2, ]`.
+_TRAILING_COMMA_RE = re.compile(r",(\s*[)\]}])")
+
+
+def repair_trailing_commas(text: str) -> str:
+    """Remove trailing commas before a closing brace/bracket.
+
+    Deliberately narrow: it only rewrites `,]`/`,}` (optionally with whitespace
+    between). It is applied ONLY as a fallback after a strict parse has already
+    failed, so it cannot mask an otherwise-valid-but-wrong response."""
+    return _TRAILING_COMMA_RE.sub(r"\1", text)
+
+
+def parse_scoring_response(raw_output: str) -> list[dict]:
+    """Parse a scorer response into the list-of-entries structure.
+
+    Tries a strict `json.loads` first; only if that raises does it apply the
+    narrow trailing-comma repair and retry. Validates the shape at the boundary
+    so a well-formed-but-wrong response fails here (with context) rather than
+    deep inside aggregate_self_consistency_runs()."""
+    try:
+        parsed = json.loads(raw_output)
+    except json.JSONDecodeError:
+        repaired = repair_trailing_commas(raw_output)
+        if repaired == raw_output:
+            raise
+        parsed = json.loads(repaired)  # may still raise -- caller handles it
+        logger.warning("scorer response had a trailing comma; auto-repaired before parsing")
+
+    if not isinstance(parsed, list) or not parsed:
+        raise ValueError(f"scorer response is not a non-empty JSON array (got {type(parsed).__name__})")
+    for entry in parsed:
+        if not isinstance(entry, dict):
+            raise ValueError(f"scorer response entry is not an object: {entry!r}")
+        missing = {"id", "fit_score", "base_variant"} - entry.keys()
+        if missing:
+            raise ValueError(f"scorer response entry {entry.get('id', '?')} missing keys: {sorted(missing)}")
+    return parsed
 
 
 def majority_vote_variant(variants: list[str]) -> str:
@@ -158,16 +212,9 @@ def score_chunk(
 
     runs: list[list[dict]] = []
     for run_index in range(k):
-        result = subprocess.run(
-            [*claude_cmd, prompt], capture_output=True, text=True, timeout=_CLAUDE_TIMEOUT_SECONDS
+        raw_output, parsed = _invoke_scorer_with_retry(
+            prompt, claude_cmd=claude_cmd, index=index, run_index=run_index
         )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"chunk {index} run {run_index} scoring failed (exit {result.returncode}): {result.stderr}"
-            )
-        raw_output = strip_json_fences(result.stdout)
-        if not raw_output:
-            raise RuntimeError(f"chunk {index} run {run_index} scorer returned no output (stderr: {result.stderr})")
         write_trace(
             invocation_type="scoring",
             input_paths=[chunk_input_path, PROFILE_SUMMARY_PATH],
@@ -175,9 +222,52 @@ def score_chunk(
             prompt_path=PROMPT_PATH,
             model=claude_cmd[0],
         )
-        runs.append(json.loads(raw_output))
+        runs.append(parsed)
 
     return aggregate_self_consistency_runs(chunk, runs, threshold=threshold)
+
+
+def _invoke_scorer_with_retry(
+    prompt: str,
+    *,
+    claude_cmd: tuple[str, ...],
+    index: int,
+    run_index: int,
+    max_attempts: int = SCORE_MAX_ATTEMPTS,
+) -> tuple[str, list[dict]]:
+    """Run one nested `claude -p` invocation, retrying transient failures.
+
+    Retries a non-zero exit, empty stdout, or an unparseable response (after the
+    trailing-comma repair fallback). Returns (raw_output, parsed_entries) on
+    success. Raises RuntimeError only after every attempt has been exhausted, so
+    a single flaky call no longer aborts the whole batch. The scoring content is
+    unchanged -- this wraps the invocation, not the model's reasoning."""
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = subprocess.run(
+                [*claude_cmd, prompt], capture_output=True, text=True, timeout=_CLAUDE_TIMEOUT_SECONDS
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"exit {result.returncode}: {result.stderr.strip() or '<empty stderr>'}")
+            raw_output = strip_json_fences(result.stdout)
+            if not raw_output:
+                raise RuntimeError(f"scorer returned no output (stderr: {result.stderr.strip() or '<empty>'})")
+            parsed = parse_scoring_response(raw_output)
+            return raw_output, parsed
+        except (RuntimeError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+            last_error = exc
+            if attempt < max_attempts:
+                delay = SCORE_RETRY_BASE_DELAY * (2 ** (attempt - 1)) + random.uniform(0, SCORE_RETRY_MAX_JITTER)
+                logger.warning(
+                    "chunk %d run %d scoring attempt %d/%d failed (%s); retrying in %.1fs",
+                    index, run_index, attempt, max_attempts, exc, delay,
+                )
+                time.sleep(delay)
+
+    raise RuntimeError(
+        f"chunk {index} run {run_index} scoring failed after {max_attempts} attempts: {last_error}"
+    )
 
 
 def score_batch(

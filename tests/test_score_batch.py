@@ -215,9 +215,14 @@ def test_score_chunk_strips_fences_from_stdout(tmp_path, monkeypatch):
     assert result[0]["fit_score"] == 8.0
 
 
-def test_score_chunk_raises_on_nonzero_exit(tmp_path):
-    with patch.object(
-        score_batch.subprocess, "run", return_value=MagicMock(returncode=1, stderr="boom", stdout="")
+def test_score_chunk_raises_on_nonzero_exit_after_retries(tmp_path):
+    # A persistently failing invocation is retried SCORE_MAX_ATTEMPTS times, then
+    # raises. time.sleep is patched so the backoff doesn't slow the test.
+    with (
+        patch.object(score_batch.time, "sleep"),
+        patch.object(
+            score_batch.subprocess, "run", return_value=MagicMock(returncode=1, stderr="boom", stdout="")
+        ) as mock_run,
     ):
         try:
             score_batch.score_chunk(
@@ -230,11 +235,16 @@ def test_score_chunk_raises_on_nonzero_exit(tmp_path):
             assert False, "expected RuntimeError"
         except RuntimeError as exc:
             assert "boom" in str(exc)
+            assert "3 attempts" in str(exc)
+    assert mock_run.call_count == score_batch.SCORE_MAX_ATTEMPTS
 
 
-def test_score_chunk_raises_when_stdout_empty(tmp_path):
-    with patch.object(
-        score_batch.subprocess, "run", return_value=MagicMock(returncode=0, stderr="", stdout="   ")
+def test_score_chunk_raises_when_stdout_empty_after_retries(tmp_path):
+    with (
+        patch.object(score_batch.time, "sleep"),
+        patch.object(
+            score_batch.subprocess, "run", return_value=MagicMock(returncode=0, stderr="", stdout="   ")
+        ) as mock_run,
     ):
         try:
             score_batch.score_chunk(
@@ -247,6 +257,84 @@ def test_score_chunk_raises_when_stdout_empty(tmp_path):
             assert False, "expected RuntimeError"
         except RuntimeError as exc:
             assert "no output" in str(exc)
+    assert mock_run.call_count == score_batch.SCORE_MAX_ATTEMPTS
+
+
+def test_repair_trailing_commas_removes_stray_commas():
+    # The repair strips the comma but may leave interior whitespace, which is
+    # still valid JSON -- assert the repaired strings all parse and round-trip.
+    for broken, expected in [
+        ('{"a": 1,}', {"a": 1}),
+        ("[1, 2, ]", [1, 2]),
+        ('{"a": [1,],\n}', {"a": [1]}),
+    ]:
+        assert json.loads(score_batch.repair_trailing_commas(broken)) == expected
+
+
+def test_repair_trailing_commas_leaves_valid_json_untouched():
+    valid = '{"a": 1, "b": [2, 3]}'
+    assert score_batch.repair_trailing_commas(valid) == valid
+
+
+def test_parse_scoring_response_repairs_trailing_comma():
+    entry = _entry(id=1, fit_score=8.0)
+    # strict json.loads would reject this trailing comma before the closing ]
+    raw = "[" + json.dumps(entry) + ",\n]"
+    parsed = score_batch.parse_scoring_response(raw)
+    assert parsed == [entry]
+
+
+def test_parse_scoring_response_rejects_missing_keys():
+    raw = json.dumps([{"id": 1, "fit_score": 8.0}])  # no base_variant
+    try:
+        score_batch.parse_scoring_response(raw)
+        assert False, "expected ValueError"
+    except ValueError as exc:
+        assert "base_variant" in str(exc)
+
+
+def test_parse_scoring_response_rejects_non_array():
+    try:
+        score_batch.parse_scoring_response('{"id": 1}')
+        assert False, "expected ValueError"
+    except ValueError as exc:
+        assert "array" in str(exc)
+
+
+def test_score_chunk_retries_then_succeeds(tmp_path, monkeypatch):
+    # First invocation fails (silent exit-1), retry succeeds. The whole batch
+    # must not abort on the first flake.
+    prompt_path = tmp_path / "prompt.md"
+    prompt_path.write_text(PROMPT_TEXT)
+    profile_path = tmp_path / "profile.md"
+    profile_path.write_text(PROFILE_TEXT)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(score_batch, "PROMPT_PATH", prompt_path)
+    monkeypatch.setattr(score_batch, "PROFILE_SUMMARY_PATH", profile_path)
+    scored = json.dumps([_entry(id=1, fit_score=8.0)])
+    responses = [
+        MagicMock(returncode=1, stderr="", stdout=""),  # transient silent failure
+        MagicMock(returncode=0, stderr="", stdout=scored),
+        MagicMock(returncode=0, stderr="", stdout=scored),
+        MagicMock(returncode=0, stderr="", stdout=scored),
+    ]
+
+    with (
+        patch.object(score_batch.time, "sleep"),
+        patch.object(score_batch.subprocess, "run", side_effect=responses) as mock_run,
+    ):
+        result = score_batch.score_chunk(
+            [{"id": 1, "row_ids": [1]}],
+            work_dir=tmp_path,
+            index=0,
+            prompt_text=PROMPT_TEXT,
+            profile_text=PROFILE_TEXT,
+            k=3,
+            threshold=7.0,
+        )
+
+    assert result[0]["fit_score"] == 8.0
+    assert mock_run.call_count == 4  # 1 retry + 3 successful runs
 
 
 def test_score_batch_chunks_invokes_per_chunk_and_concatenates(tmp_path):
