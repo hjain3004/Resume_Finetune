@@ -582,6 +582,78 @@ def set_flags(conn: sqlite3.Connection, job_id: int, flags: list[str]) -> None:
     conn.commit()
 
 
+def apply_eligibility_transitions(conn: sqlite3.Connection, transitions: tuple[object, ...]) -> int:
+    """Apply a freshly computed M6.11 eligibility impact transition set.
+
+    The transition objects are produced by scripts.eligibility_impact. This
+    helper owns all SQL and uses compare-and-set predicates so stale previews
+    cannot overwrite concurrent state.
+    """
+    if not transitions:
+        return 0
+    changed = 0
+    try:
+        conn.execute("BEGIN")
+        for transition in transitions:
+            action = getattr(transition.action, "value", transition.action)
+            if action == "report_terminal":
+                continue
+            if action == "filter_discovered":
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, filter_reason = ?
+                    WHERE id = ? AND status = ? AND (filter_reason IS NULL OR filter_reason != ?)
+                    """,
+                    (
+                        Status.FILTERED_OUT,
+                        transition.reason_code,
+                        transition.job_id,
+                        transition.from_status,
+                        transition.reason_code,
+                    ),
+                )
+            elif action == "filter_active":
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, filter_reason = ?
+                    WHERE id = ? AND status = ? AND (filter_reason IS NULL OR filter_reason != ?)
+                    """,
+                    (
+                        Status.FILTERED_OUT,
+                        transition.reason_code,
+                        transition.job_id,
+                        transition.from_status,
+                        transition.reason_code,
+                    ),
+                )
+            elif action == "restore_legacy":
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, filter_reason = NULL, fit_score = NULL,
+                        fit_rationale = NULL, base_variant = NULL,
+                        missing_keywords = NULL, borderline = 0
+                    WHERE id = ? AND status = ? AND filter_reason = ?
+                    """,
+                    (
+                        Status.RESOLVED,
+                        transition.job_id,
+                        transition.from_status,
+                        transition.reason_code,
+                    ),
+                )
+            else:
+                raise ValueError(f"unknown eligibility impact action: {action}")
+            changed += conn.execute("SELECT changes()").fetchone()[0]
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return changed
+
+
 def duplicate_dedup_keys(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     """M7 I10: dedup_key values that appear on more than one row."""
     return conn.execute(
