@@ -6,6 +6,13 @@ design is `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`. Before
 write and approve a detailed plan for **M9D-0 only**. Do not treat the design document's
 rollout list as executable coding instructions.
 
+Status amendment (2026-07-15): M9D-0 is complete, but the live backlog-clear exposed a
+resolution-runtime stabilization gate before further calibration or M9D work. Implement
+**M6.10 only** from
+`docs/superpowers/plans/2026-07-15-m6-10-resolution-runtime-hardening.md`; then perform its
+user-supervised live smoke. The separate calibration-contract correction described in
+`docs/ROADMAP.md` is not part of M6.10.
+
 Rules of engagement for the implementer:
 
 - Build **one milestone per session**, in order. Read `docs/ARCHITECTURE.md` first, every time.

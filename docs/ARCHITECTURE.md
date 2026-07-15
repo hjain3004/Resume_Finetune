@@ -574,6 +574,35 @@ Implementation:
   `RESOLVE_FAILED` this run) and writes them to the new `runs.tier1_resolved`/`tier2_resolved`/
   `manual_failed` columns (§4.1) via `db.finish_run()`. See §8 for the digest line.
 
+### 6.5 Resolution runtime hardening (TARGET — M6.10, approved 2026-07-15)
+
+The M6.5 implementation above remains the current behavior until M6.10 is implemented.
+M6.10 changes runtime orchestration without weakening the three-tier content policy:
+
+- A resolver attempt produces a typed orchestration outcome: resolved, content failure,
+  transient infrastructure failure, or internal error. Only a content failure consumes
+  `resolve_attempts`; connection resets, browser launch failures, and unexpected internal
+  exceptions leave the job eligible without spending its content-failure budget.
+- `run_resolution()` retains a final per-row `except Exception` isolation boundary, but an
+  unexpected exception is logged with its traceback and recorded as an internal issue, not
+  converted to `None` and counted as a content failure.
+- Resolution accepts a separate deterministic `--resolve-limit N`; discovery's `--limit`
+  semantics are unchanged. Selection is ordered by job id so bounded runs are repeatable.
+- Production browser fallback uses one run-scoped `AsyncWebCrawler` lifecycle, not one
+  Chromium launch per URL. If browser startup/lifecycle fails, a circuit breaker defers
+  subsequent browser-required rows for the remainder of that run while tier-1 work
+  continues. Tests still mock the browser boundary and never launch a browser.
+- Jobright uses a static ATS link when present, otherwise accepts its static
+  `__NEXT_DATA__` aggregator payload before considering browser rendering. Browser work is
+  not spent on every Jobright row merely to look for a possible upgrade link; shortlisted
+  aggregator rows continue to use the existing digest/manual-original-posting path.
+- A run interrupted by an exception or `KeyboardInterrupt` still receives `finished_at`,
+  partial counters, and structured notes identifying it as aborted. Historical live-DB
+  cleanup is a separate user-approved administrative action, never an automated migration.
+
+No schema migration or new dependency is approved by M6.10. Full details and acceptance
+criteria are in `docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`.
+
 ## 7. Pre-filter (`prefilter.py`)
 
 Runs on `RESOLVED` rows without a `filter_reason`. Rules from `config/filters.yaml`:

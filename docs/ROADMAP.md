@@ -24,6 +24,29 @@ asymmetry, segment tagging, exemplar injection gate). Exit criteria: user has bl
 per calibration_report.py; shortlist_threshold locked in config; scoring stress-suite
 bands re-anchored from PROVISIONAL to calibrated values.
 
+### Stabilization gate before the next calibration batch
+
+**M6.10 — Resolution runtime hardening: PLANNED, implementation next.** The M9D-0
+backlog-clear exposed two production-boundary defects that unit-test success did not catch:
+transient resolver infrastructure errors currently consume a job's three-attempt content
+failure budget, and the tier-2 Crawl4AI path launches a fresh Chromium lifecycle per URL.
+Before another unbounded `--resolve-only` run or another calibration batch, implement the
+approved M6.10 design and plan:
+
+- `docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`
+- `docs/superpowers/plans/2026-07-15-m6-10-resolution-runtime-hardening.md`
+
+M6.10 is a stabilization milestone, not M9D-1. It adds typed resolution outcomes, bounded
+resolution work, a run-scoped browser lifecycle with a circuit breaker, static-first
+Jobright fallback, and reliable aborted-run accounting. It may not add dependencies, start
+M9D-1/M8, change scoring behavior, or mutate the live DB during automated verification.
+
+**Calibration-contract correction follows in a separate milestone.** The current worksheet
+is a metadata-interest baseline, while the scorer sees the full JD; those labels cannot be
+used as equivalent evidence. The next calibration design must separate metadata
+`interest_call` from JD-informed `fit_call`, and treat both APPLY and MAYBE as positive for
+the 7+ human-review shortlist. Do not combine that correction with M6.10.
+
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —
 verified 2026-07-14: no master-profile loader in repo).**
