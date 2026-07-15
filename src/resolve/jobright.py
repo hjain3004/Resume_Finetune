@@ -92,37 +92,27 @@ def _build_jd_text(job: dict) -> str:
     return "\n\n".join(parts)
 
 
-def resolve(url: str, html_text: str, session, *, browser_resolver: bool = False) -> ResolvedJD | None:
-    ats_link = find_ats_link(html_text)
-    if ats_link is None and browser_resolver:
-        from src.resolve import browser  # deferred: avoids circular import at load time
+def _resolve_ats_link(url: str, ats_link: str, session) -> ResolvedJD | None:
+    from src.resolve import route  # deferred: avoids circular import at load time
 
-        rendered_html = browser.fetch_html(url, session)
-        if rendered_html:
-            ats_link = find_ats_link(rendered_html)
-    if ats_link:
-        from src.resolve import route  # deferred: avoids circular import at load time
-
-        result = route(ats_link).resolve(ats_link, session)
-        if result is None:
-            return None
-        return ResolvedJD(
-            jd_text=result.jd_text,
-            resolver=result.resolver,
-            raw_title=result.raw_title,
-            raw_location=result.raw_location,
-            ats_url=ats_link,
-            jd_quality="ats",
-            notes=f"jobright: {url}",
-        )
-
-    job = _extract_job_result(html_text)
-    if job is None:
+    result = route(ats_link).resolve(ats_link, session)
+    if result is None:
         return None
+    return ResolvedJD(
+        jd_text=result.jd_text,
+        resolver=result.resolver,
+        raw_title=result.raw_title,
+        raw_location=result.raw_location,
+        ats_url=ats_link,
+        jd_quality="ats",
+        notes=f"jobright: {url}",
+    )
+
+
+def _resolved_from_jobright_payload(url: str, job: dict) -> ResolvedJD | None:
     jd_text = _build_jd_text(job)
     if not jd_text:
         return None
-
     return ResolvedJD(
         jd_text=jd_text,
         resolver=RESOLVER_NAME,
@@ -132,3 +122,35 @@ def resolve(url: str, html_text: str, session, *, browser_resolver: bool = False
         flags=["sponsor_likely"] if job.get("isH1bSponsor") else None,
         notes=f"jobright aggregator: {url}",
     )
+
+
+def resolve(
+    url: str,
+    html_text: str,
+    session,
+    *,
+    browser_resolver: bool = False,
+    browser_client=None,
+) -> ResolvedJD | None:
+    """M6.10: static-first ordering. A rendered-DOM browser fetch is spent
+    only when BOTH static paths (an outbound ATS/apply link, then the static
+    __NEXT_DATA__ aggregator payload) fail -- not on every jobright row that
+    merely lacks a static ATS link, since __NEXT_DATA__ alone is already
+    sufficient for an aggregator-quality resolution."""
+    ats_link = find_ats_link(html_text)
+    if ats_link:
+        return _resolve_ats_link(url, ats_link, session)
+
+    job = _extract_job_result(html_text)
+    if job is not None:
+        return _resolved_from_jobright_payload(url, job)
+
+    if browser_resolver and browser_client is not None:
+        from src.resolve import browser  # deferred: avoids circular import at load time
+
+        rendered_html = browser.fetch_html(url, session, browser_client)
+        ats_link = find_ats_link(rendered_html or "")
+        if ats_link:
+            return _resolve_ats_link(url, ats_link, session)
+
+    return None
