@@ -71,7 +71,9 @@ job-pipeline/
 ├── docs/                      # this documentation package
 ├── config/
 │   ├── sources.yaml           # tracker repos, watchlist, toggles
-│   ├── filters.yaml           # pre-filter rules
+│   ├── eligibility.yaml       # M6.11: sole eligibility business policy
+│   ├── location_taxonomy.yaml # M6.11: local country/state vocabulary
+│   ├── filters.yaml           # scoring config only (score_threshold)
 │   └── wrapper_map.yaml       # M6.0: known wrapper hostname -> fixed ATS board
 ├── data/
 │   ├── jobs.db                # SQLite (gitignored)
@@ -580,7 +582,7 @@ Implementation:
   `RESOLVE_FAILED` this run) and writes them to the new `runs.tier1_resolved`/`tier2_resolved`/
   `manual_failed` columns (§4.1) via `db.finish_run()`. See §8 for the digest line.
 
-### 6.5 Resolution runtime hardening (CURRENT — M6.10 partial implementation, 2026-07-15)
+### 6.5 Resolution runtime hardening (CURRENT — M6.10 complete, 2026-07-15)
 
 M6.10 changes runtime orchestration without weakening the three-tier content policy:
 
@@ -610,38 +612,46 @@ M6.10 changes runtime orchestration without weakening the three-tier content pol
   calls `db.finish_run()` once, and always writes valid JSON notes with `run_outcome`,
   `resolution_summary`, optional `discovery_issues`, and optional bounded `fatal_error`.
 
-No schema migration or new dependency is approved by M6.10. Task 8's live DB smoke and
-ROADMAP completion remain user-gated. Full details and acceptance criteria are in
+No schema migration or new dependency was added by M6.10. Task 8's live DB smoke completed
+2026-07-15. Full details and acceptance criteria are in
 `docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`.
 
-## 7. Pre-filter (`prefilter.py`)
+## 7. Eligibility policy v2 (`eligibility.py` + `prefilter.py`)
 
-Runs on `RESOLVED` rows without a `filter_reason`. Rules from `config/filters.yaml`:
+M6.11 replaces the legacy regex-only prefilter with a typed, validated, configuration-driven
+eligibility policy. `config/eligibility.yaml` is the sole business-policy source for
+country, opportunity type, start windows, role family, seniority, work authorization, and
+review flag names. `config/location_taxonomy.yaml` is data vocabulary only. `config/filters.yaml`
+is scoring-owned and currently retains only `score_threshold`.
 
-```yaml
-title_include:        # at least one must match (regex, case-insensitive) — else FILTERED_OUT
-  - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer"
-    # NOTE: include-rules are OR-of-list; a title passes if ANY include regex matches.
-    # M6.6: the former second line ("new.?grad|early.?career|university|entry.?level|
-    # graduate|2026|2027") is removed — it let non-role titles like "Graduate Research
-    # Scientist" or "Student Researcher" pass on the word "graduate"/"university" alone.
-    # Level/new-grad is already enforced by title_exclude (seniority terms) + years_cap,
-    # so role-family match is the only include gate now.
-title_exclude:        # any match → FILTERED_OUT (reason recorded)
-  - "senior|staff|principal|lead|manager|director|intern(ship)?\\b"
-  - "\\b(7|8|9|10)\\+?\\s*years"
-location_allow:       # empty list = allow all
-  - "united states|usa|remote|san jose|san francisco|bay area|seattle|austin|new york"
-jd_flags:             # do NOT filter out; add to `flags` JSON for the digest
-  sponsorship_risk:
-    - "unable to sponsor|not.{0,20}sponsor|no visa|citizens? only|clearance required|US citizenship"
-years_cap: 3          # if JD demands more than this many years as a minimum → FILTERED_OUT
-```
+The pure evaluator in `src/eligibility.py` performs no SQLite, network, browser, or LLM work.
+`src/prefilter.py` is now only a gate adapter: it calls the pure evaluator and DB helpers in
+`src/db.py`. Stable filter reasons are `eligibility:country`,
+`eligibility:work_authorization`, `eligibility:opportunity_type`,
+`eligibility:start_window`, `eligibility:role_family`, and `eligibility:seniority`.
 
-`years_cap` implementation: regex over the JD for `(\d+)\+?\s*(?:years|yrs)` near the words
-`minimum|at least|required`; take the smallest such number found in a requirements context; if
-it exceeds the cap, filter out with reason `yoe:{n}`. If ambiguous, do not filter (false
-negatives are cheaper than false positives — the user reviews the digest).
+There are two deterministic gates:
+
+1. Pre-resolution gate over `DISCOVERED` rows, run in normal and `--resolve-only` modes before
+   any HTTP session/browser work. Country is evaluated first; explicit non-US evidence filters
+   immediately, while bare `Remote`, empty, or unrecognized locations defer rather than being
+   guessed. Explicit disabled type or out-of-window internship evidence can also filter before
+   resolution.
+2. Post-resolution gate over `RESOLVED` rows, run immediately after resolution. It evaluates
+   country, work authorization, opportunity type/start window, role family, seniority, and
+   non-rejection flags using the full JD.
+
+Initial policy: United States roles only; full-time roles with 2027 start evidence pass;
+full-time roles with no stated start remain eligible with `start_date_unknown`; internships
+require Spring 2027 or January-May 2027 evidence; explicit no-sponsorship and US-citizens-only
+requirements filter; sponsorship silence passes; generic authorization language passes with
+`authorization_ambiguous`.
+
+`runs.notes` includes an `eligibility_summary` with `pre_resolution` and `post_resolution`
+gate counts. `scripts/eligibility_impact.py` previews existing-row effects read-only by
+default. Its guarded apply path requires explicit confirmation and a non-existing backup path,
+then applies the freshly recomputed transition set transactionally. Task 10 live preview,
+apply, and smoke remain user-supervised and are not run during offline implementation.
 
 Every `FILTERED_OUT` row keeps its `jd_text` and records a one-line `filter_reason`.
 

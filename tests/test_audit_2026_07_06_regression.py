@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src import db
 from src.audit.invariants_export import check_i3, check_i4, check_i5
+from src.eligibility import load_eligibility_config
 
 _AUDIT_CFG = {"i3": {"similarity_threshold": 0.85}, "i3b": {"similarity_threshold": 0.50}}
 
@@ -22,7 +23,7 @@ def test_archived_2026_07_06_batch_fails_i3(tmp_path):
         "tests/fixtures/audit_2026_07_06_batch.json",
         tmp_path / "data" / "batch" / "2026-07-06.json",
     )
-    finding = check_i3(_conn(), _AUDIT_CFG, {}, {}, tmp_path)
+    finding = check_i3(_conn(), _AUDIT_CFG, {}, load_eligibility_config(), {}, tmp_path)
     assert finding.status == "FAIL"
 
 
@@ -32,7 +33,7 @@ def test_archived_2026_07_06_batch_fails_i4(tmp_path):
         "tests/fixtures/audit_2026_07_06_batch.json",
         tmp_path / "data" / "batch" / "2026-07-06.json",
     )
-    finding = check_i4(_conn(), _AUDIT_CFG, {}, {}, tmp_path)
+    finding = check_i4(_conn(), _AUDIT_CFG, {}, load_eligibility_config(), {}, tmp_path)
     assert finding.status == "FAIL"
 
 
@@ -44,5 +45,5 @@ def test_archived_2026_07_06_batch_fails_i5(tmp_path):
     sh.copy("tests/fixtures/audit_2026_07_06_batch.json", tmp_path / "data" / "batch" / "2026-07-06.json")
     sh.copy("config/batch_schema.json", tmp_path / "config" / "batch_schema.json")
     sh.copy("config/scored_schema.json", tmp_path / "config" / "scored_schema.json")
-    finding = check_i5(_conn(), _AUDIT_CFG, {}, {}, tmp_path)
+    finding = check_i5(_conn(), _AUDIT_CFG, {}, load_eligibility_config(), {}, tmp_path)
     assert finding.status == "FAIL"

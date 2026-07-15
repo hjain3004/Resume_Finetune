@@ -94,8 +94,8 @@ def test_audit_runs_under_10s_on_10k_rows(tmp_path, isolated_repo_root):
     db_path = tmp_path / "jobs.db"
     conn = db.get_connection(str(db_path))
     rows = [
-        f"('k{i}', 'Company{i}', 'Software Engineer {i}', 'Remote', 'https://example{i}.com/job', "
-        f"'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVED', 'Backend role building distributed systems in Java and Kafka for company {i}.')"
+        f"('k{i}', 'CompanyX{i}', 'Software Engineer X{i}', 'Remote', 'https://example{i}.com/job', "
+        f"'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVED', 'Backend engineering building distributed systems in Java and Kafka.')"
         for i in range(10_000)
     ]
     conn.executescript(

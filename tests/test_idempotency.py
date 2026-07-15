@@ -9,9 +9,11 @@ discovering the same still-open postings is expected to touch them."""
 from unittest.mock import patch
 
 from src import db, run_ingest
+from src.eligibility import load_eligibility_config
 from src.discover.base import DiscoveryResult
 from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD
+from src import prefilter
 
 FIXED_JOBS = [
     DiscoveredJob(
@@ -74,3 +76,36 @@ def test_full_pipeline_run_twice_is_idempotent(tmp_path):
     for before, after in zip(rows_after_first, rows_after_second):
         assert after["repost_count"] == before["repost_count"] + 1
         assert after["last_seen_at"] > before["last_seen_at"]
+
+
+def test_eligibility_gate_flow_twice_is_idempotent():
+    conn = db.get_connection(":memory:")
+    jobs = [
+        DiscoveredJob("CA Co", "Software Engineer", "Remote - Canada", "https://example.com/ca", "tracker_vansh", None),
+        DiscoveredJob("Unknown Co", "Software Engineer", "Remote", "https://example.com/unknown", "tracker_vansh", None),
+        DiscoveredJob("FT Co", "Software Engineer", "New York, NY", "https://example.com/ft", "tracker_vansh", None),
+        DiscoveredJob("Intern Co", "Software Engineering Intern", "New York, NY", "https://example.com/intern", "tracker_vansh", None),
+        DiscoveredJob("Sponsor Co", "Software Engineer", "New York, NY", "https://example.com/sponsor", "tracker_vansh", None),
+        DiscoveredJob("No Start Co", "Software Engineer", "Austin, Texas", "https://example.com/no-start", "tracker_vansh", None),
+    ]
+    db.insert_discovered(conn, jobs)
+    for url, jd in {
+        "https://example.com/unknown": "Starts in 2027.",
+        "https://example.com/ft": "New Grad 2027.",
+        "https://example.com/intern": "Spring 2027 internship.",
+        "https://example.com/sponsor": "Starts in 2027. Unable to sponsor visas.",
+        "https://example.com/no-start": "Build backend systems.",
+    }.items():
+        row = db.get_by_url(conn, url)
+        db.mark_resolved(conn, row["id"], ResolvedJD(jd, "fixture"))
+
+    config = load_eligibility_config()
+    prefilter.run_pre_resolution_gate(conn, config)
+    prefilter.run_post_resolution_gate(conn, config)
+    first = [dict(row) for row in conn.execute("SELECT * FROM jobs ORDER BY id")]
+
+    prefilter.run_pre_resolution_gate(conn, config)
+    prefilter.run_post_resolution_gate(conn, config)
+    second = [dict(row) for row in conn.execute("SELECT * FROM jobs ORDER BY id")]
+
+    assert second == first

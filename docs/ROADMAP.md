@@ -40,11 +40,18 @@ resolution work, a run-scoped browser lifecycle with a circuit breaker, static-f
 Jobright fallback, reliable aborted-run accounting, and live-smoke evidence recorded in
 DECISIONS.md. It did not add dependencies, start M9D-1/M8, or change scoring behavior.
 
+**M6.11 — Configurable Eligibility Policy v2: OFFLINE IMPLEMENTATION COMPLETE
+(2026-07-15); live acceptance pending.** Offline code, tests, audit migration, docs, and the
+read-only/guarded impact tool are implemented. The policy is country-first, config-driven,
+and separates eligibility from scoring config. Task 10 remains a hard user-supervised gate:
+do not run the live `data/jobs.db` impact preview, create live backups, apply transitions,
+or run live smoke until explicitly approved.
+
 **Calibration-contract correction follows in a separate milestone.** The current worksheet
 is a metadata-interest baseline, while the scorer sees the full JD; those labels cannot be
 used as equivalent evidence. The next calibration design must separate metadata
 `interest_call` from JD-informed `fit_call`, and treat both APPLY and MAYBE as positive for
-the 7+ human-review shortlist. Do not combine that correction with M6.10.
+the 7+ human-review shortlist. Do not combine that correction with M6.10 or M6.11.
 
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —

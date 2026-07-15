@@ -15,6 +15,7 @@ from pathlib import Path
 
 from src import audit, db, resolve
 from src.audit.invariants_db import diff_permitted_drift
+from src.eligibility import load_eligibility_config
 from src.run_ingest import load_filters_config, load_freshness_config
 
 _STATUS_ICON = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗", "SKIP": "–"}
@@ -56,12 +57,14 @@ def run_audit(db_path: str, out_dir: str, repo_root: str) -> audit.AuditResult:
     audit_config = _load_audit_config()
     audit_config["current_logic_version"] = resolve.LOGIC_VERSION
     filters_config = load_filters_config()
+    eligibility_config = load_eligibility_config()
     freshness_config = load_freshness_config()
 
     result = audit.run_all(
         conn,
         audit_config=audit_config,
         filters_config=filters_config,
+        eligibility_config=eligibility_config,
         freshness_config=freshness_config,
         repo_root=Path(repo_root),
     )

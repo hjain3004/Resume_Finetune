@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping, Pattern
@@ -480,6 +481,8 @@ def classify_country(location: str | None, config: EligibilityConfig) -> Country
     text = (location or "").strip()
     if not text:
         return CountryClassification(CountryEvidence.UNKNOWN, (), ())
+    if re.sub(r"[\s\-_]+", " ", text).strip().lower() in {"remote", "worldwide"}:
+        return CountryClassification(CountryEvidence.UNKNOWN, (), ())
 
     matched: dict[str, set[str]] = {}
     for code, entry in config.taxonomy.countries.items():
@@ -520,7 +523,12 @@ def classify_country(location: str | None, config: EligibilityConfig) -> Country
 def _contains_phrase(text: str, phrase: str) -> bool:
     if not phrase:
         return False
-    return re.search(rf"(?<![A-Za-z0-9]){re.escape(phrase)}(?![A-Za-z0-9])", text, re.IGNORECASE) is not None
+    return _phrase_pattern(phrase).search(text) is not None
+
+
+@lru_cache(maxsize=2048)
+def _phrase_pattern(phrase: str) -> Pattern[str]:
+    return re.compile(rf"(?<![A-Za-z0-9]){re.escape(phrase)}(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def _match_us_states(text: str, config: EligibilityConfig) -> set[str]:
@@ -587,7 +595,7 @@ _MONTHS = {
 
 _START_CONTEXT_RE = re.compile(
     r"\b(start|starts|starting|available|availability|begin|begins|commence|commences|"
-    r"new grad|new graduate|graduate|internship|intern|program|role|co[- ]?op)\b",
+    r"new grad|new graduate|graduate|internship|intern|program|co[- ]?op)\b",
     re.IGNORECASE,
 )
 _NON_START_CONTEXT_RE = re.compile(r"\b(founded|copyright|established|incorporated)\b", re.IGNORECASE)

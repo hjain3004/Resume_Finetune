@@ -1239,3 +1239,27 @@ processed and converted to deterministic content/manual failures.
 Post-smoke verification passed with `.venv/bin/python -m pytest -q` reporting 464 tests.
 M6.10 is therefore complete. Calibration-contract correction, M9D-1, M8, dependency work,
 and scoring changes remain separate future milestones.
+
+## 2026-07-15 — M6.11 offline configurable eligibility implementation
+
+M6.11 offline implementation completed through Task 9. Eligibility policy now lives in
+`config/eligibility.yaml`; `config/location_taxonomy.yaml` supplies deterministic country and
+US-state vocabulary; `config/filters.yaml` is scoring-only (`score_threshold`). No dependency
+or schema migration was added.
+
+Accepted policy semantics implemented offline: country is evaluated first; explicit non-US
+roles filter before resolution; unknown country evidence is preserved; full-time 2027 roles
+pass; full-time roles with no stated start pass post-resolution with `start_date_unknown`;
+internships require Spring 2027 or January-May 2027 evidence; explicit no-sponsorship and
+US-citizens-only requirements filter; sponsorship silence passes; generic authorization
+language passes with `authorization_ambiguous`.
+
+`src/prefilter.py` is now an orchestration adapter around the pure evaluator and DB helpers.
+Audit I2/I6a use the same typed policy as ingestion. `scripts/eligibility_impact.py` provides
+a read-only preview and guarded apply path with explicit `--confirm APPLY` plus backup
+requirements; live preview/apply/smoke remain Task 10 and were not run.
+
+Offline verification: focused M6.11 suite passed with 130 tests; full suite passed with
+538 tests. User-owned `tests/test_scoring_stress.py`, the untracked PDFs, and
+`docs/superpowers/reports/` were left untouched. Calibration Contract v2, M8, M9D, Crawlee,
+and Apify were not started.
