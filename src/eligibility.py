@@ -748,11 +748,14 @@ def _evaluate_start_window(
     if _evidence_matches_policy(evidence, policy, config):
         return ("pass", None, matched)
 
-    has_evidence = bool(evidence.exact_dates or evidence.month_years or evidence.seasons or evidence.years)
+    has_specific_evidence = bool(evidence.exact_dates or evidence.month_years or evidence.seasons)
+    has_evidence = bool(has_specific_evidence or evidence.years)
     if has_evidence:
         if type_name == OpportunityType.FULL_TIME.value and policy.year_only_evidence == "sufficient":
             # Any explicit start evidence outside the configured windows is a
             # deterministic miss for full-time.
+            return ("filter", "eligibility:start_window", matched)
+        if has_specific_evidence:
             return ("filter", "eligibility:start_window", matched)
         if stage is EligibilityStage.PRE_RESOLUTION:
             return ("defer", None, matched)

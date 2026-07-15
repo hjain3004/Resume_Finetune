@@ -148,6 +148,62 @@ def test_rows_by_status_limit_none_returns_all_rows(conn):
     assert len(rows) == 2
 
 
+def test_eligibility_rows_returns_status_rows_ordered_by_id(conn):
+    db.insert_discovered(
+        conn,
+        [
+            _job(url="https://example.com/c", company="C"),
+            _job(url="https://example.com/a", company="A"),
+            _job(url="https://example.com/b", company="B"),
+        ],
+    )
+
+    rows = db.eligibility_rows(conn, Status.DISCOVERED)
+
+    assert [row["id"] for row in rows] == sorted(row["id"] for row in rows)
+
+
+def test_merge_job_flags_preserves_existing_sorts_and_is_idempotent(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute("UPDATE jobs SET flags = ? WHERE id = ?", (json.dumps(["z_existing"]), job_id))
+    conn.commit()
+
+    assert db.merge_job_flags(conn, job_id, ("country_unknown", "z_existing")) is True
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert json.loads(row["flags"]) == ["country_unknown", "z_existing"]
+    assert db.merge_job_flags(conn, job_id, ("z_existing", "country_unknown")) is False
+
+
+def test_mark_eligibility_filtered_compare_and_set_and_idempotent(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+
+    assert db.mark_eligibility_filtered(
+        conn, job_id, expected_status=Status.DISCOVERED, reason="eligibility:country"
+    ) is True
+    row = conn.execute("SELECT status, filter_reason FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.FILTERED_OUT
+    assert row["filter_reason"] == "eligibility:country"
+    assert db.mark_eligibility_filtered(
+        conn, job_id, expected_status=Status.DISCOVERED, reason="eligibility:country"
+    ) is False
+
+
+def test_mark_eligibility_filtered_preserves_terminal_or_unexpected_status(conn):
+    db.insert_discovered(conn, [_job()])
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
+    conn.execute("UPDATE jobs SET status = ?, filter_reason = ? WHERE id = ?", (Status.APPLIED, None, job_id))
+    conn.commit()
+
+    assert db.mark_eligibility_filtered(
+        conn, job_id, expected_status=Status.DISCOVERED, reason="eligibility:country"
+    ) is False
+    row = conn.execute("SELECT status, filter_reason FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == Status.APPLIED
+    assert row["filter_reason"] is None
+
+
 def test_mark_resolved_sets_status_and_jd_fields(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]

@@ -111,6 +111,59 @@ def get_readonly_connection(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def eligibility_rows(conn: sqlite3.Connection, status: Status) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT id, title, location, jd_text, flags, status, filter_reason
+        FROM jobs
+        WHERE status = ?
+        ORDER BY id
+        """,
+        (status,),
+    ).fetchall()
+
+
+def merge_job_flags(conn: sqlite3.Connection, job_id: int, flags: tuple[str, ...]) -> bool:
+    row = conn.execute("SELECT flags FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if row is None:
+        return False
+    existing = json.loads(row["flags"]) if row["flags"] else []
+    merged = sorted(set(existing) | set(flags))
+    if merged == sorted(set(existing)):
+        return False
+    conn.execute("UPDATE jobs SET flags = ? WHERE id = ?", (json.dumps(merged), job_id))
+    return True
+
+
+def mark_eligibility_filtered(
+    conn: sqlite3.Connection,
+    job_id: int,
+    *,
+    expected_status: Status,
+    reason: str,
+) -> bool:
+    terminal_statuses = {
+        Status.APPLIED,
+        Status.REJECTED,
+        Status.TAILORED,
+        Status.CLOSED,
+        Status.FILTERED_OUT,
+    }
+    row = conn.execute(
+        "SELECT status, filter_reason FROM jobs WHERE id = ?",
+        (job_id,),
+    ).fetchone()
+    if row is None or row["status"] != expected_status or row["status"] in terminal_statuses:
+        return False
+    if row["status"] == Status.FILTERED_OUT and row["filter_reason"] == reason:
+        return False
+    conn.execute(
+        "UPDATE jobs SET status = ?, filter_reason = ? WHERE id = ? AND status = ?",
+        (Status.FILTERED_OUT, reason, job_id, expected_status),
+    )
+    return conn.execute("SELECT changes()").fetchone()[0] > 0
+
+
 def _migrate_jobs_columns(conn: sqlite3.Connection) -> None:
     existing = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
     for column, coltype in _JOBS_MIGRATIONS:

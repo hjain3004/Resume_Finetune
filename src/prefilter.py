@@ -1,92 +1,92 @@
-"""Deterministic pre-filter rules per ARCHITECTURE §7."""
+"""Eligibility gate orchestration.
+
+Business policy lives in src.eligibility and config/eligibility.yaml. This
+module only adapts pure decisions to idempotent DB helper calls.
+"""
 
 from __future__ import annotations
 
 import json
-import re
 import sqlite3
+from collections import Counter
 from dataclasses import dataclass
 
-from src.models import Status
-
-_YEARS_RE = re.compile(
-    r"(?:minimum|at least|required)[^.\n]{0,40}?(\d+)\+?\s*(?:years|yrs)"
-    r"|(\d+)\+?\s*(?:years|yrs)[^.\n]{0,40}?(?:minimum|at least|required)",
-    re.IGNORECASE,
+from src import db
+from src.eligibility import (
+    EligibilityConfig,
+    EligibilityDisposition,
+    EligibilityStage,
+    evaluate,
 )
+from src.models import Status
 
 
 @dataclass(frozen=True)
-class PrefilterResult:
-    filtered: bool
-    reason: str | None
-    flags: list[str]
+class EligibilityGateSummary:
+    evaluated: int = 0
+    filtered: int = 0
+    deferred: int = 0
+    passed: int = 0
+    by_reason: tuple[tuple[str, int], ...] = ()
+    by_flag: tuple[tuple[str, int], ...] = ()
 
 
-def _any_match(patterns: list[str], text: str) -> bool:
-    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+def run_pre_resolution_gate(conn: sqlite3.Connection, config: EligibilityConfig) -> EligibilityGateSummary:
+    return _run_gate(conn, config, stage=EligibilityStage.PRE_RESOLUTION, status=Status.DISCOVERED)
 
 
-def _years_required(jd_text: str) -> int | None:
-    numbers = []
-    for match in _YEARS_RE.finditer(jd_text):
-        value = match.group(1) or match.group(2)
-        numbers.append(int(value))
-    return min(numbers) if numbers else None
+def run_post_resolution_gate(conn: sqlite3.Connection, config: EligibilityConfig) -> EligibilityGateSummary:
+    return _run_gate(conn, config, stage=EligibilityStage.POST_RESOLUTION, status=Status.RESOLVED)
 
 
-def evaluate(title: str, location: str | None, jd_text: str | None, config: dict) -> PrefilterResult:
-    jd_text = jd_text or ""
-    location = location or ""
+def _run_gate(
+    conn: sqlite3.Connection,
+    config: EligibilityConfig,
+    *,
+    stage: EligibilityStage,
+    status: Status,
+) -> EligibilityGateSummary:
+    evaluated = filtered = deferred = passed = 0
+    by_reason: Counter[str] = Counter()
+    by_flag: Counter[str] = Counter()
 
-    title_include = config.get("title_include") or []
-    if title_include and not _any_match(title_include, title):
-        return PrefilterResult(True, "title_include", [])
+    for row in db.eligibility_rows(conn, status):
+        evaluated += 1
+        existing_flags = _flags_tuple(row["flags"])
+        decision = evaluate(
+            stage=stage,
+            title=row["title"],
+            location=row["location"],
+            jd_text=row["jd_text"],
+            existing_flags=existing_flags,
+            config=config,
+        )
+        if decision.disposition is EligibilityDisposition.FILTER:
+            reason = decision.reason_code or "eligibility:unknown"
+            if db.mark_eligibility_filtered(conn, row["id"], expected_status=status, reason=reason):
+                filtered += 1
+                by_reason[reason] += 1
+        elif decision.disposition is EligibilityDisposition.DEFER:
+            deferred += 1
+        else:
+            passed += 1
+            added_flags = tuple(flag for flag in decision.flags if flag not in existing_flags)
+            if added_flags and db.merge_job_flags(conn, row["id"], added_flags):
+                for flag in added_flags:
+                    by_flag[flag] += 1
 
-    title_exclude = config.get("title_exclude") or []
-    if _any_match(title_exclude, title):
-        return PrefilterResult(True, "title_exclude", [])
-
-    location_allow = config.get("location_allow") or []
-    if location_allow and not _any_match(location_allow, location):
-        return PrefilterResult(True, "location", [])
-
-    years_cap = config.get("years_cap")
-    if years_cap is not None:
-        required_years = _years_required(jd_text)
-        if required_years is not None and required_years > years_cap:
-            return PrefilterResult(True, f"yoe:{required_years}", [])
-
-    flags = []
-    for flag_name, patterns in (config.get("jd_flags") or {}).items():
-        if _any_match(patterns, jd_text):
-            flags.append(flag_name)
-
-    return PrefilterResult(False, None, flags)
-
-
-def run_prefilter(conn: sqlite3.Connection, config: dict) -> int:
-    """Evaluate every RESOLVED row without a filter_reason. Returns the count
-    newly marked FILTERED_OUT."""
-    filtered_count = 0
-    rows = conn.execute(
-        "SELECT id, title, location, jd_text, flags FROM jobs WHERE status = ? AND filter_reason IS NULL",
-        (Status.RESOLVED,),
-    ).fetchall()
-    for row in rows:
-        result = evaluate(row["title"], row["location"], row["jd_text"], config)
-        if result.filtered:
-            conn.execute(
-                "UPDATE jobs SET status = ?, filter_reason = ? WHERE id = ?",
-                (Status.FILTERED_OUT, result.reason, row["id"]),
-            )
-            filtered_count += 1
-        elif result.flags:
-            existing_flags = json.loads(row["flags"]) if row["flags"] else []
-            merged_flags = sorted(set(existing_flags) | set(result.flags))
-            conn.execute(
-                "UPDATE jobs SET flags = ? WHERE id = ?",
-                (json.dumps(merged_flags), row["id"]),
-            )
     conn.commit()
-    return filtered_count
+    return EligibilityGateSummary(
+        evaluated=evaluated,
+        filtered=filtered,
+        deferred=deferred,
+        passed=passed,
+        by_reason=tuple(sorted(by_reason.items())),
+        by_flag=tuple(sorted(by_flag.items())),
+    )
+
+
+def _flags_tuple(raw_flags: str | None) -> tuple[str, ...]:
+    if not raw_flags:
+        return ()
+    return tuple(json.loads(raw_flags))
