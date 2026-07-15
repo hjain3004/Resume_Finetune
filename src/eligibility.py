@@ -37,6 +37,17 @@ class OpportunityType(str, Enum):
     FULL_TIME = "full_time"
 
 
+class EligibilityStage(str, Enum):
+    PRE_RESOLUTION = "pre_resolution"
+    POST_RESOLUTION = "post_resolution"
+
+
+class EligibilityDisposition(str, Enum):
+    PASS = "pass"
+    FILTER = "filter"
+    DEFER = "defer"
+
+
 @dataclass(frozen=True)
 class DateWindow:
     earliest: date
@@ -64,6 +75,14 @@ class StartEvidence:
     seasons: tuple[tuple[str, int], ...]
     years: tuple[int, ...]
     matched_text: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EligibilityDecision:
+    disposition: EligibilityDisposition
+    reason_code: str | None
+    flags: tuple[str, ...]
+    evidence: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -631,3 +650,176 @@ def _is_start_context(segment: str) -> bool:
     if _NON_START_CONTEXT_RE.search(segment):
         return False
     return _START_CONTEXT_RE.search(segment) is not None
+
+
+_YEARS_RE = re.compile(
+    r"(?:minimum|at least|required|requires?)[^.\n]{0,40}?(\d+)\+?\s*(?:years|yrs)"
+    r"|(\d+)\+?\s*(?:years|yrs)[^.\n]{0,40}?(?:minimum|at least|required|requires?)",
+    re.IGNORECASE,
+)
+
+
+def evaluate(
+    *,
+    stage: EligibilityStage,
+    title: str,
+    location: str | None,
+    jd_text: str | None,
+    existing_flags: tuple[str, ...],
+    config: EligibilityConfig,
+) -> EligibilityDecision:
+    flags = set(existing_flags)
+    evidence: list[str] = []
+
+    country = classify_country(location, config)
+    if country.evidence is CountryEvidence.EXPLICIT_DISALLOWED:
+        return _decision(EligibilityDisposition.FILTER, "eligibility:country", flags, country.matched_text)
+    if country.evidence is CountryEvidence.UNKNOWN:
+        if stage is EligibilityStage.PRE_RESOLUTION and config.countries.unknown_pre_resolution == "defer":
+            return _decision(EligibilityDisposition.DEFER, None, flags, country.matched_text)
+        if stage is EligibilityStage.POST_RESOLUTION:
+            if config.countries.unknown_post_resolution == "reject":
+                return _decision(EligibilityDisposition.FILTER, "eligibility:country", flags, country.matched_text)
+            if config.countries.unknown_post_resolution == "allow_with_flag":
+                flags.add(config.flags.country_unknown)
+
+    combined_text = " ".join(part for part in (title, jd_text or "") if part)
+    if stage is EligibilityStage.POST_RESOLUTION:
+        auth = _evaluate_work_authorization(combined_text, existing_flags, config)
+        if auth[0] == "filter":
+            return _decision(EligibilityDisposition.FILTER, "eligibility:work_authorization", flags, auth[2])
+        if auth[0] == "flag":
+            flags.add(config.flags.authorization_ambiguous)
+            evidence.extend(auth[2])
+
+    opportunity = classify_opportunity_type(title, jd_text if stage is EligibilityStage.POST_RESOLUTION else None, config)
+    if opportunity.inferred:
+        flags.add(config.flags.opportunity_type_inferred)
+    type_policy = config.opportunity_types.types[opportunity.opportunity_type.value]
+    if not type_policy.enabled:
+        return _decision(EligibilityDisposition.FILTER, "eligibility:opportunity_type", flags, opportunity.matched_text)
+
+    start = _evaluate_start_window(opportunity.opportunity_type.value, combined_text, type_policy, stage, config)
+    if start[0] == "filter":
+        return _decision(EligibilityDisposition.FILTER, "eligibility:start_window", flags, start[2])
+    if start[0] == "defer":
+        return _decision(EligibilityDisposition.DEFER, None, flags, start[2])
+    if start[0] == "flag":
+        flags.add(config.flags.start_date_unknown)
+        evidence.extend(start[2])
+
+    if not any(pattern.search(title) or (stage is EligibilityStage.POST_RESOLUTION and jd_text and pattern.search(jd_text))
+               for family in config.role_families.include for pattern in family.patterns):
+        return _decision(EligibilityDisposition.FILTER, "eligibility:role_family", flags, ())
+
+    if any(pattern.search(title) for pattern in config.seniority.title_exclude_patterns):
+        return _decision(EligibilityDisposition.FILTER, "eligibility:seniority", flags, ())
+    seniority_text = title if stage is EligibilityStage.PRE_RESOLUTION else combined_text
+    required_years = _years_required(seniority_text)
+    if required_years is not None and required_years > config.seniority.years_cap:
+        return _decision(EligibilityDisposition.FILTER, "eligibility:seniority", flags, (f"{required_years} years",))
+
+    return _decision(EligibilityDisposition.PASS, None, flags, tuple(evidence))
+
+
+def _decision(
+    disposition: EligibilityDisposition,
+    reason_code: str | None,
+    flags: set[str],
+    evidence: tuple[str, ...],
+) -> EligibilityDecision:
+    return EligibilityDecision(
+        disposition=disposition,
+        reason_code=reason_code,
+        flags=tuple(sorted(flags)),
+        evidence=tuple(sorted(set(evidence))),
+    )
+
+
+def _evaluate_start_window(
+    type_name: str,
+    text: str,
+    policy: OpportunityTypePolicy,
+    stage: EligibilityStage,
+    config: EligibilityConfig,
+) -> tuple[str, str | None, tuple[str, ...]]:
+    evidence = extract_start_evidence(text, config)
+    matched = evidence.matched_text
+    if _evidence_matches_policy(evidence, policy, config):
+        return ("pass", None, matched)
+
+    has_evidence = bool(evidence.exact_dates or evidence.month_years or evidence.seasons or evidence.years)
+    if has_evidence:
+        if type_name == OpportunityType.FULL_TIME.value and policy.year_only_evidence == "sufficient":
+            # Any explicit start evidence outside the configured windows is a
+            # deterministic miss for full-time.
+            return ("filter", "eligibility:start_window", matched)
+        if stage is EligibilityStage.PRE_RESOLUTION:
+            return ("defer", None, matched)
+        return ("filter", "eligibility:start_window", matched)
+
+    unknown_policy = (
+        policy.unknown_start_pre_resolution
+        if stage is EligibilityStage.PRE_RESOLUTION
+        else policy.unknown_start_post_resolution
+    )
+    if unknown_policy == "defer":
+        return ("defer", None, ())
+    if unknown_policy == "reject":
+        return ("filter", "eligibility:start_window", ())
+    if unknown_policy == "allow_with_flag":
+        return ("flag", None, ())
+    return ("pass", None, ())
+
+
+def _evidence_matches_policy(evidence: StartEvidence, policy: OpportunityTypePolicy, config: EligibilityConfig) -> bool:
+    for exact in evidence.exact_dates:
+        if _date_in_windows(exact, policy.start_windows):
+            return True
+    for year, month in evidence.month_years:
+        if _date_in_windows(date(year, month, 1), policy.start_windows):
+            return True
+    for season, year in evidence.seasons:
+        if season in policy.allowed_seasons:
+            months = config.seasons[season].months
+            if any(_date_in_windows(date(year, month, 1), policy.start_windows) for month in months):
+                return True
+    if policy.year_only_evidence == "sufficient":
+        for year in evidence.years:
+            if any(window.earliest.year <= year <= window.latest.year for window in policy.start_windows):
+                return True
+    return False
+
+
+def _date_in_windows(value: date, windows: tuple[DateWindow, ...]) -> bool:
+    return any(window.earliest <= value <= window.latest for window in windows)
+
+
+def _evaluate_work_authorization(
+    text: str,
+    existing_flags: tuple[str, ...],
+    config: EligibilityConfig,
+) -> tuple[str, str | None, tuple[str, ...]]:
+    policy = config.work_authorization
+    for key in ("explicit_no_sponsorship", "citizenship_required"):
+        for pattern in policy.patterns.get(key, ()):
+            match = pattern.search(text)
+            if match:
+                return ("filter", "eligibility:work_authorization", (match.group(0),))
+    for pattern in policy.patterns.get("positive_sponsorship", ()):
+        match = pattern.search(text)
+        if match:
+            return ("pass", None, (match.group(0),))
+    for pattern in policy.patterns.get("ambiguous", ()):
+        match = pattern.search(text)
+        if match:
+            return ("flag", None, (match.group(0),))
+    return ("pass", None, ())
+
+
+def _years_required(jd_text: str) -> int | None:
+    numbers = []
+    for match in _YEARS_RE.finditer(jd_text):
+        value = match.group(1) or match.group(2)
+        numbers.append(int(value))
+    return min(numbers) if numbers else None
