@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date
+from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping, Pattern
@@ -21,10 +22,23 @@ class EligibilityConfigError(ValueError):
     pass
 
 
+class CountryEvidence(str, Enum):
+    EXPLICIT_ALLOWED = "explicit_allowed"
+    EXPLICIT_DISALLOWED = "explicit_disallowed"
+    UNKNOWN = "unknown"
+
+
 @dataclass(frozen=True)
 class DateWindow:
     earliest: date
     latest: date
+
+
+@dataclass(frozen=True)
+class CountryClassification:
+    evidence: CountryEvidence
+    country_codes: tuple[str, ...]
+    matched_text: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -416,3 +430,63 @@ def _compile_patterns(value: Any, path: str) -> tuple[Pattern[str], ...]:
         except re.error as exc:
             raise EligibilityConfigError(f"{path}[{idx}]: invalid regex") from exc
     return tuple(compiled)
+
+
+def classify_country(location: str | None, config: EligibilityConfig) -> CountryClassification:
+    text = (location or "").strip()
+    if not text:
+        return CountryClassification(CountryEvidence.UNKNOWN, (), ())
+
+    matched: dict[str, set[str]] = {}
+    for code, entry in config.taxonomy.countries.items():
+        for phrase in (*entry.names, *entry.aliases):
+            if _contains_phrase(text, phrase):
+                matched.setdefault(code, set()).add(phrase)
+        for country_code in entry.codes:
+            if len(country_code) == 2:
+                if code == "US" and _contains_phrase(text, country_code):
+                    matched.setdefault(code, set()).add(country_code)
+                elif country_code not in config.taxonomy.us_states and _contains_phrase(text, country_code):
+                    matched.setdefault(code, set()).add(country_code)
+            elif _contains_phrase(text, country_code):
+                matched.setdefault(code, set()).add(country_code)
+
+    us_matches = _match_us_states(text, config)
+    if us_matches:
+        matched.setdefault("US", set()).update(us_matches)
+
+    allowed = set(config.countries.allowed)
+    disallowed_codes = sorted(code for code in matched if code not in allowed)
+    if disallowed_codes:
+        return CountryClassification(
+            CountryEvidence.EXPLICIT_DISALLOWED,
+            tuple(disallowed_codes),
+            tuple(sorted({item for code in disallowed_codes for item in matched[code]})),
+        )
+    allowed_codes = sorted(code for code in matched if code in allowed)
+    if allowed_codes:
+        return CountryClassification(
+            CountryEvidence.EXPLICIT_ALLOWED,
+            tuple(allowed_codes),
+            tuple(sorted({item for code in allowed_codes for item in matched[code]})),
+        )
+    return CountryClassification(CountryEvidence.UNKNOWN, (), ())
+
+
+def _contains_phrase(text: str, phrase: str) -> bool:
+    if not phrase:
+        return False
+    return re.search(rf"(?<![A-Za-z0-9]){re.escape(phrase)}(?![A-Za-z0-9])", text, re.IGNORECASE) is not None
+
+
+def _match_us_states(text: str, config: EligibilityConfig) -> set[str]:
+    matches: set[str] = set()
+    for abbr, name in config.taxonomy.us_states.items():
+        if _contains_phrase(text, name):
+            matches.add(name)
+        # Treat state abbreviations as state evidence in bounded location-token
+        # positions, especially city/state forms. This prevents "CA" from being
+        # read as Canada in "San Diego, CA" while avoiding substring accidents.
+        if re.search(rf"(?:^|[,\-/\s]){re.escape(abbr)}(?:$|[,\-/\s])", text, re.IGNORECASE):
+            matches.add(abbr)
+    return matches
