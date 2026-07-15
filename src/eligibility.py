@@ -28,6 +28,15 @@ class CountryEvidence(str, Enum):
     UNKNOWN = "unknown"
 
 
+class OpportunityType(str, Enum):
+    INTERNSHIP = "internship"
+    CO_OP = "co_op"
+    CONTRACT = "contract"
+    PART_TIME = "part_time"
+    TEMPORARY = "temporary"
+    FULL_TIME = "full_time"
+
+
 @dataclass(frozen=True)
 class DateWindow:
     earliest: date
@@ -38,6 +47,22 @@ class DateWindow:
 class CountryClassification:
     evidence: CountryEvidence
     country_codes: tuple[str, ...]
+    matched_text: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OpportunityClassification:
+    opportunity_type: OpportunityType
+    inferred: bool
+    matched_text: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class StartEvidence:
+    exact_dates: tuple[date, ...]
+    month_years: tuple[tuple[int, int], ...]
+    seasons: tuple[tuple[str, int], ...]
+    years: tuple[int, ...]
     matched_text: tuple[str, ...]
 
 
@@ -490,3 +515,119 @@ def _match_us_states(text: str, config: EligibilityConfig) -> set[str]:
         if re.search(rf"(?:^|[,\-/\s]){re.escape(abbr)}(?:$|[,\-/\s])", text, re.IGNORECASE):
             matches.add(abbr)
     return matches
+
+
+def classify_opportunity_type(
+    title: str, jd_text: str | None, config: EligibilityConfig
+) -> OpportunityClassification:
+    for text in (title or "", jd_text or ""):
+        if not text:
+            continue
+        for type_name in config.opportunity_types.classification_order:
+            for pattern in config.opportunity_types.patterns[type_name]:
+                match = pattern.search(text)
+                if match:
+                    return OpportunityClassification(
+                        OpportunityType(type_name),
+                        False,
+                        (match.group(0),),
+                    )
+    return OpportunityClassification(
+        OpportunityType(config.opportunity_types.default_when_unmarked),
+        True,
+        (),
+    )
+
+
+_MONTHS = {
+    "january": 1,
+    "jan": 1,
+    "february": 2,
+    "feb": 2,
+    "march": 3,
+    "mar": 3,
+    "april": 4,
+    "apr": 4,
+    "may": 5,
+    "june": 6,
+    "jun": 6,
+    "july": 7,
+    "jul": 7,
+    "august": 8,
+    "aug": 8,
+    "september": 9,
+    "sep": 9,
+    "sept": 9,
+    "october": 10,
+    "oct": 10,
+    "november": 11,
+    "nov": 11,
+    "december": 12,
+    "dec": 12,
+}
+
+_START_CONTEXT_RE = re.compile(
+    r"\b(start|starts|starting|available|availability|begin|begins|commence|commences|"
+    r"new grad|new graduate|graduate|internship|intern|program|role|co[- ]?op)\b",
+    re.IGNORECASE,
+)
+_NON_START_CONTEXT_RE = re.compile(r"\b(founded|copyright|established|incorporated)\b", re.IGNORECASE)
+
+
+def extract_start_evidence(text: str, config: EligibilityConfig) -> StartEvidence:
+    exact_dates: set[date] = set()
+    month_years: set[tuple[int, int]] = set()
+    seasons: set[tuple[str, int]] = set()
+    years: set[int] = set()
+    matched_text: set[str] = set()
+
+    for segment in _evidence_segments(text or ""):
+        if not _is_start_context(segment):
+            continue
+        for match in re.finditer(r"\b(20\d{2})-(0[1-9]|1[0-2])-([0-2]\d|3[01])\b", segment):
+            try:
+                parsed = date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            except ValueError:
+                continue
+            exact_dates.add(parsed)
+            matched_text.add(match.group(0))
+        for match in re.finditer(r"\b(0?[1-9]|1[0-2])/(0?[1-9]|[12]\d|3[01])/(20\d{2})\b", segment):
+            try:
+                parsed = date(int(match.group(3)), int(match.group(1)), int(match.group(2)))
+            except ValueError:
+                continue
+            exact_dates.add(parsed)
+            matched_text.add(match.group(0))
+        month_pattern = "|".join(re.escape(name) for name in sorted(_MONTHS, key=len, reverse=True))
+        for match in re.finditer(rf"\b({month_pattern})\.?\s+(20\d{{2}})\b", segment, re.IGNORECASE):
+            month = _MONTHS[match.group(1).lower().rstrip(".")]
+            year = int(match.group(2))
+            month_years.add((year, month))
+            matched_text.add(match.group(0))
+        for season_name in config.seasons:
+            for match in re.finditer(rf"\b{re.escape(season_name)}\s+(20\d{{2}})\b", segment, re.IGNORECASE):
+                seasons.add((season_name, int(match.group(1))))
+                matched_text.add(match.group(0))
+        for match in re.finditer(r"\b(20\d{2})\b", segment):
+            years.add(int(match.group(1)))
+            matched_text.add(match.group(0))
+
+    # More specific date evidence also contains a year; keep year evidence
+    # visible because policy can treat year-only as sufficient/insufficient.
+    return StartEvidence(
+        exact_dates=tuple(sorted(exact_dates)),
+        month_years=tuple(sorted(month_years)),
+        seasons=tuple(sorted(seasons)),
+        years=tuple(sorted(years)),
+        matched_text=tuple(sorted(matched_text)),
+    )
+
+
+def _evidence_segments(text: str) -> list[str]:
+    return [segment.strip() for segment in re.split(r"[.\n;]", text) if segment.strip()]
+
+
+def _is_start_context(segment: str) -> bool:
+    if _NON_START_CONTEXT_RE.search(segment):
+        return False
+    return _START_CONTEXT_RE.search(segment) is not None
