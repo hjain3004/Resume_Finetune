@@ -1,6 +1,7 @@
 import sqlite3
 
 from src import db
+from src.eligibility import load_eligibility_config
 from src.audit.invariants_sources import check_i1, check_i2
 
 
@@ -15,10 +16,7 @@ _AUDIT_CFG = {
     "i1": {"warn_consecutive_zero_runs": 3, "fail_consecutive_zero_runs": 7, "trailing_runs_considered": 7},
     "i2": {"fail_resolve_rate_below": 0.5, "trailing_runs_considered": 3, "warn_domain_failure_count": 3},
 }
-_FILTERS_CFG = {
-    "title_include": ["software|swe|backend"],
-    "title_exclude": ["senior|staff"],
-}
+_FILTERS_CFG = {"score_threshold": 7.0}
 
 
 def _seed_runs_with_zero_discoveries(conn, source, n):
@@ -34,7 +32,7 @@ def test_i1_pass_when_source_has_recent_discoveries():
     db.record_run_source(conn, run_id, "tracker_vansh", discovered=5, inserted=2)
     db.finish_run(conn, run_id)
 
-    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "PASS"
 
@@ -43,7 +41,7 @@ def test_i1_warn_after_three_consecutive_zero_runs():
     conn = _conn()
     _seed_runs_with_zero_discoveries(conn, "tracker_vansh", 3)
 
-    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "WARN"
     assert any(e["source"] == "tracker_vansh" for e in finding.evidence)
@@ -53,7 +51,7 @@ def test_i1_fail_after_seven_consecutive_zero_runs():
     conn = _conn()
     _seed_runs_with_zero_discoveries(conn, "tracker_vansh", 7)
 
-    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i1(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "FAIL"
 
@@ -64,7 +62,7 @@ def test_i2_fail_when_trailing_resolve_rate_below_50_percent():
         run_id = db.start_run(conn)
         db.finish_run(conn, run_id, resolved=resolved, failed=failed)
 
-    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "FAIL"
 
@@ -75,7 +73,7 @@ def test_i2_pass_when_trailing_resolve_rate_healthy():
         run_id = db.start_run(conn)
         db.finish_run(conn, run_id, resolved=resolved, failed=failed)
 
-    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status != "FAIL"
 
@@ -94,28 +92,48 @@ def test_i2_warn_domain_with_three_failures_on_role_matching_titles():
     )
     conn.commit()
 
-    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "WARN"
     assert any(e.get("domain") == "gated.example.com" for e in finding.evidence)
 
 
-def test_i2_does_not_warn_when_domain_failures_have_excluded_titles():
-    """Negative test: 3 RESOLVE_FAILED at same domain with titles excluded by prefilter should NOT trigger WARN."""
+def test_i2_does_not_warn_when_domain_failures_have_explicit_eligibility_filter():
+    """Three RESOLVE_FAILED rows that are explicit PRE FILTER outcomes are not resolver-gap evidence."""
     conn = _conn()
     conn.executescript(
         """
-        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
-        VALUES ('k4', 'Acme', 'Senior Software Engineer', 'https://excluded.example.com/1', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
-        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
-        VALUES ('k5', 'Beta', 'Senior Backend Engineer', 'https://excluded.example.com/2', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
-        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
-        VALUES ('k6', 'Gamma', 'Staff Software Engineer', 'https://excluded.example.com/3', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k4', 'Acme', 'Software Engineer', 'Remote - Canada', 'https://excluded.example.com/1', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k5', 'Beta', 'Software Engineer', 'Toronto, Canada', 'https://excluded.example.com/2', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, location, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k6', 'Gamma', 'Software Engineer', 'Vancouver, Canada', 'https://excluded.example.com/3', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
         """
     )
     conn.commit()
 
-    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, {}, None)
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
 
     assert finding.status == "PASS"
     assert not any(e.get("domain") == "excluded.example.com" for e in finding.evidence)
+
+
+def test_i2_unknown_location_failures_remain_resolver_gap_evidence():
+    conn = _conn()
+    conn.executescript(
+        """
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k7', 'Acme', 'Software Engineer', 'https://unknown.example.com/1', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k8', 'Beta', 'Software Engineer', 'https://unknown.example.com/2', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        INSERT INTO jobs (dedup_key, company, title, url, source, discovered_at, status, resolve_attempts)
+        VALUES ('k9', 'Gamma', 'Software Engineer', 'https://unknown.example.com/3', 'tracker_vansh', '2026-07-01T00:00:00+00:00', 'RESOLVE_FAILED', 3);
+        """
+    )
+    conn.commit()
+
+    finding = check_i2(conn, _AUDIT_CFG, _FILTERS_CFG, load_eligibility_config(), {}, None)
+
+    assert finding.status == "WARN"
+    assert any(e.get("domain") == "unknown.example.com" for e in finding.evidence)

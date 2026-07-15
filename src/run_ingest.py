@@ -456,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
                 conn,
                 audit_config=load_audit_config(),
                 filters_config=load_filters_config(),
+                eligibility_config=eligibility_config,
                 freshness_config=freshness_cfg,
             )
             print(f"Audit: {audit_result.overall} ({len(audit_result.findings)} invariant(s) checked)")

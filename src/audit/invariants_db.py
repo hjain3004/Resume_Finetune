@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import json
 
-from src import db, prefilter
+from src import db
+from src.eligibility import EligibilityDisposition, EligibilityStage, evaluate
 from src.audit import Finding
 from src.models import Status
 
@@ -15,20 +16,28 @@ _ACTIVE_LOGIC_VERSION_STATUSES = (
 )
 
 
-def check_i6a(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i6a(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     leak_statuses = (Status.RESOLVED, Status.SCORED, Status.SHORTLISTED, Status.TAILORED, Status.APPLIED)
     evidence = []
     for row in db.all_rows(conn):
         if row["status"] not in leak_statuses:
             continue
-        result = prefilter.evaluate(row["title"], row["location"], row["jd_text"], filters_config)
-        if result.filtered:
-            evidence.append({"id": row["id"], "title": row["title"], "reason": result.reason})
+        flags = tuple(json.loads(row["flags"])) if row["flags"] else ()
+        result = evaluate(
+            stage=EligibilityStage.POST_RESOLUTION,
+            title=row["title"],
+            location=row["location"],
+            jd_text=row["jd_text"],
+            existing_flags=flags,
+            config=eligibility_config,
+        )
+        if result.disposition is EligibilityDisposition.FILTER:
+            evidence.append({"id": row["id"], "title": row["title"], "reason": result.reason_code})
     status = "FAIL" if evidence else "PASS"
     return Finding(invariant="I6a", status=status, evidence=evidence)
 
 
-def check_i6b(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i6b(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     cfg = audit_config.get("i6", {})
     high = cfg.get("warn_filtered_pct_above", 0.90)
     low = cfg.get("warn_filtered_pct_below", 0.20)
@@ -45,7 +54,7 @@ def check_i6b(conn, audit_config, filters_config, freshness_config, repo_root) -
     return Finding(invariant="I6b", status="PASS")
 
 
-def check_i7(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i7(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     """I7 (docs/SELF_HEALING.md §1/§3): a full double-pipeline-run idempotency
     check is a weekly/after-src-change action (tests/test_idempotency.py
     already covers it in CI), not a per-run DB-state check — it can't fit the
@@ -81,7 +90,7 @@ def diff_permitted_drift(
     return diffs
 
 
-def check_i8(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i8(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     evidence = []
     known_statuses = {s.value for s in Status}
     threshold = filters_config.get("score_threshold", 7.0)
@@ -98,7 +107,7 @@ def check_i8(conn, audit_config, filters_config, freshness_config, repo_root) ->
     return Finding(invariant="I8", status=status, evidence=evidence)
 
 
-def check_i9(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i9(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     stale_flag = audit_config.get("i9", {}).get("stale_flag", "stale_logic_version")
     current_version = audit_config.get("current_logic_version", 1)
 
@@ -125,7 +134,7 @@ def check_i9(conn, audit_config, filters_config, freshness_config, repo_root) ->
     return Finding(invariant="I9", status="PASS")
 
 
-def check_i10(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i10(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     evidence = []
 
     dup_keys = db.duplicate_dedup_keys(conn)

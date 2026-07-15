@@ -15,7 +15,7 @@ from src.models import Status
 _SCORED_STATUSES = (Status.SCORED, Status.SHORTLISTED, Status.TAILORED, Status.APPLIED, Status.REJECTED)
 
 
-def check_i11(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i11(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     has_scored_rows = db.has_any_row_with_status(conn, _SCORED_STATUSES)
     if not has_scored_rows:
         return Finding(invariant="I11", status="PASS")
@@ -35,7 +35,7 @@ def _resolve_path(repo_root: Path, relative: str) -> Path:
     return candidate if candidate.exists() else Path(relative)
 
 
-def check_i12(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i12(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     cfg = audit_config.get("i12", {})
     root = Path(repo_root)
 
@@ -68,7 +68,7 @@ def check_i12(conn, audit_config, filters_config, freshness_config, repo_root) -
     return Finding(invariant="I12", status=status, evidence=warn_evidence)
 
 
-def check_i13(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i13(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     liveness_days = freshness_config.get("liveness_days", 5)
     high_threshold = audit_config.get("i13", {}).get("high_score_threshold", 9.0)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=liveness_days)).isoformat()

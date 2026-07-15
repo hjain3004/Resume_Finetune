@@ -1,7 +1,4 @@
-"""M7 self-healing audit orchestrator (docs/SELF_HEALING.md §1/§5). Each
-invariant module exposes check_iN(conn, audit_config, filters_config,
-freshness_config, repo_root) -> Finding; run_all() calls every registered
-check in numeric order and rolls the results up into one AuditResult."""
+"""M7 self-healing audit orchestrator (docs/SELF_HEALING.md §1/§5)."""
 
 from __future__ import annotations
 
@@ -41,10 +38,14 @@ def run_all(
     *,
     audit_config: dict,
     filters_config: dict,
+    eligibility_config,
     freshness_config: dict,
     repo_root: Path = Path("."),
 ) -> AuditResult:
-    findings = [check(conn, audit_config, filters_config, freshness_config, repo_root) for check in _CHECKS]
+    findings = [
+        check(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root)
+        for check in _CHECKS
+    ]
     overall = "PASS"
     for f in findings:
         if _STATUS_RANK[f.status] > _STATUS_RANK[overall]:

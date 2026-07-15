@@ -2,6 +2,7 @@ import sqlite3
 
 from src import audit
 from src.db import init_db
+from src.eligibility import load_eligibility_config
 
 
 def _conn():
@@ -20,9 +21,9 @@ def test_finding_defaults():
 def test_run_all_returns_pass_overall_when_all_checks_pass(monkeypatch):
     conn = _conn()
     monkeypatch.setattr(
-        audit, "_CHECKS", [lambda c, ac, fc, frc, rr: audit.Finding(invariant="I0", status="PASS")]
+        audit, "_CHECKS", [lambda c, ac, fc, ec, frc, rr: audit.Finding(invariant="I0", status="PASS")]
     )
-    result = audit.run_all(conn, audit_config={}, filters_config={}, freshness_config={})
+    result = audit.run_all(conn, audit_config={}, filters_config={}, eligibility_config=load_eligibility_config(), freshness_config={})
     assert result.overall == "PASS"
     assert len(result.findings) == 1
 
@@ -33,11 +34,11 @@ def test_run_all_overall_is_fail_if_any_finding_fails(monkeypatch):
         audit,
         "_CHECKS",
         [
-            lambda c, ac, fc, frc, rr: audit.Finding(invariant="I0", status="PASS"),
-            lambda c, ac, fc, frc, rr: audit.Finding(invariant="I1", status="FAIL"),
+            lambda c, ac, fc, ec, frc, rr: audit.Finding(invariant="I0", status="PASS"),
+            lambda c, ac, fc, ec, frc, rr: audit.Finding(invariant="I1", status="FAIL"),
         ],
     )
-    result = audit.run_all(conn, audit_config={}, filters_config={}, freshness_config={})
+    result = audit.run_all(conn, audit_config={}, filters_config={}, eligibility_config=load_eligibility_config(), freshness_config={})
     assert result.overall == "FAIL"
 
 
@@ -47,11 +48,11 @@ def test_run_all_overall_is_warn_if_warn_but_no_fail(monkeypatch):
         audit,
         "_CHECKS",
         [
-            lambda c, ac, fc, frc, rr: audit.Finding(invariant="I0", status="PASS"),
-            lambda c, ac, fc, frc, rr: audit.Finding(invariant="I1", status="WARN"),
+            lambda c, ac, fc, ec, frc, rr: audit.Finding(invariant="I0", status="PASS"),
+            lambda c, ac, fc, ec, frc, rr: audit.Finding(invariant="I1", status="WARN"),
         ],
     )
-    result = audit.run_all(conn, audit_config={}, filters_config={}, freshness_config={})
+    result = audit.run_all(conn, audit_config={}, filters_config={}, eligibility_config=load_eligibility_config(), freshness_config={})
     assert result.overall == "WARN"
 
 

@@ -42,7 +42,7 @@ def _load_scored(repo_root: Path) -> list[dict] | None:
     return json.loads(path.read_text())
 
 
-def check_i3(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i3(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     """I3 fires on either of two independent signals within the same company:
     (1) content similarity >= threshold, or (2) an exact title match. Signal
     (2) mirrors scripts/export_batch.py's M6.6 _cluster_rows() fix: aggregator
@@ -71,7 +71,7 @@ def check_i3(conn, audit_config, filters_config, freshness_config, repo_root) ->
     return Finding(invariant="I3", status=status, evidence=evidence)
 
 
-def check_i3b(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i3b(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     threshold = audit_config.get("i3b", {}).get("similarity_threshold", 0.50)
     batch = _load_batch(Path(repo_root))
     if not batch:
@@ -111,7 +111,7 @@ def _load_chrome_patterns(path: Path) -> list[str]:
     return patterns
 
 
-def check_i4(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i4(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     patterns_path = Path(repo_root) / "config" / "chrome_patterns.txt"
     if not patterns_path.exists():
         patterns_path = Path("config/chrome_patterns.txt")
@@ -132,7 +132,7 @@ def check_i4(conn, audit_config, filters_config, freshness_config, repo_root) ->
     return Finding(invariant="I4", status=status, evidence=evidence)
 
 
-def check_i5(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i5(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     root = Path(repo_root)
     batch_schema_path = root / "config" / "batch_schema.json"
     scored_schema_path = root / "config" / "scored_schema.json"

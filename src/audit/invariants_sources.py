@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from src import db, prefilter
+from src import db
+from src.eligibility import EligibilityDisposition, EligibilityStage, evaluate
 from src.audit import Finding
 from src.models import Status
 
 
-def check_i1(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i1(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     cfg = audit_config.get("i1", {})
     warn_n = cfg.get("warn_consecutive_zero_runs", 3)
     fail_n = cfg.get("fail_consecutive_zero_runs", 7)
@@ -34,7 +35,7 @@ def check_i1(conn, audit_config, filters_config, freshness_config, repo_root) ->
     return Finding(invariant="I1", status=worst, evidence=evidence)
 
 
-def check_i2(conn, audit_config, filters_config, freshness_config, repo_root) -> Finding:
+def check_i2(conn, audit_config, filters_config, eligibility_config, freshness_config, repo_root) -> Finding:
     cfg = audit_config.get("i2", {})
     fail_rate_below = cfg.get("fail_resolve_rate_below", 0.5)
     trailing = cfg.get("trailing_runs_considered", 3)
@@ -55,7 +56,14 @@ def check_i2(conn, audit_config, filters_config, freshness_config, repo_root) ->
         row
         for row in db.all_rows(conn)
         if row["status"] == Status.RESOLVE_FAILED
-        and not prefilter.evaluate(row["title"], row["location"], row["jd_text"], filters_config).filtered
+        and evaluate(
+            stage=EligibilityStage.PRE_RESOLUTION,
+            title=row["title"],
+            location=row["location"],
+            jd_text=row["jd_text"],
+            existing_flags=(),
+            config=eligibility_config,
+        ).disposition is not EligibilityDisposition.FILTER
     ]
     by_domain: dict[str, list[int]] = {}
     for row in failing_rows:
