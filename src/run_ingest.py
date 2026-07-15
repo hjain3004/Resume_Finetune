@@ -21,6 +21,7 @@ from src.discover import ADAPTERS, discover_all, inbox_manual
 from src.discover import tracker_common
 from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
+from src.eligibility import EligibilityConfigError, load_eligibility_config as _load_eligibility_config
 from src.resolve.base import PoliteSession
 from src.resolve.browser import BrowserClient, CircuitBreakingBrowserClient, Crawl4AIBrowserClient
 from src.resolve.outcomes import ResolutionOutcome, ResolutionOutcomeKind, ResolutionSummary
@@ -78,6 +79,10 @@ def load_sources_config(path: str = "config/sources.yaml") -> dict:
 def load_filters_config(path: str = "config/filters.yaml") -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def load_eligibility_config():
+    return _load_eligibility_config()
 
 
 def load_browser_resolver_flag(path: str = "config/sources.yaml") -> bool:
@@ -142,16 +147,45 @@ def _resolution_summary_payload(summary: ResolutionSummary) -> dict:
     }
 
 
+def _empty_gate_payload() -> dict:
+    return {"evaluated": 0, "filtered": 0, "deferred": 0, "passed": 0, "by_reason": {}, "by_flag": {}}
+
+
+def _gate_summary_payload(summary: prefilter.EligibilityGateSummary | None) -> dict:
+    if summary is None:
+        return _empty_gate_payload()
+    return {
+        "evaluated": summary.evaluated,
+        "filtered": summary.filtered,
+        "deferred": summary.deferred,
+        "passed": summary.passed,
+        "by_reason": dict(summary.by_reason),
+        "by_flag": dict(summary.by_flag),
+    }
+
+
+def _eligibility_summary_payload(
+    eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None,
+) -> dict:
+    eligibility_summary = eligibility_summary or {}
+    return {
+        "pre_resolution": _gate_summary_payload(eligibility_summary.get("pre_resolution")),
+        "post_resolution": _gate_summary_payload(eligibility_summary.get("post_resolution")),
+    }
+
+
 def _run_notes(
     *,
     run_outcome: str,
     summary: ResolutionSummary,
     discovery_issues: tuple[DiscoveryIssue, ...] | list[DiscoveryIssue],
     fatal_error: BaseException | None,
+    eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None = None,
 ) -> str:
     payload = {
         "run_outcome": run_outcome,
         "resolution_summary": _resolution_summary_payload(summary),
+        "eligibility_summary": _eligibility_summary_payload(eligibility_summary),
     }
     if discovery_issues:
         payload["discovery_issues"] = [asdict(issue) for issue in discovery_issues]
@@ -174,6 +208,7 @@ def finalize_run(
     browser_client: BrowserClient | None,
     new_count: int,
     filtered_count: int,
+    eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None = None,
 ) -> None:
     if browser_client is not None:
         try:
@@ -205,6 +240,7 @@ def finalize_run(
             summary=summary,
             discovery_issues=discovery_issues,
             fatal_error=fatal_error,
+            eligibility_summary=eligibility_summary,
         ),
     )
 
@@ -315,19 +351,27 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         logger.error(str(exc))
         return 1
+    try:
+        eligibility_config = load_eligibility_config()
+    except EligibilityConfigError as exc:
+        logger.error("invalid eligibility config: %s", exc)
+        return 1
+    freshness_cfg = load_freshness_config()
+    browser_resolver = load_browser_resolver_flag()
 
     db_path = ":memory:" if args.dry_run else args.db
     conn = db.get_connection(db_path)
     run_id = db.start_run(conn)
-    freshness_cfg = load_freshness_config()
 
     new_count = 0
     discovery_result = DiscoveryResult((), (), (), ())
     discovery_issues: tuple[DiscoveryIssue, ...] = ()
     filtered_count = 0
+    eligibility_summary: dict[str, prefilter.EligibilityGateSummary] = {}
     resolution_summary = ResolutionSummary()
     audit_result = None
     browser_client: BrowserClient | None = None
+    session = None
     exit_code = 0
     run_outcome = "completed"
     fatal_error: BaseException | None = None
@@ -378,29 +422,32 @@ def main(argv: list[str] | None = None) -> int:
         checkpoint_failed = any(issue.stage == "checkpoint" for issue in discovery_issues)
 
         if not args.discover_only:
-            session = PoliteSession()
-            browser_resolver = load_browser_resolver_flag()
-            if browser_resolver:
-                browser_client = CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
-            run_resolution(
-                conn,
-                session,
-                browser_resolver=browser_resolver,
-                resolve_limit=args.resolve_limit,
-                browser_client=browser_client,
-                summary=resolution_summary,
-            )
+            pre_summary = prefilter.run_pre_resolution_gate(conn, eligibility_config)
+            eligibility_summary["pre_resolution"] = pre_summary
+            filtered_count += pre_summary.filtered
+
+            if db.eligibility_rows(conn, Status.DISCOVERED):
+                session = PoliteSession()
+                if browser_resolver:
+                    browser_client = CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
+                run_resolution(
+                    conn,
+                    session,
+                    browser_resolver=browser_resolver,
+                    resolve_limit=args.resolve_limit,
+                    browser_client=browser_client,
+                    summary=resolution_summary,
+                )
             print(f"Resolved {resolution_summary.resolved} job(s), {resolution_summary.content_failed} failed.")
 
-            # I6a: prefilter eligibility is a state condition (RESOLVED rows lacking
-            # a filter_reason verdict), not a step gated on run mode. A --resolve-only
-            # run must still sweep it, or rows it resolves sit unfiltered until
-            # someone remembers to run a full pipeline (see DECISIONS.md 2026-07-12).
-            filters_cfg = load_filters_config()
-            filtered_count = prefilter.run_prefilter(conn, filters_cfg)
+            post_summary = prefilter.run_post_resolution_gate(conn, eligibility_config)
+            eligibility_summary["post_resolution"] = post_summary
+            filtered_count += post_summary.filtered
             print(f"Filtered out {filtered_count} job(s).")
 
             if not args.resolve_only:
+                if session is None:
+                    session = PoliteSession()
                 closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
                 print(f"Liveness recheck: {closed_count} job(s) closed.")
 
@@ -437,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
             browser_client=browser_client,
             new_count=new_count,
             filtered_count=filtered_count,
+            eligibility_summary=eligibility_summary,
         )
 
     if write_digest:

@@ -58,6 +58,10 @@ def test_finalize_run_writes_completed_notes_and_counters():
     assert "discovery_issues" not in notes
     assert notes["resolution_summary"]["transient"] == 0
     assert notes["resolution_summary"]["internal"] == 0
+    assert notes["eligibility_summary"] == {
+        "pre_resolution": {"evaluated": 0, "filtered": 0, "deferred": 0, "passed": 0, "by_reason": {}, "by_flag": {}},
+        "post_resolution": {"evaluated": 0, "filtered": 0, "deferred": 0, "passed": 0, "by_reason": {}, "by_flag": {}},
+    }
 
     source_row = conn.execute(
         "SELECT * FROM run_sources WHERE run_id = ? AND source = ?", (run_id, "tracker_vansh")
@@ -222,7 +226,21 @@ def test_main_finalizes_run_as_aborted_when_resolution_is_interrupted(tmp_path):
         patch.object(
             run_ingest,
             "discover_all",
-            return_value=DiscoveryResult((), (), ("tracker_vansh", "tracker_simplify", "tracker_jobright"), ()),
+            return_value=DiscoveryResult(
+                (
+                    DiscoveredJob(
+                        "Acme",
+                        "Software Engineer",
+                        "New York, NY",
+                        "https://boards.greenhouse.io/acme/jobs/1",
+                        "tracker_vansh",
+                        None,
+                    ),
+                ),
+                (),
+                ("tracker_vansh", "tracker_simplify", "tracker_jobright"),
+                (),
+            ),
         ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "run_resolution", side_effect=_fake_run_resolution),
@@ -245,6 +263,76 @@ def test_main_finalizes_run_as_aborted_when_resolution_is_interrupted(tmp_path):
     notes = json.loads(run_row["notes"])
     assert notes["run_outcome"] == "aborted"
     assert notes["fatal_error"]["type"] == "KeyboardInterrupt"
+    assert "eligibility_summary" in notes
+
+
+def test_resolve_only_filters_explicit_non_us_before_session_or_resolution(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    conn = db.get_connection(db_path)
+    db.insert_discovered(
+        conn,
+        [DiscoveredJob("Acme", "Software Engineer", "Remote - Canada", "https://example.com/ca", "tracker_vansh", None)],
+    )
+
+    with (
+        patch.object(run_ingest, "PoliteSession", side_effect=AssertionError("session should not be created")),
+        patch.object(run_ingest, "run_resolution", side_effect=AssertionError("resolution should not run")),
+    ):
+        result = run_ingest.main(["--resolve-only", "--db", db_path])
+
+    row = db.get_connection(db_path).execute("SELECT status, filter_reason FROM jobs").fetchone()
+    assert result == 0
+    assert row["status"] == Status.FILTERED_OUT
+    assert row["filter_reason"] == "eligibility:country"
+
+
+def test_resolve_only_unknown_location_reaches_resolver(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    conn = db.get_connection(db_path)
+    db.insert_discovered(
+        conn,
+        [DiscoveredJob("Acme", "Software Engineer", "Remote", "https://example.com/remote", "tracker_vansh", None)],
+    )
+
+    called = {"resolution": False}
+
+    def _fake_resolution(conn, session, *, browser_resolver, resolve_limit, browser_client, summary):
+        called["resolution"] = True
+        return summary
+
+    with patch.object(run_ingest, "run_resolution", side_effect=_fake_resolution):
+        result = run_ingest.main(["--resolve-only", "--db", db_path])
+
+    assert result == 0
+    assert called["resolution"] is True
+
+
+def test_discover_only_does_not_run_eligibility_gates(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+
+    with (
+        patch.object(
+            run_ingest,
+            "discover_all",
+            return_value=DiscoveryResult((), (), ("tracker_vansh",), ()),
+        ),
+        patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
+        patch.object(run_ingest.prefilter, "run_pre_resolution_gate", side_effect=AssertionError("no pre gate")),
+        patch.object(run_ingest.prefilter, "run_post_resolution_gate", side_effect=AssertionError("no post gate")),
+    ):
+        result = run_ingest.main(["--discover-only", "--db", db_path])
+
+    assert result == 0
+
+
+def test_invalid_eligibility_config_exits_before_database_creation(tmp_path):
+    db_path = tmp_path / "jobs.db"
+
+    with patch.object(run_ingest, "load_eligibility_config", side_effect=run_ingest.EligibilityConfigError("bad config")):
+        result = run_ingest.main(["--db", str(db_path)])
+
+    assert result == 1
+    assert not db_path.exists()
 
 
 def test_main_completed_run_has_run_outcome_completed_without_discovery_issues_key(tmp_path):
