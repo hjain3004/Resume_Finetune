@@ -40,6 +40,7 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
         ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
         patch.object(run_ingest, "load_browser_resolver_flag", return_value=True),
+        patch.object(run_ingest, "Crawl4AIBrowserClient", return_value=MagicMock()),
         patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd", "browser")) as mock_resolve,
     ):
         run_ingest.main([
@@ -52,8 +53,9 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
         "https://boards.greenhouse.io/acme/jobs/1",
         mock_resolve.call_args.args[1],
         browser_resolver=True,
-        browser_client=None,
+        browser_client=mock_resolve.call_args.kwargs["browser_client"],
     )
+    assert mock_resolve.call_args.kwargs["browser_client"] is not None
 
     conn = db.get_connection(db_path)
     run_row = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()

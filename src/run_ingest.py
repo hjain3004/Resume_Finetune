@@ -22,6 +22,7 @@ from src.discover import tracker_common
 from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
 from src.resolve.base import PoliteSession
+from src.resolve.browser import BrowserClient, CircuitBreakingBrowserClient, Crawl4AIBrowserClient
 from src.resolve.outcomes import ResolutionOutcome, ResolutionOutcomeKind, ResolutionSummary
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -122,6 +123,89 @@ def _serialize_discovery_issues(issues: tuple[DiscoveryIssue, ...]) -> str | Non
     return json.dumps(
         {"discovery_issues": [asdict(issue) for issue in issues]},
         sort_keys=True,
+    )
+
+
+def _resolution_summary_payload(summary: ResolutionSummary) -> dict:
+    reason_codes: dict[str, int] = {}
+    for issue in summary.issues:
+        reason_codes[issue.reason_code] = reason_codes.get(issue.reason_code, 0) + 1
+    return {
+        "resolved": summary.resolved,
+        "content_failed": summary.content_failed,
+        "transient": summary.transient,
+        "internal": summary.internal,
+        "tier1": summary.tier1,
+        "tier2": summary.tier2,
+        "manual": summary.manual,
+        "reason_codes": reason_codes,
+    }
+
+
+def _run_notes(
+    *,
+    run_outcome: str,
+    summary: ResolutionSummary,
+    discovery_issues: tuple[DiscoveryIssue, ...] | list[DiscoveryIssue],
+    fatal_error: BaseException | None,
+) -> str:
+    payload = {
+        "run_outcome": run_outcome,
+        "resolution_summary": _resolution_summary_payload(summary),
+    }
+    if discovery_issues:
+        payload["discovery_issues"] = [asdict(issue) for issue in discovery_issues]
+    if fatal_error is not None:
+        payload["fatal_error"] = {
+            "type": type(fatal_error).__name__,
+            "message": str(fatal_error)[:500],
+        }
+    return json.dumps(payload, sort_keys=True)
+
+
+def finalize_run(
+    conn,
+    run_id: int,
+    *,
+    summary: ResolutionSummary,
+    run_outcome: str,
+    fatal_error: BaseException | None,
+    discovery_issues: tuple[DiscoveryIssue, ...] | list[DiscoveryIssue],
+    browser_client: BrowserClient | None,
+    new_count: int,
+    filtered_count: int,
+) -> None:
+    if browser_client is not None:
+        try:
+            browser_client.close()
+        except Exception:
+            logger.exception("browser client close failed during run finalization")
+
+    for source, counts in summary.per_source.items():
+        db.record_run_source(
+            conn,
+            run_id,
+            source,
+            resolved=counts["resolved"],
+            failed=counts["failed"],
+        )
+
+    db.finish_run(
+        conn,
+        run_id,
+        new_jobs=new_count,
+        resolved=summary.resolved,
+        failed=summary.content_failed,
+        filtered_out=filtered_count,
+        tier1_resolved=summary.tier1,
+        tier2_resolved=summary.tier2,
+        manual_failed=summary.manual,
+        notes=_run_notes(
+            run_outcome=run_outcome,
+            summary=summary,
+            discovery_issues=discovery_issues,
+            fatal_error=fatal_error,
+        ),
     )
 
 
@@ -240,117 +324,122 @@ def main(argv: list[str] | None = None) -> int:
     new_count = 0
     discovery_result = DiscoveryResult((), (), (), ())
     discovery_issues: tuple[DiscoveryIssue, ...] = ()
-    if not args.resolve_only:
-        selected = _with_snapshot_dir(selected, args.snapshot_dir)
-        discovery_result = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
-        inserted_by_source, checkpoint_issues = persist_discovery(
-            conn,
-            discovery_result,
-            stale_days=freshness_cfg["stale_days"],
-            reopen_days=freshness_cfg["reopen_days"],
-            dry_run=args.dry_run,
-        )
-        discovery_issues = discovery_result.issues + checkpoint_issues
-        discovered = discovery_result.jobs
-        new_count = sum(inserted_by_source.values())
-        print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
-        for job in discovered:
-            print(f"  - {job.company}: {job.title} [{job.source}]")
-
-        discovered_by_source = Counter(job.source for job in discovered)
-        for source in selected:
-            db.record_run_source(
-                conn,
-                run_id,
-                source,
-                discovered=discovered_by_source.get(source, 0),
-                inserted=inserted_by_source.get(source, 0),
-            )
-
-        if args.source is None or args.source == INBOX_SOURCE_NAME:
-            inbox_result = inbox_manual.ingest(conn, {"dry_run": args.dry_run})
-            inbox_new = inbox_result.new_urls + inbox_result.new_pastes
-            new_count += inbox_new
-            print(
-                f"Inbox: {inbox_result.new_urls} URL(s), {inbox_result.new_pastes} paste(s) ingested."
-            )
-            db.record_run_source(
-                conn, run_id, INBOX_SOURCE_NAME, discovered=inbox_new, inserted=inbox_new
-            )
-
-    all_selected_failed = (
-        not args.resolve_only and bool(selected) and not discovery_result.succeeded_sources
-    )
-    checkpoint_failed = any(issue.stage == "checkpoint" for issue in discovery_issues)
-    run_notes = _serialize_discovery_issues(discovery_issues)
-
-    resolved_count = 0
-    failed_count = 0
     filtered_count = 0
-    tiers = {"tier1": 0, "tier2": 0, "manual": 0}
-    if not args.discover_only:
-        session = PoliteSession()
-        browser_resolver = load_browser_resolver_flag()
-        resolution_summary = run_resolution(
-            conn, session, browser_resolver=browser_resolver, resolve_limit=args.resolve_limit
-        )
-        resolved_count = resolution_summary.resolved
-        failed_count = resolution_summary.content_failed
-        tiers = {
-            "tier1": resolution_summary.tier1,
-            "tier2": resolution_summary.tier2,
-            "manual": resolution_summary.manual,
-        }
-        print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
-
-        for source, counts in resolution_summary.per_source.items():
-            db.record_run_source(
-                conn, run_id, source, resolved=counts["resolved"], failed=counts["failed"]
-            )
-
-        # I6a: prefilter eligibility is a state condition (RESOLVED rows lacking
-        # a filter_reason verdict), not a step gated on run mode. A --resolve-only
-        # run must still sweep it, or rows it resolves sit unfiltered until
-        # someone remembers to run a full pipeline (see DECISIONS.md 2026-07-12).
-        filters_cfg = load_filters_config()
-        filtered_count = prefilter.run_prefilter(conn, filters_cfg)
-        print(f"Filtered out {filtered_count} job(s).")
-
-        if not args.resolve_only:
-            closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
-            print(f"Liveness recheck: {closed_count} job(s) closed.")
-
+    resolution_summary = ResolutionSummary()
     audit_result = None
-    if not args.discover_only and not args.resolve_only:
-        audit_result = audit_module.run_all(
-            conn,
-            audit_config=load_audit_config(),
-            filters_config=load_filters_config(),
-            freshness_config=freshness_cfg,
-        )
-        print(f"Audit: {audit_result.overall} ({len(audit_result.findings)} invariant(s) checked)")
-        if not args.dry_run:
-            audit_out_dir = Path(args.audit_dir)
-            audit_out_dir.mkdir(parents=True, exist_ok=True)
-            audit_date_str = datetime.now(timezone.utc).date().isoformat()
-            (audit_out_dir / f"{audit_date_str}.json").write_text(
-                json.dumps(audit_module.to_json_dict(audit_result, date_str=audit_date_str), indent=2)
+    browser_client: BrowserClient | None = None
+    exit_code = 0
+    run_outcome = "completed"
+    fatal_error: BaseException | None = None
+    write_digest = False
+
+    try:
+        if not args.resolve_only:
+            selected = _with_snapshot_dir(selected, args.snapshot_dir)
+            discovery_result = discover_all(selected, limit=args.limit, dry_run=args.dry_run)
+            inserted_by_source, checkpoint_issues = persist_discovery(
+                conn,
+                discovery_result,
+                stale_days=freshness_cfg["stale_days"],
+                reopen_days=freshness_cfg["reopen_days"],
+                dry_run=args.dry_run,
             )
+            discovery_issues = discovery_result.issues + checkpoint_issues
+            discovered = discovery_result.jobs
+            new_count = sum(inserted_by_source.values())
+            print(f"Discovered {len(discovered)} job(s), {new_count} new, from {len(selected)} source(s).")
+            for job in discovered:
+                print(f"  - {job.company}: {job.title} [{job.source}]")
 
-    db.finish_run(
-        conn,
-        run_id,
-        new_jobs=new_count,
-        resolved=resolved_count,
-        failed=failed_count,
-        filtered_out=filtered_count,
-        tier1_resolved=tiers["tier1"],
-        tier2_resolved=tiers["tier2"],
-        manual_failed=tiers["manual"],
-        notes=run_notes,
-    )
+            discovered_by_source = Counter(job.source for job in discovered)
+            for source in selected:
+                db.record_run_source(
+                    conn,
+                    run_id,
+                    source,
+                    discovered=discovered_by_source.get(source, 0),
+                    inserted=inserted_by_source.get(source, 0),
+                )
 
-    if not args.discover_only and not args.resolve_only:
+            if args.source is None or args.source == INBOX_SOURCE_NAME:
+                inbox_result = inbox_manual.ingest(conn, {"dry_run": args.dry_run})
+                inbox_new = inbox_result.new_urls + inbox_result.new_pastes
+                new_count += inbox_new
+                print(
+                    f"Inbox: {inbox_result.new_urls} URL(s), {inbox_result.new_pastes} paste(s) ingested."
+                )
+                db.record_run_source(
+                    conn, run_id, INBOX_SOURCE_NAME, discovered=inbox_new, inserted=inbox_new
+                )
+
+        all_selected_failed = (
+            not args.resolve_only and bool(selected) and not discovery_result.succeeded_sources
+        )
+        checkpoint_failed = any(issue.stage == "checkpoint" for issue in discovery_issues)
+
+        if not args.discover_only:
+            session = PoliteSession()
+            browser_resolver = load_browser_resolver_flag()
+            if browser_resolver:
+                browser_client = CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
+            run_resolution(
+                conn,
+                session,
+                browser_resolver=browser_resolver,
+                resolve_limit=args.resolve_limit,
+                browser_client=browser_client,
+                summary=resolution_summary,
+            )
+            print(f"Resolved {resolution_summary.resolved} job(s), {resolution_summary.content_failed} failed.")
+
+            # I6a: prefilter eligibility is a state condition (RESOLVED rows lacking
+            # a filter_reason verdict), not a step gated on run mode. A --resolve-only
+            # run must still sweep it, or rows it resolves sit unfiltered until
+            # someone remembers to run a full pipeline (see DECISIONS.md 2026-07-12).
+            filters_cfg = load_filters_config()
+            filtered_count = prefilter.run_prefilter(conn, filters_cfg)
+            print(f"Filtered out {filtered_count} job(s).")
+
+            if not args.resolve_only:
+                closed_count = freshness.run_liveness_recheck(conn, session, freshness_cfg["liveness_days"])
+                print(f"Liveness recheck: {closed_count} job(s) closed.")
+
+        if not args.discover_only and not args.resolve_only:
+            audit_result = audit_module.run_all(
+                conn,
+                audit_config=load_audit_config(),
+                filters_config=load_filters_config(),
+                freshness_config=freshness_cfg,
+            )
+            print(f"Audit: {audit_result.overall} ({len(audit_result.findings)} invariant(s) checked)")
+            if not args.dry_run:
+                audit_out_dir = Path(args.audit_dir)
+                audit_out_dir.mkdir(parents=True, exist_ok=True)
+                audit_date_str = datetime.now(timezone.utc).date().isoformat()
+                (audit_out_dir / f"{audit_date_str}.json").write_text(
+                    json.dumps(audit_module.to_json_dict(audit_result, date_str=audit_date_str), indent=2)
+                )
+            write_digest = True
+
+        exit_code = 1 if all_selected_failed or checkpoint_failed else 0
+    except BaseException as exc:
+        run_outcome = "aborted"
+        fatal_error = exc
+        raise
+    finally:
+        finalize_run(
+            conn,
+            run_id,
+            summary=resolution_summary,
+            run_outcome=run_outcome,
+            fatal_error=fatal_error,
+            discovery_issues=discovery_issues,
+            browser_client=browser_client,
+            new_count=new_count,
+            filtered_count=filtered_count,
+        )
+
+    if write_digest:
         run_row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         if args.dry_run:
             print(digest.build_digest(conn, run_row, audit_result=audit_result))
@@ -358,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
             digest_path = digest.write_digest(conn, run_row, base_dir=args.digest_dir, audit_result=audit_result)
             print(f"Digest written to {digest_path}")
 
-    return 1 if all_selected_failed or checkpoint_failed else 0
+    return exit_code
 
 
 if __name__ == "__main__":
