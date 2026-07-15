@@ -1,0 +1,303 @@
+version: 1
+countries:
+  AD: {names: [Andorra], codes: [AD, AND], aliases: []}
+  AE: {names: [United Arab Emirates], codes: [AE, ARE], aliases: [UAE]}
+  AF: {names: [Afghanistan], codes: [AF, AFG], aliases: []}
+  AG: {names: [Antigua and Barbuda], codes: [AG, ATG], aliases: []}
+  AI: {names: [Anguilla], codes: [AI, AIA], aliases: []}
+  AL: {names: [Albania], codes: [AL, ALB], aliases: []}
+  AM: {names: [Armenia], codes: [AM, ARM], aliases: []}
+  AO: {names: [Angola], codes: [AO, AGO], aliases: []}
+  AQ: {names: [Antarctica], codes: [AQ, ATA], aliases: []}
+  AR: {names: [Argentina], codes: [AR, ARG], aliases: []}
+  AS: {names: [American Samoa], codes: [AS, ASM], aliases: []}
+  AT: {names: [Austria], codes: [AT, AUT], aliases: []}
+  AU: {names: [Australia], codes: [AU, AUS], aliases: []}
+  AW: {names: [Aruba], codes: [AW, ABW], aliases: []}
+  AX: {names: [Aland Islands], codes: [AX, ALA], aliases: [Åland Islands]}
+  AZ: {names: [Azerbaijan], codes: [AZ, AZE], aliases: []}
+  BA: {names: [Bosnia and Herzegovina], codes: [BA, BIH], aliases: []}
+  BB: {names: [Barbados], codes: [BB, BRB], aliases: []}
+  BD: {names: [Bangladesh], codes: [BD, BGD], aliases: []}
+  BE: {names: [Belgium], codes: [BE, BEL], aliases: []}
+  BF: {names: [Burkina Faso], codes: [BF, BFA], aliases: []}
+  BG: {names: [Bulgaria], codes: [BG, BGR], aliases: []}
+  BH: {names: [Bahrain], codes: [BH, BHR], aliases: []}
+  BI: {names: [Burundi], codes: [BI, BDI], aliases: []}
+  BJ: {names: [Benin], codes: [BJ, BEN], aliases: []}
+  BL: {names: [Saint Barthelemy], codes: [BL, BLM], aliases: [Saint Barthélemy]}
+  BM: {names: [Bermuda], codes: [BM, BMU], aliases: []}
+  BN: {names: [Brunei Darussalam], codes: [BN, BRN], aliases: [Brunei]}
+  BO: {names: [Bolivia], codes: [BO, BOL], aliases: []}
+  BQ: {names: [Bonaire Sint Eustatius and Saba], codes: [BQ, BES], aliases: []}
+  BR: {names: [Brazil], codes: [BR, BRA], aliases: []}
+  BS: {names: [Bahamas], codes: [BS, BHS], aliases: []}
+  BT: {names: [Bhutan], codes: [BT, BTN], aliases: []}
+  BV: {names: [Bouvet Island], codes: [BV, BVT], aliases: []}
+  BW: {names: [Botswana], codes: [BW, BWA], aliases: []}
+  BY: {names: [Belarus], codes: [BY, BLR], aliases: []}
+  BZ: {names: [Belize], codes: [BZ, BLZ], aliases: []}
+  CA: {names: [Canada], codes: [CA, CAN], aliases: []}
+  CC: {names: [Cocos Islands], codes: [CC, CCK], aliases: [Keeling Islands]}
+  CD: {names: [Congo Democratic Republic], codes: [CD, COD], aliases: [Democratic Republic of the Congo]}
+  CF: {names: [Central African Republic], codes: [CF, CAF], aliases: []}
+  CG: {names: [Congo], codes: [CG, COG], aliases: [Republic of the Congo]}
+  CH: {names: [Switzerland], codes: [CH, CHE], aliases: []}
+  CI: {names: [Cote d'Ivoire], codes: [CI, CIV], aliases: [Ivory Coast, Côte d’Ivoire]}
+  CK: {names: [Cook Islands], codes: [CK, COK], aliases: []}
+  CL: {names: [Chile], codes: [CL, CHL], aliases: []}
+  CM: {names: [Cameroon], codes: [CM, CMR], aliases: []}
+  CN: {names: [China], codes: [CN, CHN], aliases: []}
+  CO: {names: [Colombia], codes: [CO, COL], aliases: []}
+  CR: {names: [Costa Rica], codes: [CR, CRI], aliases: []}
+  CU: {names: [Cuba], codes: [CU, CUB], aliases: []}
+  CV: {names: [Cabo Verde], codes: [CV, CPV], aliases: [Cape Verde]}
+  CW: {names: [Curacao], codes: [CW, CUW], aliases: [Curaçao]}
+  CX: {names: [Christmas Island], codes: [CX, CXR], aliases: []}
+  CY: {names: [Cyprus], codes: [CY, CYP], aliases: []}
+  CZ: {names: [Czechia], codes: [CZ, CZE], aliases: [Czech Republic]}
+  DE: {names: [Germany], codes: [DE, DEU], aliases: []}
+  DJ: {names: [Djibouti], codes: [DJ, DJI], aliases: []}
+  DK: {names: [Denmark], codes: [DK, DNK], aliases: []}
+  DM: {names: [Dominica], codes: [DM, DMA], aliases: []}
+  DO: {names: [Dominican Republic], codes: [DO, DOM], aliases: []}
+  DZ: {names: [Algeria], codes: [DZ, DZA], aliases: []}
+  EC: {names: [Ecuador], codes: [EC, ECU], aliases: []}
+  EE: {names: [Estonia], codes: [EE, EST], aliases: []}
+  EG: {names: [Egypt], codes: [EG, EGY], aliases: []}
+  EH: {names: [Western Sahara], codes: [EH, ESH], aliases: []}
+  ER: {names: [Eritrea], codes: [ER, ERI], aliases: []}
+  ES: {names: [Spain], codes: [ES, ESP], aliases: []}
+  ET: {names: [Ethiopia], codes: [ET, ETH], aliases: []}
+  FI: {names: [Finland], codes: [FI, FIN], aliases: []}
+  FJ: {names: [Fiji], codes: [FJ, FJI], aliases: []}
+  FK: {names: [Falkland Islands], codes: [FK, FLK], aliases: []}
+  FM: {names: [Micronesia], codes: [FM, FSM], aliases: []}
+  FO: {names: [Faroe Islands], codes: [FO, FRO], aliases: []}
+  FR: {names: [France], codes: [FR, FRA], aliases: []}
+  GA: {names: [Gabon], codes: [GA, GAB], aliases: []}
+  GB: {names: [United Kingdom], codes: [GB, GBR], aliases: [UK, Great Britain]}
+  GD: {names: [Grenada], codes: [GD, GRD], aliases: []}
+  GE: {names: [Georgia], codes: [GE, GEO], aliases: []}
+  GF: {names: [French Guiana], codes: [GF, GUF], aliases: []}
+  GG: {names: [Guernsey], codes: [GG, GGY], aliases: []}
+  GH: {names: [Ghana], codes: [GH, GHA], aliases: []}
+  GI: {names: [Gibraltar], codes: [GI, GIB], aliases: []}
+  GL: {names: [Greenland], codes: [GL, GRL], aliases: []}
+  GM: {names: [Gambia], codes: [GM, GMB], aliases: []}
+  GN: {names: [Guinea], codes: [GN, GIN], aliases: []}
+  GP: {names: [Guadeloupe], codes: [GP, GLP], aliases: []}
+  GQ: {names: [Equatorial Guinea], codes: [GQ, GNQ], aliases: []}
+  GR: {names: [Greece], codes: [GR, GRC], aliases: []}
+  GS: {names: [South Georgia and the South Sandwich Islands], codes: [GS, SGS], aliases: []}
+  GT: {names: [Guatemala], codes: [GT, GTM], aliases: []}
+  GU: {names: [Guam], codes: [GU, GUM], aliases: []}
+  GW: {names: [Guinea-Bissau], codes: [GW, GNB], aliases: []}
+  GY: {names: [Guyana], codes: [GY, GUY], aliases: []}
+  HK: {names: [Hong Kong], codes: [HK, HKG], aliases: []}
+  HM: {names: [Heard Island and McDonald Islands], codes: [HM, HMD], aliases: []}
+  HN: {names: [Honduras], codes: [HN, HND], aliases: []}
+  HR: {names: [Croatia], codes: [HR, HRV], aliases: []}
+  HT: {names: [Haiti], codes: [HT, HTI], aliases: []}
+  HU: {names: [Hungary], codes: [HU, HUN], aliases: []}
+  ID: {names: [Indonesia], codes: [ID, IDN], aliases: []}
+  IE: {names: [Ireland], codes: [IE, IRL], aliases: []}
+  IL: {names: [Israel], codes: [IL, ISR], aliases: []}
+  IM: {names: [Isle of Man], codes: [IM, IMN], aliases: []}
+  IN: {names: [India], codes: [IN, IND], aliases: []}
+  IO: {names: [British Indian Ocean Territory], codes: [IO, IOT], aliases: []}
+  IQ: {names: [Iraq], codes: [IQ, IRQ], aliases: []}
+  IR: {names: [Iran], codes: [IR, IRN], aliases: []}
+  IS: {names: [Iceland], codes: [IS, ISL], aliases: []}
+  IT: {names: [Italy], codes: [IT, ITA], aliases: []}
+  JE: {names: [Jersey], codes: [JE, JEY], aliases: []}
+  JM: {names: [Jamaica], codes: [JM, JAM], aliases: []}
+  JO: {names: [Jordan], codes: [JO, JOR], aliases: []}
+  JP: {names: [Japan], codes: [JP, JPN], aliases: []}
+  KE: {names: [Kenya], codes: [KE, KEN], aliases: []}
+  KG: {names: [Kyrgyzstan], codes: [KG, KGZ], aliases: []}
+  KH: {names: [Cambodia], codes: [KH, KHM], aliases: []}
+  KI: {names: [Kiribati], codes: [KI, KIR], aliases: []}
+  KM: {names: [Comoros], codes: [KM, COM], aliases: []}
+  KN: {names: [Saint Kitts and Nevis], codes: [KN, KNA], aliases: []}
+  KP: {names: [North Korea], codes: [KP, PRK], aliases: []}
+  KR: {names: [South Korea], codes: [KR, KOR], aliases: []}
+  KW: {names: [Kuwait], codes: [KW, KWT], aliases: []}
+  KY: {names: [Cayman Islands], codes: [KY, CYM], aliases: []}
+  KZ: {names: [Kazakhstan], codes: [KZ, KAZ], aliases: []}
+  LA: {names: [Laos], codes: [LA, LAO], aliases: []}
+  LB: {names: [Lebanon], codes: [LB, LBN], aliases: []}
+  LC: {names: [Saint Lucia], codes: [LC, LCA], aliases: []}
+  LI: {names: [Liechtenstein], codes: [LI, LIE], aliases: []}
+  LK: {names: [Sri Lanka], codes: [LK, LKA], aliases: []}
+  LR: {names: [Liberia], codes: [LR, LBR], aliases: []}
+  LS: {names: [Lesotho], codes: [LS, LSO], aliases: []}
+  LT: {names: [Lithuania], codes: [LT, LTU], aliases: []}
+  LU: {names: [Luxembourg], codes: [LU, LUX], aliases: []}
+  LV: {names: [Latvia], codes: [LV, LVA], aliases: []}
+  LY: {names: [Libya], codes: [LY, LBY], aliases: []}
+  MA: {names: [Morocco], codes: [MA, MAR], aliases: []}
+  MC: {names: [Monaco], codes: [MC, MCO], aliases: []}
+  MD: {names: [Moldova], codes: [MD, MDA], aliases: []}
+  ME: {names: [Montenegro], codes: [ME, MNE], aliases: []}
+  MF: {names: [Saint Martin], codes: [MF, MAF], aliases: []}
+  MG: {names: [Madagascar], codes: [MG, MDG], aliases: []}
+  MH: {names: [Marshall Islands], codes: [MH, MHL], aliases: []}
+  MK: {names: [North Macedonia], codes: [MK, MKD], aliases: [Macedonia]}
+  ML: {names: [Mali], codes: [ML, MLI], aliases: []}
+  MM: {names: [Myanmar], codes: [MM, MMR], aliases: [Burma]}
+  MN: {names: [Mongolia], codes: [MN, MNG], aliases: []}
+  MO: {names: [Macao], codes: [MO, MAC], aliases: [Macau]}
+  MP: {names: [Northern Mariana Islands], codes: [MP, MNP], aliases: []}
+  MQ: {names: [Martinique], codes: [MQ, MTQ], aliases: []}
+  MR: {names: [Mauritania], codes: [MR, MRT], aliases: []}
+  MS: {names: [Montserrat], codes: [MS, MSR], aliases: []}
+  MT: {names: [Malta], codes: [MT, MLT], aliases: []}
+  MU: {names: [Mauritius], codes: [MU, MUS], aliases: []}
+  MV: {names: [Maldives], codes: [MV, MDV], aliases: []}
+  MW: {names: [Malawi], codes: [MW, MWI], aliases: []}
+  MX: {names: [Mexico], codes: [MX, MEX], aliases: []}
+  MY: {names: [Malaysia], codes: [MY, MYS], aliases: []}
+  MZ: {names: [Mozambique], codes: [MZ, MOZ], aliases: []}
+  NA: {names: [Namibia], codes: [NA, NAM], aliases: []}
+  NC: {names: [New Caledonia], codes: [NC, NCL], aliases: []}
+  NE: {names: [Niger], codes: [NE, NER], aliases: []}
+  NF: {names: [Norfolk Island], codes: [NF, NFK], aliases: []}
+  NG: {names: [Nigeria], codes: [NG, NGA], aliases: []}
+  NI: {names: [Nicaragua], codes: [NI, NIC], aliases: []}
+  NL: {names: [Netherlands], codes: [NL, NLD], aliases: []}
+  "NO": {names: [Norway], codes: ["NO", NOR], aliases: []}
+  NP: {names: [Nepal], codes: [NP, NPL], aliases: []}
+  NR: {names: [Nauru], codes: [NR, NRU], aliases: []}
+  NU: {names: [Niue], codes: [NU, NIU], aliases: []}
+  NZ: {names: [New Zealand], codes: [NZ, NZL], aliases: []}
+  OM: {names: [Oman], codes: [OM, OMN], aliases: []}
+  PA: {names: [Panama], codes: [PA, PAN], aliases: []}
+  PE: {names: [Peru], codes: [PE, PER], aliases: []}
+  PF: {names: [French Polynesia], codes: [PF, PYF], aliases: []}
+  PG: {names: [Papua New Guinea], codes: [PG, PNG], aliases: []}
+  PH: {names: [Philippines], codes: [PH, PHL], aliases: []}
+  PK: {names: [Pakistan], codes: [PK, PAK], aliases: []}
+  PL: {names: [Poland], codes: [PL, POL], aliases: []}
+  PM: {names: [Saint Pierre and Miquelon], codes: [PM, SPM], aliases: []}
+  PN: {names: [Pitcairn], codes: [PN, PCN], aliases: []}
+  PR: {names: [Puerto Rico], codes: [PR, PRI], aliases: []}
+  PS: {names: [Palestine], codes: [PS, PSE], aliases: []}
+  PT: {names: [Portugal], codes: [PT, PRT], aliases: []}
+  PW: {names: [Palau], codes: [PW, PLW], aliases: []}
+  PY: {names: [Paraguay], codes: [PY, PRY], aliases: []}
+  QA: {names: [Qatar], codes: [QA, QAT], aliases: []}
+  RE: {names: [Reunion], codes: [RE, REU], aliases: [Réunion]}
+  RO: {names: [Romania], codes: [RO, ROU], aliases: []}
+  RS: {names: [Serbia], codes: [RS, SRB], aliases: []}
+  RU: {names: [Russian Federation], codes: [RU, RUS], aliases: [Russia]}
+  RW: {names: [Rwanda], codes: [RW, RWA], aliases: []}
+  SA: {names: [Saudi Arabia], codes: [SA, SAU], aliases: []}
+  SB: {names: [Solomon Islands], codes: [SB, SLB], aliases: []}
+  SC: {names: [Seychelles], codes: [SC, SYC], aliases: []}
+  SD: {names: [Sudan], codes: [SD, SDN], aliases: []}
+  SE: {names: [Sweden], codes: [SE, SWE], aliases: []}
+  SG: {names: [Singapore], codes: [SG, SGP], aliases: []}
+  SH: {names: [Saint Helena], codes: [SH, SHN], aliases: []}
+  SI: {names: [Slovenia], codes: [SI, SVN], aliases: []}
+  SJ: {names: [Svalbard and Jan Mayen], codes: [SJ, SJM], aliases: []}
+  SK: {names: [Slovakia], codes: [SK, SVK], aliases: []}
+  SL: {names: [Sierra Leone], codes: [SL, SLE], aliases: []}
+  SM: {names: [San Marino], codes: [SM, SMR], aliases: []}
+  SN: {names: [Senegal], codes: [SN, SEN], aliases: []}
+  SO: {names: [Somalia], codes: [SO, SOM], aliases: []}
+  SR: {names: [Suriname], codes: [SR, SUR], aliases: []}
+  SS: {names: [South Sudan], codes: [SS, SSD], aliases: []}
+  ST: {names: [Sao Tome and Principe], codes: [ST, STP], aliases: [São Tomé and Príncipe]}
+  SV: {names: [El Salvador], codes: [SV, SLV], aliases: []}
+  SX: {names: [Sint Maarten], codes: [SX, SXM], aliases: []}
+  SY: {names: [Syria], codes: [SY, SYR], aliases: []}
+  SZ: {names: [Eswatini], codes: [SZ, SWZ], aliases: [Swaziland]}
+  TC: {names: [Turks and Caicos Islands], codes: [TC, TCA], aliases: []}
+  TD: {names: [Chad], codes: [TD, TCD], aliases: []}
+  TF: {names: [French Southern Territories], codes: [TF, ATF], aliases: []}
+  TG: {names: [Togo], codes: [TG, TGO], aliases: []}
+  TH: {names: [Thailand], codes: [TH, THA], aliases: []}
+  TJ: {names: [Tajikistan], codes: [TJ, TJK], aliases: []}
+  TK: {names: [Tokelau], codes: [TK, TKL], aliases: []}
+  TL: {names: [Timor-Leste], codes: [TL, TLS], aliases: [East Timor]}
+  TM: {names: [Turkmenistan], codes: [TM, TKM], aliases: []}
+  TN: {names: [Tunisia], codes: [TN, TUN], aliases: []}
+  TO: {names: [Tonga], codes: [TO, TON], aliases: []}
+  TR: {names: [Turkey], codes: [TR, TUR], aliases: [Türkiye]}
+  TT: {names: [Trinidad and Tobago], codes: [TT, TTO], aliases: []}
+  TV: {names: [Tuvalu], codes: [TV, TUV], aliases: []}
+  TW: {names: [Taiwan], codes: [TW, TWN], aliases: []}
+  TZ: {names: [Tanzania], codes: [TZ, TZA], aliases: []}
+  UA: {names: [Ukraine], codes: [UA, UKR], aliases: []}
+  UG: {names: [Uganda], codes: [UG, UGA], aliases: []}
+  UM: {names: [United States Minor Outlying Islands], codes: [UM, UMI], aliases: []}
+  US: {names: [United States, United States of America], codes: [US, USA], aliases: [U.S., U.S.A., America]}
+  UY: {names: [Uruguay], codes: [UY, URY], aliases: []}
+  UZ: {names: [Uzbekistan], codes: [UZ, UZB], aliases: []}
+  VA: {names: [Holy See], codes: [VA, VAT], aliases: [Vatican City]}
+  VC: {names: [Saint Vincent and the Grenadines], codes: [VC, VCT], aliases: []}
+  VE: {names: [Venezuela], codes: [VE, VEN], aliases: []}
+  VG: {names: [Virgin Islands British], codes: [VG, VGB], aliases: [British Virgin Islands]}
+  VI: {names: [Virgin Islands U.S.], codes: [VI, VIR], aliases: [U.S. Virgin Islands]}
+  VN: {names: [Viet Nam], codes: [VN, VNM], aliases: [Vietnam]}
+  VU: {names: [Vanuatu], codes: [VU, VUT], aliases: []}
+  WF: {names: [Wallis and Futuna], codes: [WF, WLF], aliases: []}
+  WS: {names: [Samoa], codes: [WS, WSM], aliases: []}
+  YE: {names: [Yemen], codes: [YE, YEM], aliases: []}
+  YT: {names: [Mayotte], codes: [YT, MYT], aliases: []}
+  ZA: {names: [South Africa], codes: [ZA, ZAF], aliases: []}
+  ZM: {names: [Zambia], codes: [ZM, ZMB], aliases: []}
+  ZW: {names: [Zimbabwe], codes: [ZW, ZWE], aliases: []}
+us_states:
+  AL: Alabama
+  AK: Alaska
+  AZ: Arizona
+  AR: Arkansas
+  CA: California
+  CO: Colorado
+  CT: Connecticut
+  DE: Delaware
+  FL: Florida
+  GA: Georgia
+  HI: Hawaii
+  ID: Idaho
+  IL: Illinois
+  IN: Indiana
+  IA: Iowa
+  KS: Kansas
+  KY: Kentucky
+  LA: Louisiana
+  ME: Maine
+  MD: Maryland
+  MA: Massachusetts
+  MI: Michigan
+  MN: Minnesota
+  MS: Mississippi
+  MO: Missouri
+  MT: Montana
+  NE: Nebraska
+  NV: Nevada
+  NH: New Hampshire
+  NJ: New Jersey
+  NM: New Mexico
+  NY: New York
+  NC: North Carolina
+  ND: North Dakota
+  OH: Ohio
+  OK: Oklahoma
+  OR: Oregon
+  PA: Pennsylvania
+  RI: Rhode Island
+  SC: South Carolina
+  SD: South Dakota
+  TN: Tennessee
+  TX: Texas
+  UT: Utah
+  VT: Vermont
+  VA: Virginia
+  WA: Washington
+  WV: West Virginia
+  WI: Wisconsin
+  WY: Wyoming
+  DC: District of Columbia

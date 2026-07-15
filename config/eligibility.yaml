@@ -1,0 +1,77 @@
+version: 2
+countries:
+  allowed: [US]
+  explicit_non_match: reject
+  unknown_pre_resolution: defer
+  unknown_post_resolution: allow_with_flag
+  remote_without_country: unknown
+opportunity_types:
+  classification_order: [internship, co_op, contract, part_time, temporary, full_time]
+  default_when_unmarked: full_time
+  patterns:
+    internship: ["\\bintern(ship)?\\b"]
+    co_op: ["\\bco[- ]?op\\b", "\\bcooperative education\\b"]
+    contract: ["\\bcontract(or)?\\b", "\\b1099\\b"]
+    part_time: ["\\bpart[- ]time\\b"]
+    temporary: ["\\btemporary\\b", "\\btemp\\b"]
+    full_time: ["\\bfull[- ]time\\b", "\\bnew grad(uate)?\\b", "\\bgraduate\\b"]
+  types:
+    full_time:
+      enabled: true
+      start_windows:
+        - {earliest: "2027-01-01", latest: "2027-12-31"}
+      year_only_evidence: sufficient
+      unknown_start_pre_resolution: defer
+      unknown_start_post_resolution: allow_with_flag
+    internship:
+      enabled: true
+      allowed_seasons: [spring]
+      start_windows:
+        - {earliest: "2027-01-01", latest: "2027-05-31"}
+      year_only_evidence: insufficient
+      unknown_start_pre_resolution: defer
+      unknown_start_post_resolution: reject
+    co_op: {enabled: false}
+    contract: {enabled: false}
+    part_time: {enabled: false}
+    temporary: {enabled: false}
+seasons:
+  spring: {months: [1, 2, 3, 4, 5]}
+  summer: {months: [6, 7, 8]}
+  fall: {months: [9, 10, 11, 12]}
+role_families:
+  include:
+    - name: software_engineering
+      patterns:
+        - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer"
+seniority:
+  title_exclude_patterns:
+    - "senior|staff|principal|lead|manager|director"
+    - "\\b(7|8|9|10)\\+?\\s*years"
+  years_cap: 3
+work_authorization:
+  silence: allow
+  ambiguous: allow_with_flag
+  explicit_no_sponsorship: reject
+  citizenship_required: reject
+  patterns:
+    explicit_no_sponsorship:
+      - "unable to sponsor"
+      - "no (?:visa )?sponsorship"
+      - "will not sponsor"
+      - "not.{0,30}sponsor"
+      - "without sponsorship now or in the future"
+    citizenship_required:
+      - "US citizens? only"
+      - "must be (?:a )?US citizen"
+      - "US citizenship (?:is )?required"
+    positive_sponsorship:
+      - "visa sponsorship (?:is )?available"
+      - "we (?:can|will) sponsor"
+    ambiguous:
+      - "authorized to work in the (?:US|United States)"
+flags:
+  country_unknown: country_unknown
+  start_date_unknown: start_date_unknown
+  authorization_ambiguous: authorization_ambiguous
+  opportunity_type_inferred: opportunity_type_inferred
