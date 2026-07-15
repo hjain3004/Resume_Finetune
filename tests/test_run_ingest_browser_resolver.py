@@ -49,7 +49,10 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
         ])
 
     mock_resolve.assert_called_once_with(
-        "https://boards.greenhouse.io/acme/jobs/1", mock_resolve.call_args.args[1], browser_resolver=True
+        "https://boards.greenhouse.io/acme/jobs/1",
+        mock_resolve.call_args.args[1],
+        browser_resolver=True,
+        browser_client=None,
     )
 
     conn = db.get_connection(db_path)

@@ -5,8 +5,12 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
+import requests
+
 from src.models import ResolvedJD
 from src.resolve import amazon_jobs, ashby, browser, generic, greenhouse, jobright, lever, workday, wrapper
+from src.resolve.browser import BrowserUnavailableError
+from src.resolve.outcomes import ResolutionOutcome
 
 # I9 (docs/SELF_HEALING.md §1): bump whenever resolver/cleaner behavior
 # changes so active rows resolved under an older version get flagged for
@@ -34,7 +38,9 @@ def route(url: str):
     return generic
 
 
-def resolve(url: str, session, *, browser_resolver: bool = False) -> ResolvedJD | None:
+def resolve(
+    url: str, session, *, browser_resolver: bool = False, browser_client=None
+) -> ResolvedJD | None:
     response = session.get(url)
     if response.status_code != 200:
         # A plain `requests` GET can be bot-blocked (e.g. qualtrics.com returns
@@ -42,8 +48,8 @@ def resolve(url: str, session, *, browser_resolver: bool = False) -> ResolvedJD 
         # tier-2 retry for hosts with no tier-1 resolver — a blocked ATS host
         # (Tesla-style Akamai block) stays tier-3 rather than masking a real
         # break.
-        if browser_resolver and route(url) is generic:
-            return browser.resolve(url, session)
+        if browser_resolver and browser_client is not None and route(url) is generic:
+            return browser.resolve(url, session, browser_client)
         return None
 
     final_url = response.url
@@ -58,12 +64,48 @@ def resolve(url: str, session, *, browser_resolver: bool = False) -> ResolvedJD 
         result = generic.resolve(final_url, session)
         if result is not None:
             return result
-        if browser_resolver:
-            return browser.resolve(final_url, session)
+        if browser_resolver and browser_client is not None:
+            return browser.resolve(final_url, session, browser_client)
         return None
     if module is jobright:
-        return jobright.resolve(final_url, response.text, session, browser_resolver=browser_resolver)
+        return jobright.resolve(
+            final_url,
+            response.text,
+            session,
+            browser_resolver=browser_resolver,
+            browser_client=browser_client,
+        )
     return module.resolve(final_url, session)
+
+
+def attempt(
+    url: str,
+    session,
+    *,
+    browser_resolver: bool = False,
+    browser_client=None,
+) -> ResolutionOutcome:
+    """M6.10: typed orchestration boundary. Individual resolver modules keep
+    their `ResolvedJD | None` contract; this wrapper turns a `requests`
+    transport failure or a browser-unavailable failure into
+    `TRANSIENT_FAILURE` (neither consumes `resolve_attempts`), and a `None`
+    result into `CONTENT_FAILURE` (the only outcome that does)."""
+    try:
+        result = resolve(
+            url,
+            session,
+            browser_resolver=browser_resolver,
+            browser_client=browser_client,
+        )
+    except requests.exceptions.RequestException as exc:
+        return ResolutionOutcome.transient("http_transport", exc)
+    except BrowserUnavailableError as exc:
+        return ResolutionOutcome.transient("browser_unavailable", exc)
+    return (
+        ResolutionOutcome.resolved(result)
+        if result is not None
+        else ResolutionOutcome.content_failure("no_acceptable_content")
+    )
 
 
 MANUAL_DOMAINS_PATH = "config/manual_domains.txt"

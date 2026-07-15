@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -5,6 +6,8 @@ import requests
 
 from src import db, run_ingest
 from src.models import DiscoveredJob, ResolvedJD, Status
+from src.resolve.browser import BrowserUnavailableError
+from src.resolve.outcomes import ResolutionSummary
 
 
 def _conn():
@@ -20,10 +23,10 @@ def test_run_resolution_marks_resolved_rows_resolved():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd text", "greenhouse")):
-        resolved_count, failed_count, _by_source, _tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert resolved_count == 1
-    assert failed_count == 0
+    assert summary.resolved == 1
+    assert summary.content_failed == 0
     row = db.get_by_url(conn, "https://boards.greenhouse.io/acme/jobs/1")
     assert row["status"] == Status.RESOLVED
     assert row["jd_text"] == "jd text"
@@ -49,9 +52,9 @@ def test_run_resolution_breaks_down_counts_by_source():
         return ResolvedJD("jd text", "greenhouse") if "greenhouse" in url else None
 
     with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
-        _, _, by_source, _tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert by_source == {
+    assert summary.per_source == {
         "tracker_vansh": {"resolved": 1, "failed": 0},
         "tracker_simplify": {"resolved": 0, "failed": 1},
     }
@@ -65,14 +68,14 @@ def test_run_resolution_records_failure_and_leaves_discovered_under_limit():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=None):
-        resolved_count, failed_count, _by_source, tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert resolved_count == 0
-    assert failed_count == 1
+    assert summary.resolved == 0
+    assert summary.content_failed == 1
     row = db.get_by_url(conn, "https://example.com/job/1")
     assert row["status"] == Status.DISCOVERED
     assert row["resolve_attempts"] == 1
-    assert tiers == {"tier1": 0, "tier2": 0, "manual": 0}
+    assert (summary.tier1, summary.tier2, summary.manual) == (0, 0, 0)
 
 
 def test_run_resolution_sets_resolve_failed_after_three_runs():
@@ -92,13 +95,18 @@ def test_run_resolution_sets_resolve_failed_after_three_runs():
     assert row["resolve_attempts"] == 3
 
 
-def test_run_resolution_treats_network_exception_as_a_resolve_failure():
-    # Regression for 2026-07-15: an unhandled ConnectionError from
-    # resolve.resolve() (a plain requests.get under the hood) propagated all
-    # the way out of run_resolution()/main(), killing an in-progress backlog
-    # clear at row 181/1047. One flaky request must be isolated to that row,
-    # not abort the whole batch -- matching discover_all()'s per-adapter
-    # exception isolation.
+# --- M6.10: transient vs content vs internal retry-budget semantics ---------
+
+
+def test_run_resolution_treats_network_exception_as_transient_not_content_failure():
+    # M6.10 regression: a requests.ConnectionError from resolve.resolve() must
+    # NOT consume resolve_attempts (the pre-M6.10 behavior crashed a live
+    # backlog clear at row 181/1047 by treating this as an unhandled
+    # exception; the intermediate fix on 2026-07-15 caught it but still
+    # spent a content-failure attempt on it, which is also wrong -- a
+    # transient infrastructure error tells us nothing about the job's
+    # content). One flaky request must be isolated to that row, not abort
+    # the whole batch, and must leave the row fully untouched.
     conn = _conn()
     db.insert_discovered(
         conn,
@@ -115,24 +123,22 @@ def test_run_resolution_treats_network_exception_as_a_resolve_failure():
         return ResolvedJD("jd text", "greenhouse")
 
     with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
-        resolved_count, failed_count, _by_source, _tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert resolved_count == 1
-    assert failed_count == 1
+    assert summary.resolved == 1
+    assert summary.content_failed == 0
+    assert summary.transient == 1
     row1 = db.get_by_url(conn, "https://example.com/job/1")
     assert row1["status"] == Status.DISCOVERED
-    assert row1["resolve_attempts"] == 1
+    assert row1["resolve_attempts"] == 0
     row2 = db.get_by_url(conn, "https://example.com/job/2")
     assert row2["status"] == Status.RESOLVED
 
 
-def test_run_resolution_treats_non_request_exception_as_a_resolve_failure():
-    # Regression for 2026-07-15: catching only requests.exceptions.RequestException
-    # still let a Playwright BrowserType.launch TimeoutError (raised from the
-    # tier-2 browser resolver, which isn't a requests exception at all) crash a
-    # second backlog-clear attempt at row 184/1047. resolve.resolve() can raise
-    # from requests, Playwright/Crawl4AI, or any per-ATS resolver module, so the
-    # catch must be broad -- proven here with a plain exception unrelated to requests.
+def test_run_resolution_treats_browser_unavailable_as_transient():
+    # M6.10: the real-world case this whole design targets -- a Playwright
+    # BrowserType.launch timeout, surfaced by Crawl4AIBrowserClient as
+    # BrowserUnavailableError, must be transient, not a content failure.
     conn = _conn()
     db.insert_discovered(
         conn,
@@ -145,19 +151,55 @@ def test_run_resolution_treats_non_request_exception_as_a_resolve_failure():
 
     def _side_effect(url, session, **kwargs):
         if "job/1" in url:
-            raise TimeoutError("BrowserType.launch: Timeout 180000ms exceeded.")
+            raise BrowserUnavailableError("Timeout 180000ms exceeded")
         return ResolvedJD("jd text", "greenhouse")
 
     with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
-        resolved_count, failed_count, _by_source, _tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert resolved_count == 1
-    assert failed_count == 1
+    assert summary.transient == 1
+    assert summary.content_failed == 0
     row1 = db.get_by_url(conn, "https://example.com/job/1")
     assert row1["status"] == Status.DISCOVERED
-    assert row1["resolve_attempts"] == 1
+    assert row1["resolve_attempts"] == 0
     row2 = db.get_by_url(conn, "https://example.com/job/2")
     assert row2["status"] == Status.RESOLVED
+
+
+def test_run_resolution_treats_unexpected_exception_as_internal_not_content_failure(caplog):
+    # An exception attempt() doesn't specifically recognize (not a requests
+    # exception, not BrowserUnavailableError -- e.g. a genuine programming
+    # defect in some resolver module) must still not consume resolve_attempts,
+    # must be logged with a traceback, and must not stop the next row.
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/job/1", "tracker_vansh", None),
+            DiscoveredJob("Beta", "SWE 2", "Remote", "https://example.com/job/2", "tracker_vansh", None),
+        ],
+    )
+    session = MagicMock()
+
+    def _side_effect(url, session, **kwargs):
+        if "job/1" in url:
+            raise RuntimeError("some unrecognized resolver defect")
+        return ResolvedJD("jd text", "greenhouse")
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
+        with caplog.at_level(logging.ERROR, logger="src.run_ingest"):
+            summary = run_ingest.run_resolution(conn, session)
+
+    assert summary.internal == 1
+    assert summary.content_failed == 0
+    row1 = db.get_by_url(conn, "https://example.com/job/1")
+    assert row1["status"] == Status.DISCOVERED
+    assert row1["resolve_attempts"] == 0
+    row2 = db.get_by_url(conn, "https://example.com/job/2")
+    assert row2["status"] == Status.RESOLVED
+
+    assert any("unexpected" in record.message.lower() for record in caplog.records)
+    assert any(record.exc_info for record in caplog.records)
 
 
 def test_run_resolution_only_processes_discovered_rows():
@@ -195,9 +237,9 @@ def test_run_resolution_tallies_tier1_tier2_and_manual():
 
     session = MagicMock()
     with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
-        _, _, _by_source, tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
-    assert tiers == {"tier1": 1, "tier2": 1, "manual": 0}
+    assert (summary.tier1, summary.tier2, summary.manual) == (1, 1, 0)
 
 
 def test_run_resolution_counts_manual_only_on_permanent_failure():
@@ -208,13 +250,13 @@ def test_run_resolution_counts_manual_only_on_permanent_failure():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=None):
-        _, _, _by_source, tiers_1 = run_ingest.run_resolution(conn, session)
-        _, _, _by_source, tiers_2 = run_ingest.run_resolution(conn, session)
-        _, _, _by_source, tiers_3 = run_ingest.run_resolution(conn, session)
+        summary_1 = run_ingest.run_resolution(conn, session)
+        summary_2 = run_ingest.run_resolution(conn, session)
+        summary_3 = run_ingest.run_resolution(conn, session)
 
-    assert tiers_1 == {"tier1": 0, "tier2": 0, "manual": 0}
-    assert tiers_2 == {"tier1": 0, "tier2": 0, "manual": 0}
-    assert tiers_3 == {"tier1": 0, "tier2": 0, "manual": 1}
+    assert (summary_1.tier1, summary_1.tier2, summary_1.manual) == (0, 0, 0)
+    assert (summary_2.tier1, summary_2.tier2, summary_2.manual) == (0, 0, 0)
+    assert (summary_3.tier1, summary_3.tier2, summary_3.manual) == (0, 0, 1)
 
 
 def test_run_resolution_passes_browser_resolver_toggle_through():
@@ -228,7 +270,23 @@ def test_run_resolution_passes_browser_resolver_toggle_through():
         run_ingest.run_resolution(conn, session, browser_resolver=True)
 
     mock_resolve.assert_called_once_with(
-        "https://example.com/job/1", session, browser_resolver=True
+        "https://example.com/job/1", session, browser_resolver=True, browser_client=None
+    )
+
+
+def test_run_resolution_passes_browser_client_through():
+    conn = _conn()
+    db.insert_discovered(
+        conn, [DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/job/1", "tracker_vansh", None)]
+    )
+    session = MagicMock()
+    browser_client = object()
+
+    with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
+        run_ingest.run_resolution(conn, session, browser_resolver=True, browser_client=browser_client)
+
+    mock_resolve.assert_called_once_with(
+        "https://example.com/job/1", session, browser_resolver=True, browser_client=browser_client
     )
 
 
@@ -263,6 +321,31 @@ def test_run_resolution_flags_content_repost_against_terminal_row():
     assert f"job #{old_id}" in new_row["notes"]
 
 
+# --- M6.10: --resolve-limit behavior -----------------------------------------
+
+
+def test_run_resolution_resolve_limit_processes_only_the_lowest_id_rows():
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/job/1", "tracker_vansh", None),
+            DiscoveredJob("Beta", "SWE 2", "Remote", "https://example.com/job/2", "tracker_vansh", None),
+            DiscoveredJob("Gamma", "SWE 3", "Remote", "https://example.com/job/3", "tracker_vansh", None),
+        ],
+    )
+    session = MagicMock()
+
+    with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
+        summary = run_ingest.run_resolution(conn, session, resolve_limit=2)
+
+    assert mock_resolve.call_count == 2
+    assert summary.content_failed == 2
+    row3 = db.get_by_url(conn, "https://example.com/job/3")
+    assert row3["status"] == Status.DISCOVERED
+    assert row3["resolve_attempts"] == 0
+
+
 # --- M7 I2: manual_domains.txt routing ---------------------------------------
 
 
@@ -280,7 +363,7 @@ def test_run_resolution_calls_resolve_normally_when_manual_domains_empty():
         run_ingest.run_resolution(conn, session)
 
     mock_resolve.assert_called_once_with(
-        "https://careers.example.com/job/1", session, browser_resolver=False
+        "https://careers.example.com/job/1", session, browser_resolver=False, browser_client=None
     )
 
 
@@ -295,13 +378,13 @@ def test_run_resolution_skips_resolve_call_for_manual_domain():
         patch.object(run_ingest.resolve, "load_manual_domains", return_value={"careers.example.com"}),
         patch.object(run_ingest.resolve, "resolve") as mock_resolve,
     ):
-        resolved_count, failed_count, per_source, tiers = run_ingest.run_resolution(conn, session)
+        summary = run_ingest.run_resolution(conn, session)
 
     mock_resolve.assert_not_called()
-    assert resolved_count == 0
-    assert failed_count == 1
-    assert per_source == {"tracker_vansh": {"resolved": 0, "failed": 1}}
-    assert tiers == {"tier1": 0, "tier2": 0, "manual": 1}
+    assert summary.resolved == 0
+    assert summary.content_failed == 1
+    assert summary.per_source == {"tracker_vansh": {"resolved": 0, "failed": 1}}
+    assert (summary.tier1, summary.tier2, summary.manual) == (0, 0, 1)
     row = db.get_by_url(conn, "https://careers.example.com/job/1")
     assert row["status"] == Status.RESOLVE_FAILED
     assert row["resolve_attempts"] == 1

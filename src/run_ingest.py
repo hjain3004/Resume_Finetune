@@ -22,6 +22,7 @@ from src.discover import tracker_common
 from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
 from src.resolve.base import PoliteSession
+from src.resolve.outcomes import ResolutionOutcome, ResolutionOutcomeKind, ResolutionSummary
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -158,61 +159,66 @@ def persist_discovery(
 
 
 def run_resolution(
-    conn, session, *, browser_resolver: bool = False, resolve_limit: int | None = None
-) -> tuple[int, int, dict[str, dict[str, int]], dict[str, int]]:
+    conn,
+    session,
+    *,
+    browser_resolver: bool = False,
+    resolve_limit: int | None = None,
+    browser_client=None,
+    summary: ResolutionSummary | None = None,
+) -> ResolutionSummary:
     """Resolve DISCOVERED rows, ordered by id, up to `resolve_limit` (M6.10;
-    None means all eligible rows, matching pre-M6.10 behavior). Returns
-    (resolved_count, failed_count, per_source, tiers) where per_source maps
-    source -> {"resolved": n, "failed": n} and tiers maps
-    "tier1"/"tier2"/"manual" -> count (M6.5 per-tier observability: tier2 =
-    resolved via resolve/browser.py, manual = reached RESOLVE_FAILED this run)."""
-    resolved_count = 0
-    failed_count = 0
-    per_source: dict[str, dict[str, int]] = defaultdict(lambda: {"resolved": 0, "failed": 0})
-    tiers = {"tier1": 0, "tier2": 0, "manual": 0}
+    None means all eligible rows). Returns the `ResolutionSummary` (a fresh
+    one if the caller didn't pass one) recording resolved/content-failed/
+    transient/internal counts, tier1/tier2/manual tallies, per-source counts,
+    and structured issues.
+
+    M6.10 retry-budget correction: only a genuine `CONTENT_FAILURE` (the
+    resolver ran and produced nothing acceptable) consumes
+    `resolve_attempts`. A `TRANSIENT_FAILURE` (a `requests` transport error or
+    a browser-unavailable error) or an `INTERNAL_ERROR` (an exception
+    `resolve.attempt()` doesn't specifically recognize -- logged here with a
+    full traceback) leaves the row's status/attempts untouched and eligible
+    for the next run; neither stops the remaining rows from being attempted
+    (this is the same per-row isolation `discover_all()` already applies per
+    adapter, now extended past the resolve call to genuinely distinguish
+    "this job's content is bad" from "something about this attempt failed")."""
+    if summary is None:
+        summary = ResolutionSummary()
     manual_domains = resolve.load_manual_domains()
     for row in db.rows_by_status(conn, Status.DISCOVERED, limit=resolve_limit):
-        source = row["source"]
         if resolve.is_manual_domain(row["url"], manual_domains):
-            db.record_resolve_failure(conn, row["id"], force_failed=True)
-            failed_count += 1
-            per_source[source]["failed"] += 1
-            tiers["manual"] += 1
+            status = db.record_resolve_failure(conn, row["id"], force_failed=True)
+            summary.record(row, ResolutionOutcome.content_failure("manual_domain"))
+            if status == Status.RESOLVE_FAILED:
+                summary.manual += 1
             continue
-        # A transient failure inside resolve.resolve() previously propagated
-        # uncaught all the way out of main(), killing the whole batch after
-        # one bad row (found 2026-07-15: a requests.ConnectionError crashed
-        # 181/1047 rows into a backlog clear; catching only
-        # RequestException still let a Playwright BrowserType.launch
-        # TimeoutError from the tier-2 browser resolver kill a second
-        # attempt at 184/1047). resolve.resolve() can raise from requests,
-        # Playwright/Crawl4AI, or any per-ATS resolver module, so this
-        # catches broadly -- same isolation the discovery layer already
-        # applies per adapter (discover_all()'s `except Exception`).
+
         try:
-            result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
-        except Exception as exc:
-            logger.warning(
-                "resolve failed for row %s (%s): %s: %s", row["id"], row["url"], type(exc).__name__, exc
+            outcome = resolve.attempt(
+                row["url"], session, browser_resolver=browser_resolver, browser_client=browser_client
             )
-            result = None
-        if result is not None:
+        except Exception as exc:
+            logger.exception("unexpected resolve error for row %s (%s)", row["id"], row["url"])
+            outcome = ResolutionOutcome.internal("unexpected_exception", exc)
+
+        summary.record(row, outcome)
+
+        if outcome.kind == ResolutionOutcomeKind.RESOLVED:
+            result = outcome.result
             db.mark_resolved(conn, row["id"], result, logic_version=resolve.LOGIC_VERSION)
             prior_repost = freshness.find_content_repost(
                 conn, row["company"], result.jd_text, exclude_row_id=row["id"]
             )
             if prior_repost is not None:
                 freshness.record_content_repost(conn, row["id"], prior_repost)
-            resolved_count += 1
-            per_source[source]["resolved"] += 1
-            tiers["tier2" if result.resolver == "browser" else "tier1"] += 1
-        else:
+        elif outcome.kind == ResolutionOutcomeKind.CONTENT_FAILURE:
             status = db.record_resolve_failure(conn, row["id"])
-            failed_count += 1
-            per_source[source]["failed"] += 1
             if status == Status.RESOLVE_FAILED:
-                tiers["manual"] += 1
-    return resolved_count, failed_count, dict(per_source), tiers
+                summary.manual += 1
+        # TRANSIENT_FAILURE / INTERNAL_ERROR: row is left untouched -- already
+        # recorded in summary.issues for visibility; eligible again next run.
+    return summary
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -285,12 +291,19 @@ def main(argv: list[str] | None = None) -> int:
     if not args.discover_only:
         session = PoliteSession()
         browser_resolver = load_browser_resolver_flag()
-        resolved_count, failed_count, resolved_by_source, tiers = run_resolution(
+        resolution_summary = run_resolution(
             conn, session, browser_resolver=browser_resolver, resolve_limit=args.resolve_limit
         )
+        resolved_count = resolution_summary.resolved
+        failed_count = resolution_summary.content_failed
+        tiers = {
+            "tier1": resolution_summary.tier1,
+            "tier2": resolution_summary.tier2,
+            "manual": resolution_summary.manual,
+        }
         print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
 
-        for source, counts in resolved_by_source.items():
+        for source, counts in resolution_summary.per_source.items():
             db.record_run_source(
                 conn, run_id, source, resolved=counts["resolved"], failed=counts["failed"]
             )

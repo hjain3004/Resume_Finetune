@@ -63,8 +63,8 @@ def main(argv: list[str] | None = None) -> int:
     db.reset_for_reresolution(conn, job_ids)
     session = PoliteSession()
     browser_resolver = load_browser_resolver_flag()
-    resolved_count, failed_count, _, _ = run_resolution(conn, session, browser_resolver=browser_resolver)
-    print(f"Re-resolved {resolved_count} job(s), {failed_count} failed.")
+    summary = run_resolution(conn, session, browser_resolver=browser_resolver)
+    print(f"Re-resolved {summary.resolved} job(s), {summary.content_failed} failed.")
     return 0
 
 
