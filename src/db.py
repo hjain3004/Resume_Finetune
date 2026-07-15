@@ -376,8 +376,16 @@ def finish_run(
     conn.commit()
 
 
-def rows_by_status(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
-    return conn.execute("SELECT * FROM jobs WHERE status = ?", (status,)).fetchall()
+def rows_by_status(
+    conn: sqlite3.Connection, status: str, *, limit: int | None = None
+) -> list[sqlite3.Row]:
+    """Rows in a given status, ordered by id for a deterministic, repeatable
+    selection (M6.10: --resolve-limit relies on this ordering)."""
+    if limit is None:
+        return conn.execute("SELECT * FROM jobs WHERE status = ? ORDER BY id", (status,)).fetchall()
+    return conn.execute(
+        "SELECT * FROM jobs WHERE status = ? ORDER BY id LIMIT ?", (status, limit)
+    ).fetchall()
 
 
 def get_by_url(conn: sqlite3.Connection, url: str) -> sqlite3.Row | None:

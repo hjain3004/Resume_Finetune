@@ -29,6 +29,13 @@ logger = logging.getLogger(__name__)
 INBOX_SOURCE_NAME = inbox_manual.SOURCE_NAME
 
 
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be >= 1")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m src.run_ingest",
@@ -39,6 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resolve-only", action="store_true", help="only run the resolution step")
     parser.add_argument("--discover-only", action="store_true", help="only run the discovery step")
     parser.add_argument("--limit", type=int, metavar="N", help="cap new insertions per source")
+    parser.add_argument(
+        "--resolve-limit",
+        type=_positive_int,
+        metavar="N",
+        help="cap the number of DISCOVERED rows attempted this run, ordered by id "
+        "(M6.10; independent of --limit, which caps discovery insertions)",
+    )
     parser.add_argument("--db", metavar="PATH", default="data/jobs.db", help="path to the SQLite database")
     parser.add_argument(
         "--snapshot-dir",
@@ -144,18 +158,20 @@ def persist_discovery(
 
 
 def run_resolution(
-    conn, session, *, browser_resolver: bool = False
+    conn, session, *, browser_resolver: bool = False, resolve_limit: int | None = None
 ) -> tuple[int, int, dict[str, dict[str, int]], dict[str, int]]:
-    """Resolve all DISCOVERED rows. Returns (resolved_count, failed_count,
-    per_source, tiers) where per_source maps source -> {"resolved": n, "failed": n}
-    and tiers maps "tier1"/"tier2"/"manual" -> count (M6.5 per-tier observability:
-    tier2 = resolved via resolve/browser.py, manual = reached RESOLVE_FAILED this run)."""
+    """Resolve DISCOVERED rows, ordered by id, up to `resolve_limit` (M6.10;
+    None means all eligible rows, matching pre-M6.10 behavior). Returns
+    (resolved_count, failed_count, per_source, tiers) where per_source maps
+    source -> {"resolved": n, "failed": n} and tiers maps
+    "tier1"/"tier2"/"manual" -> count (M6.5 per-tier observability: tier2 =
+    resolved via resolve/browser.py, manual = reached RESOLVE_FAILED this run)."""
     resolved_count = 0
     failed_count = 0
     per_source: dict[str, dict[str, int]] = defaultdict(lambda: {"resolved": 0, "failed": 0})
     tiers = {"tier1": 0, "tier2": 0, "manual": 0}
     manual_domains = resolve.load_manual_domains()
-    for row in db.rows_by_status(conn, Status.DISCOVERED):
+    for row in db.rows_by_status(conn, Status.DISCOVERED, limit=resolve_limit):
         source = row["source"]
         if resolve.is_manual_domain(row["url"], manual_domains):
             db.record_resolve_failure(conn, row["id"], force_failed=True)
@@ -270,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         session = PoliteSession()
         browser_resolver = load_browser_resolver_flag()
         resolved_count, failed_count, resolved_by_source, tiers = run_resolution(
-            conn, session, browser_resolver=browser_resolver
+            conn, session, browser_resolver=browser_resolver, resolve_limit=args.resolve_limit
         )
         print(f"Resolved {resolved_count} job(s), {failed_count} failed.")
 

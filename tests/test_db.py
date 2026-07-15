@@ -107,6 +107,47 @@ def test_rows_by_status_and_get_by_url(conn):
     assert fetched["company"] == "Acme"
 
 
+def test_rows_by_status_returns_rows_ordered_by_id_regardless_of_insertion_order(conn):
+    # M6.10: --resolve-limit must select a deterministic, repeatable subset.
+    db.insert_discovered(
+        conn,
+        [
+            _job(url="https://example.com/job/c", company="C Corp"),
+            _job(url="https://example.com/job/a", company="A Corp"),
+            _job(url="https://example.com/job/b", company="B Corp"),
+        ],
+    )
+    rows = db.rows_by_status(conn, Status.DISCOVERED)
+    ids = [row["id"] for row in rows]
+    assert ids == sorted(ids)
+
+
+def test_rows_by_status_limit_returns_exactly_n_lowest_id_rows(conn):
+    db.insert_discovered(
+        conn,
+        [
+            _job(url="https://example.com/job/1", company="A"),
+            _job(url="https://example.com/job/2", company="B"),
+            _job(url="https://example.com/job/3", company="C"),
+        ],
+    )
+    all_rows = db.rows_by_status(conn, Status.DISCOVERED)
+    assert len(all_rows) == 3
+
+    limited = db.rows_by_status(conn, Status.DISCOVERED, limit=2)
+    assert len(limited) == 2
+    assert [row["id"] for row in limited] == sorted(row["id"] for row in all_rows)[:2]
+
+
+def test_rows_by_status_limit_none_returns_all_rows(conn):
+    db.insert_discovered(
+        conn,
+        [_job(url="https://example.com/job/1"), _job(url="https://example.com/job/2", company="B")],
+    )
+    rows = db.rows_by_status(conn, Status.DISCOVERED, limit=None)
+    assert len(rows) == 2
+
+
 def test_mark_resolved_sets_status_and_jd_fields(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]

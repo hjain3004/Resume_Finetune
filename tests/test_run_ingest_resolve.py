@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 
 from src import db, run_ingest
@@ -304,3 +305,24 @@ def test_run_resolution_skips_resolve_call_for_manual_domain():
     row = db.get_by_url(conn, "https://careers.example.com/job/1")
     assert row["status"] == Status.RESOLVE_FAILED
     assert row["resolve_attempts"] == 1
+
+
+# --- M6.10: --resolve-limit CLI flag ----------------------------------------
+
+
+def test_build_parser_accepts_resolve_limit_of_one():
+    parser = run_ingest.build_parser()
+    args = parser.parse_args(["--resolve-only", "--resolve-limit", "1"])
+    assert args.resolve_limit == 1
+
+
+def test_build_parser_rejects_resolve_limit_of_zero():
+    parser = run_ingest.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--resolve-only", "--resolve-limit", "0"])
+
+
+def test_build_parser_resolve_limit_defaults_to_none():
+    parser = run_ingest.build_parser()
+    args = parser.parse_args(["--resolve-only"])
+    assert args.resolve_limit is None
