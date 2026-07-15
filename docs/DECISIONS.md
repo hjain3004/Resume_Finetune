@@ -1176,3 +1176,38 @@ for M9D source evaluation, not proof that a source independently caused those un
 `rg -n "crawlee|apify|mcp" src scripts pyproject.toml` returned no matches. No schema,
 dependency, crawler, agent, Apify, or new-source work entered M9D-0. M9D-1 through M9D-5
 remain unimplemented.
+
+## 2026-07-15 — M6.10 offline implementation through Task 7
+
+M6.10 was continued from the approved resolution-runtime-hardening plan after Tasks 1-5 had
+already been committed. Task 6 added reliable finalization for partial and aborted runs.
+
+**Implemented boundary:** `run_ingest.main()` now creates a run-scoped `ResolutionSummary`
+before vulnerable work, creates one `CircuitBreakingBrowserClient(Crawl4AIBrowserClient())`
+when browser resolution is enabled, and passes both into `run_resolution()`. The production
+browser client is therefore shared for the run instead of being omitted from orchestration.
+
+**Finalization:** `run_ingest.finalize_run()` is the single run-finalization boundary for
+normal and aborted runs. It closes the browser client before DB finalization, logs browser
+close failures without blocking finalization, writes partial per-source resolved/failed
+counts from `ResolutionSummary.per_source`, calls `db.finish_run()` once, and always writes
+valid JSON notes. Notes include `run_outcome`, `resolution_summary`, reason-code counts, and
+optional `discovery_issues`/bounded `fatal_error` diagnostics. `KeyboardInterrupt` and other
+`BaseException` subclasses are finalized as `aborted` and then re-raised; the original
+interrupt is not swallowed or converted.
+
+**Preserved behavior:** discovery source selection, checkpoint commits, inbox ingestion,
+all-selected-source/checkpoint exit semantics, resolve-only prefilter sweeping, liveness
+checks, audit JSON writing, digest generation, dry-run digest output, and existing source
+accounting were preserved. Digest generation still queries the run row only after
+finalization, and the existing `audit_result` object is still passed into digest rendering.
+
+**Documentation status:** `docs/ARCHITECTURE.md` now describes the M6.10 runtime behavior as
+current. `docs/ROADMAP.md` was intentionally not marked complete; Task 8's live DB smoke is
+still user-gated.
+
+**Verification:** `.venv/bin/python -m pytest -q` passed with 464 tests. `git diff --check`
+passed. The user-owned `tests/test_scoring_stress.py` change, `docs/2605.27371v1.pdf`,
+`docs/_Aditya___Sood_.pdf`, and `docs/superpowers/reports/` remained unstaged and untouched
+by the M6.10 commits. No live DB mutation, dependency, schema migration, M9D-1 work, M8
+work, or scoring investigation was performed.

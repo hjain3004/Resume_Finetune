@@ -547,36 +547,41 @@ Three-tier resolution ladder:
 3. **Tier 3** — `RESOLVE_FAILED` → digest "Needs your help" (unchanged).
 
 Implementation:
-- `_crawl_async(url) -> CrawlResult`: the only async function, using `crawl4ai.AsyncWebCrawler`
-  with `CacheMode.BYPASS`. `_crawl(url)` wraps it in `asyncio.run()` — this is the sole seam
-  tests mock (`_crawl_async` patched with an `AsyncMock`); no real browser runs in pytest.
-- `fetch_markdown(url, session)` / `fetch_html(url, session)`: both call `session.throttle(url)`
-  first (§6.2) so browser fetches count against the same per-host rate limit, then `_crawl()`,
-  returning `None` on `result.success is False`.
-- `resolve(url, session) -> ResolvedJD | None`: `fetch_markdown()` + `generic.passes_quality()`;
-  on success, `resolver="browser"`, `jd_quality="ats"` (a rendered DOM is still the employer's
-  own text, unlike jobright's aggregator summary).
+- `BrowserClient` protocol: synchronous `start()`, `crawl(url)`, and `close()`.
+- `Crawl4AIBrowserClient`: owns one event loop and one `crawl4ai.AsyncWebCrawler` for a
+  resolution run. It uses `CacheMode.BYPASS`, keeps Crawl4AI behind a synchronous boundary,
+  and raises `BrowserUnavailableError` for lifecycle/start/operation failures.
+- `CircuitBreakingBrowserClient`: run-local wrapper around a `BrowserClient`. The first
+  `BrowserUnavailableError` trips the breaker; subsequent browser-required rows fail fast
+  with the same transient browser-unavailable outcome instead of retrying browser startup.
+- `fetch_markdown(url, session, browser_client)` / `fetch_html(url, session, browser_client)`:
+  both call `session.throttle(url)` first (§6.2) so browser fetches count against the same
+  per-host rate limit, then `browser_client.crawl(url)`, returning `None` on
+  `result.success is False`.
+- `resolve(url, session, browser_client) -> ResolvedJD | None`: `fetch_markdown()` +
+  `generic.passes_quality()`; on success, `resolver="browser"`, `jd_quality="ats"` (a
+  rendered DOM is still the employer's own text, unlike jobright's aggregator summary).
 - Deterministic rendering/markdown only — crawl4ai's LLM-extraction strategies are forbidden
   (no model calls inside `src/`, no API keys in the pipeline). No stealth/anti-bot-evasion:
   default browser fingerprint, honest behavior. A site that blocks a plain headless browser
   (e.g. tesla.com) is expected to stay tier-3 — this is not a bug to work around.
-- M6.2 reuse: `jobright.resolve()` gains a `browser_resolver` kwarg. When the static-HTML
-  `find_ats_link()` finds nothing and the toggle is on, it calls `browser.fetch_html()` and
-  retries `find_ats_link()` against the rendered DOM before falling back to `__NEXT_DATA__`.
-  This reuses `browser.py`'s fetch rather than a second rendering implementation, per spec.
+- M6.2/M6.10 Jobright ordering: `jobright.resolve()` checks static ATS links first, then
+  accepts a valid static `__NEXT_DATA__` aggregator payload, and only then uses
+  `browser.fetch_html()` to inspect rendered DOM for an ATS link. Browser work is not spent
+  on every valid Jobright aggregator row merely to look for a possible upgrade link.
 - Config: `browser_resolver: true` is a top-level key in `config/sources.yaml` (sibling to
   `sources:`, not per-source — the fallback applies pipeline-wide). Read by
   `run_ingest.load_browser_resolver_flag()` (default `False` if absent) and threaded through
-  `run_ingest.run_resolution()` → `resolve.resolve(..., browser_resolver=...)`. With the
-  toggle off, behavior is byte-for-byte identical to pre-M6.5.
+  `run_ingest.run_resolution()` → `resolve.resolve(..., browser_resolver=...,
+  browser_client=...)`. With the toggle off, behavior is byte-for-byte identical to
+  pre-M6.5.
 - Observability: `run_ingest.run_resolution()` tallies `tier1`/`tier2`/`manual` counts per run
   (tier2 = `ResolvedJD.resolver == "browser"`; manual = `db.record_resolve_failure()` returned
   `RESOLVE_FAILED` this run) and writes them to the new `runs.tier1_resolved`/`tier2_resolved`/
   `manual_failed` columns (§4.1) via `db.finish_run()`. See §8 for the digest line.
 
-### 6.5 Resolution runtime hardening (TARGET — M6.10, approved 2026-07-15)
+### 6.5 Resolution runtime hardening (CURRENT — M6.10 partial implementation, 2026-07-15)
 
-The M6.5 implementation above remains the current behavior until M6.10 is implemented.
 M6.10 changes runtime orchestration without weakening the three-tier content policy:
 
 - A resolver attempt produces a typed orchestration outcome: resolved, content failure,
@@ -588,10 +593,10 @@ M6.10 changes runtime orchestration without weakening the three-tier content pol
   converted to `None` and counted as a content failure.
 - Resolution accepts a separate deterministic `--resolve-limit N`; discovery's `--limit`
   semantics are unchanged. Selection is ordered by job id so bounded runs are repeatable.
-- Production browser fallback uses one run-scoped `AsyncWebCrawler` lifecycle, not one
-  Chromium launch per URL. If browser startup/lifecycle fails, a circuit breaker defers
-  subsequent browser-required rows for the remainder of that run while tier-1 work
-  continues. Tests still mock the browser boundary and never launch a browser.
+- Production browser fallback uses one run-scoped `CircuitBreakingBrowserClient(
+  Crawl4AIBrowserClient())`, not one Chromium launch per URL. If browser startup/lifecycle
+  fails, a circuit breaker defers subsequent browser-required rows for the remainder of that
+  run while tier-1 work continues. Tests mock the browser boundary and never launch a browser.
 - Jobright uses a static ATS link when present, otherwise accepts its static
   `__NEXT_DATA__` aggregator payload before considering browser rendering. Browser work is
   not spent on every Jobright row merely to look for a possible upgrade link; shortlisted
@@ -599,9 +604,15 @@ M6.10 changes runtime orchestration without weakening the three-tier content pol
 - A run interrupted by an exception or `KeyboardInterrupt` still receives `finished_at`,
   partial counters, and structured notes identifying it as aborted. Historical live-DB
   cleanup is a separate user-approved administrative action, never an automated migration.
+- `main()` owns a mutable `ResolutionSummary` for the entire run. `finalize_run()` is the
+  single run-finalization boundary: it closes the browser client first, logs close failures
+  without blocking DB finalization, records partial `run_sources` resolved/failed counters,
+  calls `db.finish_run()` once, and always writes valid JSON notes with `run_outcome`,
+  `resolution_summary`, optional `discovery_issues`, and optional bounded `fatal_error`.
 
-No schema migration or new dependency is approved by M6.10. Full details and acceptance
-criteria are in `docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`.
+No schema migration or new dependency is approved by M6.10. Task 8's live DB smoke and
+ROADMAP completion remain user-gated. Full details and acceptance criteria are in
+`docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`.
 
 ## 7. Pre-filter (`prefilter.py`)
 
@@ -708,7 +719,7 @@ day). Sections, in order:
 
 ```
 python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discover-only]
-                         [--limit N] [--db PATH] [--snapshot-dir DIR]
+                         [--limit N] [--resolve-limit N] [--db PATH] [--snapshot-dir DIR]
 ```
 
 - Default: discover → dedupe/insert → resolve (all `DISCOVERED` with attempts < 3) →
@@ -716,12 +727,18 @@ python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discove
 - `--dry-run`: full pipeline, no DB writes, no snapshot writes; print would-be digest to stdout.
 - `--limit N`: cap new insertions per source; deferred rows remain eligible through
   `pending_keys`.
+- `--resolve-limit N`: cap the number of `DISCOVERED` rows attempted by resolution, ordered
+  by row id. This is independent of discovery `--limit` and is the required flag for bounded
+  live smokes.
 - `--snapshot-dir DIR`: override tracker checkpoint location, primarily for isolated smoke
   runs and tests.
 - Exit code 0 on success even if some resolutions failed (failures are data, not errors);
   nonzero on infrastructure errors, all selected discovery sources failing, or checkpoint
   commit failure after durable insert. Partial source failure is nonfatal and visible in
   `runs.notes`/digest warnings.
+- `runs.notes` is valid JSON for new runs. It always includes `run_outcome` and
+  `resolution_summary`; aborted runs include bounded `fatal_error` diagnostics, and runs with
+  discovery issues include `discovery_issues`.
 
 Idempotency requirement (testable): running the command twice back-to-back must produce a
 second `runs` row with `new_jobs=0` and no row modifications other than that `runs` row,
