@@ -26,20 +26,19 @@ bands re-anchored from PROVISIONAL to calibrated values.
 
 ### Stabilization gate before the next calibration batch
 
-**M6.10 — Resolution runtime hardening: PLANNED, implementation next.** The M9D-0
+**M6.10 — Resolution runtime hardening: COMPLETE (2026-07-15).** The M9D-0
 backlog-clear exposed two production-boundary defects that unit-test success did not catch:
-transient resolver infrastructure errors currently consume a job's three-attempt content
-failure budget, and the tier-2 Crawl4AI path launches a fresh Chromium lifecycle per URL.
-Before another unbounded `--resolve-only` run or another calibration batch, implement the
-approved M6.10 design and plan:
+transient resolver infrastructure errors consumed a job's three-attempt content failure
+budget, and the tier-2 Crawl4AI path launched a fresh Chromium lifecycle per URL. M6.10
+implemented the approved stabilization design and plan:
 
 - `docs/superpowers/specs/2026-07-15-resolution-runtime-hardening-design.md`
 - `docs/superpowers/plans/2026-07-15-m6-10-resolution-runtime-hardening.md`
 
-M6.10 is a stabilization milestone, not M9D-1. It adds typed resolution outcomes, bounded
+M6.10 is a stabilization milestone, not M9D-1. It added typed resolution outcomes, bounded
 resolution work, a run-scoped browser lifecycle with a circuit breaker, static-first
-Jobright fallback, and reliable aborted-run accounting. It may not add dependencies, start
-M9D-1/M8, change scoring behavior, or mutate the live DB during automated verification.
+Jobright fallback, reliable aborted-run accounting, and live-smoke evidence recorded in
+DECISIONS.md. It did not add dependencies, start M9D-1/M8, or change scoring behavior.
 
 **Calibration-contract correction follows in a separate milestone.** The current worksheet
 is a metadata-interest baseline, while the scorer sees the full JD; those labels cannot be

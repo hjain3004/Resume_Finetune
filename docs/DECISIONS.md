@@ -1211,3 +1211,31 @@ passed. The user-owned `tests/test_scoring_stress.py` change, `docs/2605.27371v1
 `docs/_Aditya___Sood_.pdf`, and `docs/superpowers/reports/` remained unstaged and untouched
 by the M6.10 commits. No live DB mutation, dependency, schema migration, M9D-1 work, M8
 work, or scoring investigation was performed.
+
+## 2026-07-15 — M6.10 live smoke completed
+
+Task 8 of the approved M6.10 plan was run only after user approval. Before mutating
+`data/jobs.db`, a timestamped backup was created at
+`data/jobs.db.pre-m6.10-smoke-20260715T081900Z.bak`. Baseline status counts were:
+DISCOVERED 366, FILTERED_OUT 697, RESOLVED 214, RESOLVE_FAILED 64, SCORED 27, and
+SHORTLISTED 18. Two older unfinished run rows already existed (`runs.id` 12 and 13) with
+zero counters.
+
+Narrow process checks found no active `src.run_ingest` or `score_batch.py` process before
+the smoke. A first sandboxed run of
+`.venv/bin/python -m src.run_ingest --resolve-only --resolve-limit 5 --db data/jobs.db`
+completed without status changes but recorded five transient `http_transport` outcomes,
+which was treated as sandbox-network evidence rather than acceptance evidence.
+
+The approved live-network rerun of the same bounded command completed as `runs.id` 16:
+`run_outcome=completed`, `resolved=0`, `failed=5`, `manual_failed=5`, `tier1_resolved=0`,
+`tier2_resolved=0`, and `filtered_out=0`. Its `resolution_summary` recorded
+`content_failed=5`, `manual=5`, `transient=0`, `internal=0`, and
+`reason_codes={"no_acceptable_content": 5}`. `run_sources` recorded the five failures under
+`tracker_jobright`. Final status counts were DISCOVERED 361, FILTERED_OUT 697, RESOLVED
+214, RESOLVE_FAILED 69, SCORED 27, and SHORTLISTED 18, so exactly five eligible rows were
+processed and converted to deterministic content/manual failures.
+
+Post-smoke verification passed with `.venv/bin/python -m pytest -q` reporting 464 tests.
+M6.10 is therefore complete. Calibration-contract correction, M9D-1, M8, dependency work,
+and scoring changes remain separate future milestones.
