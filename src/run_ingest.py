@@ -14,7 +14,6 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
 import yaml
 
 from src import audit as audit_module, db, digest, freshness, prefilter, resolve
@@ -164,16 +163,22 @@ def run_resolution(
             per_source[source]["failed"] += 1
             tiers["manual"] += 1
             continue
-        # A transient network error (connection reset, timeout) from
-        # session.get() inside resolve.resolve() previously propagated
+        # A transient failure inside resolve.resolve() previously propagated
         # uncaught all the way out of main(), killing the whole batch after
-        # one bad request (found 2026-07-15: crashed 181/1047 rows into a
-        # backlog clear). Treat it like any other per-row resolve failure —
-        # same isolation the discovery layer already applies per adapter.
+        # one bad row (found 2026-07-15: a requests.ConnectionError crashed
+        # 181/1047 rows into a backlog clear; catching only
+        # RequestException still let a Playwright BrowserType.launch
+        # TimeoutError from the tier-2 browser resolver kill a second
+        # attempt at 184/1047). resolve.resolve() can raise from requests,
+        # Playwright/Crawl4AI, or any per-ATS resolver module, so this
+        # catches broadly -- same isolation the discovery layer already
+        # applies per adapter (discover_all()'s `except Exception`).
         try:
             result = resolve.resolve(row["url"], session, browser_resolver=browser_resolver)
-        except requests.exceptions.RequestException as exc:
-            logger.warning("resolve failed for row %s (%s): %s", row["id"], row["url"], exc)
+        except Exception as exc:
+            logger.warning(
+                "resolve failed for row %s (%s): %s: %s", row["id"], row["url"], type(exc).__name__, exc
+            )
             result = None
         if result is not None:
             db.mark_resolved(conn, row["id"], result, logic_version=resolve.LOGIC_VERSION)
