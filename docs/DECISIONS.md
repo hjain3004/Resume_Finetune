@@ -1263,3 +1263,48 @@ Offline verification: focused M6.11 suite passed with 130 tests; full suite pass
 538 tests. User-owned `tests/test_scoring_stress.py`, the untracked PDFs, and
 `docs/superpowers/reports/` were left untouched. Calibration Contract v2, M8, M9D, Crawlee,
 and Apify were not started.
+
+## 2026-07-16 — M6.11 live acceptance completed
+
+M6.11 Task 10 was completed through the two required user-supervised gates. Before preview,
+no active `src.run_ingest`, scoring, import, impact, or audit process was found. Baseline
+live DB evidence for `data/jobs.db`: size 9,478,144 bytes, `PRAGMA integrity_check=ok`, git
+HEAD `cbb9d4c`, and status counts DISCOVERED 361, FILTERED_OUT 697, RESOLVED 214,
+RESOLVE_FAILED 69, SCORED 27, SHORTLISTED 18. The only dirty worktree files were the known
+user-owned `tests/test_scoring_stress.py`, two untracked PDFs, and `docs/superpowers/reports/`.
+
+The read-only preview was saved at `data/eligibility-impact/20260716T063102Z-preview.json`.
+The DB SHA-256 before and after preview was identical
+(`9afd1d455feae95de17f36910214d11f2803ba894a500f73b5bdfcd83e3ef087`), confirming no DB
+mutation. Previewed actionable transitions: 488 total — 80 `filter_active`, 94
+`filter_discovered`, and 314 `restore_legacy`. Reason counts were `eligibility:country` 34,
+`eligibility:opportunity_type` 8, `eligibility:start_window` 118,
+`eligibility:work_authorization` 14, legacy `location` 179, and legacy `title_include` 135.
+There were zero terminal/report-only observations.
+
+After explicit preview approval, the current preview was recomputed and matched the approved
+transition set exactly. The guarded apply command used backup
+`data/backups/jobs-pre-m6.11-20260716T072916Z.db` and applied 488 of 488 previewed
+transitions. Backup and live DB integrity checks both returned `ok`. Verification found zero
+transition-effect errors, zero terminal-row changes, zero unrelated-row changes, zero
+restored-row scoring-clear errors across 314 restored legacy rows, and zero scoring
+preservation errors across 13 newly filtered SCORED/SHORTLISTED rows. Post-apply preview
+returned zero actionable transitions. Post-apply status counts were DISCOVERED 267,
+FILTERED_OUT 557, RESOLVED 461, RESOLVE_FAILED 69, SCORED 17, SHORTLISTED 15.
+
+After explicit smoke approval, the bounded command
+`.venv/bin/python -m src.run_ingest --resolve-only --resolve-limit 5 --db data/jobs.db` was
+run. A sandboxed first attempt produced five transient `http_transport` outcomes and no job
+status changes, so it was treated as sandbox-network evidence. The approved live-network
+rerun completed as `runs.id` 18 with `run_outcome=completed`, `resolved=0`, `failed=5`,
+`manual_failed=5`, `transient=0`, `internal=0`, and
+`reason_codes={"no_acceptable_content": 5}`. It processed exactly five eligible rows from
+`tracker_jobright`; status counts became DISCOVERED 262, FILTERED_OUT 557, RESOLVED 461,
+RESOLVE_FAILED 74, SCORED 17, SHORTLISTED 15. The live sample did not contain an explicit
+non-US discovered row because the approved apply had already filtered such rows; the offline
+no-resolver-call tests remain the deterministic country-first evidence.
+
+Post-smoke preview again returned zero actionable transitions. Final verification passed:
+`.venv/bin/python -m pytest -q` reported 538 tests, and `git diff --check` passed. M6.11 is
+complete. Calibration Contract v2, M8, M9D, Crawlee, Apify, and any unrelated milestone work
+were not started.
