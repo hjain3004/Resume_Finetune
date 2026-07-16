@@ -1,15 +1,21 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from src.calibration import (
     BatchJob,
     CalibrationContractError,
+    CalibrationStage,
+    RoundMetadata,
     atomic_write_text,
     batch_jobs_to_json,
     load_batch,
+    parse_interest_worksheet,
+    render_interest_worksheet,
     select_round_jobs,
     sha256_bytes,
+    sha256_file,
 )
 
 
@@ -159,3 +165,155 @@ def test_atomic_write_text_creates_new_file(tmp_path):
     atomic_write_text(path, "new text")
 
     assert path.read_text(encoding="utf-8") == "new text"
+
+
+def _metadata(batch_path: Path, *, count: int = 2, **overrides: object) -> RoundMetadata:
+    data = {
+        "contract_version": 2,
+        "stage": CalibrationStage.INTEREST,
+        "round_name": "2026-07-16",
+        "batch_path": batch_path,
+        "batch_sha256": sha256_file(batch_path),
+        "canonical_job_count": count,
+        "created_at": "2026-07-16T00:00:00+00:00",
+    }
+    data.update(overrides)
+    return RoundMetadata(**data)
+
+
+def _write_valid_round_batch(tmp_path, jobs: tuple[BatchJob, ...] | None = None) -> tuple[Path, tuple[BatchJob, ...]]:
+    jobs = jobs or _valid_jobs(2)
+    path = tmp_path / "round.batch.json"
+    path.write_text(batch_jobs_to_json(jobs), encoding="utf-8")
+    return path, jobs
+
+
+def _write_interest(tmp_path, text: str) -> Path:
+    path = tmp_path / "round.interest.md"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_render_interest_worksheet_metadata_header_and_blindness(tmp_path):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+
+    text = render_interest_worksheet(_metadata(batch_path), jobs)
+
+    assert text.startswith("---\n")
+    assert "contract_version: 2\n" in text
+    assert "stage: interest\n" in text
+    assert 'round: "2026-07-16"\n' in text
+    assert f'batch_sha256: "{sha256_file(batch_path)}"\n' in text
+    assert "canonical_job_count: 2\n" in text
+    assert "| id | row_ids | company | title | locations | flags | jd_quality | interest_call | notes |\n" in text
+    assert "Complete JD text" not in text
+    assert "fit_score" not in text
+    assert "fit_call" not in text
+
+
+def test_interest_worksheet_round_trips_escaped_cells_and_normalizes_calls(tmp_path):
+    jobs = (
+        BatchJob(
+            job_id=1,
+            row_ids=(1, 11),
+            company="A&B | Labs",
+            title="Backend\nEngineer",
+            locations=("New York | Remote",),
+            flags=("needs&review",),
+            jd_quality="ats",
+            jd_text="JD hidden",
+        ),
+        BatchJob(
+            job_id=2,
+            row_ids=(2,),
+            company="Beta",
+            title="ML Engineer",
+            locations=(),
+            flags=(),
+            jd_quality="aggregator",
+            jd_text="JD hidden 2",
+        ),
+        BatchJob(
+            job_id=3,
+            row_ids=(3,),
+            company="Gamma",
+            title="Data Engineer",
+            locations=("Remote",),
+            flags=(),
+            jd_quality="ats",
+            jd_text="JD hidden 3",
+        ),
+    )
+    batch_path, jobs = _write_valid_round_batch(tmp_path, jobs)
+    text = render_interest_worksheet(_metadata(batch_path, count=3), jobs)
+    text = text.replace("| 1,11 | A&amp;B &#124; Labs | Backend<br>Engineer |", "| 1,11 | A&amp;B &#124; Labs | Backend<br>Engineer |")
+    text = text.replace("| ats |  |  |", "| ats | apply | note with &#124; pipe &amp; amp<br>next |", 1)
+    text = text.replace("| aggregator |  |  |", "| aggregator |  MAYBE  |  |", 1)
+    text = text.replace("| ats |  |  |", "| ats | skip |  |", 1)
+    path = _write_interest(tmp_path, text)
+
+    worksheet = parse_interest_worksheet(path, require_complete=True)
+
+    assert [label.interest_call for label in worksheet.labels] == ["APPLY", "MAYBE", "SKIP"]
+    assert worksheet.labels[0].job.company == "A&B | Labs"
+    assert worksheet.labels[0].job.title == "Backend\nEngineer"
+    assert worksheet.labels[0].notes == "note with | pipe & amp\nnext"
+
+
+def test_parse_interest_accepts_blank_calls_only_when_not_required(tmp_path):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+    path = _write_interest(tmp_path, render_interest_worksheet(_metadata(batch_path), jobs))
+
+    worksheet = parse_interest_worksheet(path, require_complete=False)
+    assert [label.interest_call for label in worksheet.labels] == [None, None]
+
+    with pytest.raises(CalibrationContractError, match="job 1.*interest_call"):
+        parse_interest_worksheet(path, require_complete=True)
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda text: text.replace("batch_sha256:", "batch_hash:"), "metadata"),
+        (lambda text: text.replace("contract_version: 2", "contract_version: 1"), "contract_version"),
+        (lambda text: text.replace("stage: interest", "stage: fit"), "stage"),
+        (lambda text: text.replace("canonical_job_count: 2", "canonical_job_count: 3"), "count"),
+        (lambda text: text.replace("| 1 |", "| 2 |", 1), "order"),
+        (lambda text: text.replace("| 1 | 1 |", "| 1 | 1,9 |", 1), "row_ids"),
+        (lambda text: text.replace("Company 1", "Other Co", 1), "company"),
+        (lambda text: text.replace("| interest_call |", "| decision |", 1), "columns"),
+        (lambda text: text + "| 99 | 99 | X | Y |  |  | ats | APPLY |  |\n", "count"),
+        (lambda text: text.replace("| ats |  |", "| ats | LATER |", 1), "interest_call"),
+        (lambda text: text.replace("---\ncontract_version", "--\ncontract_version", 1), "front matter"),
+    ],
+)
+def test_parse_interest_rejects_tampering(tmp_path, mutate, message):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+    text = render_interest_worksheet(_metadata(batch_path), jobs)
+    path = _write_interest(tmp_path, mutate(text))
+
+    with pytest.raises(CalibrationContractError, match=message):
+        parse_interest_worksheet(path, require_complete=False)
+
+
+def test_parse_interest_rejects_batch_hash_drift(tmp_path):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+    path = _write_interest(tmp_path, render_interest_worksheet(_metadata(batch_path), jobs))
+    batch_path.write_text(batch_jobs_to_json(_valid_jobs(3)), encoding="utf-8")
+
+    with pytest.raises(CalibrationContractError, match="batch.*sha256"):
+        parse_interest_worksheet(path, require_complete=False)
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"batch_sha256": "ABC"}, "batch_sha256"),
+        ({"created_at": "2026-07-16T00:00:00"}, "created_at"),
+    ],
+)
+def test_render_interest_rejects_invalid_metadata(tmp_path, override, message):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+
+    with pytest.raises(CalibrationContractError, match=message):
+        render_interest_worksheet(_metadata(batch_path, **override), jobs)
