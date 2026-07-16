@@ -1353,3 +1353,34 @@ used `git diff --check`. Next human action is to export a fresh eligibility-pass
 start a v2 round with `scripts/calibration_packet.py start`, complete the interest and fit
 worksheets blind to scores, then run `scripts/calibration_report.py` against the resulting
 fit worksheet and scored JSON.
+
+## 2026-07-16 — Calibration Contract v2 acceptance-review fixes
+
+Independent acceptance review found two remaining correctness defects in the v2 calibration
+implementation.
+
+First, fit parsing treated every later pipe-prefixed line in a worksheet as part of the
+calibration table. A legitimate complete JD section containing a Markdown table such as
+`| Requirement | Value |` could therefore raise `table row has wrong column count` even
+though the fit worksheet and JD hash were valid. The root cause was `_parse_table()` scanning
+the whole worksheet after the calibration-table header. The fix is structural: find the
+exact expected header, validate its separator row, parse only the contiguous calibration
+table immediately following that header, and stop at the first non-table line. JD marker and
+hash validation remains unchanged; no text-specific special case was added.
+
+Second, DB-backed report output counted unscored jobs in the agreement denominator. The
+comparison model already classified unscored rows separately; only `_print_report()` printed
+`Agreements` over `len(report.comparisons)`. The report now prints agreements over
+`scored_count`, so two scored agreements plus one unscored row reports `Agreements: 2/2`,
+and a fully unscored round reports `Agreements: 0/0`.
+
+Regression evidence: the new fit-parser test first failed with
+`CalibrationContractError: ... table row has wrong column count`, then passed after the
+parser-boundary fix. The new report tests first failed because `Agreements: 2/2` and
+`Agreements: 0/0` were absent, then passed after the denominator fix.
+
+Verification after both fixes: calibration contract/packet/report suite passed with
+74 tests; broader focused suite passed with 182 tests; full suite passed with 610 tests.
+No real calibration round, scorer/model call, score import, live DB mutation, threshold
+change, M8, M9D, discovery, tailoring, dependency, or protected scoring-input change was
+performed.

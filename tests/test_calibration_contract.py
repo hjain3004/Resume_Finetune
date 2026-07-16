@@ -371,6 +371,34 @@ def test_render_fit_worksheet_includes_complete_jd_hash_and_round_trips_marker_l
     assert [label.fit_call for label in parsed.labels] == [None, None]
 
 
+def test_parse_fit_worksheet_ignores_markdown_tables_inside_complete_jd_sections(tmp_path):
+    jobs = (BatchJob(1, (1,), "A", "Backend", ("Remote",), (), "ats", "truncated"),)
+    interest_path, interest, _ = _completed_interest(tmp_path, jobs)
+    jd_with_markdown_table = """Role overview
+
+| Requirement | Value |
+|---|---|
+| Python | Required |
+
+Responsibilities continue after the table.
+"""
+    fit_path = tmp_path / "round.fit.md"
+    text = render_fit_worksheet(
+        _fit_metadata(tmp_path, interest_path, interest),
+        interest,
+        (FullJD(1, "A", "Backend", jd_with_markdown_table),),
+    )
+    text = text.replace("| APPLY |  |", "| APPLY | APPLY |", 1)
+    fit_path.write_text(text, encoding="utf-8")
+
+    parsed = parse_fit_worksheet(fit_path, require_complete=True)
+
+    assert len(parsed.labels) == 1
+    assert parsed.labels[0].job.job_id == 1
+    assert parsed.labels[0].fit_call == "APPLY"
+    assert "| Python | Required |" in fit_path.read_text(encoding="utf-8")
+
+
 def test_parse_fit_normalizes_completed_fit_calls_and_locks_interest_calls(tmp_path):
     interest_path, interest, _ = _completed_interest(tmp_path)
     full_jds = tuple(FullJD(label.job.job_id, label.job.company, label.job.title, f"Complete JD {label.job.job_id}") for label in interest.labels)

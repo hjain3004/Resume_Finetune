@@ -475,10 +475,18 @@ def _parse_table(body: str, *, expected_columns: tuple[str, ...], path: Path) ->
             raise CalibrationContractError(f"{path}: table columns do not match expected columns")
     if header_index is None:
         raise CalibrationContractError(f"{path}: missing expected table columns")
+    separator_index = header_index + 1
+    if separator_index >= len(lines) or not lines[separator_index].startswith("|"):
+        raise CalibrationContractError(f"{path}: missing table separator row")
+    separator_cells = [cell.strip() for cell in lines[separator_index].strip("|").split("|")]
+    if len(separator_cells) != len(header_cells) or any(
+        not cell or set(cell) - {"-", ":"} or "-" not in cell for cell in separator_cells
+    ):
+        raise CalibrationContractError(f"{path}: malformed table separator row")
     rows: list[dict[str, str]] = []
-    for line in lines[header_index + 1 :]:
+    for line in lines[separator_index + 1 :]:
         if not line.startswith("|"):
-            continue
+            break
         cells = [cell.strip() for cell in line.strip("|").split("|")]
         if cells and all(set(cell) <= {"-"} for cell in cells):
             continue

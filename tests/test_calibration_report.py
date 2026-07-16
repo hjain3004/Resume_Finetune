@@ -186,9 +186,37 @@ def test_db_backed_mode_lists_unscored_and_is_readonly(tmp_path, capsys):
     assert calibration_report.main([str(fit_path), "--db", str(db_path)]) == 0
 
     output = capsys.readouterr().out
+    assert "Scored: 2" in output
     assert "Unscored: 1" in output
+    assert "Agreements: 2/2" in output
     assert "id=2" in output
     assert db_path.read_bytes() == before
+
+
+def test_db_backed_mode_prints_zero_agreement_denominator_when_nothing_scored(tmp_path, capsys):
+    fit_path, _ = _write_fit_round(tmp_path)
+    db_path = tmp_path / "jobs.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    db.init_db(conn)
+    for job_id in (1, 2, 3):
+        conn.execute(
+            """
+            INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at, status, fit_score)
+            VALUES (?, ?, 'C', 'T', 'Remote', ?, 'tracker_vansh',
+                    '2026-07-16T00:00:00+00:00', 'RESOLVED', NULL)
+            """,
+            (job_id, f"k{job_id}", f"https://example.com/{job_id}"),
+        )
+    conn.commit()
+    conn.close()
+
+    assert calibration_report.main([str(fit_path), "--db", str(db_path)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Scored: 0" in output
+    assert "Unscored: 3" in output
+    assert "Agreements: 0/0" in output
 
 
 def test_legacy_worksheet_is_refused_before_db_query(tmp_path, monkeypatch, capsys):

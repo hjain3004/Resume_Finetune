@@ -54,6 +54,7 @@ def _print_report(
     false_negatives = [c for c in report.comparisons if c.kind == ComparisonKind.FALSE_NEGATIVE]
     false_positives = [c for c in report.comparisons if c.kind == ComparisonKind.FALSE_POSITIVE]
     unscored = [c for c in report.comparisons if c.kind == ComparisonKind.UNSCORED]
+    scored_count = len(report.comparisons) - len(unscored)
 
     print(f"Worksheet: {worksheet_path}")
     print(f"Contract: v{metadata.contract_version} {metadata.stage.value}")
@@ -65,10 +66,10 @@ def _print_report(
     print(f"Canonical jobs: {len(worksheet.labels)}")
     print(f"Interest-labeled: {sum(1 for label in worksheet.labels if label.interest_call is not None)}")
     print(f"Fit-labeled: {sum(1 for label in worksheet.labels if label.fit_call is not None)}")
-    print(f"Scored: {len(worksheet.labels) - len(unscored)}")
+    print(f"Scored: {scored_count}")
     print(f"Unscored: {len(unscored)}")
     print(f"Fit labels: APPLY={fit_counts['APPLY']}, MAYBE={fit_counts['MAYBE']}, SKIP={fit_counts['SKIP']}")
-    print(f"Agreements: {agreements}/{len(report.comparisons)}")
+    print(f"Agreements: {agreements}/{scored_count}")
     print(f"False negatives: {len(false_negatives)}")
     print(f"False positives: {len(false_positives)}")
 
