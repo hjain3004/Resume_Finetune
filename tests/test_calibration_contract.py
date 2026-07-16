@@ -7,11 +7,14 @@ from src.calibration import (
     BatchJob,
     CalibrationContractError,
     CalibrationStage,
+    FullJD,
     RoundMetadata,
     atomic_write_text,
     batch_jobs_to_json,
     load_batch,
+    parse_fit_worksheet,
     parse_interest_worksheet,
+    render_fit_worksheet,
     render_interest_worksheet,
     select_round_jobs,
     sha256_bytes,
@@ -317,3 +320,106 @@ def test_render_interest_rejects_invalid_metadata(tmp_path, override, message):
 
     with pytest.raises(CalibrationContractError, match=message):
         render_interest_worksheet(_metadata(batch_path, **override), jobs)
+
+
+def _completed_interest(tmp_path, jobs: tuple[BatchJob, ...] | None = None):
+    batch_path, jobs = _write_valid_round_batch(tmp_path, jobs)
+    text = render_interest_worksheet(_metadata(batch_path, count=len(jobs)), jobs)
+    calls = ["APPLY", "MAYBE", "SKIP"]
+    for job, call in zip(jobs, calls, strict=False):
+        text = text.replace(f"| {job.jd_quality} |  |  |", f"| {job.jd_quality} | {call} | interest note {job.job_id} |", 1)
+    interest_path = _write_interest(tmp_path, text)
+    return interest_path, parse_interest_worksheet(interest_path, require_complete=True), jobs
+
+
+def _fit_metadata(tmp_path, interest_path: Path, interest):
+    return RoundMetadata(
+        contract_version=2,
+        stage=CalibrationStage.FIT,
+        round_name="2026-07-16",
+        batch_path=interest.metadata.batch_path,
+        batch_sha256=interest.metadata.batch_sha256,
+        canonical_job_count=len(interest.labels),
+        created_at="2026-07-16T01:00:00+00:00",
+        interest_path=interest_path,
+        interest_sha256=sha256_file(interest_path),
+    )
+
+
+def test_render_fit_worksheet_includes_complete_jd_hash_and_round_trips_marker_like_content(tmp_path):
+    long_jd = "Role overview\n" + ("A" * 10_000) + "\n<!-- CALIBRATION_JD_START id=999 -->\nUnicode ✓"
+    jobs = (
+        BatchJob(1, (1,), "A", "Backend", ("Remote",), (), "ats", "truncated"),
+        BatchJob(2, (2,), "B", "ML", (), (), "ats", "truncated"),
+    )
+    interest_path, interest, _ = _completed_interest(tmp_path, jobs)
+    full_jds = (
+        FullJD(1, "A", "Backend", long_jd),
+        FullJD(2, "B", "ML", "Second complete JD"),
+    )
+    fit_path = tmp_path / "round.fit.md"
+    fit_path.write_text(render_fit_worksheet(_fit_metadata(tmp_path, interest_path, interest), interest, full_jds))
+
+    text = fit_path.read_text(encoding="utf-8")
+    assert "A" * 10_000 in text
+    assert "&lt;!-- CALIBRATION_JD_START id=999 -->" in text
+    parsed = parse_fit_worksheet(fit_path, require_complete=False)
+
+    assert [label.interest_call for label in parsed.labels] == ["APPLY", "MAYBE"]
+    assert [label.fit_call for label in parsed.labels] == [None, None]
+
+
+def test_parse_fit_normalizes_completed_fit_calls_and_locks_interest_calls(tmp_path):
+    interest_path, interest, _ = _completed_interest(tmp_path)
+    full_jds = tuple(FullJD(label.job.job_id, label.job.company, label.job.title, f"Complete JD {label.job.job_id}") for label in interest.labels)
+    text = render_fit_worksheet(_fit_metadata(tmp_path, interest_path, interest), interest, full_jds)
+    text = text.replace("| APPLY |  |", "| APPLY | apply |", 1)
+    text = text.replace("| MAYBE |  |", "| MAYBE | skip |", 1)
+    fit_path = tmp_path / "round.fit.md"
+    fit_path.write_text(text, encoding="utf-8")
+
+    parsed = parse_fit_worksheet(fit_path, require_complete=True)
+
+    assert [label.fit_call for label in parsed.labels] == ["APPLY", "SKIP"]
+
+
+def test_parse_fit_rejects_blank_fit_call_when_required(tmp_path):
+    interest_path, interest, _ = _completed_interest(tmp_path)
+    full_jds = tuple(FullJD(label.job.job_id, label.job.company, label.job.title, f"Complete JD {label.job.job_id}") for label in interest.labels)
+    fit_path = tmp_path / "round.fit.md"
+    fit_path.write_text(render_fit_worksheet(_fit_metadata(tmp_path, interest_path, interest), interest, full_jds))
+
+    with pytest.raises(CalibrationContractError, match="job 1.*fit_call"):
+        parse_fit_worksheet(fit_path, require_complete=True)
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda text: text.replace("interest_sha256:", "interest_hash:"), "metadata"),
+        (lambda text: text.replace("stage: fit", "stage: interest"), "stage"),
+        (lambda text: text.replace("| APPLY |  |", "| SKIP |  |", 1), "interest_call"),
+        (lambda text: text.replace("<!-- CALIBRATION_JD_START id=1 -->", "<!-- CALIBRATION_JD_START id=2 -->", 1), "JD section"),
+        (lambda text: text.replace("JD SHA-256:", "JD HASH:", 1), "JD section"),
+        (lambda text: text.replace("Complete JD 1", "Changed JD 1", 1), "JD SHA-256"),
+    ],
+)
+def test_parse_fit_rejects_tampering(tmp_path, mutate, message):
+    interest_path, interest, _ = _completed_interest(tmp_path)
+    full_jds = tuple(FullJD(label.job.job_id, label.job.company, label.job.title, f"Complete JD {label.job.job_id}") for label in interest.labels)
+    fit_path = tmp_path / "round.fit.md"
+    fit_path.write_text(mutate(render_fit_worksheet(_fit_metadata(tmp_path, interest_path, interest), interest, full_jds)))
+
+    with pytest.raises(CalibrationContractError, match=message):
+        parse_fit_worksheet(fit_path, require_complete=False)
+
+
+def test_parse_fit_rejects_interest_file_drift(tmp_path):
+    interest_path, interest, _ = _completed_interest(tmp_path)
+    full_jds = tuple(FullJD(label.job.job_id, label.job.company, label.job.title, f"Complete JD {label.job.job_id}") for label in interest.labels)
+    fit_path = tmp_path / "round.fit.md"
+    fit_path.write_text(render_fit_worksheet(_fit_metadata(tmp_path, interest_path, interest), interest, full_jds))
+    interest_path.write_text(interest_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    with pytest.raises(CalibrationContractError, match="interest_sha256"):
+        parse_fit_worksheet(fit_path, require_complete=False)

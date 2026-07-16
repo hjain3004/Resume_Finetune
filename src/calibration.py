@@ -10,6 +10,7 @@ import json
 import os
 import tempfile
 import html
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -91,8 +92,30 @@ class CalibrationWorksheet:
     labels: tuple[CalibrationLabel, ...]
 
 
+@dataclass(frozen=True)
+class FullJD:
+    job_id: int
+    company: str
+    title: str
+    jd_text: str
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _INTEREST_COLUMNS = ("id", "row_ids", "company", "title", "locations", "flags", "jd_quality", "interest_call", "notes")
+_FIT_COLUMNS = (
+    "id",
+    "row_ids",
+    "company",
+    "title",
+    "locations",
+    "flags",
+    "jd_quality",
+    "interest_call",
+    "fit_call",
+    "notes",
+)
+_JD_MARKER_PREFIX = "<!-- CALIBRATION_JD_"
+_ESCAPED_JD_MARKER_PREFIX = "&lt;!-- CALIBRATION_JD_"
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -289,6 +312,12 @@ def _validate_round_metadata(metadata: RoundMetadata, *, expected_stage: Calibra
     if not isinstance(metadata.canonical_job_count, int) or metadata.canonical_job_count <= 0:
         raise CalibrationContractError("canonical_job_count must be a positive integer count")
     _validate_created_at(metadata.created_at)
+    if expected_stage == CalibrationStage.FIT:
+        if metadata.interest_path is None:
+            raise CalibrationContractError("interest_path metadata is required for fit stage")
+        if metadata.interest_sha256 is None:
+            raise CalibrationContractError("interest_sha256 metadata is required for fit stage")
+        _validate_sha256(metadata.interest_sha256, field="interest_sha256")
 
 
 def normalize_call(value: str, *, field: str, job_id: int, required: bool) -> str | None:
@@ -494,4 +523,176 @@ def parse_interest_worksheet(path: str | Path, *, require_complete: bool) -> Cal
         )
     if seen_ids != {job.job_id for job in jobs}:
         raise CalibrationContractError(f"{artifact_path}: missing or extra canonical rows")
+    return CalibrationWorksheet(metadata=metadata, labels=tuple(labels))
+
+
+def _escape_jd_markers(jd_text: str) -> str:
+    return jd_text.replace(_JD_MARKER_PREFIX, _ESCAPED_JD_MARKER_PREFIX)
+
+
+def _restore_jd_markers(jd_text: str) -> str:
+    return jd_text.replace(_ESCAPED_JD_MARKER_PREFIX, _JD_MARKER_PREFIX)
+
+
+def render_fit_worksheet(
+    metadata: RoundMetadata,
+    interest: CalibrationWorksheet,
+    full_jds: tuple[FullJD, ...],
+) -> str:
+    _validate_round_metadata(metadata, expected_stage=CalibrationStage.FIT)
+    if not isinstance(interest.metadata, RoundMetadata) or interest.metadata.stage != CalibrationStage.INTEREST:
+        raise CalibrationContractError("fit worksheet requires a v2 interest worksheet")
+    if metadata.interest_path is None or metadata.interest_sha256 is None:
+        raise CalibrationContractError("fit metadata must include interest provenance")
+    if len(full_jds) != len(interest.labels):
+        raise CalibrationContractError("full JD count must match interest labels")
+    full_by_id = {full.job_id: full for full in full_jds}
+    if set(full_by_id) != {label.job.job_id for label in interest.labels}:
+        raise CalibrationContractError("full JD IDs must match interest labels")
+
+    rows = [
+        "---",
+        f"contract_version: {metadata.contract_version}",
+        f"stage: {metadata.stage.value}",
+        f'round: "{metadata.round_name}"',
+        f'batch_path: "{_path_for_metadata(metadata.batch_path)}"',
+        f'batch_sha256: "{metadata.batch_sha256}"',
+        f"canonical_job_count: {metadata.canonical_job_count}",
+        f'created_at: "{metadata.created_at}"',
+        f'interest_path: "{_path_for_metadata(metadata.interest_path)}"',
+        f'interest_sha256: "{metadata.interest_sha256}"',
+        "---",
+        "",
+        "| id | row_ids | company | title | locations | flags | jd_quality | interest_call | fit_call | notes |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for label in interest.labels:
+        job = label.job
+        if label.interest_call is None:
+            raise CalibrationContractError(f"job {job.job_id}: interest_call is required before fit reveal")
+        full = full_by_id[job.job_id]
+        if full.company != job.company or full.title != job.title:
+            raise CalibrationContractError(f"job {job.job_id}: full JD company/title does not match batch")
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    str(job.job_id),
+                    ",".join(str(row_id) for row_id in sorted(job.row_ids)),
+                    encode_cell(job.company),
+                    encode_cell(job.title),
+                    encode_cell("; ".join(job.locations)),
+                    encode_cell("; ".join(job.flags)),
+                    job.jd_quality,
+                    label.interest_call,
+                    "",
+                    "",
+                ]
+            )
+            + " |"
+        )
+    rows.append("")
+    for label in interest.labels:
+        job = label.job
+        full = full_by_id[job.job_id]
+        if not full.jd_text:
+            raise CalibrationContractError(f"job {job.job_id}: full JD text is missing")
+        rows.extend(
+            [
+                f"## Job {job.job_id} — {job.company} — {job.title}",
+                "",
+                f"JD SHA-256: `{sha256_bytes(full.jd_text.encode('utf-8'))}`",
+                "",
+                f"<!-- CALIBRATION_JD_START id={job.job_id} -->",
+                _escape_jd_markers(full.jd_text),
+                f"<!-- CALIBRATION_JD_END id={job.job_id} -->",
+                "",
+            ]
+        )
+    return "\n".join(rows)
+
+
+def _parse_jd_sections(body: str, *, expected_ids: tuple[int, ...], path: Path) -> dict[int, str]:
+    starts = re.findall(r"<!-- CALIBRATION_JD_START id=(\d+) -->", body)
+    ends = re.findall(r"<!-- CALIBRATION_JD_END id=(\d+) -->", body)
+    if sorted(starts) != sorted(str(job_id) for job_id in expected_ids) or sorted(ends) != sorted(str(job_id) for job_id in expected_ids):
+        raise CalibrationContractError(f"{path}: JD section markers do not match expected jobs")
+    sections: dict[int, str] = {}
+    for job_id in expected_ids:
+        pattern = re.compile(
+            rf"JD SHA-256: `([0-9a-f]{{64}})`\n\n<!-- CALIBRATION_JD_START id={job_id} -->\n(.*?)\n<!-- CALIBRATION_JD_END id={job_id} -->",
+            re.DOTALL,
+        )
+        match = pattern.search(body)
+        if match is None:
+            raise CalibrationContractError(f"{path}: JD section missing or malformed for job {job_id}")
+        expected_hash, rendered_text = match.groups()
+        restored = _restore_jd_markers(rendered_text)
+        actual_hash = sha256_bytes(restored.encode("utf-8"))
+        if actual_hash != expected_hash:
+            raise CalibrationContractError(f"{path}: job {job_id} JD SHA-256 mismatch")
+        sections[job_id] = restored
+    return sections
+
+
+def parse_fit_worksheet(path: str | Path, *, require_complete: bool) -> CalibrationWorksheet:
+    artifact_path = Path(path)
+    raw_metadata, body = _split_front_matter(artifact_path.read_text(encoding="utf-8"), path=artifact_path)
+    metadata = _parse_round_metadata(raw_metadata, stage=CalibrationStage.FIT, include_interest=True)
+    if not metadata.batch_path.exists():
+        raise CalibrationContractError(f"{artifact_path}: batch file does not exist: {metadata.batch_path}")
+    if sha256_file(metadata.batch_path) != metadata.batch_sha256:
+        raise CalibrationContractError(f"{artifact_path}: batch sha256 does not match metadata batch_sha256")
+    if metadata.interest_path is None or metadata.interest_sha256 is None:
+        raise CalibrationContractError(f"{artifact_path}: interest metadata missing")
+    if sha256_file(metadata.interest_path) != metadata.interest_sha256:
+        raise CalibrationContractError(f"{artifact_path}: interest_sha256 does not match current interest file")
+    interest = parse_interest_worksheet(metadata.interest_path, require_complete=True)
+    jobs = tuple(label.job for label in interest.labels)
+    rows = _parse_table(body, expected_columns=_FIT_COLUMNS, path=artifact_path)
+    if len(rows) != len(jobs):
+        raise CalibrationContractError(f"{artifact_path}: fit row count does not match interest count")
+    _parse_jd_sections(body, expected_ids=tuple(job.job_id for job in jobs), path=artifact_path)
+
+    labels: list[CalibrationLabel] = []
+    seen_ids: set[int] = set()
+    for row, interest_label in zip(rows, interest.labels, strict=True):
+        job = interest_label.job
+        try:
+            row_id = int(row["id"])
+        except ValueError as exc:
+            raise CalibrationContractError(f"{artifact_path}: invalid row id {row['id']!r}") from exc
+        if row_id in seen_ids:
+            raise CalibrationContractError(f"{artifact_path}: duplicate row id {row_id}")
+        seen_ids.add(row_id)
+        if row_id != job.job_id:
+            raise CalibrationContractError(f"{artifact_path}: row order/id mismatch for job {job.job_id}")
+        expected = _expected_interest_cells(job)
+        for column, expected_value in expected.items():
+            actual = decode_cell(row[column])
+            if actual != expected_value:
+                raise CalibrationContractError(
+                    f"{artifact_path}: job {job.job_id} {column} mismatch: expected {expected_value!r}, got {actual!r}"
+                )
+        copied_interest = normalize_call(
+            decode_cell(row["interest_call"]),
+            field="interest_call",
+            job_id=job.job_id,
+            required=True,
+        )
+        if copied_interest != interest_label.interest_call:
+            raise CalibrationContractError(f"{artifact_path}: job {job.job_id} copied interest_call changed")
+        labels.append(
+            CalibrationLabel(
+                job=job,
+                interest_call=copied_interest,
+                fit_call=normalize_call(
+                    decode_cell(row["fit_call"]),
+                    field="fit_call",
+                    job_id=job.job_id,
+                    required=require_complete,
+                ),
+                notes=decode_cell(row["notes"]),
+            )
+        )
     return CalibrationWorksheet(metadata=metadata, labels=tuple(labels))

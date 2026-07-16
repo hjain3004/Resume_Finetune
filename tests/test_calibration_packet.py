@@ -1,9 +1,11 @@
 import json
+import sqlite3
 from datetime import datetime, timezone
 
 import pytest
 
 from scripts import calibration_packet
+from src import db
 from src.calibration import parse_interest_worksheet, sha256_file
 
 
@@ -117,3 +119,74 @@ def test_start_round_rolls_back_batch_if_interest_write_fails(tmp_path, monkeypa
 
     assert not (out_dir / "fixed.batch.json").exists()
     assert not (out_dir / "fixed.interest.md").exists()
+
+
+def _complete_interest_calls(path):
+    text = path.read_text(encoding="utf-8")
+    text = text.replace("| ats |  |  |", "| ats | APPLY | note |", 1)
+    text = text.replace("| ats |  |  |", "| ats | MAYBE | note |", 1)
+    path.write_text(text, encoding="utf-8")
+
+
+def _temp_jobs_db(tmp_path, rows):
+    db_path = tmp_path / "jobs.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    db.init_db(conn)
+    for row in rows:
+        conn.execute(
+            """
+            INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+            VALUES (?, ?, ?, ?, 'Remote', ?, 'tracker_vansh', '2026-07-16T00:00:00+00:00', 'RESOLVED', ?)
+            """,
+            (row["id"], f"k{row['id']}", row["company"], row["title"], f"https://example.com/{row['id']}", row["jd_text"]),
+        )
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+def test_reveal_fit_reads_complete_jds_readonly_and_refuses_partial_outputs(tmp_path):
+    source = _source_batch(tmp_path, 2)
+    batch_path, interest_path = calibration_packet.start_round(source, out_dir=tmp_path / "out", round_name="round", limit=2)
+    _complete_interest_calls(interest_path)
+    before_batch = batch_path.read_bytes()
+    rows = json.loads(batch_path.read_text(encoding="utf-8"))
+    long_jd = "Complete long JD " + ("x" * 10_000)
+    db_path = _temp_jobs_db(
+        tmp_path,
+        [
+            {"id": rows[0]["id"], "company": rows[0]["company"], "title": rows[0]["title"], "jd_text": long_jd},
+            {"id": rows[1]["id"], "company": rows[1]["company"], "title": rows[1]["title"], "jd_text": "Second complete JD"},
+        ],
+    )
+    before_db = db_path.read_bytes()
+
+    fit_path = calibration_packet.reveal_fit(interest_path, db_path=db_path)
+
+    assert fit_path == interest_path.with_name("round.fit.md")
+    assert "x" * 10_000 in fit_path.read_text(encoding="utf-8")
+    assert db_path.read_bytes() == before_db
+    assert batch_path.read_bytes() == before_batch
+
+
+def test_reveal_fit_rejects_incomplete_interest_and_missing_db_without_creating_output(tmp_path):
+    source = _source_batch(tmp_path, 2)
+    _, interest_path = calibration_packet.start_round(source, out_dir=tmp_path / "out", round_name="round", limit=2)
+    missing_db = tmp_path / "missing.db"
+
+    with pytest.raises(Exception, match="interest_call"):
+        calibration_packet.reveal_fit(interest_path, db_path=missing_db)
+
+    assert not missing_db.exists()
+    assert not interest_path.with_name("round.fit.md").exists()
+
+
+def test_reveal_cli_reports_concise_errors(tmp_path, capsys):
+    source = _source_batch(tmp_path, 2)
+    _, interest_path = calibration_packet.start_round(source, out_dir=tmp_path / "out", round_name="round", limit=2)
+
+    exit_code = calibration_packet.main(["reveal", str(interest_path), "--db", str(tmp_path / "missing.db")])
+
+    assert exit_code == 2
+    assert "Calibration packet rejected:" in capsys.readouterr().err

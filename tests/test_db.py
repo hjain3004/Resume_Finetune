@@ -619,6 +619,51 @@ def test_mark_resolved_merges_flags_instead_of_overwriting(conn):
     assert set(json.loads(row["flags"])) == {"stale_listing", "sponsor_likely"}
 
 
+def test_calibration_jobs_by_ids_returns_requested_order_and_complete_fields(conn):
+    for i in range(1, 4):
+        conn.execute(
+            """
+            INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+            VALUES (?, ?, ?, ?, 'Remote', ?, 'tracker_vansh', '2026-07-16T00:00:00+00:00', ?, ?)
+            """,
+            (i, f"k{i}", f"Company {i}", f"Title {i}", f"https://example.com/{i}", Status.RESOLVED, f"JD {i}"),
+        )
+    conn.commit()
+
+    rows = db.calibration_jobs_by_ids(conn, (3, 1))
+
+    assert [row["id"] for row in rows] == [3, 1]
+    assert rows[0]["company"] == "Company 3"
+    assert rows[0]["title"] == "Title 3"
+    assert rows[0]["jd_text"] == "JD 3"
+
+
+def test_calibration_jobs_by_ids_handles_empty_input(conn):
+    assert db.calibration_jobs_by_ids(conn, ()) == []
+
+
+def test_calibration_jobs_by_ids_missing_ids_are_detectable_by_caller(conn):
+    conn.execute(
+        """
+        INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at, status, jd_text)
+        VALUES (1, 'k1', 'Company 1', 'Title 1', 'Remote', 'https://example.com/1', 'tracker_vansh',
+                '2026-07-16T00:00:00+00:00', ?, 'JD 1')
+        """,
+        (Status.RESOLVED,),
+    )
+    conn.commit()
+
+    rows = db.calibration_jobs_by_ids(conn, (1, 2))
+
+    assert [row["id"] for row in rows] == [1]
+
+
+def test_calibration_jobs_by_ids_does_not_write(conn):
+    before = conn.total_changes
+    db.calibration_jobs_by_ids(conn, ())
+    assert conn.total_changes == before
+
+
 def test_add_flag_and_note_unions_flag_and_appends_note(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]
