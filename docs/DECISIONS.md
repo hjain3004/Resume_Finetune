@@ -1308,3 +1308,48 @@ Post-smoke preview again returned zero actionable transitions. Final verificatio
 `.venv/bin/python -m pytest -q` reported 538 tests, and `git diff --check` passed. M6.11 is
 complete. Calibration Contract v2, M8, M9D, Crawlee, Apify, and any unrelated milestone work
 were not started.
+
+## 2026-07-16 — Calibration Contract v2 implemented
+
+The original Phase 2 worksheet (`data/calibration/2026-07-12.user.md`) was confirmed to be a
+metadata-interest artifact, not JD-informed model ground truth. The defect was semantic:
+the user made calls from digest metadata, while the scorer sees JD text. Treating those as
+the same judgment created false calibration disagreements when the full JD introduced
+citizenship restrictions, specialty mismatch, level mismatch, or other information not
+present in the digest.
+
+Approved contract now separates `interest_call` and `fit_call`. `interest_call` is recorded
+before the user sees JD text and is diagnostic only. `fit_call` is recorded after the user
+reads the complete JD and before any model score is shown; only `fit_call` is calibration
+ground truth. `APPLY` means the user would submit an application. `MAYBE` means the posting
+is worth human review. For the 7+ shortlist boundary, `APPLY` and `MAYBE` are positive;
+`SKIP` is negative. `interest_call -> fit_call` changes are reported separately from model
+disagreements.
+
+Implementation added `src/calibration.py` for typed artifact parsing/rendering, provenance
+validation, strict scored-file coverage validation, legacy parsing, and comparison
+semantics. `scripts/calibration_packet.py` now creates immutable v2 round batches and
+metadata-only interest worksheets, then reveals full-JD fit worksheets through a read-only
+SQLite connection. Complete JDs are retrieved via `src.db.calibration_jobs_by_ids`;
+DB-backed report compatibility reads scores via `src.db.calibration_scores_by_ids`.
+`scripts/calibration_report.py` now requires v2 fit ground truth and prefers
+`--scored-file`.
+
+The historical worksheet stayed byte-identical with SHA-256
+`c094aeabcadd1e6eead34e498083baf8aa208d26d1c3767ee4950242bcee7e6c`. It remains valid
+legacy interest-only evidence, but the v2 report refuses to use it as fit ground truth and
+instructs the user to start a v2 round.
+
+Scope intentionally did not include changing `docs/scoring_prompt.md`,
+`config/profile_summary.md`, `scripts/score_batch.py`, scoring aggregation/model invocation,
+`config/filters.yaml`, the threshold value, DB schema, live job statuses/scores, production
+DB contents, stress-band anchors, M8, M9D, discovery, tailoring, dependencies, or a first
+real v2 calibration round.
+
+Verification: focused Task 7 suite passed with 180 tests:
+`.venv/bin/python -m pytest -q tests/test_calibration_contract.py tests/test_calibration_packet.py tests/test_calibration_report.py tests/test_db.py tests/test_export_batch.py tests/test_score_batch.py tests/test_import_scores.py`.
+Full suite passed with 608 tests before documentation edits. The documentation-only follow-up
+used `git diff --check`. Next human action is to export a fresh eligibility-passed batch,
+start a v2 round with `scripts/calibration_packet.py start`, complete the interest and fit
+worksheets blind to scores, then run `scripts/calibration_report.py` against the resulting
+fit worksheet and scored JSON.

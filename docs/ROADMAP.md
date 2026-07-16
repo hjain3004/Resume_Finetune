@@ -18,10 +18,12 @@ after run-to-run variance was measured. Specs: ARCHITECTURE.md, IMPLEMENTATION_P
 ## Phase 2 — Scoring Calibration
 **Status: IN PROGRESS — started 2026-07-14. NOTE: earlier claims of completion were
 wrong; no scored output existed before this date (see DECISIONS.md).**
-Protocol: docs/PHASE2_KICKOFF.md "Phase 2 — Calibration protocol" + amendments (threshold
-asymmetry, segment tagging, exemplar injection gate). Exit criteria: user has blind-rated
-≥ 15–20 real jobs; two consecutive batches with zero threshold-crossing disagreements
-per calibration_report.py; shortlist_threshold locked in config; scoring stress-suite
+Protocol: docs/PHASE2_KICKOFF.md "Phase 2 — Calibration protocol v2" + amendments
+(threshold asymmetry, segment tagging, exemplar injection gate). Exit criteria: at least
+20 fresh eligibility-passed canonical jobs with complete JD-informed `fit_call` labels;
+at least two complete v2 rounds; at least 10 canonical jobs per round; two consecutive
+complete rounds with zero threshold-crossing disagreements per `scripts/calibration_report.py`;
+shortlist_threshold locked in config only after evidence supports it; scoring stress-suite
 bands re-anchored from PROVISIONAL to calibrated values.
 
 ### Stabilization gate before the next calibration batch
@@ -45,11 +47,12 @@ audit migration, docs, the read-only/guarded impact tool, live preview, backed-u
 bounded live smoke are complete. The policy is country-first, config-driven, separates
 eligibility from scoring config, and live acceptance evidence is recorded in DECISIONS.md.
 
-**Calibration-contract correction follows in a separate milestone.** The current worksheet
-is a metadata-interest baseline, while the scorer sees the full JD; those labels cannot be
-used as equivalent evidence. The next calibration design must separate metadata
-`interest_call` from JD-informed `fit_call`, and treat both APPLY and MAYBE as positive for
-the 7+ human-review shortlist. Do not combine that correction with M6.10 or M6.11.
+**Calibration Contract v2: COMPLETE (2026-07-16).** The implementation now separates
+metadata-only `interest_call` from full-JD `fit_call`, defaults fresh rounds to 12 canonical
+groups, validates batch/interest/fit/JD/scored provenance, reads complete JDs through a
+read-only SQLite connection, preserves the historical `2026-07-12.user.md` worksheet as
+legacy interest-only evidence, and compares 7+ shortlist decisions only against fit labels.
+No real v2 calibration round has been completed yet, so Phase 2 remains in progress.
 
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —

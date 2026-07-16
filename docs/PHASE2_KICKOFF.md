@@ -334,33 +334,83 @@ the Phase 2 calibration protocol.
 
 ---
 
-## Phase 2 — Calibration protocol (human process, not code)
+## Phase 2 — Calibration protocol v2 (human process, not code)
 
-Goal: make `fit_score` mean the same thing to Claude as it does to the user, then set the
-SHORTLISTED threshold. This is deliberately manual for 1–2 weeks.
+Goal: make `fit_score` mean the same thing to Claude as it does to the user, then lock a
+SHORTLISTED threshold from JD-informed evidence. Calibration Contract v2 separates two
+human judgments that the original worksheet conflated:
 
-**Step 1 — Blind baseline (first batch after M6).** Before looking at Claude's scores, the
-user reads the digest and privately marks each unique job: APPLY / MAYBE / SKIP. Keep it in
-`data/calibration/YYYY-MM-DD.user.md`.
+- `interest_call`: metadata-only decision before reading the JD.
+- `fit_call`: final decision after reading the complete JD, still before seeing model scores.
 
-**Step 2 — Run scoring.** Export → `claude -p` with the corrected prompt → import.
+`APPLY` means the user would submit an application. `MAYBE` means the posting is worth human
+review. For the 7+ shortlist boundary, both `APPLY` and `MAYBE` are positive; `SKIP` is
+negative. Only `fit_call` is model-calibration ground truth. `interest_call -> fit_call`
+changes are diagnostic evidence about what the JD revealed, not model disagreements.
 
-**Step 3 — Compare.** A tiny script (`scripts/calibration_report.py`, M6-adjacent, trivial)
-prints jobs where the user said APPLY but score < 7, or SKIP but score ≥ 7. These
-disagreements are the only interesting rows.
+**Step 1 — Export an eligibility-passed batch.** Use the existing export path for current
+`RESOLVED` jobs. Exported scoring batches may contain truncated `jd_text`; they are not the
+source for human full-JD review.
 
-**Step 4 — Fix the *inputs*, not the scores.** For each disagreement, decide which of these
-is the cause and amend it:
-- profile_summary.md Notes (most common fix — e.g., "I don't want ServiceNow/low-code roles"
-  belongs there)
-- the anchor definitions in the prompt
-- a prefilter rule (if the job should never have reached scoring)
-Never hand-edit scores in the DB; the DB reflects what the system believes.
+**Step 2 — Start a blind v2 round.** Create a canonical metadata-only packet, defaulting to
+12 groups:
 
-**Step 5 — Repeat daily until** two consecutive batches have zero threshold-crossing
-disagreements. Then set `shortlist_threshold` in config to the boundary the exercise
-revealed (likely 7.0–7.5) and scoring goes on autopilot with spot-checks.
+```bash
+python -m scripts.calibration_packet start data/batch/YYYY-MM-DD.json \
+  --out-dir data/calibration --round YYYY-MM-DD
+```
 
-**Exit to Phase 3** (per ROADMAP.md): ≥15–20 real jobs reviewed, disagreement rate
-acceptable to the user, AND the jd_quality pipeline reliably produces `ats`-grade text for
-shortlisted jobs — because tailoring cannot start from aggregator paraphrases.
+This writes `YYYY-MM-DD.batch.json` and `YYYY-MM-DD.interest.md`. The worksheet contains no
+JD text and no score fields. The user completes every `interest_call`.
+
+**Step 3 — Reveal full-JD fit worksheet.** After all interest calls are complete:
+
+```bash
+python -m scripts.calibration_packet reveal data/calibration/YYYY-MM-DD.interest.md \
+  --db data/jobs.db
+```
+
+Reveal validates the interest artifact and batch hash, opens SQLite read-only, retrieves
+complete untruncated representative JDs, and writes `YYYY-MM-DD.fit.md`. The user completes
+every `fit_call` without seeing model scores.
+
+**Step 4 — Score the immutable round batch.** Run the existing scorer against
+`YYYY-MM-DD.batch.json`. Existing output naming is preserved: scoring
+`YYYY-MM-DD.batch.json` produces `YYYY-MM-DD.scored.json`. Do not import scores just to run
+calibration; the report can read the scored file directly.
+
+**Step 5 — Compare fit labels to scores.** Preferred command:
+
+```bash
+python -m scripts.calibration_report data/calibration/YYYY-MM-DD.fit.md \
+  --scored-file data/calibration/YYYY-MM-DD.scored.json
+```
+
+Truth table at the configured threshold (currently 7 unless `--threshold` is supplied for
+analysis only):
+
+| `fit_call` | score | classification |
+|---|---:|---|
+| APPLY or MAYBE | >= threshold | agreement |
+| APPLY or MAYBE | < threshold | false negative |
+| SKIP | < threshold | agreement |
+| SKIP | >= threshold | false positive |
+
+The report also prints the complete `interest_call -> fit_call` transition matrix and every
+decision changed after reading the JD. Valid disagreements are diagnostic output and do not
+make the command fail.
+
+**Step 6 — Fix the *inputs*, not the scores.** For each threshold-crossing disagreement,
+decide whether the durable fix belongs in `profile_summary.md`, the scoring prompt anchors,
+or an eligibility rule. Never hand-edit scores in the DB; the DB reflects what the system
+believes. Prompt/profile changes remain protected and reset calibration confidence until
+revalidated.
+
+**Corrected evidence gate before locking Phase 2:** at least 20 fresh eligibility-passed
+canonical jobs with complete JD-informed fit labels; at least two complete v2 rounds; at
+least 10 canonical jobs per round; two consecutive complete rounds with zero
+threshold-crossing disagreements; provisional scoring-stress bands re-anchored from actual
+fit-label evidence; threshold locked only after the evidence supports it.
+
+**Exit to Phase 3** (per ROADMAP.md): Phase 2 evidence gate satisfied AND ≥5 SHORTLISTED rows
+with `jd_quality='ats'` — tailoring cannot start from aggregator paraphrases.

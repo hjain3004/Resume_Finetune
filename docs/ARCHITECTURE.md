@@ -777,6 +777,15 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
   validates the JSON against a schema and writes scores back to SQLite (`SCORED`; ≥ threshold →
   `SHORTLISTED`). Claude never touches the DB directly — files in, files out, validation in
   between.
+- **Calibration Contract v2 (2026-07-16)**: `scripts/calibration_packet.py start` takes an
+  exported batch and writes an immutable `data/calibration/YYYY-MM-DD.batch.json` plus a
+  metadata-only `YYYY-MM-DD.interest.md` worksheet. `reveal` validates completed interest
+  calls, opens SQLite read-only, retrieves complete untruncated representative JDs through
+  `src.db.calibration_jobs_by_ids()`, and writes `YYYY-MM-DD.fit.md`. `scripts/calibration_report.py`
+  compares scored output only against JD-informed `fit_call` labels. `interest_call` remains
+  diagnostic, not model ground truth. APPLY and MAYBE are positive at the 7+ human-review
+  shortlist boundary; SKIP is negative. Legacy `data/calibration/2026-07-12.user.md` is
+  preserved as historical interest-only evidence and cannot be used as fit ground truth.
 - **Sub-batched scoring (M6.7 item 1, `scripts/score_batch.py`)**: rather than one Claude
   invocation over the whole exported batch, `score_batch()` splits it into chunks of at most
   6 objects (`CHUNK_SIZE`), writes each chunk to `data/batch/chunk_N.json`, and invokes

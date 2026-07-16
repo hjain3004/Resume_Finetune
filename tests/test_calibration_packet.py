@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from scripts import calibration_packet
+from scripts import calibration_packet, calibration_report
 from src import db
-from src.calibration import parse_interest_worksheet, sha256_file
+from src.calibration import parse_fit_worksheet, parse_interest_worksheet, sha256_file
 
 
 def _source_batch(tmp_path, count: int = 14):
@@ -190,3 +190,75 @@ def test_reveal_cli_reports_concise_errors(tmp_path, capsys):
 
     assert exit_code == 2
     assert "Calibration packet rejected:" in capsys.readouterr().err
+
+
+def test_end_to_end_calibration_contract_v2_tempdir_flow(tmp_path, capsys):
+    source = _source_batch(tmp_path, 14)
+    batch_path, interest_path = calibration_packet.start_round(
+        source,
+        out_dir=tmp_path / "calibration",
+        round_name="round",
+        limit=12,
+    )
+    interest_text = interest_path.read_text(encoding="utf-8")
+    assert "Full JD hidden" not in interest_text
+    calls = ["APPLY", "MAYBE", "SKIP"] * 4
+    for call in calls:
+        interest_text = interest_text.replace("| ats |  |  |", f"| ats | {call} | interest |", 1)
+    interest_path.write_text(interest_text, encoding="utf-8")
+    interest = parse_interest_worksheet(interest_path, require_complete=True)
+    assert len(interest.labels) == 12
+
+    batch = json.loads(batch_path.read_text(encoding="utf-8"))
+    db_rows = [
+        {
+            "id": obj["id"],
+            "company": obj["company"],
+            "title": obj["title"],
+            "jd_text": f"Complete JD for {obj['id']} " + ("x" * 7000),
+        }
+        for obj in batch
+    ]
+    db_path = _temp_jobs_db(tmp_path, db_rows)
+    before_db = db_path.read_bytes()
+    fit_path = calibration_packet.reveal_fit(interest_path, db_path=db_path)
+    assert db_path.read_bytes() == before_db
+    fit_text = fit_path.read_text(encoding="utf-8")
+    assert "x" * 7000 in fit_text
+    assert "fit_score" not in fit_text
+
+    lines = []
+    for line in fit_text.splitlines():
+        if line.startswith("| ") and not line.startswith("| id ") and not line.startswith("|---"):
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            # Make MAYBE positive semantics observable: job 2 remains MAYBE
+            # and will score exactly at threshold.
+            cells[8] = cells[7] if cells[0] != "3" else "APPLY"
+            cells[9] = "fit"
+            line = "| " + " | ".join(cells) + " |"
+        lines.append(line)
+    fit_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    fit = parse_fit_worksheet(fit_path, require_complete=True)
+    assert len(fit.labels) == 12
+
+    scored_path = tmp_path / "round.scored.json"
+    scored = []
+    for obj in batch:
+        score = 7.0 if obj["id"] != 3 else 6.0
+        scored.append(
+            {
+                "id": obj["id"],
+                "row_ids": obj["row_ids"],
+                "fit_score": score,
+                "base_variant": "backend",
+                "missing_keywords": [],
+                "rationale": "synthetic",
+            }
+        )
+    scored_path.write_text(json.dumps(scored), encoding="utf-8")
+
+    assert calibration_report.main([str(fit_path), "--scored-file", str(scored_path)]) == 0
+    output = capsys.readouterr().out
+    assert "Canonical jobs: 12" in output
+    assert "MAYBE -> MAYBE: 4" in output
+    assert "False negatives: 1" in output
