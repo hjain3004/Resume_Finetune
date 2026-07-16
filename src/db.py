@@ -688,6 +688,21 @@ def calibration_jobs_by_ids(
     return [by_id[job_id] for job_id in job_ids if job_id in by_id]
 
 
+def calibration_scores_by_ids(
+    conn: sqlite3.Connection, job_ids: tuple[int, ...]
+) -> list[sqlite3.Row]:
+    """Return calibration scores in caller-requested ID order."""
+    if not job_ids:
+        return []
+    placeholders = ",".join("?" * len(job_ids))
+    rows = conn.execute(
+        f"SELECT id, fit_score FROM jobs WHERE id IN ({placeholders})",
+        job_ids,
+    ).fetchall()
+    by_id = {row["id"]: row for row in rows}
+    return [by_id[job_id] for job_id in job_ids if job_id in by_id]
+
+
 def has_any_row_with_status(conn: sqlite3.Connection, statuses: tuple[str, ...]) -> bool:
     row = conn.execute(
         f"SELECT 1 FROM jobs WHERE status IN ({','.join('?' * len(statuses))}) LIMIT 1",

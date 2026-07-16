@@ -664,6 +664,28 @@ def test_calibration_jobs_by_ids_does_not_write(conn):
     assert conn.total_changes == before
 
 
+def test_calibration_scores_by_ids_returns_requested_order_and_null_scores(conn):
+    for job_id, score in [(1, 7.0), (2, None), (3, 6.5)]:
+        conn.execute(
+            """
+            INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at, status, fit_score)
+            VALUES (?, ?, 'Company', 'Title', 'Remote', ?, 'tracker_vansh',
+                    '2026-07-16T00:00:00+00:00', 'SCORED', ?)
+            """,
+            (job_id, f"k{job_id}", f"https://example.com/{job_id}", score),
+        )
+    conn.commit()
+
+    rows = db.calibration_scores_by_ids(conn, (3, 2, 1, 99))
+
+    assert [row["id"] for row in rows] == [3, 2, 1]
+    assert [row["fit_score"] for row in rows] == [6.5, None, 7.0]
+
+
+def test_calibration_scores_by_ids_handles_empty_input(conn):
+    assert db.calibration_scores_by_ids(conn, ()) == []
+
+
 def test_add_flag_and_note_unions_flag_and_appends_note(conn):
     db.insert_discovered(conn, [_job()])
     job_id = conn.execute("SELECT id FROM jobs").fetchone()["id"]

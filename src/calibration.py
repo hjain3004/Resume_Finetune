@@ -46,6 +46,13 @@ class CalibrationStage(str, Enum):
     LEGACY_INTEREST = "legacy_interest"
 
 
+class ComparisonKind(str, Enum):
+    AGREEMENT = "agreement"
+    FALSE_NEGATIVE = "false_negative"
+    FALSE_POSITIVE = "false_positive"
+    UNSCORED = "unscored"
+
+
 @dataclass(frozen=True)
 class BatchJob:
     job_id: int
@@ -98,6 +105,27 @@ class FullJD:
     company: str
     title: str
     jd_text: str
+
+
+@dataclass(frozen=True)
+class ScoredCall:
+    job_id: int
+    row_ids: tuple[int, ...]
+    fit_score: float
+
+
+@dataclass(frozen=True)
+class CalibrationComparison:
+    label: CalibrationLabel
+    score: float | None
+    kind: ComparisonKind
+
+
+@dataclass(frozen=True)
+class CalibrationReport:
+    comparisons: tuple[CalibrationComparison, ...]
+    transition_counts: tuple[tuple[str, str, int], ...]
+    complete: bool
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -767,3 +795,92 @@ def parse_calibration_worksheet(
     if stage == CalibrationStage.FIT.value:
         return parse_fit_worksheet(artifact_path, require_complete=require_complete)
     raise CalibrationContractError(f"{artifact_path}: unsupported calibration stage {stage!r}")
+
+
+def load_scored_file(path: str | Path, jobs: tuple[BatchJob, ...]) -> tuple[ScoredCall, ...]:
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CalibrationContractError(f"{path}: invalid scored JSON: {exc}") from exc
+    if not isinstance(raw, list):
+        raise CalibrationContractError(f"{path}: scored JSON root must be a list")
+    expected_by_id = {job.job_id: job for job in jobs}
+    expected_ids = set(expected_by_id)
+    seen_ids: set[int] = set()
+    covered_row_ids: set[int] = set()
+    scored: list[ScoredCall] = []
+    for index, entry in enumerate(raw, start=1):
+        if not isinstance(entry, dict):
+            raise CalibrationContractError(f"{path}: scored entry {index} must be an object")
+        if "id" not in entry or "row_ids" not in entry or "fit_score" not in entry:
+            raise CalibrationContractError(f"{path}: scored entry {index} missing id, row_ids, or fit_score")
+        job_id = entry["id"]
+        if not isinstance(job_id, int) or isinstance(job_id, bool):
+            raise CalibrationContractError(f"{path}: scored entry {index} id must be an integer")
+        if job_id not in expected_by_id:
+            raise CalibrationContractError(f"{path}: scored entry id {job_id} is not in the fit worksheet batch")
+        if job_id in seen_ids:
+            raise CalibrationContractError(f"{path}: duplicate scored id {job_id}")
+        seen_ids.add(job_id)
+        row_ids = entry["row_ids"]
+        if not isinstance(row_ids, list) or not row_ids or any(
+            not isinstance(row_id, int) or isinstance(row_id, bool) for row_id in row_ids
+        ):
+            raise CalibrationContractError(f"{path}: scored entry {job_id} row_ids must be non-empty integers")
+        row_ids_tuple = tuple(row_ids)
+        if row_ids_tuple != expected_by_id[job_id].row_ids:
+            raise CalibrationContractError(f"{path}: scored entry {job_id} row_ids do not match the fit worksheet batch")
+        overlap = covered_row_ids & set(row_ids_tuple)
+        if overlap:
+            raise CalibrationContractError(f"{path}: scored row_id coverage overlaps: {sorted(overlap)}")
+        covered_row_ids.update(row_ids_tuple)
+        score = entry["fit_score"]
+        if not isinstance(score, (int, float)) or isinstance(score, bool):
+            raise CalibrationContractError(f"{path}: scored entry {job_id} fit_score must be numeric")
+        if not 0 <= float(score) <= 10:
+            raise CalibrationContractError(f"{path}: scored entry {job_id} fit_score must be between 0 and 10")
+        scored.append(ScoredCall(job_id=job_id, row_ids=row_ids_tuple, fit_score=float(score)))
+    if seen_ids != expected_ids:
+        raise CalibrationContractError(f"{path}: scored coverage mismatch; missing={sorted(expected_ids - seen_ids)} extra={sorted(seen_ids - expected_ids)}")
+    return tuple(scored)
+
+
+def compare_fit_calls(
+    worksheet: CalibrationWorksheet,
+    scores: tuple[ScoredCall, ...],
+    *,
+    threshold: float,
+) -> CalibrationReport:
+    if not isinstance(worksheet.metadata, RoundMetadata) or worksheet.metadata.stage != CalibrationStage.FIT:
+        raise CalibrationContractError(
+            "legacy interest-only worksheet cannot be used as fit ground truth; start a v2 round"
+        )
+    score_by_id = {score.job_id: score.fit_score for score in scores}
+    if len(score_by_id) != len(scores):
+        raise CalibrationContractError("duplicate scored calls")
+    comparisons: list[CalibrationComparison] = []
+    for label in worksheet.labels:
+        if label.fit_call is None:
+            raise CalibrationContractError(f"job {label.job.job_id}: fit_call is required for comparison")
+        score = score_by_id.get(label.job.job_id)
+        if score is None:
+            kind = ComparisonKind.UNSCORED
+        elif label.fit_call in {"APPLY", "MAYBE"}:
+            kind = ComparisonKind.AGREEMENT if score >= threshold else ComparisonKind.FALSE_NEGATIVE
+        else:
+            kind = ComparisonKind.AGREEMENT if score < threshold else ComparisonKind.FALSE_POSITIVE
+        comparisons.append(CalibrationComparison(label=label, score=score, kind=kind))
+    transitions: list[tuple[str, str, int]] = []
+    for interest_call in ("APPLY", "MAYBE", "SKIP"):
+        for fit_call in ("APPLY", "MAYBE", "SKIP"):
+            count = sum(
+                1
+                for label in worksheet.labels
+                if label.interest_call == interest_call and label.fit_call == fit_call
+            )
+            transitions.append((interest_call, fit_call, count))
+    return CalibrationReport(
+        comparisons=tuple(comparisons),
+        transition_counts=tuple(transitions),
+        complete=all(comparison.kind != ComparisonKind.UNSCORED for comparison in comparisons),
+    )
