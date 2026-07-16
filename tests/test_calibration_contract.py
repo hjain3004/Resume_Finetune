@@ -12,8 +12,10 @@ from src.calibration import (
     atomic_write_text,
     batch_jobs_to_json,
     load_batch,
+    parse_calibration_worksheet,
     parse_fit_worksheet,
     parse_interest_worksheet,
+    parse_legacy_interest_worksheet,
     render_fit_worksheet,
     render_interest_worksheet,
     select_round_jobs,
@@ -423,3 +425,46 @@ def test_parse_fit_rejects_interest_file_drift(tmp_path):
 
     with pytest.raises(CalibrationContractError, match="interest_sha256"):
         parse_fit_worksheet(fit_path, require_complete=False)
+
+
+def test_historical_worksheet_hash_is_byte_identical():
+    historical = Path("data/calibration/2026-07-12.user.md")
+    assert sha256_file(historical) == "c094aeabcadd1e6eead34e498083baf8aa208d26d1c3767ee4950242bcee7e6c"
+
+
+def test_parse_legacy_interest_worksheet_preserves_interest_only_labels():
+    text = Path("data/calibration/2026-07-12.user.md").read_text(encoding="utf-8")
+
+    worksheet = parse_legacy_interest_worksheet(text)
+
+    assert worksheet.metadata.stage == CalibrationStage.LEGACY_INTEREST
+    assert len(worksheet.labels) == 30
+    assert {label.fit_call for label in worksheet.labels} == {None}
+    assert worksheet.labels[0].job.job_id == 32
+    assert worksheet.labels[0].interest_call == "APPLY"
+    assert worksheet.labels[-1].interest_call == "APPLY"
+
+
+def test_parse_legacy_interest_worksheet_preserves_blank_rows_as_incomplete():
+    worksheet = parse_legacy_interest_worksheet(
+        """\
+| id | company | title | jd_quality | flags | your call | notes |
+|---|---|---|---|---|---|---|
+| 1 | A | T | ats |  |  | note |
+| 2 | B | T2 | aggregator | flag | maybe | note |
+"""
+    )
+
+    assert [label.interest_call for label in worksheet.labels] == [None, "MAYBE"]
+
+
+def test_parse_calibration_worksheet_dispatches_v2_and_refuses_legacy_as_fit_ground_truth(tmp_path):
+    batch_path, jobs = _write_valid_round_batch(tmp_path)
+    interest_path = _write_interest(tmp_path, render_interest_worksheet(_metadata(batch_path), jobs))
+
+    parsed = parse_calibration_worksheet(interest_path, require_complete=False)
+    assert parsed.metadata.stage == CalibrationStage.INTEREST
+
+    historical = Path("data/calibration/2026-07-12.user.md")
+    with pytest.raises(CalibrationContractError, match="legacy interest-only worksheet cannot be used as fit ground truth"):
+        parse_calibration_worksheet(historical, require_complete=True)

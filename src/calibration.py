@@ -114,6 +114,7 @@ _FIT_COLUMNS = (
     "fit_call",
     "notes",
 )
+_LEGACY_COLUMNS = ("id", "company", "title", "jd_quality", "flags", "your call", "notes")
 _JD_MARKER_PREFIX = "<!-- CALIBRATION_JD_"
 _ESCAPED_JD_MARKER_PREFIX = "&lt;!-- CALIBRATION_JD_"
 
@@ -696,3 +697,73 @@ def parse_fit_worksheet(path: str | Path, *, require_complete: bool) -> Calibrat
             )
         )
     return CalibrationWorksheet(metadata=metadata, labels=tuple(labels))
+
+
+def parse_legacy_interest_worksheet(text: str) -> CalibrationWorksheet:
+    rows = _parse_table(text, expected_columns=_LEGACY_COLUMNS, path=Path("<legacy>"))
+    labels: list[CalibrationLabel] = []
+    seen_ids: set[int] = set()
+    for row in rows:
+        try:
+            job_id = int(row["id"])
+        except ValueError as exc:
+            raise CalibrationContractError(f"legacy worksheet: invalid row id {row['id']!r}") from exc
+        if job_id in seen_ids:
+            raise CalibrationContractError(f"legacy worksheet: duplicate row id {job_id}")
+        seen_ids.add(job_id)
+        call = normalize_call(decode_cell(row["your call"]), field="your call", job_id=job_id, required=False)
+        flags_text = decode_cell(row["flags"]).strip()
+        flags = tuple(part.strip() for part in flags_text.split(";") if part.strip()) if flags_text else ()
+        labels.append(
+            CalibrationLabel(
+                job=BatchJob(
+                    job_id=job_id,
+                    row_ids=(job_id,),
+                    company=decode_cell(row["company"]),
+                    title=decode_cell(row["title"]),
+                    locations=(),
+                    flags=flags,
+                    jd_quality=decode_cell(row["jd_quality"]),
+                    jd_text="",
+                ),
+                interest_call=call,
+                fit_call=None,
+                notes=decode_cell(row["notes"]),
+            )
+        )
+    return CalibrationWorksheet(
+        metadata=LegacyMetadata(
+            contract_version=1,
+            stage=CalibrationStage.LEGACY_INTEREST,
+            source_path=Path("<legacy>"),
+        ),
+        labels=tuple(labels),
+    )
+
+
+def parse_calibration_worksheet(
+    path: str | Path, *, require_complete: bool = True
+) -> CalibrationWorksheet:
+    artifact_path = Path(path)
+    text = artifact_path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        if require_complete:
+            raise CalibrationContractError(
+                "legacy interest-only worksheet cannot be used as fit ground truth; start a v2 round"
+            )
+        worksheet = parse_legacy_interest_worksheet(text)
+        return CalibrationWorksheet(
+            metadata=LegacyMetadata(
+                contract_version=1,
+                stage=CalibrationStage.LEGACY_INTEREST,
+                source_path=artifact_path,
+            ),
+            labels=worksheet.labels,
+        )
+    raw_metadata, _ = _split_front_matter(text, path=artifact_path)
+    stage = raw_metadata.get("stage")
+    if stage == CalibrationStage.INTEREST.value:
+        return parse_interest_worksheet(artifact_path, require_complete=require_complete)
+    if stage == CalibrationStage.FIT.value:
+        return parse_fit_worksheet(artifact_path, require_complete=require_complete)
+    raise CalibrationContractError(f"{artifact_path}: unsupported calibration stage {stage!r}")
