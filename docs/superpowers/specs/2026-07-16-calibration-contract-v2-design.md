@@ -226,7 +226,7 @@ The preferred reproducible command is:
 ```bash
 python -m scripts.calibration_report \
   data/calibration/2026-07-16.fit.md \
-  --scored-file data/calibration/2026-07-16.batch.scored.json
+  --scored-file data/calibration/2026-07-16.scored.json
 ```
 
 The report loads the fit worksheet's round batch, verifies the scored file covers every
