@@ -1384,3 +1384,53 @@ Verification after both fixes: calibration contract/packet/report suite passed w
 No real calibration round, scorer/model call, score import, live DB mutation, threshold
 change, M8, M9D, discovery, tailoring, dependency, or protected scoring-input change was
 performed.
+
+## 2026-07-17 — Clearance requirements classified as work-authorization rejections
+
+Calibration round `2026-07-16-r1` scored six clearance-gated postings that should never have
+reached the scorer. The round's headline result — 8/12 agreement with four false negatives
+and zero false positives at threshold 7.0 — was an artifact, not a scoring problem.
+
+Root cause: `config/eligibility.yaml`'s `work_authorization` gate already rejects on
+`citizenship_required`, but its patterns matched only explicit wording ("US citizens only",
+"must be a US citizen", "US citizenship is required"). A posting demanding an active TS/SCI
+or DoD clearance requires US citizenship implicitly and almost never uses that wording, so
+every such posting passed the gate. The user confirmed (2026-07-17) they are not a US
+citizen; TS/SCI and DoD clearances are granted only to US citizens and cannot be sponsored,
+so a clearance requirement is a work-authorization fact, not a fit judgment.
+
+Decision: added a third rejection category `clearance_required: reject` to the
+`work_authorization` gate, parallel to the existing two, rather than widening
+`citizenship_required`. The categories stay separable because they encode different facts
+that happen to share a consequence; a future citizen candidate can relax one without
+disturbing sponsorship handling. `_evaluate_work_authorization()` now iterates all three.
+
+Patterns match the *requirement*, never the bare mention. `clearance preferred`, `clearance
+is a plus`, and `no clearance required` must not reject: job id=28's full 3,621-character JD
+carries only a bare "Security Clearance" heading with no requirement language, and rejecting
+on the word alone would discard holdable jobs. Verified: the gate filters exactly ids 26, 29,
+31, 34, 35 and passes id=28.
+
+The scorer was correct throughout. All four "false negatives" were correct rejections of
+jobs the candidate cannot hold; id=26's own rationale named the clearance as a hard
+disqualifier. A threshold sweep showed 11/12 agreement at 4.0–5.0, and acting on it would
+have promoted five unapplicable jobs into the shortlist. **The threshold was not changed and
+remains 7.0**, and no scoring prompt or profile change was made — the model's behavior was
+never the defect.
+
+Consequence for Phase 2: round `2026-07-16-r1` cannot count toward the evidence gate. Four
+of its five APPLY fit labels are on jobs now rejected as ineligible, leaving one trustworthy
+positive (id=36), so the round yields effectively no usable positive ground truth and says
+nothing about whether 7.0 is correct. The round's artifacts are preserved unmodified as
+evidence; the gate's "at least 20 fresh eligibility-passed canonical jobs" requirement is now
+materially stricter, since the earlier batch was not truly eligibility-passed.
+
+Residual risk, not acted on: SpaceX id=36's full JD (1,712 chars) states no clearance,
+citizenship, or ITAR restriction and therefore passes, but SpaceX applies US-person/ITAR
+constraints to most technical roles in practice. Company-level ITAR policy is a separate
+decision and was not invented here; it needs user approval before any blocklist exists.
+
+Verification: 11 new tests (7 requirement rejections using verbatim round phrasings, 4
+over-rejection guards) failed first, then passed. Eligibility suite 91 passed; full suite
+625 passed. No score import, DB mutation, threshold change, scoring-input change, M8, or M9D
+work was performed.

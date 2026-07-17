@@ -54,6 +54,7 @@ work_authorization:
   ambiguous: allow_with_flag
   explicit_no_sponsorship: reject
   citizenship_required: reject
+  clearance_required: reject
   patterns:
     explicit_no_sponsorship:
       - "unable to sponsor"
@@ -65,6 +66,18 @@ work_authorization:
       - "US citizens? only"
       - "must be (?:a )?US citizen"
       - "US citizenship (?:is )?required"
+    # A clearance requirement is a citizenship requirement stated indirectly: TS/SCI
+    # and DoD clearances are granted only to US citizens and cannot be sponsored, yet
+    # such postings rarely use the explicit citizenship wording above. Match the
+    # requirement, never the bare mention -- "clearance preferred" and "no clearance
+    # required" are not disqualifying. Evidence: calibration round 2026-07-16-r1.
+    clearance_required:
+      - "\\bactive\\s+top[-\\s]?secret\\b"
+      - "\\btop[-\\s]?secret\\s+cleared\\b"
+      - "\\bTS/SCI\\b"
+      - "\\bability\\s+(?:to|and\\s+willingness\\s+to)\\s+obtain\\b[^.]{0,80}\\bclearance\\b"
+      - "\\bmust\\s+(?:possess|have|hold|be\\s+able\\s+to\\s+obtain)\\b[^.]{0,60}\\bclearance\\b"
+      - "(?<!no\\s)\\bclearance\\s+(?:is\\s+)?required\\b"
     positive_sponsorship:
       - "visa sponsorship (?:is )?available"
       - "we (?:can|will) sponsor"

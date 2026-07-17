@@ -141,6 +141,7 @@ class WorkAuthorizationPolicy:
     ambiguous: str
     explicit_no_sponsorship: str
     citizenship_required: str
+    clearance_required: str
     patterns: Mapping[str, tuple[Pattern[str], ...]]
 
 
@@ -410,6 +411,7 @@ def _parse_work_authorization(payload: Any) -> WorkAuthorizationPolicy:
         ambiguous=_policy_value(payload.get("ambiguous"), "work_authorization.ambiguous"),
         explicit_no_sponsorship=_policy_value(payload.get("explicit_no_sponsorship"), "work_authorization.explicit_no_sponsorship"),
         citizenship_required=_policy_value(payload.get("citizenship_required"), "work_authorization.citizenship_required"),
+        clearance_required=_policy_value(payload.get("clearance_required"), "work_authorization.clearance_required"),
         patterns=MappingProxyType(patterns),
     )
 
@@ -812,7 +814,7 @@ def _evaluate_work_authorization(
     config: EligibilityConfig,
 ) -> tuple[str, str | None, tuple[str, ...]]:
     policy = config.work_authorization
-    for key in ("explicit_no_sponsorship", "citizenship_required"):
+    for key in ("explicit_no_sponsorship", "citizenship_required", "clearance_required"):
         for pattern in policy.patterns.get(key, ()):
             match = pattern.search(text)
             if match:

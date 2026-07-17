@@ -115,6 +115,47 @@ def test_explicit_work_authorization_negative_filters(jd: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "jd",
+    [
+        # Verbatim phrasings from calibration round 2026-07-16-r1, which scored six
+        # clearance-gated postings that should never have passed eligibility.
+        "Active Top-Secret clearance with SCI eligibility",  # id=26 Amentum
+        "Amentum is searching for a Top-Secret cleared Cloud Developer",  # id=26
+        "Ability to obtain and maintain a DoD Security Clearance is required",  # id=29, id=31
+        "Active Top Secret, Top Secret SCI, or DOE Level Q clearance",  # id=34
+        "Active Top Secret, Top Secret SCI, or DOE Level Q clearance, or the ability and willingness to obtain one",  # id=35
+        "Must possess an active TS/SCI clearance",
+        "A security clearance is required for this position.",
+    ],
+)
+def test_clearance_requirement_filters_as_work_authorization(jd: str) -> None:
+    # TS/SCI and DoD clearances are granted only to US citizens, and no sponsorship
+    # path exists, so a clearance requirement is a work-authorization rejection for
+    # this candidate -- not a scoring problem. See DECISIONS.md.
+    decision = _decision("Software Engineer", "Washington, DC", f"Starts in 2027. {jd}")
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:work_authorization"
+
+
+@pytest.mark.parametrize(
+    "jd",
+    [
+        # A bare mention is not a requirement. id=28's JD carries only this heading;
+        # rejecting on the word alone would discard jobs the candidate can hold.
+        "Security Clearance",
+        "An active security clearance is a plus.",
+        "Clearance preferred but not required.",
+        "No clearance required for this role.",
+    ],
+)
+def test_clearance_mentioned_without_requirement_does_not_filter(jd: str) -> None:
+    decision = _decision("Software Engineer", "New York, NY", f"Starts in 2027. {jd}")
+
+    assert decision.disposition is not EligibilityDisposition.FILTER
+
+
+@pytest.mark.parametrize(
     ("jd", "expected_flags"),
     [
         ("Starts in 2027.", ("opportunity_type_inferred",)),
