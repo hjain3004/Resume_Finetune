@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,9 +29,15 @@ def start_round(
     out_dir: str | Path = "data/calibration",
     round_name: str | None = None,
     limit: int = DEFAULT_ROUND_LIMIT,
+    exclude_rounds: Sequence[str | Path] = (),
     now: datetime | None = None,
 ) -> tuple[Path, Path]:
-    jobs = calibration.select_round_jobs(calibration.load_batch(source_batch), limit=limit)
+    exclude_ids = frozenset(
+        job.job_id for prior in exclude_rounds for job in calibration.load_batch(prior)
+    )
+    jobs = calibration.select_round_jobs(
+        calibration.load_batch(source_batch), limit=limit, exclude_ids=exclude_ids
+    )
     round_id = round_name or _utc_round_name(now)
     base = Path(out_dir)
     batch_path = base / f"{round_id}.batch.json"
@@ -130,6 +137,15 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--out-dir", default="data/calibration")
     start.add_argument("--round", dest="round_name", default=None)
     start.add_argument("--limit", type=int, default=DEFAULT_ROUND_LIMIT)
+    start.add_argument(
+        "--exclude-round",
+        dest="exclude_rounds",
+        action="append",
+        default=[],
+        metavar="PRIOR_BATCH",
+        help="path to a previous round's .batch.json whose jobs must not be drawn again "
+        "(repeatable); keeps successive rounds blind and additive",
+    )
     reveal = subparsers.add_parser("reveal", help="reveal a locked full-JD fit worksheet")
     reveal.add_argument("interest_path", metavar="INTEREST")
     reveal.add_argument("--db", default="data/jobs.db")
@@ -147,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
                 out_dir=args.out_dir,
                 round_name=args.round_name,
                 limit=args.limit,
+                exclude_rounds=args.exclude_rounds,
             )
             print(f"Wrote calibration batch: {batch_path}")
             print(f"Wrote interest worksheet: {interest_path}")

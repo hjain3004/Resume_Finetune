@@ -48,6 +48,42 @@ def test_start_round_creates_default_12_packet_with_expected_names_and_hash(tmp_
     assert "Full JD hidden" not in interest_path.read_text(encoding="utf-8")
 
 
+def test_start_round_excludes_jobs_from_a_previous_round(tmp_path):
+    source = _source_batch(tmp_path, 14)
+    out_dir = tmp_path / "calibration"
+    prior_batch, _ = calibration_packet.start_round(
+        source, out_dir=out_dir, round_name="round-1", limit=3
+    )
+
+    batch_path, _ = calibration_packet.start_round(
+        source, out_dir=out_dir, round_name="round-2", limit=3, exclude_rounds=(prior_batch,)
+    )
+
+    prior_ids = {obj["id"] for obj in json.loads(prior_batch.read_text(encoding="utf-8"))}
+    new_ids = [obj["id"] for obj in json.loads(batch_path.read_text(encoding="utf-8"))]
+    assert prior_ids == {1, 2, 3}
+    assert new_ids == [4, 5, 6]
+    assert not prior_ids & set(new_ids)
+
+
+def test_start_round_cli_accepts_repeatable_exclude_round(tmp_path):
+    source = _source_batch(tmp_path, 14)
+    out_dir = tmp_path / "out"
+    calibration_packet.main(["start", str(source), "--out-dir", str(out_dir), "--round", "r1", "--limit", "2"])
+    calibration_packet.main(["start", str(source), "--out-dir", str(out_dir), "--round", "r2", "--limit", "2",
+                             "--exclude-round", str(out_dir / "r1.batch.json")])
+
+    exit_code = calibration_packet.main(
+        ["start", str(source), "--out-dir", str(out_dir), "--round", "r3", "--limit", "2",
+         "--exclude-round", str(out_dir / "r1.batch.json"),
+         "--exclude-round", str(out_dir / "r2.batch.json")]
+    )
+
+    assert exit_code == 0
+    ids = [obj["id"] for obj in json.loads((out_dir / "r3.batch.json").read_text(encoding="utf-8"))]
+    assert ids == [5, 6]
+
+
 def test_start_round_supports_explicit_limit_round_and_prints_summary(tmp_path, capsys):
     source = _source_batch(tmp_path, 4)
     exit_code = calibration_packet.main(

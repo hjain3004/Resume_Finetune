@@ -68,6 +68,40 @@ def test_select_round_jobs_defaults_to_first_12_and_supports_explicit_limit():
     assert [job.job_id for job in select_round_jobs(jobs, limit=2)] == [1, 2]
 
 
+def test_select_round_jobs_skips_previously_used_ids():
+    # Without this, every round draws jobs[:limit] -- the same lowest ids forever, so
+    # round N+1 re-labels round N's jobs. That breaks blindness (the user has already
+    # read those JDs) and stalls the evidence gate, which counts *fresh* canonical jobs.
+    jobs = _valid_jobs(14)
+
+    selected = select_round_jobs(jobs, limit=3, exclude_ids=frozenset({1, 2, 5}))
+
+    assert [job.job_id for job in selected] == [3, 4, 6]
+
+
+def test_select_round_jobs_applies_limit_after_exclusion():
+    jobs = _valid_jobs(14)
+
+    selected = select_round_jobs(jobs, limit=12, exclude_ids=frozenset({1}))
+
+    assert len(selected) == 12
+    assert 1 not in {job.job_id for job in selected}
+    assert [job.job_id for job in selected] == list(range(2, 14))
+
+
+def test_select_round_jobs_rejects_limit_greater_than_remaining_after_exclusion():
+    # The count that matters is what survives exclusion, not the raw batch size.
+    with pytest.raises(CalibrationContractError, match="available.*2"):
+        select_round_jobs(_valid_jobs(4), limit=3, exclude_ids=frozenset({1, 2}))
+
+
+def test_select_round_jobs_without_exclusion_is_unchanged():
+    jobs = _valid_jobs(14)
+
+    assert [job.job_id for job in select_round_jobs(jobs, limit=2)] == [1, 2]
+    assert [job.job_id for job in select_round_jobs(jobs, limit=2, exclude_ids=frozenset())] == [1, 2]
+
+
 @pytest.mark.parametrize("limit", [0, -1, 1.5, "2"])
 def test_select_round_jobs_rejects_invalid_limits(limit):
     with pytest.raises(CalibrationContractError, match="limit"):

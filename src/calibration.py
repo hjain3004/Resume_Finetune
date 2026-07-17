@@ -233,13 +233,24 @@ def load_batch(path: str | Path) -> tuple[BatchJob, ...]:
     return jobs
 
 
-def select_round_jobs(jobs: tuple[BatchJob, ...], limit: int = DEFAULT_ROUND_LIMIT) -> tuple[BatchJob, ...]:
+def select_round_jobs(
+    jobs: tuple[BatchJob, ...],
+    limit: int = DEFAULT_ROUND_LIMIT,
+    exclude_ids: frozenset[int] = frozenset(),
+) -> tuple[BatchJob, ...]:
+    """Take the first `limit` jobs, skipping any whose id appears in `exclude_ids`.
+
+    Exclusion exists so successive rounds draw *fresh* canonical jobs. The Phase 2
+    evidence gate counts fresh eligibility-passed jobs, and a round that re-draws a
+    previous round's ids is neither blind (the user has read those JDs) nor additive.
+    """
     if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
         raise CalibrationContractError(f"round limit must be a positive integer; got {limit!r}")
-    available = len(jobs)
+    eligible = tuple(job for job in jobs if job.job_id not in exclude_ids)
+    available = len(eligible)
     if limit > available:
         raise CalibrationContractError(f"round limit {limit} exceeds available jobs {available}")
-    return jobs[:limit]
+    return eligible[:limit]
 
 
 def batch_jobs_to_json(jobs: tuple[BatchJob, ...]) -> str:

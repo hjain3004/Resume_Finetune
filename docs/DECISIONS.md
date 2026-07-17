@@ -1458,3 +1458,35 @@ Verification: 5 new tests (dotted and spelled-out variants) failed first, then p
 Eligibility suite 40 passed; full suite 630 passed. No DB mutation: preview is read-only and
 the DB SHA-256 was identical before and after
 (`d84723e4820481635ba54a748ee132cc4d53f95c0305153005a88099646b9db0`).
+
+## 2026-07-17 — Calibration rounds draw fresh jobs via --exclude-round
+
+`select_round_jobs` was `jobs[:limit]` — it always drew the lowest `limit` ids with no
+memory of prior rounds. Regenerating round `2026-07-17-r1` from the re-exported batch
+produced 7/12 ids already labeled in round `2026-07-16-r1`. That is doubly wrong: the
+interest call is no longer blind (the user has read those JDs), and the Phase 2 evidence gate
+counts *fresh* eligibility-passed canonical jobs, so overlapping rounds never accumulate
+toward the "at least 20 fresh" requirement. The defect was structural — every future round
+would redraw the same lowest ids forever.
+
+Fix: `select_round_jobs` gained an `exclude_ids` parameter (default empty, so existing
+behavior is unchanged), and `start_round` / the `start` CLI gained a repeatable
+`--exclude-round PRIOR_BATCH` that unions the job ids from each named prior `.batch.json`.
+The limit is validated against the count *remaining after* exclusion, so a round that cannot
+be filled from fresh jobs fails loudly instead of silently returning a short packet.
+
+The contaminated `2026-07-17-r1` packet was discarded (it had no human labels, so nothing was
+lost) and regenerated with `--exclude-round data/calibration/2026-07-16-r1.batch.json`: 12
+fresh jobs, zero overlap with round 1, zero clearance-gated ids.
+
+Not changed: `role_family` still passes some non-engineering titles (e.g. id=44 QA Auditor,
+id=53 SAP SD Analyst) via the post-resolution JD-text fallback. This is documented intended
+behavior (`PHASE2_KICKOFF.md` line 304: the anchored scale prices wrong-specialty at 3–4 and
+the scorer sees context the regex cannot; revisit only if wrong-specialty exceeds ~20% of
+scored volume). Measured: 0% of the 31 scored/shortlisted rows are wrong-specialty, so the
+trigger is not met and the docs say leave it alone. M6.1 content-hash duplicate collapse was
+also verified working — the 16 IDEXX rows collapse to one export group with all row_ids
+preserved; there was no dedup defect.
+
+Verification: 6 new tests (4 contract, 2 packet/CLI) failed first, then passed. Calibration
+suite 80 passed; full suite 636 passed.
