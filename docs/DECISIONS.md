@@ -1490,3 +1490,44 @@ preserved; there was no dedup defect.
 
 Verification: 6 new tests (4 contract, 2 packet/CLI) failed first, then passed. Calibration
 suite 80 passed; full suite 636 passed.
+
+## 2026-07-17 — Bare named clearance levels reject regardless of required/preferred framing
+
+Found during live scoring of calibration round `2026-07-17-r1` (fresh, non-contaminated
+batch). Job id=83 (Booz Allen Hamilton, "Full-Stack Software Engineer") passed the
+just-hardened eligibility gate and reached the scorer, which named the clearance a hard
+disqualifier in its own rationale. Its qualifications list read:
+
+```
+Must have: ... - Top Secret clearance - Bachelor's degree ...
+Preferred: ... - TS / SCI clearance
+```
+
+Neither bullet used "active", "required", or "must obtain" -- the phrasing the previous fix's
+patterns expected. A bare clearance-level name sitting alone in a qualifications bullet is
+itself the requirement signal; this is at least as common as the explicit-requirement wording
+already covered.
+
+This also surfaced a real policy question: the second bullet names TS/SCI only under
+"Preferred", not "Must have". The user's earlier choice (2026-07-17, clearance-gate decision)
+was plain "Reject" over the two-tier "reject required, flag preferred" option, favoring
+simplicity. Decision: extend that choice -- once a *specific* clearance level is named (Top
+Secret, TS/SCI, Secret, DOE Q), reject regardless of required/preferred framing, since no
+framing makes an unobtainable clearance obtainable for a non-citizen. This is distinct from
+the existing generic-mention guard (id=28: a bare "Security Clearance" heading names no
+level and still passes) -- the new rule only fires when a specific level is named.
+
+`clearance_required` patterns merged the old bare `\bTS/SCI\b` line into
+`\b(?:top[-\s]?secret|TS\s*/\s*SCI|secret)\s+clearance\b`, tolerant of spaced slashes
+("TS / SCI"), and covering bare "Secret clearance" without "Top".
+
+Impact preview (read-only, DB hash unchanged): 3 additional rows now filter, all Booz Allen
+Hamilton postings (ids 83, 84, 88), all `RESOLVED` with no score to lose. Not yet applied to
+the live DB -- pending the same guarded-apply approval used for the earlier clearance fix.
+
+Verification: 4 new tests (real Booz Allen bullets verbatim, spaced-slash TS/SCI, bare Secret,
+Preferred-framed TS/SCI) failed first (one already passed via the existing "must have...
+clearance" pattern), then all passed after the config change. Existing guard tests (id=28's
+bare heading, "clearance preferred", "no clearance required") remain green -- confirmed
+against real DB text for id=28, not just the parametrized fixtures. Eligibility suite 44
+passed; full suite 640 passed.

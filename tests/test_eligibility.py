@@ -177,6 +177,32 @@ def test_clearance_mentioned_without_requirement_does_not_filter(jd: str) -> Non
 
 
 @pytest.mark.parametrize(
+    "jd",
+    [
+        # Verbatim from calibration round 2026-07-17-r1: id=83 Booz Allen Hamilton
+        # reached the scorer, which correctly named the clearance a hard disqualifier
+        # in its rationale -- the eligibility gate should have caught it first. Neither
+        # bullet uses "active"/"required"/"must obtain"; a clearance level named as a
+        # bare qualifications-list item is itself the requirement signal.
+        "Must have:\n- Top Secret clearance\n- Bachelor's degree in CS or Engineering",
+        "Preferred:\n- TS / SCI clearance",
+        # spaced-slash and bare "Secret" (no "Top") variants
+        "TS / SCI clearance",
+        "Secret clearance",
+    ],
+)
+def test_bare_named_clearance_level_filters_regardless_of_required_or_preferred_framing(jd: str) -> None:
+    # A specific clearance level (Top Secret / TS-SCI / Secret / DOE Q) cannot be
+    # obtained by a non-citizen under any framing -- "preferred" doesn't make a role
+    # holdable, so unlike the generic bare-mention guard above, a *named* level is a
+    # reject signal even without "required" wording. See DECISIONS.md.
+    decision = _decision("Full-Stack Software Engineer", "Hampton, VA", f"Starts in 2027. {jd}")
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:work_authorization"
+
+
+@pytest.mark.parametrize(
     ("jd", "expected_flags"),
     [
         ("Starts in 2027.", ("opportunity_type_inferred",)),

@@ -72,12 +72,20 @@ work_authorization:
     # A clearance requirement is a citizenship requirement stated indirectly: TS/SCI
     # and DoD clearances are granted only to US citizens and cannot be sponsored, yet
     # such postings rarely use the explicit citizenship wording above. Match the
-    # requirement, never the bare mention -- "clearance preferred" and "no clearance
-    # required" are not disqualifying. Evidence: calibration round 2026-07-16-r1.
+    # requirement, never the bare mention -- generic "clearance preferred" and "no
+    # clearance required" are not disqualifying (id=28, calibration round
+    # 2026-07-16-r1). But once a *specific* clearance level is named (Top Secret,
+    # TS/SCI, Secret, DOE Q), reject regardless of required/preferred framing: no
+    # framing makes an unobtainable clearance obtainable, and defense-adjacent
+    # postings routinely name a level as a bare qualifications-list bullet with no
+    # "active"/"required" wording at all. Evidence: id=83, calibration round
+    # 2026-07-17-r1 (Booz Allen: "Must have: - Top Secret clearance" / "Preferred: -
+    # TS / SCI clearance"), reached the scorer, which named the clearance a hard
+    # disqualifier itself.
     clearance_required:
       - "\\bactive\\s+top[-\\s]?secret\\b"
       - "\\btop[-\\s]?secret\\s+cleared\\b"
-      - "\\bTS/SCI\\b"
+      - "\\b(?:top[-\\s]?secret|TS\\s*/\\s*SCI|secret)\\s+clearance\\b"
       - "\\bability\\s+(?:to|and\\s+willingness\\s+to)\\s+obtain\\b[^.]{0,80}\\bclearance\\b"
       - "\\bmust\\s+(?:possess|have|hold|be\\s+able\\s+to\\s+obtain)\\b[^.]{0,60}\\bclearance\\b"
       - "(?<!no\\s)\\bclearance\\s+(?:is\\s+)?required\\b"
