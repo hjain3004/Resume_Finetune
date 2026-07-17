@@ -117,6 +117,27 @@ def test_explicit_work_authorization_negative_filters(jd: str) -> None:
 @pytest.mark.parametrize(
     "jd",
     [
+        # "U.S." with periods is the ordinary form in American postings, but the original
+        # patterns matched only the bare "US" spelling, so the most common phrasing of a
+        # hard citizenship requirement passed the gate. Job id=52 reached SCORED this way
+        # and was caught only incidentally, by a clearance pattern.
+        "U.S. citizenship required.",
+        "U.S. citizens only.",
+        "Must be a U.S. citizen.",
+        "Must be a United States citizen.",
+        "United States citizenship is required.",
+    ],
+)
+def test_dotted_and_spelled_out_citizenship_requirements_filter(jd: str) -> None:
+    decision = _decision("Software Engineer", "New York, NY", f"Starts in 2027. {jd}")
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:work_authorization"
+
+
+@pytest.mark.parametrize(
+    "jd",
+    [
         # Verbatim phrasings from calibration round 2026-07-16-r1, which scored six
         # clearance-gated postings that should never have passed eligibility.
         "Active Top-Secret clearance with SCI eligibility",  # id=26 Amentum

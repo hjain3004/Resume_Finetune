@@ -62,10 +62,13 @@ work_authorization:
       - "will not sponsor"
       - "not.{0,30}sponsor"
       - "without sponsorship now or in the future"
+    # Accept the dotted "U.S." and spelled-out "United States" forms: American postings
+    # write it that way far more often than the bare "US" the original patterns assumed,
+    # so the commonest phrasing of a hard citizenship bar was passing the gate.
     citizenship_required:
-      - "US citizens? only"
-      - "must be (?:a )?US citizen"
-      - "US citizenship (?:is )?required"
+      - "\\bU\\.?S\\.?\\s*citizens?\\s+only"
+      - "\\bmust be (?:an?\\s+)?(?:U\\.?S\\.?|United States)\\s*citizens?\\b"
+      - "\\b(?:U\\.?S\\.?|United States)\\s*citizenship\\s+(?:is\\s+)?required"
     # A clearance requirement is a citizenship requirement stated indirectly: TS/SCI
     # and DoD clearances are granted only to US citizens and cannot be sponsored, yet
     # such postings rarely use the explicit citizenship wording above. Match the

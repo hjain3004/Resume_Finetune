@@ -1434,3 +1434,27 @@ Verification: 11 new tests (7 requirement rejections using verbatim round phrasi
 over-rejection guards) failed first, then passed. Eligibility suite 91 passed; full suite
 625 passed. No score import, DB mutation, threshold change, scoring-input change, M8, or M9D
 work was performed.
+
+## 2026-07-17 — Citizenship patterns accept dotted "U.S." and "United States" forms
+
+Found while reviewing the clearance-gate impact preview above. The `citizenship_required`
+patterns matched only the bare "US" spelling (`US citizens? only`, `must be (?:a )?US
+citizen`, `US citizenship (?:is )?required`), so the ordinary American phrasing — "U.S.
+citizenship required", with periods — passed the work-authorization gate untouched. This is
+a pre-existing hole, older and wider than the clearance gap: dotted "U.S." is the more common
+form in real postings.
+
+Evidence: job id=52 (Mission Technologies / HII, "Front End Developer") reached `SCORED`
+with `fit_score=2.5` despite its JD stating "U.S. citizenship required". It was caught only
+incidentally, by a clearance pattern, in the first preview. After this fix the gate matches
+it directly on the citizenship evidence, which is the correct reason code.
+
+Patterns now accept `U\.?S\.?` and the spelled-out "United States" in all three rules. The
+existing EEO guard still passes: "We do not discriminate based on citizenship status" is not
+a requirement and must not filter. Impact preview rose from 52 to 59 work-authorization
+transitions once dotted forms were recognized.
+
+Verification: 5 new tests (dotted and spelled-out variants) failed first, then passed.
+Eligibility suite 40 passed; full suite 630 passed. No DB mutation: preview is read-only and
+the DB SHA-256 was identical before and after
+(`d84723e4820481635ba54a748ee132cc4d53f95c0305153005a88099646b9db0`).
