@@ -1531,3 +1531,7 @@ clearance" pattern), then all passed after the config change. Existing guard tes
 bare heading, "clearance preferred", "no clearance required") remain green -- confirmed
 against real DB text for id=28, not just the parametrized fixtures. Eligibility suite 44
 passed; full suite 640 passed.
+
+Applied 2026-07-17: 3/3 previewed transitions applied to `data/jobs.db` via guarded apply.
+Backup: `data/backups/jobs-pre-bare-clearance-level-20260717T185358Z.db`. Integrity `ok`
+before and after; ids 83, 84, 88 -> `FILTERED_OUT`; no `SCORED`/`SHORTLISTED` rows affected.
