@@ -60,9 +60,17 @@ _PROMPT_HEADER_MARKER = "## Prompt"
 _PROFILE_MARKER = "{{PROFILE_SUMMARY}}"
 _BATCH_MARKER = "{{BATCH_JSON}}"
 _CLAUDE_TIMEOUT_SECONDS = 300
-# Pure text-in/text-out: no permission flags, because the prompt asks for no
-# tool use at all. Nothing to approve, nothing to sandbox.
-DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p")
+# Pure text-in/text-out: the nested scorer receives the prompt as its final
+# argv element, has no tools, and does not persist a session. Do not add
+# permission-bypass flags here.
+#
+# Order matters. `--tools <tools...>` is variadic and greedily consumes every
+# following argv element that does not start with "-", so `--tools ""` must never
+# sit last: it would swallow the appended prompt as a tool name, and the CLI would
+# exit 1 with "Input must be provided ... when using --print". The trailing "--"
+# keeps the prompt positional even if it ever begins with a dash.
+DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+SCORER_DIAGNOSTIC_MAX_CHARS = 1000
 _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?|\n?```\s*$", re.MULTILINE)
 
 
@@ -128,6 +136,17 @@ def parse_scoring_response(raw_output: str) -> list[dict]:
         if missing:
             raise ValueError(f"scorer response entry {entry.get('id', '?')} missing keys: {sorted(missing)}")
     return parsed
+
+
+def _format_subprocess_stream(name: str, text: str) -> str:
+    """Return a bounded, labeled diagnostic stream for scorer CLI failures."""
+    stripped = text.strip()
+    if not stripped:
+        return f"{name}: <empty>"
+    if len(stripped) <= SCORER_DIAGNOSTIC_MAX_CHARS:
+        return f"{name}: {stripped}"
+    omitted = len(stripped) - SCORER_DIAGNOSTIC_MAX_CHARS
+    return f"{name}: {stripped[:SCORER_DIAGNOSTIC_MAX_CHARS]}...<truncated {omitted} chars>"
 
 
 def majority_vote_variant(variants: list[str]) -> str:
@@ -249,7 +268,11 @@ def _invoke_scorer_with_retry(
                 [*claude_cmd, prompt], capture_output=True, text=True, timeout=_CLAUDE_TIMEOUT_SECONDS
             )
             if result.returncode != 0:
-                raise RuntimeError(f"exit {result.returncode}: {result.stderr.strip() or '<empty stderr>'}")
+                raise RuntimeError(
+                    f"exit {result.returncode}; "
+                    f"{_format_subprocess_stream('stdout', result.stdout)}; "
+                    f"{_format_subprocess_stream('stderr', result.stderr)}"
+                )
             raw_output = strip_json_fences(result.stdout)
             if not raw_output:
                 raise RuntimeError(f"scorer returned no output (stderr: {result.stderr.strip() or '<empty>'})")

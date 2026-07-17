@@ -153,7 +153,7 @@ def test_aggregate_self_consistency_runs_raises_on_missing_entry():
         assert "id 1" in str(exc)
 
 
-def test_score_chunk_invokes_claude_k_times_with_no_permission_flags(tmp_path, monkeypatch):
+def test_score_chunk_invokes_claude_k_times_with_tools_disabled_and_no_permission_flags(tmp_path, monkeypatch):
     # chdir so score_chunk's write_trace() call (default trace_dir="data/traces",
     # relative to cwd) lands under tmp_path instead of the repo's real data/traces/ —
     # see bbb2559 for the same class of bug with data/digests/. PROMPT_PATH is
@@ -184,9 +184,91 @@ def test_score_chunk_invokes_claude_k_times_with_no_permission_flags(tmp_path, m
     assert mock_run.call_count == score_batch.SELF_CONSISTENCY_K
     for call in mock_run.call_args_list:
         invoked_cmd = call.args[0]
-        assert invoked_cmd[:2] == ["claude", "-p"]
+        assert invoked_cmd[:6] == ["claude", "-p", "--tools", "", "--no-session-persistence", "--"]
+        assert invoked_cmd[-1].startswith("## Prompt")
         assert not any(flag.startswith("--permission") or flag.startswith("--allowed") for flag in invoked_cmd)
         assert call.kwargs["timeout"] == score_batch._CLAUDE_TIMEOUT_SECONDS
+
+
+def test_default_claude_command_disables_tools_and_session_persistence():
+    assert score_batch.DEFAULT_CLAUDE_CMD == ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+
+
+def test_default_claude_command_never_leaves_prompt_adjacent_to_variadic_tools():
+    # `claude --tools <tools...>` is variadic: it greedily consumes every following
+    # argv element that does not start with "-". With the prompt appended last, a
+    # trailing `--tools ""` swallows the prompt as a tool name and the CLI exits 1
+    # with "Input must be provided ... when using --print" -- the same exit signature
+    # as the auth/limit failures this wrapper is meant to diagnose. Verified against
+    # Claude CLI 2.1.211.
+    cmd = list(score_batch.DEFAULT_CLAUDE_CMD)
+    tools_value_index = cmd.index("--tools") + 1
+    assert cmd[tools_value_index] == ""
+    # something must terminate variadic collection before the appended prompt
+    assert cmd[tools_value_index + 1 :], "--tools value must not be the final default arg"
+    assert cmd[-1] == "--", "prompt must be positional, past an explicit end-of-options marker"
+
+
+def test_invoke_scorer_nonzero_exit_reports_bounded_stdout_and_stderr():
+    prompt = "SECRET SCORING PROMPT SHOULD NOT APPEAR"
+    with (
+        patch.object(score_batch.time, "sleep"),
+        patch.object(
+            score_batch.subprocess,
+            "run",
+            return_value=MagicMock(
+                returncode=1,
+                stdout="Not logged in · Please run /login",
+                stderr="",
+            ),
+        ),
+    ):
+        try:
+            score_batch._invoke_scorer_with_retry(
+                prompt,
+                claude_cmd=("claude", "-p"),
+                index=0,
+                run_index=0,
+            )
+            assert False, "expected RuntimeError"
+        except RuntimeError as exc:
+            message = str(exc)
+
+    assert "exit 1" in message
+    assert "stdout: Not logged in · Please run /login" in message
+    assert "stderr: <empty>" in message
+    assert prompt not in message
+
+
+def test_invoke_scorer_nonzero_exit_reports_both_streams_with_truncation():
+    prompt = "SECRET SCORING PROMPT SHOULD NOT APPEAR"
+    long_stdout = "stdout-start " + ("S" * 1500)
+    long_stderr = "stderr-start " + ("E" * 1500)
+    with (
+        patch.object(score_batch.time, "sleep"),
+        patch.object(
+            score_batch.subprocess,
+            "run",
+            return_value=MagicMock(returncode=2, stdout=long_stdout, stderr=long_stderr),
+        ),
+    ):
+        try:
+            score_batch._invoke_scorer_with_retry(
+                prompt,
+                claude_cmd=("claude", "-p"),
+                index=0,
+                run_index=0,
+            )
+            assert False, "expected RuntimeError"
+        except RuntimeError as exc:
+            message = str(exc)
+
+    assert "exit 2" in message
+    assert "stdout: stdout-start" in message
+    assert "stderr: stderr-start" in message
+    assert "<truncated" in message
+    assert len(message) < 2600
+    assert prompt not in message
 
 
 def test_score_chunk_strips_fences_from_stdout(tmp_path, monkeypatch):
