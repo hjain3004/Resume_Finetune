@@ -133,7 +133,7 @@ def test_report_output_contains_counts_transitions_changed_rows_and_notes(tmp_pa
     fit_path, _ = _write_fit_round(tmp_path, fit_calls=("APPLY", "MAYBE", "SKIP"))
     scored_path = _scored_file(tmp_path, [(1, 7.0), (2, 6.5), (3, 7.0)])
 
-    assert calibration_report.main([str(fit_path), "--scored-file", str(scored_path)]) == 0
+    assert calibration_report.main([str(fit_path), "--scored-file", str(scored_path), "--threshold", "7.0"]) == 0
 
     output = capsys.readouterr().out
     assert "Fit labels: APPLY=1, MAYBE=1, SKIP=1" in output
@@ -183,7 +183,7 @@ def test_db_backed_mode_lists_unscored_and_is_readonly(tmp_path, capsys):
     conn.close()
     before = db_path.read_bytes()
 
-    assert calibration_report.main([str(fit_path), "--db", str(db_path)]) == 0
+    assert calibration_report.main([str(fit_path), "--db", str(db_path), "--threshold", "7.0"]) == 0
 
     output = capsys.readouterr().out
     assert "Scored: 2" in output

@@ -293,7 +293,7 @@ def test_end_to_end_calibration_contract_v2_tempdir_flow(tmp_path, capsys):
         )
     scored_path.write_text(json.dumps(scored), encoding="utf-8")
 
-    assert calibration_report.main([str(fit_path), "--scored-file", str(scored_path)]) == 0
+    assert calibration_report.main([str(fit_path), "--scored-file", str(scored_path), "--threshold", "7.0"]) == 0
     output = capsys.readouterr().out
     assert "Canonical jobs: 12" in output
     assert "MAYBE -> MAYBE: 4" in output

@@ -16,8 +16,13 @@ after run-to-run variance was measured. Specs: ARCHITECTURE.md, IMPLEMENTATION_P
 (M0–M5, historical), PHASE2_KICKOFF.md (M6.x), SELF_HEALING.md (M7).
 
 ## Phase 2 — Scoring Calibration
-**Status: IN PROGRESS — started 2026-07-14. NOTE: earlier claims of completion were
-wrong; no scored output existed before this date (see DECISIONS.md).**
+**Status: COMPLETE (2026-07-19).** Closed on accumulated evidence (36 fresh fit-labeled jobs
+across 3 non-contaminated rounds, zero false positives in any round) rather than the "two
+consecutive clean rounds" gate below, which the false-negative pattern showed was unlikely to
+ever clear by chance — see `docs/DECISIONS.md` (2026-07-19 entry) for the full evidence table,
+the approved deviation, the `shortlist_threshold` change (7.0 → 6.0), and the stress-suite
+band re-anchoring (PROVISIONAL → CALIBRATED). NOTE: earlier claims of completion before this
+date were wrong; no scored output existed before 2026-07-14 (see DECISIONS.md).
 Protocol: docs/PHASE2_KICKOFF.md "Phase 2 — Calibration protocol v2" + amendments
 (threshold asymmetry, segment tagging, exemplar injection gate). Exit criteria: at least
 20 fresh eligibility-passed canonical jobs with complete JD-informed `fit_call` labels;
@@ -52,7 +57,6 @@ metadata-only `interest_call` from full-JD `fit_call`, defaults fresh rounds to 
 groups, validates batch/interest/fit/JD/scored provenance, reads complete JDs through a
 read-only SQLite connection, preserves the historical `2026-07-12.user.md` worksheet as
 legacy interest-only evidence, and compares 7+ shortlist decisions only against fit labels.
-No real v2 calibration round has been completed yet, so Phase 2 remains in progress.
 
 **M6.12 — Role-Family Matching v2: COMPLETE (2026-07-19).** Closed a gap in M6.9's JD-text
 fallback where a single incidental keyword match (e.g. "platform" once) let clearly
@@ -62,7 +66,9 @@ fallback, then widened the include vocabulary after the live-DB impact preview s
 false-negative titles the narrower list missed. See `docs/DECISIONS.md` (2026-07-19 entry)
 for the approved deviation from the documented 20%-of-scored-volume revisit trigger and full
 live impact numbers. Calibration round `2026-07-17-r2` was contaminated by this change (3 of
-its 12 jobs were reclassified `FILTERED_OUT`) and needs regeneration.
+its 12 jobs were reclassified `FILTERED_OUT`) and was regenerated as `2026-07-19-r2` (12 fresh
+jobs, zero overlap with any prior round); that round completed calibration and is the third
+round counted in Phase 2's closure above.
 
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —
