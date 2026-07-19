@@ -366,3 +366,55 @@ def test_exclude_pattern_takes_precedence_over_include_pattern() -> None:
 
     assert decision.disposition is EligibilityDisposition.FILTER
     assert decision.reason_code == "eligibility:role_family_excluded"
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Python Engineer (Early-Career)",
+        "GPU Compiler Performance",
+        "LGV CS Programmer",
+        "Machine Learning Engineer",
+        "Formal Verification Engineer",
+        "Student Assistant – Applications Development - Hybrid",
+    ],
+)
+def test_widened_include_vocabulary_passes_titles_missed_by_narrow_original_list(title: str) -> None:
+    # Regression: the live-DB impact preview for the jd_fallback_min_hits change surfaced
+    # genuine software-adjacent titles that the original 9-pattern include list (software,
+    # swe, backend, back.end, full.?stack, platform, infrastructure, distributed, developer)
+    # never matched at the title level, so they had to clear the raised JD-fallback bar
+    # instead -- which several of them failed, a false-negative regression this milestone
+    # should not introduce. Each of these titles now matches directly via python, compiler,
+    # programmer, "machine learning", "formal verification", or "applications development".
+    decision = _decision(title, "New York, NY", "Starts in 2027")
+
+    assert decision.disposition is EligibilityDisposition.PASS
+
+
+def test_widened_include_vocabulary_covers_front_end_and_programming_via_jd_fallback() -> None:
+    # Regression: id=137 (InstaLILY AI "Design Engineer") from the live-DB impact preview --
+    # title doesn't match any include pattern, but the JD describes "front-end craft" and
+    # "product infrastructure", which should now clear the 2-distinct-hit fallback bar via
+    # the new front.?end pattern plus the existing infrastructure pattern.
+    decision = _decision(
+        "Design Engineer",
+        "New York, NY",
+        "Bring strong front-end craft to interaction design. Build a design system in code "
+        "as shared product infrastructure. Starts in 2027.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.PASS
+
+    # Regression: id=402 (Baxter "SW Engineer - Test Automation") -- title doesn't match any
+    # include pattern, but the JD mentions "software quality" and "programming languages",
+    # which should now clear the fallback bar via the existing software pattern plus the new
+    # programming pattern.
+    decision = _decision(
+        "SW Engineer - Test Automation",
+        "New York, NY",
+        "Ensure software quality and reliability. Experience with programming languages "
+        "such as Python, Java, or C#. Starts in 2027.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.PASS
