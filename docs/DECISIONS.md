@@ -1535,3 +1535,71 @@ passed; full suite 640 passed.
 Applied 2026-07-17: 3/3 previewed transitions applied to `data/jobs.db` via guarded apply.
 Backup: `data/backups/jobs-pre-bare-clearance-level-20260717T185358Z.db`. Integrity `ok`
 before and after; ids 83, 84, 88 -> `FILTERED_OUT`; no `SCORED`/`SHORTLISTED` rows affected.
+
+## 2026-07-19 — Role-family matching v2 (M6.12): deviation from the 20%-of-scored-volume trigger
+
+Calibration round `2026-07-17-r2` surfaced three eligibility-passed jobs with zero legitimate
+relationship to software engineering: id=96 (RG&T Solutions, "Casino Game Tester"), id=123
+(Heron Power, "Power Electronics PCBA Technician"), id=111 (ByteDance, "Graduate Research
+Scientist"). Root cause: `role_family` matching's post-resolution JD-text fallback passed on
+a single incidental keyword match anywhere in the JD (e.g. "platform" mentioned once). This
+same fallback design is documented as intentional in `PHASE2_KICKOFF.md` (M6.9 note 3): it
+exists so non-standard-title genuine engineering roles (front-end, embedded) still reach the
+scorer, which prices wrong-specialty postings at 3-4 with JD context a regex can't use. The
+documented revisit trigger is wrong-specialty rows exceeding ~20% of *scored* volume; that
+trigger was not met (0/45 scored rows were wrong-specialty at the time). This is therefore an
+explicit, user-approved deviation from that trigger, not a response to it: three
+clearly-wrong-category jobs reaching human calibration review was judged sufficient reason to
+tighten the mechanism regardless of scored-volume impact.
+
+**Design** (`docs/superpowers/specs/2026-07-19-role-family-matching-v2-design.md`, milestone
+M6.12): `role_families.include[].exclude_patterns` — title-only hard-exclusion regexes,
+checked before any positive match. `role_families.jd_fallback_min_hits: 2` — the JD-only
+fallback now requires at least this many *distinct* include patterns to match, not one.
+
+**Two review-driven corrections during implementation**, both confirmed against the live
+`data/jobs.db`, not just the design's assumptions:
+
+1. The initial `\banalyst\b` exclude seed was too broad — it would have wrongly excluded real
+   software titles using "Analyst" as a trailing qualifier (iCapital's "Technology Software
+   Engineer Rotation Program - Analyst", "Configuration Developer - Analyst"; Atos's "Analyst
+   Programmer" — all `RESOLVED`, genuinely-eligible rows). Narrowed to
+   `\b(business|systems?|functional)\s+analyst\b`, which still catches the original motivating
+   case (id=53, "Junior SAP SD Functional Analyst").
+2. The live-DB impact preview for `jd_fallback_min_hits` (run before any apply) showed 87
+   proposed transitions — far more than the ~5 anticipated from the original evidence. Sampling
+   the `eligibility:role_family` bucket found roughly 15 genuine software-adjacent titles
+   (Python Engineer, GPU Compiler Performance, LGV CS Programmer, Machine Learning Engineer,
+   Formal Verification Engineer, "Applications Development", front-end/design-engineer JDs)
+   that the original 9-pattern include vocabulary never matched at the title level, so they had
+   to clear the raised 2-hit JD-fallback bar and mostly failed to. The include vocabulary was
+   widened (python, programmer, programming, compiler, "formal verification", "machine
+   learning", "applications development", `front.?end`) to close this false-negative gap,
+   re-verified against the same live rows before re-running the preview.
+
+After the vocabulary widening, the preview also surfaced a residual effect: 8 finance/quant
+"Analyst"/"Researcher" titles at Citadel, Citadel Securities, US Bank, AMD, Apple, and
+Renaissance Technologies flipped to eligible because their JDs genuinely mention Python/machine
+learning as required tools (Citadel id=210's JD confirmed as substantive ATS-quality content,
+not a scrape artifact). Decision: leave these as-is rather than add more exclude patterns.
+Unlike the casino-tester/technician/research-scientist cases, these are genuinely ambiguous
+(a quant researcher who uses Python is not unambiguously non-software), which is exactly the
+class of case `PHASE2_KICKOFF.md`'s original design intends for the scorer to price rather
+than a keyword gate to filter.
+
+**Live impact** (`data/calibration/role-family-v2-impact.json`, final preview before apply):
+68 total transitions — 60 `filter_active` (51 via raised `jd_fallback_min_hits`, later reduced
+to 24 after the vocabulary widening, plus 36 via `eligibility:role_family_excluded`), 8
+`restore_legacy` (previously filtered under a pre-M6.11 legacy reason, now correctly passing
+under the widened vocabulary). All transitions were `RESOLVED` or legacy-`FILTERED_OUT` rows;
+zero `SCORED`/`SHORTLISTED` rows affected.
+
+Applied 2026-07-19: 68/68 previewed transitions applied to `data/jobs.db` via guarded apply.
+Backup: `data/backups/jobs-pre-role-family-v2-20260719T125022Z.db`. Integrity `ok` before and
+after. Status deltas: `RESOLVED` 402 → 350 (-52), `FILTERED_OUT` 617 → 669 (+52), net matches
+60 filter_active − 8 restore_legacy exactly. `SCORED` (16) and `SHORTLISTED` (15) unchanged.
+ids 44, 53, 96, 111, 123 confirmed `FILTERED_OUT` with `eligibility:role_family_excluded`.
+
+Verification: implemented via subagent-driven development with a task-level reviewer per task
+plus two whole-branch review rounds (one caught the analyst false-positive above, pre-merge).
+Full test suite green throughout (658 passed after the vocabulary widening; no regressions).

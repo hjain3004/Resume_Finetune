@@ -54,6 +54,16 @@ read-only SQLite connection, preserves the historical `2026-07-12.user.md` works
 legacy interest-only evidence, and compares 7+ shortlist decisions only against fit labels.
 No real v2 calibration round has been completed yet, so Phase 2 remains in progress.
 
+**M6.12 — Role-Family Matching v2: COMPLETE (2026-07-19).** Closed a gap in M6.9's JD-text
+fallback where a single incidental keyword match (e.g. "platform" once) let clearly
+wrong-specialty postings (casino game tester, PCBA technician, PhD-only research scientist)
+reach the scorer. Added title-only exclude patterns and a distinct-hit threshold for the JD
+fallback, then widened the include vocabulary after the live-DB impact preview surfaced
+false-negative titles the narrower list missed. See `docs/DECISIONS.md` (2026-07-19 entry)
+for the approved deviation from the documented 20%-of-scored-volume revisit trigger and full
+live impact numbers. Calibration round `2026-07-17-r2` was contaminated by this change (3 of
+its 12 jobs were reclassified `FILTERED_OUT`) and needs regeneration.
+
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —
 verified 2026-07-14: no master-profile loader in repo).**
