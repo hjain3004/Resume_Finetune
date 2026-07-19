@@ -465,6 +465,7 @@ Expected: `[96, 111, 123]` (or whatever subset actually applied) — confirms th
 ```bash
 PYTHONPATH=. python scripts/export_batch.py --db data/jobs.db --out-dir data/batch
 ```
+
 Expected: writes `data/batch/2026-07-19.json`, exporting only `RESOLVED` rows — the now-`FILTERED_OUT` ids (96, 111, 123, and any others from Task 4) are excluded automatically since export only pulls `RESOLVED` status.
 
 - [ ] **Step 3: Start a fresh round excluding both prior rounds**
@@ -476,6 +477,7 @@ PYTHONPATH=. python scripts/calibration_packet.py start data/batch/2026-07-19.js
   --exclude-round data/calibration/2026-07-17-r1.batch.json \
   --exclude-round data/calibration/2026-07-17-r2.batch.json
 ```
+
 Expected: writes `data/calibration/2026-07-19-r2.batch.json` and `.interest.md` with 12 fresh jobs, zero overlap with all three prior rounds (the two real prior rounds plus the discarded contaminated r2).
 
 - [ ] **Step 4: Tell the user the round was regenerated**
