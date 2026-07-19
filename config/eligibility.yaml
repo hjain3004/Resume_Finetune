@@ -56,7 +56,7 @@ role_families:
       exclude_patterns:
         - "technician"
         - "\\bresearch scientist\\b"
-        - "\\banalyst\\b"
+        - "\\b(business|systems?|functional)\\s+analyst\\b"
         - "\\bauditor\\b"
         - "\\b(game\\s+)?tester\\b"
         - "casino"
