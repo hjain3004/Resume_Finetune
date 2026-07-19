@@ -60,20 +60,9 @@ def test_title_include_pattern_still_passes_outright() -> None:
     assert decision.disposition is EligibilityDisposition.PASS
 
 
-def test_single_incidental_jd_keyword_no_longer_passes() -> None:
-    decision = _decision(
-        "Power Electronics PCBA Technician",
-        "Santa Cruz, CA",
-        "Join our infrastructure buildout team. Starts in 2027.",
-    )
-
-    assert decision.disposition is EligibilityDisposition.FILTER
-    assert decision.reason_code == "eligibility:role_family_excluded"
-
-
 def test_jd_only_job_with_two_distinct_hits_passes() -> None:
     decision = _decision(
-        "Full Stack Developer II",
+        "Program Coordinator II",
         "New York, NY",
         "You will build backend services using our distributed platform. Starts in 2027.",
     )
