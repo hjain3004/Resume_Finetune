@@ -48,6 +48,13 @@ def test_loads_valid_config_as_frozen_typed_contract() -> None:
     )
     assert config.opportunity_types.types["internship"].allowed_seasons == ("spring",)
     assert config.role_families.include[0].name == "software_engineering"
+    assert len(config.role_families.include[0].patterns) > 1
+    assert config.role_families.include[0].exclude_patterns
+    assert any(
+        p.search("Senior Research Scientist")
+        for p in config.role_families.include[0].exclude_patterns
+    )
+    assert config.role_families.jd_fallback_min_hits == 2
     assert config.seniority.years_cap == 3
     assert config.flags.country_unknown == "country_unknown"
 
@@ -93,6 +100,11 @@ def test_loads_valid_config_as_frozen_typed_contract() -> None:
         ),
         (lambda p: p["seniority"].update(years_cap=-1), "seniority.years_cap"),
         (lambda p: p["role_families"].update(include=[]), "role_families.include"),
+        (lambda p: p["role_families"].update(jd_fallback_min_hits=0), "role_families.jd_fallback_min_hits"),
+        (
+            lambda p: p["role_families"]["include"][0].update(exclude_patterns=["["]),
+            "role_families.include[0].exclude_patterns[0]: invalid regex",
+        ),
     ],
 )
 def test_validation_rejects_invalid_policy(tmp_path: Path, mutate, message: str) -> None:

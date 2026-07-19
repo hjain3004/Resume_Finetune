@@ -114,11 +114,13 @@ class SeasonPolicy:
 class RoleFamily:
     name: str
     patterns: tuple[Pattern[str], ...]
+    exclude_patterns: tuple[Pattern[str], ...]
 
 
 @dataclass(frozen=True)
 class RoleFamilyPolicy:
     include: tuple[RoleFamily, ...]
+    jd_fallback_min_hits: int
 
 
 @dataclass(frozen=True)
@@ -368,7 +370,9 @@ def _parse_windows(payload: Any, path: str) -> tuple[DateWindow, ...]:
 
 
 def _parse_role_families(payload: Any) -> RoleFamilyPolicy:
-    include = payload.get("include") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        raise EligibilityConfigError("role_families")
+    include = payload.get("include")
     if not isinstance(include, list) or not include:
         raise EligibilityConfigError("role_families.include")
     families = []
@@ -379,9 +383,15 @@ def _parse_role_families(payload: Any) -> RoleFamilyPolicy:
             RoleFamily(
                 name=str(item["name"]),
                 patterns=_compile_patterns(item.get("patterns"), f"role_families.include[{idx}].patterns"),
+                exclude_patterns=_compile_patterns(
+                    item.get("exclude_patterns") or [], f"role_families.include[{idx}].exclude_patterns"
+                ),
             )
         )
-    return RoleFamilyPolicy(include=tuple(families))
+    min_hits = payload.get("jd_fallback_min_hits")
+    if not isinstance(min_hits, int) or isinstance(min_hits, bool) or min_hits < 1:
+        raise EligibilityConfigError("role_families.jd_fallback_min_hits")
+    return RoleFamilyPolicy(include=tuple(families), jd_fallback_min_hits=min_hits)
 
 
 def _parse_seniority(payload: Any) -> SeniorityPolicy:

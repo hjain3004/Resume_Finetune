@@ -40,10 +40,26 @@ seasons:
   summer: {months: [6, 7, 8]}
   fall: {months: [9, 10, 11, 12]}
 role_families:
+  jd_fallback_min_hits: 2
   include:
     - name: software_engineering
       patterns:
-        - "software|swe|backend|back.end|full.?stack|platform|infrastructure|distributed|developer"
+        - "software"
+        - "\\bswe\\b"
+        - "backend"
+        - "back.end"
+        - "full.?stack"
+        - "platform"
+        - "infrastructure"
+        - "distributed"
+        - "developer"
+      exclude_patterns:
+        - "technician"
+        - "\\bresearch scientist\\b"
+        - "\\banalyst\\b"
+        - "\\bauditor\\b"
+        - "\\b(game\\s+)?tester\\b"
+        - "casino"
 seniority:
   title_exclude_patterns:
     - "senior|staff|principal|lead|manager|director"
