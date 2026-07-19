@@ -719,6 +719,9 @@ def evaluate(
     if not type_policy.enabled:
         return _decision(EligibilityDisposition.FILTER, "eligibility:opportunity_type", flags, opportunity.matched_text)
 
+    if any(pattern.search(title) for family in config.role_families.include for pattern in family.exclude_patterns):
+        return _decision(EligibilityDisposition.FILTER, "eligibility:role_family_excluded", flags, ())
+
     start = _evaluate_start_window(opportunity.opportunity_type.value, combined_text, type_policy, stage, config)
     if start[0] == "filter":
         return _decision(EligibilityDisposition.FILTER, "eligibility:start_window", flags, start[2])
@@ -728,9 +731,19 @@ def evaluate(
         flags.add(config.flags.start_date_unknown)
         evidence.extend(start[2])
 
-    if not any(pattern.search(title) or (stage is EligibilityStage.POST_RESOLUTION and jd_text and pattern.search(jd_text))
-               for family in config.role_families.include for pattern in family.patterns):
-        return _decision(EligibilityDisposition.FILTER, "eligibility:role_family", flags, ())
+    title_match = any(pattern.search(title) for family in config.role_families.include for pattern in family.patterns)
+    if not title_match:
+        if stage is EligibilityStage.POST_RESOLUTION and jd_text:
+            distinct_hits = sum(
+                1
+                for family in config.role_families.include
+                for pattern in family.patterns
+                if pattern.search(jd_text)
+            )
+            if distinct_hits < config.role_families.jd_fallback_min_hits:
+                return _decision(EligibilityDisposition.FILTER, "eligibility:role_family", flags, ())
+        else:
+            return _decision(EligibilityDisposition.FILTER, "eligibility:role_family", flags, ())
 
     if any(pattern.search(title) for pattern in config.seniority.title_exclude_patterns):
         return _decision(EligibilityDisposition.FILTER, "eligibility:seniority", flags, ())

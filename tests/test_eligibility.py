@@ -29,7 +29,7 @@ def _decision(title: str, location: str | None, jd_text: str | None, *, stage=El
         ("Software Engineer", "Toronto, Canada", "Starts in 2027", "eligibility:country"),
         ("Software Engineer Co-op", "New York, NY", "Spring 2027", "eligibility:opportunity_type"),
         ("Software Engineer Intern", "New York, NY", "Summer 2027 internship", "eligibility:start_window"),
-        ("Marketing Analyst", "New York, NY", "Starts in 2027", "eligibility:role_family"),
+        ("Marketing Analyst", "New York, NY", "Starts in 2027", "eligibility:role_family_excluded"),
         ("Senior Software Engineer", "New York, NY", "Starts in 2027", "eligibility:seniority"),
         ("Software Engineer", "New York, NY", "Requires 7 years of backend experience. Starts in 2027.", "eligibility:seniority"),
         ("Software Engineer", "New York, NY", "Starts in 2027. We are unable to sponsor visas.", "eligibility:work_authorization"),
@@ -40,6 +40,68 @@ def test_post_resolution_filters_with_stable_reason_codes(title: str, location: 
 
     assert decision.disposition is EligibilityDisposition.FILTER
     assert decision.reason_code == reason
+
+
+def test_title_exclude_pattern_filters_even_with_saturated_jd_include_hits() -> None:
+    decision = _decision(
+        "Casino Game Tester",
+        "New York, NY",
+        "You will test our platform. Our backend developer team built the infrastructure. "
+        "This role is distributed across our full-stack software developer group.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:role_family_excluded"
+
+
+def test_title_include_pattern_still_passes_outright() -> None:
+    decision = _decision("Embedded Software Engineer", "New York, NY", "Starts in 2027.")
+
+    assert decision.disposition is EligibilityDisposition.PASS
+
+
+def test_single_incidental_jd_keyword_no_longer_passes() -> None:
+    decision = _decision(
+        "Power Electronics PCBA Technician",
+        "Santa Cruz, CA",
+        "Join our infrastructure buildout team. Starts in 2027.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:role_family_excluded"
+
+
+def test_jd_only_job_with_two_distinct_hits_passes() -> None:
+    decision = _decision(
+        "Full Stack Developer II",
+        "New York, NY",
+        "You will build backend services using our distributed platform. Starts in 2027.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.PASS
+
+
+def test_jd_only_job_with_one_distinct_hit_filters() -> None:
+    decision = _decision(
+        "Product Coordinator",
+        "New York, NY",
+        "You will coordinate with our platform team. Starts in 2027.",
+    )
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:role_family"
+
+
+def test_pre_resolution_exclude_applies_to_title_without_jd_text() -> None:
+    decision = _decision(
+        "SAP SD Analyst",
+        "New York, NY",
+        None,
+        stage=EligibilityStage.PRE_RESOLUTION,
+    )
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:role_family_excluded"
 
 
 def test_country_mismatch_short_circuits_later_dimensions(monkeypatch: pytest.MonkeyPatch) -> None:
