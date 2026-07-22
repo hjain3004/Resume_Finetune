@@ -81,3 +81,24 @@ def test_load_profile_rejects_missing_top_level_key(tmp_path: Path) -> None:
 
     with pytest.raises(ProfileValidationError, match="education"):
         load_profile(path)
+
+
+def test_load_profile_rejects_bullet_missing_evidence(tmp_path: Path) -> None:
+    yaml_text = VALID_PROFILE_YAML.replace(
+        '        evidence: "Profiled the endpoint, found N+1 queries, added Redis caching."\n',
+        "",
+    )
+    path = tmp_path / "master_profile.yaml"
+    path.write_text(yaml_text)
+
+    with pytest.raises(ProfileValidationError, match="acme-perf"):
+        load_profile(path)
+
+
+def test_load_profile_rejects_bullet_invalid_strength(tmp_path: Path) -> None:
+    yaml_text = VALID_PROFILE_YAML.replace("strength: flagship", "strength: legendary")
+    path = tmp_path / "master_profile.yaml"
+    path.write_text(yaml_text)
+
+    with pytest.raises(ProfileValidationError, match="acme-perf"):
+        load_profile(path)

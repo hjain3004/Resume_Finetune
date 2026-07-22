@@ -80,13 +80,27 @@ class MasterProfile:
 
 
 def _build_bullet(raw: dict[str, Any]) -> Bullet:
+    bullet_id = raw.get("id")
+    if not bullet_id:
+        raise ProfileValidationError("bullet missing required field: id")
+    if not raw.get("text"):
+        raise ProfileValidationError(f"bullet {bullet_id}: missing required field: text")
+    if not raw.get("evidence"):
+        raise ProfileValidationError(f"bullet {bullet_id}: missing required field: evidence")
+    try:
+        strength = Strength(raw.get("strength"))
+    except ValueError:
+        raise ProfileValidationError(
+            f"bullet {bullet_id}: strength must be one of "
+            f"{[s.value for s in Strength]}, got {raw.get('strength')!r}"
+        ) from None
     return Bullet(
-        id=raw["id"],
+        id=bullet_id,
         text=raw["text"],
         tags=tuple(raw.get("tags", ())),
         metrics=tuple(raw.get("metrics", ())),
         evidence=raw["evidence"],
-        strength=Strength(raw["strength"]),
+        strength=strength,
     )
 
 
