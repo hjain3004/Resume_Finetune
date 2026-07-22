@@ -564,6 +564,26 @@ def mark_closed(conn: sqlite3.Connection, job_id: int, note: str) -> None:
     conn.commit()
 
 
+def mark_dead_posting(conn: sqlite3.Connection, job_id: int, note: str) -> None:
+    """M6.13 dead-posting remediation: a resolved row's jd_text is a
+    closed/expired notice rather than real JD content. Terminal like
+    `mark_closed`, but detected from stored content rather than a liveness
+    recheck; clears the scoring fields so a stale title-only score can't
+    keep the row eligible for shortlisting."""
+    row = conn.execute("SELECT notes FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    notes = f"{row['notes']}; {note}" if row["notes"] else note
+    conn.execute(
+        """
+        UPDATE jobs
+        SET status = ?, notes = ?, fit_score = NULL, fit_rationale = NULL,
+            base_variant = NULL, missing_keywords = NULL
+        WHERE id = ?
+        """,
+        (Status.CLOSED, notes, job_id),
+    )
+    conn.commit()
+
+
 def touch_last_seen(conn: sqlite3.Connection, job_id: int) -> None:
     """M6.8 liveness recheck: the posting is still live — record that we just
     confirmed it, so the next recheck waits a fresh `liveness_days`."""

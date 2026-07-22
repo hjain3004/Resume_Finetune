@@ -66,3 +66,30 @@ def test_passes_quality_rejects_short_text():
 
 def test_passes_quality_rejects_long_text_without_jd_keyword():
     assert generic.passes_quality("lorem ipsum " * 100) is False
+
+
+def test_passes_quality_rejects_closed_posting_with_job_keywords():
+    text = (
+        "We're sorry! This job is no longer available. "
+        "Responsibilities and requirements for other openings: " + "x" * 400
+    )
+    assert generic.passes_quality(text) is False
+
+
+def test_passes_quality_rejects_position_filled_notice():
+    text = "Sorry, this position has been filled. " + "Experience required. " * 30
+    assert generic.passes_quality(text) is False
+
+
+def test_resolve_returns_none_on_closed_posting_page():
+    session = MagicMock()
+    session.get.return_value = MagicMock(
+        status_code=200,
+        text="<p>We're sorry! This job is no longer available. "
+        + "Requirements: experience with Python. " * 20
+        + "</p>",
+    )
+
+    result = generic.resolve("https://example.com/closed", session)
+
+    assert result is None
