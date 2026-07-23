@@ -131,6 +131,15 @@ def _build_variant(raw: dict[str, Any]) -> Variant:
     )
 
 
+def _check_unique_bullet_ids(experience: tuple[Experience, ...], projects: tuple[Project, ...]) -> None:
+    seen: set[str] = set()
+    for source in (*experience, *projects):
+        for bullet in source.bullets:
+            if bullet.id in seen:
+                raise ProfileValidationError(f"duplicate bullet id: {bullet.id}")
+            seen.add(bullet.id)
+
+
 def load_profile(path: str | Path) -> MasterProfile:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
 
@@ -138,14 +147,18 @@ def load_profile(path: str | Path) -> MasterProfile:
     if missing:
         raise ProfileValidationError(f"master_profile.yaml missing required key(s): {', '.join(missing)}")
 
+    experience = tuple(_build_experience(e) for e in raw["experience"])
+    projects = tuple(_build_project(p) for p in raw["projects"])
+    _check_unique_bullet_ids(experience, projects)
+
     skills = {section: tuple(values) for section, values in raw["skills"].items()}
     variants = {name: _build_variant(v) for name, v in raw["variants"].items()}
 
     return MasterProfile(
         identity=raw["identity"],
         education=tuple(raw["education"]),
-        experience=tuple(_build_experience(e) for e in raw["experience"]),
-        projects=tuple(_build_project(p) for p in raw["projects"]),
+        experience=experience,
+        projects=projects,
         skills=skills,
         variants=variants,
         do_not_claim=tuple(raw.get("do_not_claim", ())),

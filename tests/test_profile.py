@@ -102,3 +102,12 @@ def test_load_profile_rejects_bullet_invalid_strength(tmp_path: Path) -> None:
 
     with pytest.raises(ProfileValidationError, match="acme-perf"):
         load_profile(path)
+
+
+def test_load_profile_rejects_duplicate_bullet_id(tmp_path: Path) -> None:
+    yaml_text = VALID_PROFILE_YAML.replace("id: side-project-search", "id: acme-perf")
+    path = tmp_path / "master_profile.yaml"
+    path.write_text(yaml_text)
+
+    with pytest.raises(ProfileValidationError, match="acme-perf"):
+        load_profile(path)
