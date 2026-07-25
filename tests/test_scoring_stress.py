@@ -18,13 +18,34 @@ def test_load_cases_reads_ten_synthetic_jds():
         "partial_overlap_ml_stretch",
         "wrong_specialty",
         "hard_requirement_miss_years",
-        "sponsorship_risk_cap",
+        "no_sponsorship_scorer_blind",
         "keyword_stuffed",
         "stale_vague",
     }
     for case in cases:
         assert len(case["expected_band"]) == 2
         assert case["expected_band"][0] <= case["expected_band"][1]
+
+
+def test_every_band_is_provisional_until_a_clean_labelled_round_exists():
+    """M6.13R: the 2026-07-19 CALIBRATED flip cited 36 human fit labels across
+    three clean rounds. That evidence was retracted (only one clean round
+    survives), so no band may claim CALIBRATED until Phase 2 re-closes."""
+    cases = scoring_stress.load_cases(FIXTURES / "cases.json")
+
+    assert {case["band_status"] for case in cases} == {"PROVISIONAL"}
+
+
+def test_sponsorship_case_is_not_presented_as_a_scorer_safety_test():
+    """Rejecting an explicitly no-sponsorship posting is the deterministic
+    eligibility gate's job (tests/test_eligibility.py), never the scorer's.
+    This case must not read as a scorer-side sponsorship cap."""
+    cases = scoring_stress.load_cases(FIXTURES / "cases.json")
+    (case,) = [c for c in cases if "sponsor" in c["category"]]
+
+    assert case["category"] == "no_sponsorship_scorer_blind"
+    assert "NOT a sponsorship safety test" in case["note"]
+    assert "eligibility" in case["note"]
 
 
 def test_build_batch_reshapes_cases_into_schema_v2_objects():

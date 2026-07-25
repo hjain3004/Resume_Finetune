@@ -471,28 +471,54 @@ def test_run_sources_for_run_lists_all_sources_including_zero(conn):
 # --- M6.8 freshness & recycling defense --------------------------------------
 
 
+# M6.13R: these assertions are about the stale-listing *policy*, not about the
+# calendar. They pin `now` so the outcome cannot drift as real time passes —
+# test_insert_discovered_does_not_flag_recent_posting started failing once its
+# hardcoded 2026-07-01 date_posted aged past the 21-day threshold.
+FROZEN_NOW = "2026-07-22T00:00:00+00:00"
+STALE_DAYS = 21
+
+
 def test_insert_discovered_flags_stale_listing_when_date_posted_old(conn):
     old_job = _job(date_posted="2026-01-01")
-    db.insert_discovered(conn, [old_job], stale_days=21)
+    db.insert_discovered(conn, [old_job], stale_days=STALE_DAYS, now=FROZEN_NOW)
 
     row = conn.execute("SELECT * FROM jobs").fetchone()
     assert json.loads(row["flags"]) == ["stale_listing"]
 
 
 def test_insert_discovered_does_not_flag_recent_posting(conn):
-    recent_job = _job(date_posted="2026-07-01")
-    db.insert_discovered(conn, [recent_job], stale_days=21)
+    """20 days old against a 21-day threshold — inside the window."""
+    recent_job = _job(date_posted="2026-07-02")
+    db.insert_discovered(conn, [recent_job], stale_days=STALE_DAYS, now=FROZEN_NOW)
 
     row = conn.execute("SELECT * FROM jobs").fetchone()
     assert row["flags"] is None
+
+
+def test_insert_discovered_flags_posting_exactly_at_stale_threshold(conn):
+    """Exactly 21 days old: `_is_older_than` compares with >=, so this is stale."""
+    boundary_job = _job(date_posted="2026-07-01")
+    db.insert_discovered(conn, [boundary_job], stale_days=STALE_DAYS, now=FROZEN_NOW)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert json.loads(row["flags"]) == ["stale_listing"]
 
 
 def test_insert_discovered_does_not_flag_when_date_posted_missing(conn):
     job = _job(date_posted=None)
-    db.insert_discovered(conn, [job], stale_days=21)
+    db.insert_discovered(conn, [job], stale_days=STALE_DAYS, now=FROZEN_NOW)
 
     row = conn.execute("SELECT * FROM jobs").fetchone()
     assert row["flags"] is None
+
+
+def test_insert_discovered_defaults_now_to_wall_clock(conn):
+    """The injected clock is a test seam; production still reads the clock."""
+    db.insert_discovered(conn, [_job(date_posted="2020-01-01")], stale_days=STALE_DAYS)
+
+    row = conn.execute("SELECT * FROM jobs").fetchone()
+    assert json.loads(row["flags"]) == ["stale_listing"]
 
 
 def test_insert_discovered_stale_check_disabled_when_stale_days_none(conn):

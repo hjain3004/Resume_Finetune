@@ -179,6 +179,32 @@ def test_explicit_work_authorization_negative_filters(jd: str) -> None:
     assert decision.reason_code == "eligibility:work_authorization"
 
 
+def test_scoring_stress_case_8_is_rejected_here_not_by_the_scorer() -> None:
+    """M6.13R: this is the JD of scoring-stress case `no_sponsorship_scorer_blind`.
+
+    The scorer is sponsorship-blind by design and rates the JD's technical
+    content highly. Rejecting it is this gate's job, and it happens before the
+    scorer ever runs — so the assertion lives here rather than in a stress band.
+    """
+    jd = (
+        "New-grad backend engineer role building Java/Spring Boot microservices "
+        "with Kafka and Elasticsearch, REST APIs, CI/CD on Kubernetes. "
+        "Entry-level, 0-2 years experience. Note: we are unable to sponsor "
+        "employment visas for this role; candidates must have current US work "
+        "authorization. Location: San Jose, CA (onsite)."
+    )
+
+    decision = _decision(
+        "New Grad Software Engineer — Backend",
+        "San Jose, CA",
+        jd,
+        flags=("sponsorship_risk",),
+    )
+
+    assert decision.disposition is EligibilityDisposition.FILTER
+    assert decision.reason_code == "eligibility:work_authorization"
+
+
 @pytest.mark.parametrize(
     "jd",
     [

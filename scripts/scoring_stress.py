@@ -6,14 +6,26 @@ returned fit_score falls within its documented expected band. Run at
 calibration start and after ANY change to docs/scoring_prompt.md or
 config/profile_summary.md.
 
-CALIBRATED bands (2026-07-19, see DECISIONS.md): every `expected_band` in
-cases.json (marked `"band_status": "CALIBRATED"` on each case) is re-anchored
-against real Phase 2 calibration evidence (36 fresh fit-labeled jobs across 3
-rounds). Case 8 (sponsorship_risk_cap) additionally carries a `note` field:
-its band reflects scorer-only behavior, since sponsorship risk is handled
-deterministically by the eligibility gate (M6.11) before the scorer ever
-runs, not by the scorer itself. A FAIL here is now a real regression signal
-for the M8 gate, not informational.
+PROVISIONAL bands (M6.13R, 2026-07-25 — see DECISIONS.md). Every case carries
+`"band_status": "PROVISIONAL"`. The 2026-07-19 flip to CALIBRATED claimed the
+bands were anchored on 36 human fit labels across three non-contaminated
+rounds; that claim was retracted — five rows of round `2026-07-16-r1` and
+three of `2026-07-17-r1` were later filtered or hold dead-posting pages,
+leaving one complete clean round. Four bands (cases 5, 6, 8, 9) were in fact
+re-anchored around a single synthetic scorer run. A FAIL here is therefore
+informational, not a release gate, until the next clean human-labelled round
+re-derives the bands.
+
+Case 8 (`no_sponsorship_scorer_blind`) is NOT a sponsorship safety test.
+Sponsorship rejection belongs to the deterministic M6.11 eligibility gate,
+which filters that JD as `eligibility:work_authorization` before the scorer
+runs; the rejection is asserted in tests/test_eligibility.py. The case exists
+only to document that the scorer itself is sponsorship-blind by design.
+
+Scope: this runner checks the *aggregated* scorer output. `score_batch` runs
+self-consistency internally (k=3, median + majority vote) and returns one
+entry per batch id, so `check_adherence` sees one `fit_score` per case and
+never the individual raw responses.
 
 Usage: python -m scripts.scoring_stress [--out-dir DIR]
 """

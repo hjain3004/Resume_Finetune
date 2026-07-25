@@ -198,6 +198,7 @@ def insert_discovered(
     *,
     stale_days: int | None = None,
     reopen_days: int = 45,
+    now: str | None = None,
 ) -> dict[str, int]:
     """Insert new jobs, deduping by dedup_key. Returns the count of genuinely
     new rows per source (for per-source observability).
@@ -213,9 +214,13 @@ def insert_discovered(
       either never actually evaluated, or died and is genuinely back. Other
       terminal statuses (FILTERED_OUT/REJECTED/APPLIED/SCORED/SHORTLISTED/...)
       stay untouched; recycled-content detection (against those) happens
-      post-resolution in freshness.find_content_repost, not here."""
+      post-resolution in freshness.find_content_repost, not here.
+
+    `now` overrides the wall clock (UTC ISO-8601). It exists so tests can pin
+    the stale/reopen windows instead of depending on the calendar date; the
+    policy itself is unchanged."""
     new_count_by_source: dict[str, int] = defaultdict(int)
-    now = _utcnow_iso()
+    now = now or _utcnow_iso()
     for job in discovered:
         key = dedup_key(job.company, job.title, job.location)
         existing = conn.execute(
@@ -564,24 +569,81 @@ def mark_closed(conn: sqlite3.Connection, job_id: int, note: str) -> None:
     conn.commit()
 
 
-def mark_dead_posting(conn: sqlite3.Connection, job_id: int, note: str) -> None:
-    """M6.13 dead-posting remediation: a resolved row's jd_text is a
-    closed/expired notice rather than real JD content. Terminal like
-    `mark_closed`, but detected from stored content rather than a liveness
-    recheck; clears the scoring fields so a stale title-only score can't
-    keep the row eligible for shortlisting."""
-    row = conn.execute("SELECT notes FROM jobs WHERE id = ?", (job_id,)).fetchone()
-    notes = f"{row['notes']}; {note}" if row["notes"] else note
-    conn.execute(
-        """
-        UPDATE jobs
-        SET status = ?, notes = ?, fit_score = NULL, fit_rationale = NULL,
-            base_variant = NULL, missing_keywords = NULL
-        WHERE id = ?
-        """,
-        (Status.CLOSED, notes, job_id),
-    )
-    conn.commit()
+class StalePreviewError(RuntimeError):
+    """A previewed row no longer holds the status the preview recorded, so the
+    whole batch is rolled back rather than applied against drifted state."""
+
+
+# M6.13R content-based closure: the only statuses a dead-posting remediation may
+# transition. Everything else — FILTERED_OUT, REJECTED, APPLIED, CLOSED,
+# RESOLVE_FAILED — is terminal and must never be overwritten (M6.13 did exactly
+# that to 35 FILTERED_OUT rows). DISCOVERED is excluded too: a DISCOVERED row's
+# leftover jd_text is stale by definition and is not evidence of closure.
+CONTENT_CLOSURE_SOURCE_STATUSES: tuple[Status, ...] = (
+    Status.RESOLVED,
+    Status.SCORED,
+    Status.SHORTLISTED,
+    Status.TAILORED,
+)
+
+
+def apply_dead_posting_closures(
+    conn: sqlite3.Connection,
+    closures: tuple[object, ...],
+    *,
+    note: str,
+) -> int:
+    """M6.13R: move previewed dead-posting rows to CLOSED in one transaction.
+
+    `closures` are the preview rows from scripts.remediate_dead_postings; each
+    carries `job_id` and the `from_status` the preview observed. Every update is
+    compare-and-set on that expected status, so a preview taken against drifted
+    state fails the whole batch instead of overwriting the drift. Rows already
+    CLOSED and already carrying `note` are treated as satisfied, which makes a
+    repeat application a no-op. Returns the exact number of rows changed.
+    """
+    if not closures:
+        return 0
+    allowed = {str(s) for s in CONTENT_CLOSURE_SOURCE_STATUSES}
+    for closure in closures:
+        if str(closure.from_status) not in allowed:
+            raise ValueError(
+                f"job {closure.job_id}: content closure from protected status "
+                f"{closure.from_status}"
+            )
+
+    changed = 0
+    try:
+        conn.execute("BEGIN")
+        for closure in closures:
+            row = conn.execute(
+                "SELECT status, notes FROM jobs WHERE id = ?", (closure.job_id,)
+            ).fetchone()
+            if row is None:
+                raise StalePreviewError(f"job {closure.job_id}: row no longer exists")
+            if row["status"] == Status.CLOSED and note in (row["notes"] or ""):
+                continue
+            if row["status"] != closure.from_status:
+                raise StalePreviewError(
+                    f"job {closure.job_id}: expected {closure.from_status}, "
+                    f"found {row['status']}"
+                )
+            notes = f"{row['notes']}; {note}" if row["notes"] else note
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = ?, notes = ?, fit_score = NULL, fit_rationale = NULL,
+                    base_variant = NULL, missing_keywords = NULL, borderline = 0
+                WHERE id = ? AND status = ?
+                """,
+                (Status.CLOSED, notes, closure.job_id, closure.from_status),
+            )
+            changed += conn.execute("SELECT changes()").fetchone()[0]
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return changed
 
 
 def touch_last_seen(conn: sqlite3.Connection, job_id: int) -> None:
@@ -666,6 +728,51 @@ def apply_eligibility_transitions(conn: sqlite3.Connection, transitions: tuple[o
                 )
             else:
                 raise ValueError(f"unknown eligibility impact action: {action}")
+            changed += conn.execute("SELECT changes()").fetchone()[0]
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return changed
+
+
+def apply_terminal_state_restorations(
+    conn: sqlite3.Connection,
+    restorations: tuple[object, ...],
+) -> int:
+    """M6.13R: undo terminal states that M6.13 overwrote, in one transaction.
+
+    Each restoration carries `job_id`, the `expected_status`/`expected_notes`
+    the row must currently hold, and the `restored_status`/`restored_notes` to
+    write back. Both current values are compare-and-set predicates, so any
+    change made after the preview was taken fails the batch rather than being
+    clobbered. Only status and notes are written — `filter_reason` and the
+    scoring columns are left exactly as they are, because the overwrite never
+    touched them and inventing values would be fabrication. A row already
+    restored is a satisfied no-op, so re-applying is idempotent.
+    """
+    if not restorations:
+        return 0
+    changed = 0
+    try:
+        conn.execute("BEGIN")
+        for item in restorations:
+            row = conn.execute(
+                "SELECT status, notes FROM jobs WHERE id = ?", (item.job_id,)
+            ).fetchone()
+            if row is None:
+                raise StalePreviewError(f"job {item.job_id}: row no longer exists")
+            if row["status"] == item.restored_status and row["notes"] == item.restored_notes:
+                continue
+            if row["status"] != item.expected_status or row["notes"] != item.expected_notes:
+                raise StalePreviewError(
+                    f"job {item.job_id}: expected {item.expected_status} with the "
+                    f"M6.13 note, found {row['status']}"
+                )
+            conn.execute(
+                "UPDATE jobs SET status = ?, notes = ? WHERE id = ? AND status = ?",
+                (item.restored_status, item.restored_notes, item.job_id, item.expected_status),
+            )
             changed += conn.execute("SELECT changes()").fetchone()[0]
         conn.commit()
     except Exception:

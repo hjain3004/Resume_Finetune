@@ -1676,3 +1676,143 @@ Phase 2 status: **COMPLETE**. Phase 3 (Tailoring, M8) still requires its second 
 criterion, ≥5 `SHORTLISTED` rows with `jd_quality='ats'` — currently 3/22 `SHORTLISTED` rows
 meet that bar (`SHORTLISTED` count is up from 15 to 22 this session, but most of the growth is
 `aggregator`-quality). Not yet unlocked.
+
+## 2026-07-25 — M6.13R: Phase 2 exit-integrity repair (retraction + live DB repair)
+
+### 1. The 2026-07-19 Phase 2 closure is retracted
+
+The closure claimed "36 fresh fit-labeled jobs across 3 non-contaminated rounds." A
+read-only reconciliation of each round's `.batch.json` canonical ids against the live DB
+shows that was already false when it was written:
+
+| Round | Canonical groups | Still valid | Invalidated canonical ids |
+|---|---|---|---|
+| `2026-07-16-r1` | 12 | **5** | 26, 29, 31, 34, 35 (`eligibility:work_authorization`); 2, 18 (dead-posting pages) |
+| `2026-07-17-r1` | 12 | **9** | 44, 53 (`eligibility:role_family_excluded`); 83 (`eligibility:work_authorization`) |
+| `2026-07-19-r2` | 12 | **12** | — |
+| **Total** | 36 | **26** | |
+
+The M6.12 role-family tightening was checked against `2026-07-17-r2` (which was correctly
+regenerated as `2026-07-19-r2`) but was never checked against the two earlier rounds, and
+the M6.13 dead-posting finding was never fed back into the calibration evidence at all.
+
+The approved deviation waived **only** the "two consecutive zero-disagreement rounds"
+condition. It did not waive the eligibility, minimum-round-size (≥10 canonical jobs), or
+real-JD requirements. 26 labels across **one** complete clean round therefore does not
+clear the gate.
+
+- **Phase 2 → IN PROGRESS**, one clean round remaining. Phase 3 stays **LOCKED**.
+- `shortlist_threshold` stays **6.0**, provisionally: no currently valid `SKIP` label scored
+  above 5.0, so the margin under 6.0 is clean — but it must be confirmed by the next clean
+  round before the threshold is treated as locked.
+- Stress-suite bands: all 10 cases back to `PROVISIONAL`. The 2026-07-19 flip to CALIBRATED
+  re-anchored four bands (cases 5, 6, 8, 9) around a single synthetic scorer run, not human
+  fit labels. Band values are retained rather than reverted — the pre-2026-07-19 values are
+  no better evidenced — but no band may claim CALIBRATED until Phase 2 re-closes.
+- Stress case 8 renamed `sponsorship_risk_cap` → `no_sponsorship_scorer_blind`. Its
+  `[8, 10]` band had been fitted around an observed 9.5, which presented a scorer-only high
+  score on an explicitly ineligible posting as if it were a sponsorship safety result.
+  Sponsorship rejection is owned by the deterministic M6.11 eligibility gate; that assertion
+  now lives in `tests/test_eligibility.py`
+  (`test_scoring_stress_case_8_is_rejected_here_not_by_the_scorer`). The band is inherited
+  from case 1 by design intent (same technical JD plus one sponsorship sentence).
+
+### 2. Dead-posting detector corrected
+
+M6.13 matched unbounded fragments (`has been filled`, `no longer exists`, `no longer open`)
+anywhere on a page. Job 1246 (D2L) was classified dead by the careers-FAQ sentence "When an
+opportunity has been filled, we will remove the job posting from the website."
+
+`resolve.generic.dead_posting_evidence()` now requires an explicit subject naming *this*
+posting bound to a dead predicate in the same sentence, and discards conditional clauses
+("Once this position has been filled, we will notify applicants"). `is_dead_posting_text()`
+is a thin wrapper, so `passes_quality()` — and therefore both the generic and browser tiers
+— share one decision, unchanged.
+
+Measured against the 956 rows with `jd_text` in the pre-remediation backup:
+
+- 67 of M6.13's 68 matches retained; the sole drop is job 1246 (the known false positive).
+- 3 genuine dead pages M6.13 **missed** are now caught: 847 (Lockheed Martin — "The job
+  posting you are looking for has expired"), 995 (Databricks 404), 1372 (Uber 404 shell,
+  1,034 chars of cookie banner).
+
+### 3. Content-based closure is now state-safe and atomic
+
+`db.mark_dead_posting()` (per-row, auto-committing, unguarded) is replaced by
+`db.apply_dead_posting_closures()`: one transaction, compare-and-set on each previewed
+row's expected status, rollback on any mismatch (`db.StalePreviewError`), no per-row
+commits, idempotent on re-application, scoring fields cleared only for rows that actually
+transition, exact changed count returned.
+
+Allowed source states (`db.CONTENT_CLOSURE_SOURCE_STATUSES`): `RESOLVED`, `SCORED`,
+`SHORTLISTED`, `TAILORED`. Never `FILTERED_OUT`, `REJECTED`, `APPLIED`, `CLOSED`,
+`RESOLVE_FAILED`. `DISCOVERED` is excluded — leftover `jd_text` on a `DISCOVERED` row is
+stale by definition and is not evidence of closure.
+
+### 4. Live DB repair — APPROVED AND APPLIED
+
+M6.13 overwrote 35 rows that were already `FILTERED_OUT` with `CLOSED`, destroying terminal
+eligibility decisions. `scripts/repair_m6_13_overwrites.py` diffs the live DB against the
+pre-remediation backup and proposes a row only when the backup row is `FILTERED_OUT`, the
+live row is `CLOSED`, and stripping the appended M6.13 note reproduces the backup notes
+exactly. It writes `status` and `notes` only — `filter_reason` and the scoring columns are
+never touched, because M6.13 never changed them and inventing values would be fabrication.
+
+Evidence:
+
+- Source backup (read-only, unmodified):
+  `data/backups/jobs_pre_dead_posting_remediation_2026-07-22.db`
+- Preview artifact: `data/dead-posting-remediation/20260725T060835Z-repair-preview.json`
+  — 35 rows, all `CLOSED → FILTERED_OUT`. By `filter_reason`: `title_include` 18,
+  `location` 11, `eligibility:start_window` 3, `eligibility:country` 1,
+  `eligibility:role_family` 1, `eligibility:work_authorization` 1.
+- Pre-apply backup: `data/backups/jobs-pre-m6.13r-repair-20260725T060835Z.db`
+- `PRAGMA integrity_check` before apply: current `ok`, source backup `ok`.
+- Applied: **`{"changed": 35, "previewed": 35}`** (single transaction).
+- `PRAGMA integrity_check` after apply: current `ok`, new backup `ok`, source backup `ok`.
+- Idempotency probe (immediate re-run): `{"changed": 0, "previewed": 0}`.
+- Verified for all 35: `status == FILTERED_OUT`, `filter_reason == backup`,
+  `notes == backup`, `fit_score == backup` (all `NULL`). Rows still holding the legacy
+  M6.13 note that are `FILTERED_OUT`: **0**.
+- `FILTERED_OUT` restored 634 → **669**, matching the backup exactly.
+
+### 5. Corrected forward remediation re-run
+
+With the corrected matcher, `scripts/remediate_dead_postings.py` proposed **2** transitions,
+both from `RESOLVED` — preview
+`data/dead-posting-remediation/20260725T060835Z-corrected-preview.json`. Both were
+inspected individually and neither is ambiguous:
+
+- job 847 (Lockheed Martin, AI Platform Engineer) — "The job posting you are looking for has
+  expired or the position has already been filled."
+- job 1372 (Uber, Software Engineer I, Masters) — "Not found. The page you are looking for
+  does not exist." (1,034-char 404 shell).
+
+Applied with backup `data/backups/jobs-pre-m6.13r-forward-20260725T061000Z.db`:
+`{"changed": 2, "previewed": 2}`; idempotency probe `{"changed": 0, "previewed": 0}`;
+`PRAGMA integrity_check` `ok`.
+
+Final live status counts: `CLOSED` 35, `DISCOVERED` 262, `FILTERED_OUT` 669, `RESOLVED` 288,
+`RESOLVE_FAILED` 74, `SCORED` 27, `SHORTLISTED` 31 (1,386 rows).
+
+### 6. ATS gate unaffected
+
+`SHORTLISTED` rows with `jd_quality='ats'`: **12**, before and after both mutations. The
+Phase 3 ≥5 ATS-quality gate is met; the Phase 2 evidence gate is the only one outstanding.
+The M8 profile-loader design spec's claim that "Phase 3 unlocked 2026-07-22" was wrong
+(it checked only the ATS half) and is corrected in place.
+
+### 7. Time-dependent test fixed
+
+`tests/test_db.py::test_insert_discovered_does_not_flag_recent_posting` failed once its
+hardcoded `date_posted="2026-07-01"` aged past the 21-day `stale_days` window.
+`db.insert_discovered()` gains an optional keyword-only `now` seam (defaults to the wall
+clock; production behavior and the stale-listing policy are unchanged), and the stale tests
+now pin `now="2026-07-22T00:00:00+00:00"` with boundary coverage at exactly 21 days (stale),
+20 days (not stale), missing `date_posted`, and a default-clock case.
+
+### 8. Also recorded
+
+`eligibility:role_family_excluded` added to the stable filter-reason list in
+`docs/ARCHITECTURE.md` — it was in use since M6.12 but undocumented, and it accounts for 2
+of the invalidated `2026-07-17-r1` calibration rows above.

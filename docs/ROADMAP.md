@@ -16,13 +16,38 @@ after run-to-run variance was measured. Specs: ARCHITECTURE.md, IMPLEMENTATION_P
 (M0–M5, historical), PHASE2_KICKOFF.md (M6.x), SELF_HEALING.md (M7).
 
 ## Phase 2 — Scoring Calibration
-**Status: COMPLETE (2026-07-19).** Closed on accumulated evidence (36 fresh fit-labeled jobs
-across 3 non-contaminated rounds, zero false positives in any round) rather than the "two
-consecutive clean rounds" gate below, which the false-negative pattern showed was unlikely to
-ever clear by chance — see `docs/DECISIONS.md` (2026-07-19 entry) for the full evidence table,
-the approved deviation, the `shortlist_threshold` change (7.0 → 6.0), and the stress-suite
-band re-anchoring (PROVISIONAL → CALIBRATED). NOTE: earlier claims of completion before this
-date were wrong; no scored output existed before 2026-07-14 (see DECISIONS.md).
+**Status: IN PROGRESS — exit-integrity repair / one clean round remaining (2026-07-25).**
+
+The 2026-07-19 closure is **retracted**. It claimed 36 fresh fit-labeled jobs across three
+non-contaminated rounds; a read-only reconciliation against the live DB (M6.13R) shows that
+was not true at the time and is not true now:
+
+| Round | Canonical groups | Still valid | Why the rest are invalid |
+|---|---|---|---|
+| `2026-07-16-r1` | 12 | **5** | 5 later filtered `eligibility:work_authorization`; 2 hold dead-posting pages (jobs 2, 18) |
+| `2026-07-17-r1` | 12 | **9** | 2 filtered `eligibility:role_family_excluded`, 1 `eligibility:work_authorization` |
+| `2026-07-19-r2` | 12 | **12** | — |
+| **Total** | 36 | **26** | one complete ≥10-job clean round exists, not three |
+
+The approved deviation on 2026-07-19 waived only the "two consecutive zero-disagreement
+rounds" condition. It did not waive the eligibility, minimum-round-size, or real-JD
+requirements, so 26 usable labels across one clean round does not clear the gate.
+
+`shortlist_threshold` stays at 6.0 and remains **provisionally supported**: no currently
+valid `SKIP` label scored above 5.0, which leaves a clean margin under 6.0. That margin must
+be confirmed by the next clean round before the threshold is treated as locked.
+
+Stress-suite bands are back to `PROVISIONAL` (all 10 cases). The 2026-07-19 flip to
+CALIBRATED re-anchored four bands around a single synthetic scorer run, not human fit
+evidence. See `docs/DECISIONS.md` (2026-07-25 entry) for the full retraction and the live
+DB repair evidence.
+
+**Remaining Phase 2 gate: one more complete clean round.** The ≥5 ATS-quality shortlist gate
+for Phase 3 is already met and stays met — 12 `SHORTLISTED` rows carry `jd_quality='ats'`
+after the M6.13R repair — so the evidence gate is the only thing left.
+
+NOTE: earlier claims of completion before 2026-07-19 were also wrong; no scored output
+existed before 2026-07-14 (see DECISIONS.md).
 Protocol: docs/PHASE2_KICKOFF.md "Phase 2 — Calibration protocol v2" + amendments
 (threshold asymmetry, segment tagging, exemplar injection gate). Exit criteria: at least
 20 fresh eligibility-passed canonical jobs with complete JD-informed `fit_call` labels;
@@ -67,13 +92,26 @@ false-negative titles the narrower list missed. See `docs/DECISIONS.md` (2026-07
 for the approved deviation from the documented 20%-of-scored-volume revisit trigger and full
 live impact numbers. Calibration round `2026-07-17-r2` was contaminated by this change (3 of
 its 12 jobs were reclassified `FILTERED_OUT`) and was regenerated as `2026-07-19-r2` (12 fresh
-jobs, zero overlap with any prior round); that round completed calibration and is the third
-round counted in Phase 2's closure above.
+jobs, zero overlap with any prior round). CORRECTION (2026-07-25): the same eligibility
+tightening also invalidated rows in the *earlier* rounds, which was not checked at the time —
+`2026-07-17-r1` lost 3 groups and `2026-07-16-r1` lost 5 to eligibility plus 2 to
+dead-posting pages. `2026-07-19-r2` remains the only complete clean round.
+
+**M6.13 — Dead-posting content gate: SUPERSEDED (2026-07-22), replaced by M6.13R
+(2026-07-25).** M6.13 correctly identified that dead ATS shells were passing `passes_quality()`
+and being scored, but its detector matched unbounded fragments and its remediation overwrote
+terminal states. M6.13R narrowed the detector to explicit subject+predicate notices, made the
+remediation transactional and state-safe, and repaired the 35 overwritten `FILTERED_OUT` rows.
+Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
 ## Phase 3 — Tailoring (M8)
 **Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —
 verified 2026-07-14: no master-profile loader in repo).**
 Unlocks when: Phase 2 exit criteria met AND ≥ 5 SHORTLISTED rows with jd_quality='ats'.
+Gate status (2026-07-25): the ATS-quality half is **met** — 12 `SHORTLISTED` rows carry
+`jd_quality='ats'`, verified after the M6.13R repair. The Phase 2 evidence half is **not**
+met (see above), so Phase 3 stays LOCKED. A note in the M8 profile-loader design spec
+claiming Phase 3 unlocked on 2026-07-22 was wrong and has been corrected in place.
 Spec: docs/TAILORING_METHODOLOGY.md (workflow S1 → S0 → S2 → S3 → G1 → G2 → G3). First
 sessions after unlock: M8 item 1 (profile loader), then the interactive master-profile
 construction session with the user (§2 protocol) before any live tailoring.

@@ -1,16 +1,26 @@
 # M8 item 1 — Master Profile Loader (design)
 
 Status: proposed
-Phase: 3 (M8 Tailoring), item 1 of the unlocked milestone family
+Phase: 3 (M8 Tailoring), item 1 — **Phase 3 is LOCKED; this spec is not cleared to build**
 Depends on: `docs/TAILORING_SPEC.md` §1 (schema), `docs/TAILORING_METHODOLOGY.md` §2 (evidence/strength/do_not_claim additions)
 
 ## Context
 
-Phase 3 unlocked 2026-07-22 (12 SHORTLISTED rows now carry `jd_quality='ats'`, past the
-≥5 gate). Per `docs/ROADMAP.md`, the first Phase 3 session builds the master-profile
-*loader* only; the interactive session where the user actually decomposes their 5-6 resume
-variants into `profile/master_profile.yaml` happens after this exists. No such YAML file
-exists yet — `profile/` currently holds only PDF resume variants.
+**CORRECTION (2026-07-25, M6.13R): Phase 3 was never unlocked, and this section was wrong.**
+Unlocking requires *both* halves of the gate in `docs/ROADMAP.md`. Only the ATS half was
+checked. The Phase 2 exit criteria were not met: the 2026-07-19 closure has since been
+retracted (of 36 claimed fit labels, 26 remain valid across one clean round, not three).
+The ATS half is genuinely met — 12 `SHORTLISTED` rows carry `jd_quality='ats'`, still true
+after the M6.13R DB repair — but Phase 3 stays LOCKED until one more clean calibration round
+completes. This spec remains a design document only; nothing in it is cleared to build.
+
+The original (incorrect) text follows for the record:
+
+> Phase 3 unlocked 2026-07-22 (12 SHORTLISTED rows now carry `jd_quality='ats'`, past the
+> ≥5 gate). Per `docs/ROADMAP.md`, the first Phase 3 session builds the master-profile
+> *loader* only; the interactive session where the user actually decomposes their 5-6 resume
+> variants into `profile/master_profile.yaml` happens after this exists. No such YAML file
+> exists yet — `profile/` currently holds only PDF resume variants.
 
 This session's scope is therefore: a loader module that can parse and validate a
 `master_profile.yaml` conforming to the spec, plus tests against small hand-written

@@ -237,8 +237,31 @@ Rules:
   Fewer than 3: stay `DISCOVERED`, retry next run.
 - A job the user manually pastes into `inbox/` for a row in `RESOLVE_FAILED` moves it to
   `RESOLVED` (match by URL).
-- `CLOSED` (M6.8) is set only by the digest-time liveness recheck (§7.5) finding a 404/410 on
-  a `SHORTLISTED`/`TAILORED` row's `ats_url`/`url`. Terminal.
+- `CLOSED` is set by exactly two paths, both terminal:
+  1. **Liveness recheck (M6.8).** The digest-time recheck (§7.5) finds a 404/410 on a
+     `SHORTLISTED`/`TAILORED` row's `ats_url`/`url` (`db.mark_closed()`).
+  2. **Content-based closure (M6.13R).** The stored `jd_text` is a dead-page notice rather
+     than JD content — the resolver fetched the ATS's "this job is no longer available"
+     shell, which is long enough and job-adjacent enough to pass the length/keyword gate.
+     Detected by `resolve.generic.dead_posting_evidence()`, which requires an explicit
+     subject naming *this* posting bound to a dead predicate in the same sentence; bare
+     fragments such as "has been filled" are not evidence, so careers-page FAQ wording
+     ("when an opportunity has been filled, we will remove the job posting") does not
+     qualify. The same function backs `passes_quality()`, so freshly fetched text and
+     already-stored `jd_text` are judged identically on both the generic and browser tiers.
+
+  Content-based closure is applied only by `scripts/remediate_dead_postings.py` through
+  `db.apply_dead_posting_closures()`, and **only from these source states**
+  (`db.CONTENT_CLOSURE_SOURCE_STATUSES`): `RESOLVED`, `SCORED`, `SHORTLISTED`, `TAILORED`.
+  `FILTERED_OUT`, `REJECTED`, `APPLIED`, `CLOSED`, and `RESOLVE_FAILED` are never
+  overwritten — the M6.13 version of this path did overwrite 35 `FILTERED_OUT` rows, which
+  destroyed their eligibility decisions and had to be repaired (see DECISIONS.md
+  2026-07-25). `DISCOVERED` is excluded too: a `DISCOVERED` row's leftover `jd_text` is
+  stale by definition and is not evidence that the posting is dead. The apply runs in one
+  transaction with compare-and-set predicates on each previewed row's expected status, so a
+  stale preview rolls the whole batch back rather than writing against drifted state, and
+  re-applying an already-applied preview is a no-op. Scoring fields are cleared only for
+  rows that actually transition.
 
 ### 4.3 Dedup key
 
@@ -628,7 +651,11 @@ The pure evaluator in `src/eligibility.py` performs no SQLite, network, browser,
 `src/prefilter.py` is now only a gate adapter: it calls the pure evaluator and DB helpers in
 `src/db.py`. Stable filter reasons are `eligibility:country`,
 `eligibility:work_authorization`, `eligibility:opportunity_type`,
-`eligibility:start_window`, `eligibility:role_family`, and `eligibility:seniority`.
+`eligibility:start_window`, `eligibility:role_family`,
+`eligibility:role_family_excluded`, and `eligibility:seniority`.
+`eligibility:role_family_excluded` (M6.12) is the title-only hard-exclude arm of the
+role-family gate — a wrong-specialty title is rejected outright rather than falling through
+to the JD-text include match that `eligibility:role_family` records.
 
 There are two deterministic gates:
 

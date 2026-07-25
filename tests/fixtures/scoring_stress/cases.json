@@ -14,7 +14,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "We're hiring new-grad software engineers for our backend platform team. You'll build REST APIs in Java and Spring Boot, work with Kafka-based event pipelines and Elasticsearch for our order-processing microservices, and ship code through CI/CD on Kubernetes. Requirements: BS/MS in CS or related field, internship or up to 2 years of professional backend experience, familiarity with Java, Spring Boot, and distributed systems. This is a full-time new-grad role based in San Jose, CA (hybrid).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 2,
@@ -31,7 +31,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "Arcline AI is looking for a new-grad backend engineer to join our agent platform team. You'll design and build Python/FastAPI services that integrate GPT-4o and other LLMs into structured agentic workflows: reasoning, tool-calling, and follow-up-action pipelines over large internal datasets. Ideal candidates have hands-on experience building LLM-powered applications (prompt engineering, structured-output parsing, agentic workflows) alongside solid backend fundamentals. Entry-level / new-grad, 0-2 years experience. Remote-US.",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 3,
@@ -48,7 +48,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "Join our backend services team building internal platform APIs. Primary language is Java; services communicate over gRPC and Protobuf rather than REST, so prior gRPC experience is a plus. You'll also touch Kafka for event streaming. Entry-level position, 0-2 years of experience, degree in CS or related field required. Location: Austin, TX (onsite).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 4,
@@ -65,7 +65,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "We're looking for an associate software engineer to join our e-commerce platform team, building backend services in C# and .NET on Azure. You'll work on order and inventory APIs, SQL Server data models, and Azure Functions. Entry-level role, 0-1 years experience, CS degree required. Location: Chicago, IL (hybrid).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 5,
@@ -74,6 +74,7 @@
       6,
       8
     ],
+    "note": "M6.13R: widened from [5, 6] on 2026-07-19 against a single synthetic scorer run, not human fit labels. The value is retained rather than reverted (the pre-2026-07-19 band is no better evidenced), but band_status is PROVISIONAL until the next clean human-labelled round re-derives it.",
     "company": "Northstar Analytics",
     "title": "New Grad Data Engineer",
     "locations": [
@@ -82,7 +83,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "New Grad Data Engineer role building data pipelines in PySpark for our analytics platform, plus some light Python backend service work (Flask) to expose pipeline outputs via internal APIs. You'll also help maintain model-scoring batch jobs written by our ML team. Entry-level, 0-2 years experience. Location: Remote-US.",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 6,
@@ -91,6 +92,7 @@
       1,
       3.5
     ],
+    "note": "M6.13R: widened from [3, 4] on 2026-07-19 against a single synthetic scorer run, not human fit labels. The value is retained rather than reverted (the pre-2026-07-19 band is no better evidenced), but band_status is PROVISIONAL until the next clean human-labelled round re-derives it.",
     "company": "Palette Studio",
     "title": "New Grad Frontend Engineer",
     "locations": [
@@ -99,7 +101,7 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "We're hiring a new-grad frontend engineer to build accessible, responsive UI components in React and TypeScript. You'll own component design, CSS architecture, cross-browser testing, and Storybook documentation. No backend work involved; this role is 100% client-side. Entry-level, 0-2 years experience. Location: San Francisco, CA (onsite).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 7,
@@ -116,16 +118,16 @@
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "We're hiring a backend software engineer to build Java/Spring Boot microservices on our trading platform, using Kafka for event streaming and PostgreSQL for persistence. This is a mid-level role: candidates must have a minimum of 5 years of professional backend engineering experience. Location: New York, NY (onsite).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 8,
-    "category": "sponsorship_risk_cap",
+    "category": "no_sponsorship_scorer_blind",
     "expected_band": [
-      8,
+      8.5,
       10
     ],
-    "note": "Re-anchored 2026-07-19: this JD's 'unable to sponsor employment visas' phrasing matches config/eligibility.yaml's explicit_no_sponsorship pattern exactly, so in production this posting is deterministically FILTERED_OUT by the M6.11 eligibility gate before the scorer ever runs -- the scorer is never the safety net for this scenario. The scorer alone scores the JD's technical content on its merits (9.5), with no independent sponsorship-awareness, which is expected and not a production risk given the upstream gate. Original PROVISIONAL band [0, 6] assumed the scorer itself should cap this; that assumption is now known incorrect and superseded by the eligibility gate's actual behavior.",
+    "note": "NOT a sponsorship safety test. Sponsorship rejection is owned by the deterministic M6.11 eligibility gate, which FILTERS_OUT this JD as eligibility:work_authorization before the scorer ever runs; that rejection is asserted in tests/test_eligibility.py, not here. This case only documents that the scorer itself is sponsorship-blind by design, so its band is inherited from case 1 (perfect_backend_match) -- the JD is case 1's technical content plus one sponsorship sentence. The band is derived from that design intent, not fitted to any observed score. M6.13R: the 2026-07-19 re-anchor to [8, 10] was fitted around a single synthetic scorer run and was wrongly labelled CALIBRATED; band_status returns to PROVISIONAL until the next clean human-labelled round.",
     "company": "Anchorpoint Systems",
     "title": "New Grad Software Engineer \u2014 Backend",
     "locations": [
@@ -136,7 +138,7 @@
     ],
     "jd_quality": "ats",
     "jd_text": "New-grad backend engineer role building Java/Spring Boot microservices with Kafka and Elasticsearch, REST APIs, CI/CD on Kubernetes. Entry-level, 0-2 years experience. Note: we are unable to sponsor employment visas for this role; candidates must have current US work authorization. Location: San Jose, CA (onsite).",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 9,
@@ -145,13 +147,14 @@
       0.5,
       3
     ],
+    "note": "M6.13R: widened from [3, 5] on 2026-07-19 against a single synthetic scorer run, not human fit labels. The value is retained rather than reverted (the pre-2026-07-19 band is no better evidenced), but band_status is PROVISIONAL until the next clean human-labelled round re-derives it.",
     "company": "Quantum Nexus Labs",
     "title": "Rockstar Ninja Software Engineer \u2014 Full Stack Blockchain AI",
     "locations": [],
     "flags": [],
     "jd_quality": "ats",
     "jd_text": "Seeking a 10x rockstar ninja full-stack blockchain AI quantum-ready ecosystem architect! Buzzword-forward team building next-gen Web3 metaverse synergy at scale. Must be a self-starter with disruptive innovation DNA, passionate about paradigm-shifting hyperscale growth hacking. Tech stack: everything, cutting-edge, bleeding-edge, state-of-the-art. Competitive salary, unlimited PTO, ping pong table. Apply now to join our rocketship!",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   },
   {
     "id": 10,
@@ -168,6 +171,6 @@
     ],
     "jd_quality": "ats",
     "jd_text": "Software Engineer needed. Good communication skills required. Apply if interested.",
-    "band_status": "CALIBRATED"
+    "band_status": "PROVISIONAL"
   }
 ]
