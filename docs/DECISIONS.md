@@ -1816,3 +1816,46 @@ now pin `now="2026-07-22T00:00:00+00:00"` with boundary coverage at exactly 21 d
 `eligibility:role_family_excluded` added to the stable filter-reason list in
 `docs/ARCHITECTURE.md` — it was in use since M6.12 but undocumented, and it accounts for 2
 of the invalidated `2026-07-17-r1` calibration rows above.
+
+## 2026-07-25 — Phase 2 closed by explicit user-approved deviation; Phase 3 unlocked
+
+After the M6.13R retraction, the user explicitly approved closing Phase 2 without another
+post-tuning held-out calibration round. This supersedes the "one clean round remaining"
+gate recorded earlier on 2026-07-25, but only for Phase 2 closure. It does not weaken Phase
+3's human-review boundary.
+
+Approved closure facts:
+
+- No post-tuning held-out round will be run before Phase 3.
+- `2026-07-25-r1` had 12 complete fit labels: 9 APPLY, 2 MAYBE, 1 SKIP.
+- After the protected quant-targeting addition to `config/profile_summary.md`, the report
+  produced 9/12 agreement, 3 false negatives, and 0 false positives at threshold 6.0.
+- This was tuning-confirmation evidence, not a held-out validation round.
+- The user knowingly waived the additional held-out round because further calibration cost
+  now exceeds its expected value.
+- Three remaining false negatives are accepted.
+- Zero false positives were observed in the usable human-reviewed calibration evidence.
+- `shortlist_threshold = 6.0` is accepted and locked for the start of Phase 3.
+- Stress-suite bands remain `PROVISIONAL`; they are retained as regression/stress
+  indicators, not calibrated evidence.
+- The current `2026-07-25-r1.scored.json` must not be imported merely to close calibration;
+  no database mutation is authorized for this closure.
+- The 6,000-character scoring truncation / navigation-boilerplate problem is deferred
+  technical debt. It remains a known cause of scorer misses and should be addressed in a
+  later scoring-input hardening milestone, not silently treated as solved.
+- Jobs 229 and 279 are prohibited live-tailoring inputs until the deterministic eligibility
+  policy is corrected in a separate maintenance milestone. The user missed literal
+  eligibility statements during JD review: job 229 has an ITAR U.S.-person requirement;
+  job 279 requires work authorization without employer sponsorship. This M8 session does
+  not change eligibility policy.
+- Phase 3 remains fully human-reviewed and must never auto-submit applications.
+
+Read-only gate check on `data/jobs.db` at closure time:
+
+- `SHORTLISTED` rows with `jd_quality='ats'`: **16**.
+- Quantcast contributes one ATS shortlisted row: job 279, `Machine Learning Engineer`.
+- If Quantcast is removed, the ATS-quality shortlist count remains **15**, comfortably above
+  the Phase 3 gate of ≥5.
+
+Action taken: `docs/ROADMAP.md` now marks Phase 2 `COMPLETE by explicit user-approved
+deviation` and Phase 3 `UNLOCKED; not yet implemented`.

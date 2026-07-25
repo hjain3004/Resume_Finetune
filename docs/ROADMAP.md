@@ -16,45 +16,38 @@ after run-to-run variance was measured. Specs: ARCHITECTURE.md, IMPLEMENTATION_P
 (M0–M5, historical), PHASE2_KICKOFF.md (M6.x), SELF_HEALING.md (M7).
 
 ## Phase 2 — Scoring Calibration
-**Status: IN PROGRESS — exit-integrity repair / one clean round remaining (2026-07-25).**
+**Status: COMPLETE — user-approved deviation (2026-07-25).**
 
-The 2026-07-19 closure is **retracted**. It claimed 36 fresh fit-labeled jobs across three
-non-contaminated rounds; a read-only reconciliation against the live DB (M6.13R) shows that
-was not true at the time and is not true now:
+Phase 2 is closed without a post-tuning held-out round. This is an explicit deviation from
+the stricter calibration protocol in `docs/PHASE2_KICKOFF.md`, approved by the user on
+2026-07-25 and recorded in `docs/DECISIONS.md`.
 
-| Round | Canonical groups | Still valid | Why the rest are invalid |
-|---|---|---|---|
-| `2026-07-16-r1` | 12 | **5** | 5 later filtered `eligibility:work_authorization`; 2 hold dead-posting pages (jobs 2, 18) |
-| `2026-07-17-r1` | 12 | **9** | 2 filtered `eligibility:role_family_excluded`, 1 `eligibility:work_authorization` |
-| `2026-07-19-r2` | 12 | **12** | — |
-| **Total** | 36 | **26** | one complete ≥10-job clean round exists, not three |
+Accepted closure facts:
 
-The approved deviation on 2026-07-19 waived only the "two consecutive zero-disagreement
-rounds" condition. It did not waive the eligibility, minimum-round-size, or real-JD
-requirements, so 26 usable labels across one clean round does not clear the gate.
+- No post-tuning held-out round will be run before Phase 3.
+- `2026-07-25-r1` had 12 complete fit labels: 9 APPLY, 2 MAYBE, 1 SKIP.
+- After the protected quant-targeting addition to `config/profile_summary.md`, the report
+  produced 9/12 agreement, 3 false negatives, and 0 false positives at threshold 6.0.
+- This was tuning-confirmation evidence, not a held-out validation round.
+- The user knowingly waived the additional held-out round because further calibration cost
+  now exceeds its expected value.
+- Three known false negatives remain accepted calibration debt.
+- Zero false positives were observed in the usable human-reviewed calibration evidence.
+- `shortlist_threshold = 6.0` is accepted and locked for the start of Phase 3.
+- Stress-suite bands remain `PROVISIONAL`; they are not treated as calibrated evidence.
+- The current `2026-07-25-r1.scored.json` must not be imported merely to close calibration;
+  no database mutation is part of this closure.
+- The 6,000-character scoring truncation / navigation-boilerplate failure mode is deferred
+  technical debt, not a Phase 3 blocker.
+- Jobs 229 and 279 are prohibited live-tailoring inputs until deterministic eligibility is
+  corrected in a separate maintenance milestone: job 229 contains an ITAR U.S.-person
+  requirement, and job 279 contains work authorization without employer sponsorship.
+- Phase 3 remains fully human-reviewed and must never auto-submit applications.
 
-`shortlist_threshold` stays at 6.0 and remains **provisionally supported**: no currently
-valid `SKIP` label scored above 5.0, which leaves a clean margin under 6.0. That margin must
-be confirmed by the next clean round before the threshold is treated as locked.
-
-Stress-suite bands are back to `PROVISIONAL` (all 10 cases). The 2026-07-19 flip to
-CALIBRATED re-anchored four bands around a single synthetic scorer run, not human fit
-evidence. See `docs/DECISIONS.md` (2026-07-25 entry) for the full retraction and the live
-DB repair evidence.
-
-**Remaining Phase 2 gate: one more complete clean round.** The ≥5 ATS-quality shortlist gate
-for Phase 3 is already met and stays met — 12 `SHORTLISTED` rows carry `jd_quality='ats'`
-after the M6.13R repair — so the evidence gate is the only thing left.
-
-NOTE: earlier claims of completion before 2026-07-19 were also wrong; no scored output
-existed before 2026-07-14 (see DECISIONS.md).
-Protocol: docs/PHASE2_KICKOFF.md "Phase 2 — Calibration protocol v2" + amendments
-(threshold asymmetry, segment tagging, exemplar injection gate). Exit criteria: at least
-20 fresh eligibility-passed canonical jobs with complete JD-informed `fit_call` labels;
-at least two complete v2 rounds; at least 10 canonical jobs per round; two consecutive
-complete rounds with zero threshold-crossing disagreements per `scripts/calibration_report.py`;
-shortlist_threshold locked in config only after evidence supports it; scoring stress-suite
-bands re-anchored from PROVISIONAL to calibrated values.
+NOTE: earlier claims of completion before 2026-07-19 were wrong; no scored output existed
+before 2026-07-14, and the 2026-07-19 closure was later retracted during M6.13R after
+invalid calibration rows were found. The 2026-07-25 closure supersedes that retraction via
+explicit user approval of the narrower evidence standard above.
 
 ### Stabilization gate before the next calibration batch
 
@@ -105,13 +98,12 @@ remediation transactional and state-safe, and repaired the 35 overwritten `FILTE
 Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
 ## Phase 3 — Tailoring (M8)
-**Status: LOCKED. Nothing built (a prior note suggesting item 1 existed was incorrect —
-verified 2026-07-14: no master-profile loader in repo).**
-Unlocks when: Phase 2 exit criteria met AND ≥ 5 SHORTLISTED rows with jd_quality='ats'.
-Gate status (2026-07-25): the ATS-quality half is **met** — 12 `SHORTLISTED` rows carry
-`jd_quality='ats'`, verified after the M6.13R repair. The Phase 2 evidence half is **not**
-met (see above), so Phase 3 stays LOCKED. A note in the M8 profile-loader design spec
-claiming Phase 3 unlocked on 2026-07-22 was wrong and has been corrected in place.
+**Status: UNLOCKED; not yet implemented.**
+Unlock condition met by explicit Phase 2 closure above plus the ATS-quality shortlist gate.
+Gate status (2026-07-25): 16 `SHORTLISTED` rows carry `jd_quality='ats'` in `data/jobs.db`.
+Quantcast contributes one of those rows (job 279), so removing Quantcast would still leave
+15 ATS-quality shortlisted rows, comfortably above the ≥5 gate. A prior note suggesting M8
+item 1 already existed was incorrect — verified 2026-07-14: no master-profile loader in repo.
 Spec: docs/TAILORING_METHODOLOGY.md (workflow S1 → S0 → S2 → S3 → G1 → G2 → G3). First
 sessions after unlock: M8 item 1 (profile loader), then the interactive master-profile
 construction session with the user (§2 protocol) before any live tailoring.

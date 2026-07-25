@@ -9,7 +9,9 @@ against resolved job postings. Summarized factually from resume variants in
 Himanshu Jain — San Jose, CA. MS in Software Engineering, San Jose State
 University (Aug 2025 – May 2027, in progress). BTech in Computer Science and
 Engineering, National Institute of Technology, Warangal (2019–2023).
-Targeting new-grad / early-career software engineering roles.
+Targeting new-grad / early-career software engineering roles, and — as a
+standing preference — quantitative trader / quantitative researcher / quant
+analyst roles at prominent trading firms and banks.
 
 ## Experience
 
@@ -76,6 +78,20 @@ Amdocs experience, different projects):
   strongest location fit; other US metros are acceptable for a new grad.
   Location alone should not sink an otherwise strong match, but weigh it
   alongside stack/level fit.
+- Quantitative roles (quantitative trader, quantitative researcher/analyst,
+  quantitative model analyst) at prominent trading firms, market makers, and
+  banks — e.g. Citadel, Citadel Securities, Tower Research, Jane Street, Two
+  Sigma, HRT, SIG, and large banks' quant groups — are a standing target, not
+  an off-profile exception. The candidate applies to these deliberately.
+  Score them on genuinely-held transferable strength: strong CS fundamentals
+  and algorithms, Python, distributed/event-driven backend systems, data
+  pipelines, and PyTorch/ML work. Absence of finance-domain experience,
+  a stated preference for a maths/statistics/physics PhD, or C++-first
+  tooling should be treated as an ordinary gap that lowers the score
+  somewhat — not as a specialty mismatch that floors it into the 2–5 band.
+  A quant role with no disqualifying hard requirement should reach the 6–8
+  band. This affects fit_score only; it is not permission to claim
+  quantitative-finance experience the candidate does not have.
 - Well-known/large employers (e.g. Amazon, TikTok, and similarly prominent
   tech companies): the candidate is more inclined to apply here even without
   an exact stack match. For these employers, weigh genuinely-held

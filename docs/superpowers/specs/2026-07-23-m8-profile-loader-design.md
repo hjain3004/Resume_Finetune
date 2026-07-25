@@ -1,18 +1,25 @@
 # M8 item 1 — Master Profile Loader (design)
 
-Status: proposed
-Phase: 3 (M8 Tailoring), item 1 — **Phase 3 is LOCKED; this spec is not cleared to build**
+Status: approved for implementation
+Phase: 3 (M8 Tailoring), item 1 — **Phase 3 is UNLOCKED by explicit user-approved deviation (2026-07-25)**
 Depends on: `docs/TAILORING_SPEC.md` §1 (schema), `docs/TAILORING_METHODOLOGY.md` §2 (evidence/strength/do_not_claim additions)
 
 ## Context
 
-**CORRECTION (2026-07-25, M6.13R): Phase 3 was never unlocked, and this section was wrong.**
+**CORRECTION (2026-07-25, M6.13R): Phase 3 was not unlocked at that time, and this section was wrong.**
 Unlocking requires *both* halves of the gate in `docs/ROADMAP.md`. Only the ATS half was
 checked. The Phase 2 exit criteria were not met: the 2026-07-19 closure has since been
 retracted (of 36 claimed fit labels, 26 remain valid across one clean round, not three).
 The ATS half is genuinely met — 12 `SHORTLISTED` rows carry `jd_quality='ats'`, still true
 after the M6.13R DB repair — but Phase 3 stays LOCKED until one more clean calibration round
 completes. This spec remains a design document only; nothing in it is cleared to build.
+
+**UPDATE (2026-07-25): Phase 3 is now unlocked by explicit user-approved deviation.** The
+user accepted the remaining calibration uncertainty, waived the additional held-out round,
+locked threshold 6.0 for the start of Phase 3, and kept Phase 3 fully human-reviewed with
+no auto-submit path. The historical correction above is preserved because it accurately
+documents the prior mistaken unlock claim. The current session is cleared to build M8 item
+1 only: the pure master-profile loader.
 
 The original (incorrect) text follows for the record:
 
