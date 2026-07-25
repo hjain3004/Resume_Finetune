@@ -1,6 +1,6 @@
 # M8 item 1 — Master Profile Loader (design)
 
-Status: approved for implementation
+Status: implemented (M8 item 1)
 Phase: 3 (M8 Tailoring), item 1 — **Phase 3 is UNLOCKED by explicit user-approved deviation (2026-07-25)**
 Depends on: `docs/TAILORING_SPEC.md` §1 (schema), `docs/TAILORING_METHODOLOGY.md` §2 (evidence/strength/do_not_claim additions)
 
@@ -83,8 +83,8 @@ class Variant:
 
 @dataclass(frozen=True)
 class MasterProfile:
-    identity: dict
-    education: tuple[dict, ...]
+    identity: dict[str, str]
+    education: tuple[dict[str, str], ...]
     experience: tuple[Experience, ...]
     projects: tuple[Project, ...]
     skills: dict[str, tuple[str, ...]]
@@ -92,9 +92,11 @@ class MasterProfile:
     do_not_claim: tuple[str, ...]
 ```
 
-`identity`, `education`, and `skills` entries stay as loosely-typed dicts (mirroring
+`identity`, `education`, and `skills` entries keep flexible key sets (mirroring
 `TAILORING_SPEC.md`'s "mirror the sections used in the current resumes" — the exact key set
-isn't fixed by the spec and shouldn't be hard-coded here); everything with a fabrication or
+isn't fixed by the spec and shouldn't be hard-coded here), but the loader validates their
+runtime shape: identity values are strings, education entries are string-key/string-value
+mappings, and skills values are nonempty string lists. Everything with a fabrication or
 selection invariant riding on it (bullets, variants) gets a real dataclass.
 
 ## `load_profile(path: str | Path) -> MasterProfile`
@@ -103,26 +105,47 @@ Reads and validates YAML (PyYAML, already an approved dependency). Raises
 `ProfileValidationError` on the first violation found, each one tracing directly to an
 explicit rule already written in the two spec docs (nothing new invented here):
 
-1. Top-level keys `identity`, `education`, `experience`, `projects`, `skills`, `variants`
+1. YAML root is a mapping.
+2. Top-level keys `identity`, `education`, `experience`, `projects`, `skills`, `variants`
    must be present; `do_not_claim` is optional and defaults to `()`.
-2. Every bullet has non-empty `id`, `text`, `evidence`, and a `strength` that's one of
+3. Expected mappings/lists/strings have the correct runtime type; booleans and scalar
+   values are rejected where containers are expected.
+4. Required textual fields are nonempty after trimming.
+5. Identity values are strings; education entries are string-key/string-value mappings.
+6. Skills is a mapping of category names to nonempty string lists.
+7. Every experience contains nonempty `org`, `title`, `dates`, and a bullet list.
+8. Every project contains a globally unique, nonempty `id` plus nonempty `name`, `stack`,
+   `dates`, `tags`, and a bullet list.
+9. Every bullet has globally unique nonempty `id`, nonempty `text`, list-of-string `tags`,
+   list-of-string `metrics`, nonempty `evidence`, and `strength` in
    `flagship`/`solid`/`filler` — `TAILORING_METHODOLOGY.md` §2 marks `evidence` and
    `strength` "required per bullet."
-3. Bullet `id`s are globally unique across `experience` + `projects` bullets. This is the
+10. Bullet `id`s are globally unique across `experience` + `projects` bullets. This is the
    structural fabrication guard `TAILORING_SPEC.md` §1 calls out directly: "every bullet in
    any generated resume must carry the `id` of a master-profile entry."
-4. Every `variants.*.projects` entry resolves to a real `projects[].id`, and every
+11. Variant names are nonempty. Every `variants.*.projects` entry resolves to a real
+   `projects[].id`, and every
    `variants.*.bullet_order` entry resolves to a real bullet id (from either
    `experience[].bullets` or `projects[].bullets`).
-5. No `do_not_claim` entry appears anywhere in `skills` values — direct enforcement of §2:
-   "the tailor may NEVER surface these as skills regardless of JD demand."
+12. Duplicate references inside a single variant are rejected.
+13. `do_not_claim` entries are nonempty strings and unique case-insensitively.
+14. No `do_not_claim` entry appears anywhere in `skills` values under direct normalized
+   case-insensitive comparison — enforcement of §2: "the tailor may NEVER surface these as
+   skills regardless of JD demand."
+15. YAML lists are converted to immutable tuples in the returned dataclasses.
+
+`do_not_claim` remains a list of literal strings in M8 item 1. Aliases such as `K8s` versus
+`Kubernetes` require a future structured representation; the loader deliberately does not
+invent an unreliable fuzzy matcher.
 
 ## Testing
 
 `tests/test_profile.py`, hand-written fixture YAML as inline strings (no fixture files —
 these are small enough that inline is clearer than a `tests/fixtures/profile/*.yaml` for a
-reader to see the fixture and its assertion in one place). One test per validation rule
-above, plus one happy-path load asserting the returned `MasterProfile` shape.
+reader to see the fixture and its assertion in one place). Tests cover the happy path,
+malformed YAML, missing keys, wrong container types, blank strings, invalid strength,
+duplicate IDs/references, malformed skills, `do_not_claim`, omitted `do_not_claim`, and
+file-not-found behavior.
 
 ## Explicitly out of scope this session
 

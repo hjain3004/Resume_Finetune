@@ -98,15 +98,17 @@ remediation transactional and state-safe, and repaired the 35 overwritten `FILTE
 Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
 ## Phase 3 — Tailoring (M8)
-**Status: UNLOCKED; not yet implemented.**
+**Status: UNLOCKED; M8 item 1 COMPLETE (2026-07-25).**
 Unlock condition met by explicit Phase 2 closure above plus the ATS-quality shortlist gate.
 Gate status (2026-07-25): 16 `SHORTLISTED` rows carry `jd_quality='ats'` in `data/jobs.db`.
 Quantcast contributes one of those rows (job 279), so removing Quantcast would still leave
 15 ATS-quality shortlisted rows, comfortably above the ≥5 gate. A prior note suggesting M8
 item 1 already existed was incorrect — verified 2026-07-14: no master-profile loader in repo.
-Spec: docs/TAILORING_METHODOLOGY.md (workflow S1 → S0 → S2 → S3 → G1 → G2 → G3). First
-sessions after unlock: M8 item 1 (profile loader), then the interactive master-profile
-construction session with the user (§2 protocol) before any live tailoring.
+M8 item 1 adds only the pure, schema-validating `profile/master_profile.yaml` loader; it
+does not create the real profile, tailor prompts, a critic, renderer, CLI, DB integration,
+SkillOpt integration, or live tailoring. Spec: docs/TAILORING_METHODOLOGY.md (workflow
+S1 → S0 → S2 → S3 → G1 → G2 → G3). Next session: interactive construction of
+`profile/master_profile.yaml` with the user (§2 protocol), before any live tailoring.
 
 ## Upgrades (M9–M12)
 **Status: see docs/UPGRADE_PLAN.md.** M9 items 1–2 (cadence, watchlist adapter) are
