@@ -363,6 +363,96 @@ def _check_unique_bullet_ids(
             seen.add(bullet.id)
 
 
+class Provenance(str, Enum):
+    COUNTED = "counted"
+    DOC_BACKED = "doc_backed"
+    CONFIGURED = "configured"
+    ESTIMATED = "estimated"
+    UNSOURCED = "unsourced"
+    CONTRADICTED = "contradicted"
+    NONE = "none"
+
+
+#: A number from one of these sources may never be printed.
+NON_RENDERABLE_PROVENANCES = frozenset(
+    {Provenance.UNSOURCED, Provenance.CONTRADICTED, Provenance.NONE}
+)
+
+_METRIC_KEYS = {"value", "provenance", "renderable", "render_as", "note"}
+
+
+@dataclass(frozen=True)
+class MetricEntry:
+    value: Any
+    provenance: Provenance
+    renderable: bool
+    render_as: str | None
+    note: str
+
+
+def _build_metric_entry(value: Any, path: str) -> MetricEntry:
+    raw = _require_mapping(value, path)
+    unknown = set(map(str, raw)) - _METRIC_KEYS
+    if unknown:
+        raise ProfileValidationError(
+            f"{path}: unknown key(s): {', '.join(sorted(unknown))}"
+        )
+    for required in ("value", "provenance", "renderable"):
+        if required not in raw:
+            raise ProfileValidationError(f"{path}.{required}: missing required key")
+
+    provenance = _build_enum(
+        Provenance,
+        _require_string(raw["provenance"], f"{path}.provenance"),
+        f"{path}.provenance",
+    )
+
+    renderable = raw["renderable"]
+    if not isinstance(renderable, bool):
+        raise ProfileValidationError(
+            f"{path}.renderable: expected boolean, got {type(renderable).__name__}"
+        )
+    if renderable and provenance in NON_RENDERABLE_PROVENANCES:
+        raise ProfileValidationError(
+            f"{path}: renderable must be false when provenance is {provenance.value!r}"
+        )
+
+    note = (raw.get("note") or "").strip()
+    if note:
+        _check_ascii(note, f"{path}.note")
+    return MetricEntry(
+        value=raw["value"],
+        provenance=provenance,
+        renderable=renderable,
+        render_as=(
+            _require_string(raw["render_as"], f"{path}.render_as")
+            if "render_as" in raw
+            else None
+        ),
+        note=note,
+    )
+
+
+def _build_metric_ledger(raw: dict[Any, Any], path: str) -> dict[str, MetricEntry]:
+    ledger_path = f"{path}.metric_ledger"
+    ledger = _require_mapping(raw.get("metric_ledger", {}), ledger_path)
+    result: dict[str, MetricEntry] = {}
+    for key, value in ledger.items():
+        name = _require_string(key, ledger_path)
+        result[name] = _build_metric_entry(value, f"{ledger_path}.{name}")
+    return result
+
+
+def _build_metric_scope(raw: dict[Any, Any], path: str) -> dict[str, str]:
+    scope_path = f"{path}.metric_scope"
+    scope = _require_mapping(raw.get("metric_scope", {}), scope_path)
+    result: dict[str, str] = {}
+    for key, value in scope.items():
+        name = _require_string(key, scope_path)
+        result[name] = _require_string(value, f"{scope_path}.{name}")
+    return result
+
+
 def load_profile(path: str | Path) -> "MasterProfile":
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")

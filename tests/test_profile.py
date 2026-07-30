@@ -126,3 +126,47 @@ def test_duplicate_project_id_is_rejected(tmp_path):
     )
     with pytest.raises(ProfileValidationError, match="duplicate project id"):
         load_profile(_write(tmp_path, doubled))
+
+
+from src.profile import Provenance
+
+
+def test_prohibited_provenance_cannot_be_renderable(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "provenance: counted", "provenance: contradicted"))
+    with pytest.raises(ProfileValidationError, match="renderable"):
+        load_profile(path)
+
+
+def test_metric_ledger_entry_must_be_mapping(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "      tests:\n"
+        "        value: 12\n"
+        "        provenance: counted\n"
+        "        renderable: true\n",
+        "      tests: just-a-string\n"))
+    with pytest.raises(ProfileValidationError, match="expected mapping"):
+        load_profile(path)
+
+
+def test_metric_ledger_rejects_unknown_key(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "        renderable: true\n", "        renderable: true\n        bogus: 1\n"))
+    with pytest.raises(ProfileValidationError, match="unknown key"):
+        load_profile(path)
+
+
+def test_metric_ledger_renderable_must_be_boolean(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "renderable: true", 'renderable: "yes"'))
+    with pytest.raises(ProfileValidationError, match="expected boolean"):
+        load_profile(path)
+
+
+def test_metric_ledger_happy_path(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    entry = profile.projects[0].metric_ledger["tests"]
+    assert entry.value == 12
+    assert entry.provenance is Provenance.COUNTED
+    assert entry.renderable is True
+    assert profile.projects[0].metric_scope["test_scope"] == "unit tests only"
