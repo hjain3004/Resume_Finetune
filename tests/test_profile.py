@@ -320,3 +320,50 @@ def test_skills_category_may_not_be_empty(tmp_path):
         'languages: ["Python", "Java"]', "languages: []"))
     with pytest.raises(ProfileValidationError, match="nonempty string list"):
         load_profile(path)
+
+
+def test_unknown_project_reference_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "projects: [proj_one]", "projects: [does_not_exist]"))
+    with pytest.raises(ProfileValidationError, match="unknown project id"):
+        load_profile(path)
+
+
+def test_unknown_bullet_reference_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "bullet_order: [exp_b1, proj_b1]", "bullet_order: [nope]"))
+    with pytest.raises(ProfileValidationError, match="unknown bullet id"):
+        load_profile(path)
+
+
+def test_duplicate_reference_within_variant_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "bullet_order: [exp_b1, proj_b1]", "bullet_order: [proj_b1, proj_b1]"))
+    with pytest.raises(ProfileValidationError, match="duplicate reference"):
+        load_profile(path)
+
+
+def test_blocked_bullet_cannot_be_referenced(tmp_path):
+    # Rule 9: ownership_unresolved must not render, enforced at load time.
+    blocked = _MINIMAL_PROFILE.replace(
+        "      - id: proj_b1\n        claim_type: verified\n        priority: 1\n",
+        "      - id: proj_b1\n        claim_type: ownership_unresolved\n"
+        "        priority: 1\n        defense: Attribution unconfirmed.\n",
+    )
+    with pytest.raises(ProfileValidationError, match="blocked"):
+        load_profile(_write(tmp_path, blocked))
+
+
+def test_priority_ordering_within_an_entry_is_enforced(tmp_path):
+    # Rule 16: a priority-2 bullet may not precede a priority-1 bullet
+    # from the same entry.
+    reordered = _MINIMAL_PROFILE.replace(
+        "      - id: proj_b1\n        claim_type: verified\n        priority: 1\n",
+        "      - id: proj_b0\n        claim_type: verified\n        priority: 2\n"
+        "        phrasings:\n          short: Lower priority thing\n"
+        "        evidence:\n"
+        '          - "src/other.py: other"\n'
+        "      - id: proj_b1\n        claim_type: verified\n        priority: 1\n",
+    ).replace("bullet_order: [exp_b1, proj_b1]", "bullet_order: [proj_b0, proj_b1]")
+    with pytest.raises(ProfileValidationError, match="priority"):
+        load_profile(_write(tmp_path, reordered))

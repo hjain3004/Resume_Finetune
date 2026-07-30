@@ -227,7 +227,7 @@ def _build_bullet(value: Any, path: str) -> Bullet:
         priority=_require_positive_int(raw["priority"], f"{path}.priority"),
         phrasings=_build_phrasings(raw["phrasings"], f"{path}.phrasings"),
         evidence=_string_list(raw["evidence"], f"{path}.evidence", allow_empty=False),
-        keywords_hit=_string_list(raw.get("keywords_hit", ()), f"{path}.keywords_hit"),
+        keywords_hit=_string_list(raw.get("keywords_hit", []), f"{path}.keywords_hit"),
         defense=defense,
         interview_risk=interview_risk,
     )
@@ -281,8 +281,8 @@ def _build_keywords(
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     keywords = _require_mapping(raw.get("keywords", {}), f"{path}.keywords")
     return (
-        _string_list(keywords.get("exact", ()), f"{path}.keywords.exact"),
-        _string_list(keywords.get("topical", ()), f"{path}.keywords.topical"),
+        _string_list(keywords.get("exact", []), f"{path}.keywords.exact"),
+        _string_list(keywords.get("topical", []), f"{path}.keywords.topical"),
     )
 
 
@@ -361,6 +361,85 @@ def _check_unique_bullet_ids(
             if bullet.id in seen:
                 raise ProfileValidationError(f"duplicate bullet id: {bullet.id}")
             seen.add(bullet.id)
+
+
+@dataclass(frozen=True)
+class BaseVariant:
+    projects: tuple[str, ...]
+    bullet_order: tuple[str, ...]
+
+
+def _check_references_unique(references: tuple[str, ...], path: str) -> None:
+    seen: set[str] = set()
+    for index, reference in enumerate(references):
+        if reference in seen:
+            raise ProfileValidationError(
+                f"{path}.{index}: duplicate reference: {reference}"
+            )
+        seen.add(reference)
+
+
+def _build_base_variants(
+    value: Any,
+    projects: tuple[Project, ...],
+    experience: tuple[Experience, ...],
+) -> dict[str, BaseVariant]:
+    raw = _require_mapping(value, "base_variants")
+    known_project_ids = {project.id for project in projects}
+    # bullet id -> (owning entry id, bullet)
+    bullet_index: dict[str, tuple[str, Bullet]] = {
+        bullet.id: (source.id, bullet)
+        for source in (*projects, *experience)
+        for bullet in source.bullets
+    }
+
+    variants: dict[str, BaseVariant] = {}
+    for raw_name, raw_variant in raw.items():
+        name = _require_string(raw_name, "base_variants")
+        variant_path = f"base_variants.{name}"
+        mapping = _require_mapping(raw_variant, variant_path)
+        variant = BaseVariant(
+            projects=_string_list(
+                mapping.get("projects", []), f"{variant_path}.projects"
+            ),
+            bullet_order=_string_list(
+                mapping.get("bullet_order", []), f"{variant_path}.bullet_order"
+            ),
+        )
+        _check_references_unique(variant.projects, f"{variant_path}.projects")
+        _check_references_unique(variant.bullet_order, f"{variant_path}.bullet_order")
+
+        for index, project_id in enumerate(variant.projects):
+            if project_id not in known_project_ids:
+                raise ProfileValidationError(
+                    f"{variant_path}.projects.{index}: unknown project id: {project_id}"
+                )
+
+        # Rule 8, then rule 9, then rule 16, in reference order.
+        last_priority: dict[str, int] = {}
+        for index, bullet_id in enumerate(variant.bullet_order):
+            entry_path = f"{variant_path}.bullet_order.{index}"
+            if bullet_id not in bullet_index:
+                raise ProfileValidationError(
+                    f"{entry_path}: unknown bullet id: {bullet_id}"
+                )
+            owner_id, bullet = bullet_index[bullet_id]
+            if bullet.is_blocked:
+                raise ProfileValidationError(
+                    f"{entry_path}: references blocked bullet {bullet_id} "
+                    f"(claim_type={bullet.claim_type.value})"
+                )
+            previous = last_priority.get(owner_id)
+            if previous is not None and bullet.priority < previous:
+                raise ProfileValidationError(
+                    f"{entry_path}: bullet {bullet_id} has priority "
+                    f"{bullet.priority} but follows priority {previous} from the "
+                    f"same entry {owner_id}"
+                )
+            last_priority[owner_id] = bullet.priority
+
+        variants[name] = variant
+    return variants
 
 
 class Provenance(str, Enum):
