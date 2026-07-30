@@ -34,7 +34,7 @@
 # Any claim_type other than `verified` requires a non-empty `defense` (C3).
 # =============================================================================
 
-schema_version: "0.2.0"
+schema_version: "0.3.0"
 last_updated: "2026-07-30"
 
 # -----------------------------------------------------------------------------
@@ -137,7 +137,7 @@ projects:
         claim_type: verified
         priority: 1                     # lead bullet; almost always selected
         theme: architecture
-        variants:
+        phrasings:
           long: >-
             Owned peer discovery for a decentralized peer-to-peer (P2P) chat
             system, designing an event-sourced membership layer - an append-only
@@ -171,7 +171,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: implementation
-        variants:
+        phrasings:
           long: >-
             Implemented the full network layer - gossip dissemination with an
             (originator, sequence, type, user) dedup key over a 10,000-entry LRU
@@ -206,7 +206,7 @@ projects:
         claim_type: verified
         priority: 2
         theme: quality
-        variants:
+        phrasings:
           long: >-
             Validated the module with 92 unit and integration tests, including
             fake-clock-driven failure-detection tests that make timer behavior
@@ -234,7 +234,7 @@ projects:
         claim_type: scoped
         priority: 2
         theme: debugging
-        variants:
+        phrasings:
           long: >-
             Diagnosed a cross-machine discovery failure caused by two parallel
             transports on separate ports and consolidated peer discovery onto the
@@ -264,7 +264,7 @@ projects:
         claim_type: verified
         priority: 3
         theme: security
-        variants:
+        phrasings:
           medium: >-
             Built trust-on-first-use key bootstrapping via an idempotent
             pre-verify hook that extracts and registers a new sender's public key
@@ -288,7 +288,7 @@ projects:
         claim_type: observed
         priority: 4
         theme: validation
-        variants:
+        phrasings:
           short: >-
             Validated the join handshake across two physical machines on a LAN,
             with a joining node reaching ACTIVE in about 200 ms and bidirectional
@@ -428,7 +428,7 @@ projects:
         claim_type: scoped
         priority: 1
         theme: leadership
-        variants:
+        phrasings:
           long: >-
             Led a 4-person team building an ICU sepsis early-warning system over
             1.55M hourly records from 40K patients and 40 raw clinical signals,
@@ -464,7 +464,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: deep_learning
-        variants:
+        phrasings:
           long: >-
             Implemented a decay-aware GRU-D recurrent network in PyTorch from the
             original paper, learning per-feature exponential decay over
@@ -497,7 +497,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: ensembling
-        variants:
+        phrasings:
           long: >-
             Designed a calibrated meta-stacking ensemble that isotonically calibrates
             XGBoost and GRU-D outputs, joins them per patient-hour, and fuses them
@@ -533,7 +533,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: rigor
-        variants:
+        phrasings:
           long: >-
             Ran a leakage ablation showing that removing the ICU length-of-stay
             feature collapsed Random Forest utility from 0.320 to -0.006, exposing a
@@ -565,7 +565,7 @@ projects:
         claim_type: verified
         priority: 2
         theme: debugging
-        variants:
+        phrasings:
           medium: >-
             Stabilized GRU-D training under 44:1 class imbalance using weighted
             binary cross-entropy, 200-step learning-rate warmup, gradient-norm
@@ -589,7 +589,7 @@ projects:
         claim_type: verified
         priority: 2
         theme: generalization
-        variants:
+        phrasings:
           medium: >-
             Validated generalization on a held-out second hospital system of 20K
             unseen patients, opened only once at the end of development, where the
@@ -618,7 +618,7 @@ projects:
         claim_type: verified
         priority: 2
         theme: benchmarking
-        variants:
+        phrasings:
           medium: >-
             Benchmarked against the qSOFA and NEWS bedside scoring rules used in
             clinical practice, both of which scored negative net utility (-0.24 and
@@ -643,7 +643,7 @@ projects:
         claim_type: scoped
         priority: 3
         theme: feature_engineering
-        variants:
+        phrasings:
           medium: >-
             Built a leakage-safe 175-feature pipeline over 40 raw clinical signals -
             per-patient temporal imputation, deltas, rolling statistics, and
@@ -671,7 +671,7 @@ projects:
         claim_type: scoped
         priority: 3
         theme: interpretability
-        variants:
+        phrasings:
           medium: >-
             Interpreted model behavior with SHAP attribution and 30+ per-patient
             trajectory case studies spanning true positives, false positives, and
@@ -694,7 +694,7 @@ projects:
         claim_type: verified
         priority: 4
         theme: methodology
-        variants:
+        phrasings:
           short: >-
             Evaluated five tabular models, a recurrent model, and two clinical rule
             baselines under a shared patient-level split, tuning decision thresholds
@@ -709,7 +709,7 @@ projects:
         claim_type: verified
         priority: 4
         theme: reproducibility
-        variants:
+        phrasings:
           short: >-
             Made results fully reproducible with pinned dependencies, seeded splits,
             saved model and calibrator artifacts, and a documented 3-notebook run
@@ -872,7 +872,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: data_engineering
-        variants:
+        phrasings:
           long: >-
             Owned the data-engineering layer of a six-stage fake-review detection
             pipeline, building a PySpark ETL over 608K YelpZip reviews that derives
@@ -908,7 +908,7 @@ projects:
         claim_type: verified
         priority: 1
         theme: analysis
-        variants:
+        phrasings:
           long: >-
             Ran a layer ablation across seven pipeline configurations showing that
             behavioral signals alone plateaued at 0.815 AUC and 0.438 F1, while adding
@@ -944,7 +944,7 @@ projects:
         claim_type: ownership_unresolved
         priority: 1
         theme: nlp
-        variants:
+        phrasings:
           long: >-
             Fine-tuned DeBERTa-base end-to-end (all 12 transformer layers, 99M
             trainable parameters) on 423K Yelp reviews, using StratifiedGroupKFold on
@@ -980,7 +980,7 @@ projects:
         claim_type: ownership_unresolved
         priority: 2
         theme: debugging
-        variants:
+        phrasings:
           medium: >-
             Diagnosed two failed text-model configurations before landing the working
             one - a frozen-backbone head-only baseline that reached only 0.74 AUC, and
@@ -1010,7 +1010,7 @@ projects:
         claim_type: verified
         priority: 2
         theme: rigor
-        variants:
+        phrasings:
           medium: >-
             Prevented target leakage by auditing every engineered feature for
             label derivation and excluding reviewer and seller spam counts and spam
@@ -1034,7 +1034,7 @@ projects:
         claim_type: ownership_unresolved
         priority: 3
         theme: adversarial
-        variants:
+        phrasings:
           medium: >-
             Stress-tested the pipeline against 70 synthetic attacker profiles across
             three camouflage tiers, exposing a hard-tier blind spot where every
@@ -1067,7 +1067,7 @@ projects:
         claim_type: ownership_unresolved
         priority: 4
         theme: analysis
-        variants:
+        phrasings:
           short: >-
             Quantified signal redundancy across detection layers with Jaccard overlap
             at multiple top-K cutoffs, showing the rule and clustering layers largely
@@ -1235,7 +1235,7 @@ experience:
         claim_type: verified
         priority: 1
         theme: architecture
-        variants:
+        phrasings:
           long: >-
             Built the anti-corruption layer between Gulf African Bank's core systems
             and four external providers - a telecom messaging gateway, the PesaLink
@@ -1276,7 +1276,7 @@ experience:
         claim_type: verified
         priority: 1
         theme: reliability
-        variants:
+        phrasings:
           long: >-
             Engineered exactly-once semantics on the money-movement path using
             INSERT-first idempotency-key reservation with atomic ON CONFLICT DO
@@ -1313,7 +1313,7 @@ experience:
         claim_type: verified
         priority: 1
         theme: compliance
-        variants:
+        phrasings:
           long: >-
             Designed a fail-closed AML sanctions screening gateway that surfaces an
             explicit typed error rather than a false "no matches" on any backend
@@ -1352,7 +1352,7 @@ experience:
         claim_type: verified
         priority: 2
         theme: payments
-        variants:
+        phrasings:
           long: >-
             Delivered a PesaLink real-time interbank transfer adapter supporting eight
             transaction types across two ESB interfaces, implementing per-request-type
@@ -1390,7 +1390,7 @@ experience:
         claim_type: verified
         priority: 2
         theme: auditability
-        variants:
+        phrasings:
           long: >-
             Implemented regulatory-grade audit infrastructure across all four services
             - append-only event logs where status is never mutated in place, request
@@ -1431,7 +1431,7 @@ experience:
         claim_type: verified
         priority: 2
         theme: quality
-        variants:
+        phrasings:
           long: >-
             Authored 230+ automated tests (roughly a 0.7:1 test-to-code ratio) plus
             103 Postman negative-path scenarios, layering Pydantic edge-case tests,
@@ -1468,7 +1468,7 @@ experience:
         claim_type: verified
         priority: 3
         theme: distributed_systems
-        variants:
+        phrasings:
           medium: >-
             Added a RabbitMQ asynchronous processing path with durable persistent
             delivery and a dedicated consumer worker (prefetch 10, robust
@@ -1500,7 +1500,7 @@ experience:
         claim_type: verified
         priority: 3
         theme: security
-        variants:
+        phrasings:
           medium: >-
             Hardened all four services with a credential isolation boundary that
             parses and deliberately discards caller-supplied vendor credentials so
@@ -1669,7 +1669,7 @@ experience:
         claim_type: verified
         priority: 1                     # strongest bullet; lead with it always
         theme: architecture
-        variants:
+        phrasings:
           long: >-
             Redesigned the Apache Kafka dead-letter-queue architecture for the
             Order Management domain, consolidating 862 per-consumer DLQ topics
@@ -1705,7 +1705,7 @@ experience:
         claim_type: verified
         priority: 1
         theme: security
-        variants:
+        phrasings:
           long: >-
             Co-built a modular Java row-level entitlement library for the shared
             microservices base, chaining JSON Web Token (JWT) claim validators for
@@ -1748,7 +1748,7 @@ experience:
         claim_type: estimated
         priority: 2
         theme: architecture
-        variants:
+        phrasings:
           long: >-
             Architected an immutable audit-trail system for contract lifecycle
             events: delegate-level triggers published standardized Kafka events
@@ -1790,7 +1790,7 @@ experience:
         claim_type: estimated
         priority: 2
         theme: architecture
-        variants:
+        phrasings:
           long: >-
             Built a policy-driven data-retention capability across three
             microservices - REST lifecycle APIs plus Kafka event-driven archival
@@ -1830,7 +1830,7 @@ experience:
         claim_type: verified
         priority: 2
         theme: quality
-        variants:
+        phrasings:
           long: >-
             Automated end-to-end API testing with Postman collections executed
             headlessly through Newman in Jenkins, adding JSON-schema response
@@ -1866,7 +1866,7 @@ experience:
         claim_type: verified
         priority: 3
         theme: infrastructure
-        variants:
+        phrasings:
           medium: >-
             Contributed to migrating the domain's continuous integration to
             Amazon Web Services (AWS) through AWS-specific Jenkinsfiles, Maven
