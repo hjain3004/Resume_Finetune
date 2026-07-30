@@ -114,7 +114,39 @@ base_variants:
   ml:
     projects: [sepsis_early_warning, fake_review_detection]
     bullet_order: [...]
+
+do_not_claim:                    # required by TAILORING_METHODOLOGY.md §2; user-supplied
+  - "Kubernetes"                 # example shape only
 ```
+
+### 4.1 `do_not_claim` and the `priority` / `strength` mapping
+
+Two requirements from `docs/TAILORING_METHODOLOGY.md` §2 were dropped by v0.2.0 and are
+restored here. Neither is a new decision — that document is authoritative under `CLAUDE.md`
+prime directive 1.
+
+**`do_not_claim`** (§2, line 89) is a required top-level list of technologies the user has
+touched but cannot defend in an interview. Quality gate L6 (§4, line 185) checks for "zero
+occurrences of listed terms outside the gap report." The authored v0.2.0 file contains zero
+occurrences of the key, and the M8 item 1 loader's guard against it was lost in the rewrite.
+It returns as a top-level list, defaulting to `[]` when absent.
+
+**`strength`** (§2, line 87) is `flagship | solid | filler` and drives selection ordering:
+"selection prefers flagship; a tailored resume may not demote a flagship bullet below a
+filler one to chase a keyword." v0.2.0 replaced it with `priority` (integers 1–4 in the
+authored file) without ever defining the correspondence, leaving gate L6's flagship-ordering
+rule undefined. The mapping is fixed here:
+
+| `priority` | methodology `strength` | authored count |
+|---|---|---|
+| 1 | flagship | 14 |
+| 2 | solid | 13 |
+| 3–4 | filler | 11 |
+
+`priority` is the only ordering field; `strength` is never stored, only referenced when
+reading the methodology. Lower `priority` means higher precedence. The ordering rule becomes
+mechanical: within a `base_variants.*.bullet_order`, no bullet may precede one of strictly
+lower `priority` from the same project or experience entry.
 
 `identity`, `education`, and `skills` keep flexible key sets (per `TAILORING_SPEC.md`'s
 "mirror the sections used in the current resumes") but their runtime shape is validated:
@@ -148,8 +180,11 @@ to `TAILORING_SPEC.md` §1.
 | 9 | No `base_variants` entry references a **blocked** bullet — `claim_type ∈ {ownership_unresolved, needs_input}` | authored header: "Must not render" |
 | 10 | `metric_ledger` entries are mappings carrying required `value` (may be `null`), `provenance`, `renderable`; optional `render_as` and `note` are permitted, any other key is an error | §6 |
 | 11 | `provenance ∈ {unsourced, contradicted, none}` may not pair with `renderable: true` | §6 |
-| 12 | `priority` is a positive integer | — |
+| 12 | `priority` is a positive integer | §4.1 |
 | 13 | Required textual fields nonempty after trimming; containers are containers | M8 item 1 rules 3–4, retained |
+| 14 | `do_not_claim` is an optional top-level list of nonempty strings, unique under case-insensitive whitespace-normalized comparison; defaults to `()` | `TAILORING_METHODOLOGY.md` §2 |
+| 15 | No `do_not_claim` term appears in any `skills` value under normalized comparison | §2's "may NEVER surface these as skills"; retained from M8 item 1 |
+| 16 | Within a `base_variants.*.bullet_order`, no bullet precedes one of strictly lower `priority` drawn from the same project or experience entry | §4.1 flagship-ordering rule, gate L6 |
 
 Rule 9 is the load-bearing one: it converts "blocked claims must never render" from a
 render-time hope into a load-time failure. The four `ownership_unresolved` bullets currently
@@ -197,7 +232,7 @@ therefore exposes three views over one source of truth:
 
 | View | Contains | Consumer |
 |---|---|---|
-| `for_tailoring(base_variant)` | `bullet_id`, selected phrasing, `keywords_hit`, `claim_type` | tailor prompt — the hot path |
+| `for_tailoring(base_variant)` | `bullet_id`, selected phrasing, `keywords_hit`, `claim_type`, `priority`, plus `identity`, `education`, `skills`, and the full `do_not_claim` list | tailor prompt — the hot path |
 | `for_critic(base_variant)` | the above plus `evidence`, `defense`, `ownership_boundary` | R1 fabrication check, `TAILORING_SPEC.md` §4 |
 | `MasterProfile` (full) | everything, including `interview_risk`, `known_gaps`, `metric_ledger` | offline human use |
 
@@ -244,6 +279,7 @@ Mechanical, in this order:
    and `config/profile_summary.md`, confirmed with the user — not invented).
 8. Author `campus_marketplace` and `clinical_trial_platform` projects at full depth.
 9. Author `base_variants` for `backend` and `ml`.
+10. Author `do_not_claim` (user-supplied; §4.1).
 
 ## 10. Documentation updates
 
@@ -265,7 +301,9 @@ Mechanical, in this order:
 - One failing test per numbered rule in §5 — duplicate keys, missing `short` phrasing,
   invalid `claim_type`, missing `defense` on a non-`verified` bullet, empty `evidence`,
   non-ASCII, unresolved `base_variants` reference, blocked-bullet reference, malformed
-  `metric_ledger`, `renderable: true` on a prohibited `provenance`.
+  `metric_ledger`, `renderable: true` on a prohibited `provenance`, duplicate `do_not_claim`
+  entry, a `do_not_claim` term appearing in `skills`, and a `bullet_order` violating the
+  priority-ordering rule. Plus a passing test that omitted `do_not_claim` defaults to `()`.
 - Projection tests: `for_tailoring` omits `evidence` / `defense` / `interview_risk` /
   `known_gaps` and excludes blocked bullets; `for_critic` includes `evidence` and `defense`.
 - Malformed YAML and file-not-found behavior.
