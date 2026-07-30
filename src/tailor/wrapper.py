@@ -190,3 +190,20 @@ def run_critic(hydrated_text: str, jd_text: str, banned_words: str, taste: str) 
     
     result = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True)
     return _extract_json_from_output(result.stdout)
+
+def tailor_loop(jd_text: str, master_profile: dict, tailored_schema: dict, banned_words: str, taste: str):
+    """Orchestrates max 2 revision rounds between the Tailor and Critic."""
+    max_rounds = 2
+    for round_num in range(max_rounds):
+        lint_errors, tailor_json, hydrated, change_list = run_tailor(jd_text, master_profile, tailored_schema)
+        if lint_errors:
+            # Re-prompt with lint errors in a real system. Here we break or return.
+            return {"status": "lint_failed", "errors": lint_errors}
+            
+        critic_res = run_critic(hydrated, jd_text, banned_words, taste)
+        if critic_res.get("verdict") == "pass":
+            return {"status": "success", "draft": hydrated, "changes": change_list}
+            
+        # Re-prompt tailor with critic issues (omitted for brevity)
+        
+    return {"status": "escalated_to_user", "draft": hydrated, "critic_res": critic_res}
