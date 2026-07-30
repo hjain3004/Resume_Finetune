@@ -144,11 +144,13 @@ known counts.
   (stress suite, D2, traces, I12 scan) already covers the report's checklist for keeping
   a custom harness. Triggers to revisit: the golden set exceeds ~50 applications and D2
   runtime/maintenance hurts; or we need systematic injection red-teaming beyond the I12
-  scan. Note: promptfoo's ownership changed (acquired 2026) — re-verify governance
+  scan. Note: promptfoo's ownership changed (acquired 2026) — re-verify sovernance
   before adopting.
 - **Claude Code Routines / cloud scheduling.** Monitor. Current preview run caps
   (~15/day) are below M9's hourly cadence. Trigger: caps lift above ~15 runs/day AND the
   user wants off local cron.
+
+- **Claude for Chrome integration** — two roles, deferred. (a) Assisted JD capture (available anytime, zero code): documented recipe — Claude Desktop + Chrome extension reads a logged-in posting tab and writes the formatted inbox/*.md file; replaces manual copy-paste for RESOLVE_FAILED jobs. (b) Supervised application assist (gated on M8 + dogfooding): fills ATS forms from the job's tailored application packet and answers screening questions traceably from master_profile (do_not_claim enforced), with the human present, reviewing each field, and clicking submit themselves. Hard constraints: no unattended operation, no batching, no CAPTCHA interaction, no credential/identity entry, one application per supervised session. This is form-assist within the existing "human submits" boundary — NOT a reversal of the §5 auto-apply rejection, which stands. (c) Use as a resolver/discovery mechanism: REJECTED — deterministic resolution is a founding decision; browser-agent-per-URL is the original anti-pattern.
 
 ## §5 — Evaluated and REJECTED (do not re-litigate without new evidence)
 

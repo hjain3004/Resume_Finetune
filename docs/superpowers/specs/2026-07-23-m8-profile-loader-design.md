@@ -1,3 +1,5 @@
+SUPERSEDED (2026-07-30) by 2026-07-30-m8-profile-schema-reconciliation-design.md. The schema below is not current.
+
 # M8 item 1 — Master Profile Loader (design)
 
 Status: implemented (M8 item 1)

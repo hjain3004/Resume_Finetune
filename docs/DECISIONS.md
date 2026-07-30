@@ -1859,3 +1859,10 @@ Read-only gate check on `data/jobs.db` at closure time:
 
 Action taken: `docs/ROADMAP.md` now marks Phase 2 `COMPLETE by explicit user-approved
 deviation` and Phase 3 `UNLOCKED; not yet implemented`.
+
+## 2026-07-30
+
+- **M8 Master Profile Schema Reconciliation (v0.3.0)**: The authored v0.2.0 schema supersedes `TAILORING_SPEC.md` §1.
+- The canonical path for the master profile moves from `profile/` to `config/master_profile.yaml`.
+- `do_not_claim` and the `priority` <-> `strength` mapping are restored per `TAILORING_METHODOLOGY.md` §2.
+- Part B of the profile authoring is deferred because evidence for the two new projects (campus_marketplace, clinical_trial_platform) cannot be model-authored (requires user input).

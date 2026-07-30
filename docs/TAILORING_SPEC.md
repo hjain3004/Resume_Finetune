@@ -4,46 +4,143 @@ Scope: how shortlisted jobs become tailored resumes. Do not implement until the 
 completed scoring dry-runs (see IMPLEMENTATION_PLAN, Phase 3 gate). This spec is the
 distillation of design research; treat its rules as requirements.
 
-## 1. Source of truth: `profile/master_profile.yaml`
+## 1. Source of truth: `config/master_profile.yaml`
 
-The user's 5–6 resume variants are decomposed ONCE (with the user, interactively) into a
-single superset file. Structure:
+### Nomenclature
+One name per concept. No aliases anywhere in code, docs, or prompts.
 
+| Term | Means | Never called |
+|---|---|---|
+| `base_variants` | named base resumes (`backend`, `ml`) | variants, tracks, profiles |
+| `phrasings` | length tiers of one bullet (`long` / `medium` / `short`) | variants, versions |
+| `bullet_id` | the fabrication anchor, globally unique | id, bid |
+| `claim_type` | provenance of a claim | strength, confidence |
+| `evidence` | artifact paths or reproducible commands | source, proof |
+| `defense` | what the candidate says when the claim is challenged | rebuttal, note |
+| `provenance` | where a number in `metric_ledger` came from | status |
+| `renderable` | whether a number may be printed | — |
+
+Two renames follow from this and are part of the migration:
+
+- bullet-level `variants:` → `phrasings:` (38 occurrences, all at bullet level, verified by
+  grep — no other usage). Resolves the collision with the base-resume concept permanently.
+- `base_variants` is keyed `backend` / `ml`, matching the `base_variant` vocabulary already
+  emitted by the Phase 2 scoring pipeline (`config/profile_summary.md` §"Project variants").
+  `TAILORING_SPEC.md`'s `systems` / `aiml` naming is stale and is removed.
+
+### Schema
 ```yaml
-identity: {name, phone, email, linkedin, github, location}
-education: [...]
-experience:
-  - org: Amdocs
-    title: Software Developer
-    dates: "Jul 2023 – Jun 2025"
-    bullets:
-      - id: amdocs-purge-archive
-        text: "Reduced production data footprint by 40% ... on OpenShift (OCP)."
-        tags: [backend, kafka, data-lifecycle, microservices]
-        metrics: ["40%", "25%"]
-      - id: amdocs-dlq
-        ...
-projects:
-  - id: sepsis-prediction
-    name: Early Sepsis Prediction in ICU
-    stack: "Python, PyTorch, Scikit-learn"
-    dates: "Feb 2026 – Apr 2026"
-    bullets: [...]
-    tags: [ml, healthcare, time-series]
-skills:
+schema_version: "0.3.0"
+last_updated: "2026-07-30"
+
+ats: {...}                       # unchanged from v0.2.0
+
+identity:
+  name: "Himanshu Jain"
+  phone: "..."
+  email: "..."
+  linkedin: "..."
+  github: "..."
+  location: "San Jose, CA"
+
+education:
+  - institution: "San Jose State University"
+    degree: "Master of Science in Software Engineering"
+    location: "San Jose, CA"
+    start: "2025-08"
+    end: "2027-05"
+    display_date: "Aug. 2025 - May 2027"
+
+skills:                          # free-form categories, nonempty string lists
   languages: [...]
   frameworks: [...]
-  # mirror the sections used in the current resumes
-variants:                     # named base resumes = ordered selections of bullet/project ids
-  systems: {projects: [mq-simulation, clinical-trial], bullet_order: [...]}
-  aiml:    {projects: [sepsis-prediction, yelp-fraud], bullet_order: [...]}
-  ...
+  # ...
+
+projects:   [...]                # v0.2.0 shape + campus_marketplace, clinical_trial_platform
+experience: [...]                # v0.2.0 shape, unchanged
+
+base_variants:
+  backend:
+    projects: [campus_marketplace, clinical_trial_platform, peerchat_peer_discovery]
+    bullet_order: [...]          # ordered bullet_ids
+  ml:
+    projects: [sepsis_early_warning, fake_review_detection]
+    bullet_order: [...]
+
+do_not_claim:                    # required by TAILORING_METHODOLOGY.md §2; user-supplied
+  - "Kubernetes"                 # example shape only
 ```
 
-**Invariant: every bullet in any generated resume must carry the `id` of a master-profile
-entry** (tracked in the working data, stripped at render). New wording is allowed only as a
-*rewrite* of an existing entry's facts; new facts require the user to add an entry first.
-This is the structural guarantee against fabrication.
+### 4.1 `do_not_claim` and the `priority` / `strength` mapping
+
+Two requirements from `docs/TAILORING_METHODOLOGY.md` §2 were dropped by v0.2.0 and are
+restored here. Neither is a new decision — that document is authoritative under `CLAUDE.md`
+prime directive 1.
+
+**`do_not_claim`** (§2, line 89) is a required top-level list of technologies the user has
+touched but cannot defend in an interview. Quality gate L6 (§4, line 185) checks for "zero
+occurrences of listed terms outside the gap report." The authored v0.2.0 file contains zero
+occurrences of the key, and the M8 item 1 loader's guard against it was lost in the rewrite.
+It returns as a top-level list, defaulting to `[]` when absent.
+
+**`strength`** (§2, line 87) is `flagship | solid | filler` and drives selection ordering:
+"selection prefers flagship; a tailored resume may not demote a flagship bullet below a
+filler one to chase a keyword." v0.2.0 replaced it with `priority` (integers 1–4 in the
+authored file) without ever defining the correspondence, leaving gate L6's flagship-ordering
+rule undefined. The mapping is fixed here:
+
+| `priority` | methodology `strength` | authored count |
+|---|---|---|
+| 1 | flagship | 14 |
+| 2 | solid | 13 |
+| 3–4 | filler | 11 |
+
+`priority` is the only ordering field; `strength` is never stored, only referenced when
+reading the methodology. Lower `priority` means higher precedence. The ordering rule becomes
+mechanical: within a `base_variants.*.bullet_order`, no bullet may precede one of strictly
+lower `priority` from the same project or experience entry.
+
+`identity`, `education`, and `skills` keep flexible key sets (per `TAILORING_SPEC.md`'s
+"mirror the sections used in the current resumes") but their runtime shape is validated:
+identity values are strings, education entries are string-key/string-value mappings, skills
+values are nonempty string lists.
+
+Date formats: `start` and `end` are `"YYYY-MM"`; `last_updated` is `"YYYY-MM-DD"`;
+`display_date` is a free human string and is the only date the renderer prints.
+
+### Metric Ledger
+v0.2.0 uses ten ad-hoc `status` values that conflate two orthogonal facts — where a number
+came from, and whether it may be printed: `counted`, `doc_backed`, `configured`,
+`estimated`, `unsourced_do_not_use`, `contradicted_do_not_use`, `unverified_do_not_use`,
+`confirmed_none`, `none_exist_by_design`.
+
+Replaced by two fields that cannot contradict each other:
+
+```yaml
+automated_tests:   { value: 233, provenance: counted, renderable: true, render_as: "230+" }
+caller_rate_limit: { value: "600/min", provenance: configured, renderable: false,
+                     note: "CONFIGURED LIMIT, not observed throughput" }
+```
+
+- `provenance ∈ {counted, doc_backed, configured, estimated, unsourced, contradicted, none}`
+- `renderable: bool`
+
+A prohibited number becomes structurally unprintable (rule 11) rather than depending on a
+reader noticing a `_do_not_use` suffix.
+
+Two entries are currently bare strings among `{value, status}` mappings —
+`sepsis_early_warning.metric_ledger.split_scope` and
+`fake_review_detection.metric_ledger.ablation_scope`. They are scope descriptors, not
+metrics; they move to a sibling `metric_scope:` mapping.
+
+`known_gaps.severity` currently mixes severities (`high`, `medium`, `low`) with a state
+(`resolved`, 5 uses). Split into `severity ∈ {high, medium, low}` and
+`status ∈ {open, resolved}`.
+
+`theme` is deleted: 26 distinct values across 38 bullets, 20 used exactly once. It carries no
+selection signal, `keywords_hit` does the real matching work, and a free-form field is
+exactly the ambiguity this design removes.
+
 
 ## 2. ATS rules (encode in the tailoring prompt/skill verbatim)
 
