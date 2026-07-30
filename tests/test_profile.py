@@ -367,3 +367,47 @@ def test_priority_ordering_within_an_entry_is_enforced(tmp_path):
     ).replace("bullet_order: [exp_b1, proj_b1]", "bullet_order: [proj_b0, proj_b1]")
     with pytest.raises(ProfileValidationError, match="priority"):
         load_profile(_write(tmp_path, reordered))
+
+def test_real_profile_loads():
+    """The shipped profile and the loader must not drift apart again."""
+    profile = load_profile("config/master_profile.yaml")
+    assert profile.schema_version == "0.3.0"
+    assert {"backend", "ml"} <= set(profile.base_variants)
+    all_bullets = [
+        bullet
+        for source in (*profile.projects, *profile.experience)
+        for bullet in source.bullets
+    ]
+    assert len(all_bullets) == 38
+    # Blocked claims exist in the corpus but must never be selectable.
+    assert any(bullet.is_blocked for bullet in all_bullets)
+    for name in profile.base_variants:
+        assert all(
+            not bullet.is_blocked for bullet in profile.for_tailoring(name).bullets
+        )
+
+def test_for_tailoring_carries_identity_skills_and_do_not_claim(tmp_path):
+    view = load_profile(_write(tmp_path, _MINIMAL_PROFILE)).for_tailoring("backend")
+    assert view.identity["name"] == "Himanshu Jain"
+    assert view.skills["languages"] == ("Python", "Java")
+    assert view.do_not_claim == ("Kubernetes",)
+
+
+def test_for_tailoring_follows_bullet_order(tmp_path):
+    view = load_profile(_write(tmp_path, _MINIMAL_PROFILE)).for_tailoring("backend")
+    assert [bullet.id for bullet in view.bullets] == ["exp_b1", "proj_b1"]
+
+
+def test_for_critic_includes_evidence_and_defense(tmp_path):
+    view = load_profile(_write(tmp_path, _MINIMAL_PROFILE)).for_critic("backend")
+    bullet = view.bullets[0]
+    assert bullet.evidence
+    assert hasattr(bullet, "defense")
+    assert bullet.ownership_boundary
+    assert not hasattr(bullet, "interview_risk")
+
+
+def test_unknown_base_variant_is_rejected(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    with pytest.raises(ProfileValidationError, match="unknown base_variant"):
+        profile.for_tailoring("quantum")

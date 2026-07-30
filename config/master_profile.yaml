@@ -62,6 +62,57 @@ ats:
   acronym_policy: expand_on_first_use   # "Continuous Integration (CI)"
   title_policy: spell_out_fully         # "Software Engineer", never "SWE"
 
+identity:
+  name: "Himanshu Jain"
+  phone: "408-390-0164"
+  email: "himanshu.jain@sjsu.edu"
+  linkedin: "<user-supplied URL>"
+  github: "<user-supplied URL>"
+  location: "San Jose, CA"
+
+education:
+  - institution: "San Jose State University"
+    degree: "Master of Science in Software Engineering"
+    location: "San Jose, CA"
+    start: "2025-08"
+    end: "2027-05"
+    display_date: "Aug. 2025 - May 2027"
+  - institution: "National Institute of Technology, Warangal"
+    degree: "Bachelor of Technology in Computer Science and Engineering"
+    location: "Warangal, India"
+    start: "2019-08"
+    end: "2023-05"
+    display_date: "Aug. 2019 - May 2023"
+
+skills:
+  languages: ["Java", "Python", "C++", "SQL"]
+  frameworks: ["Spring Boot", "Spring MVC (REST)", "FastAPI", "JUnit", "Mockito"]
+  libraries: ["Apache Kafka", "Elasticsearch", "PyTorch", "scikit-learn", "XGBoost", "PySpark"]
+  apis_and_standards: ["REST", "JSON", "OpenAPI/Swagger", "OAuth2/JWT", "HTTP"]
+  developer_tools: ["Jenkins", "Maven", "Docker", "Git/GitHub", "Bitbucket", "Postman", "OpenShift (OCP)", "SonarQube", "IntelliJ"]
+  databases: ["PostgreSQL", "Couchbase (SDK, N1QL)", "SQL (RDBMS)"]
+
+do_not_claim:
+  - "Kubernetes"
+
+base_variants:
+  backend:
+    projects: [peerchat_peer_discovery]
+    bullet_order: [
+      int_b1, int_b2, int_b3, int_b4, int_b5, int_b6, int_b7, int_b8,
+      am_b01_dlq_consolidation, am_b02_row_level_entitlement, am_b03_audit_trail, am_b04_data_retention, am_b05_test_automation, am_b06_aws_ci_and_resilience,
+      pc_b01_event_sourcing, pc_b02_network_layer, pc_b03_testing_rigor, pc_b04_transport_consolidation, pc_b05_tofu_bootstrap, pc_b06_two_laptop_validation
+    ]
+  ml:
+    projects: [sepsis_early_warning, fake_review_detection]
+    bullet_order: [
+      int_b1, int_b2, int_b3, int_b4, int_b5, int_b6, int_b7, int_b8,
+      am_b01_dlq_consolidation, am_b02_row_level_entitlement, am_b03_audit_trail, am_b04_data_retention, am_b05_test_automation, am_b06_aws_ci_and_resilience,
+      sepsis_b1, sepsis_b2, sepsis_b3, sepsis_b5, sepsis_b4, sepsis_b6, sepsis_b7, sepsis_b8, sepsis_b10, sepsis_b9, sepsis_b11,
+      frd_b1, frd_b3, frd_b5
+    ]
+
+
 # -----------------------------------------------------------------------------
 # PROJECTS
 # -----------------------------------------------------------------------------
@@ -396,24 +447,24 @@ projects:
     # test set. See known_gaps.sep_gap_benchmark_comparison before putting any
     # of these next to a challenge ranking.
     # -------------------------------------------------------------------------
-    metric_ledger:
     metric_scope:
       split_scope: "held-out patient-level split of PhysioNet 2019 public training sets A+B"
-      ensemble_u_norm:      { value: 0.439,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      grud_u_norm:          { value: 0.400,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      random_forest_u_norm: { value: 0.376,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      xgboost_u_norm:       { value: 0.356,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      ensemble_auroc:       { value: 0.809,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      ensemble_auprc:       { value: 0.110,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      ensemble_f1:          { value: 0.213,  provenance: doc_backed, renderable: true, evidence: "results/final_results.csv" }
-      rf_u_norm_with_iculos:    { value: 0.320,  provenance: doc_backed, renderable: true, evidence: "results/iculos_ablation.csv" }
-      rf_u_norm_without_iculos: { value: -0.006, provenance: doc_backed, renderable: true, evidence: "results/iculos_ablation.csv" }
-      median_lead_time_h_hosp_a: { value: 9,  provenance: doc_backed, renderable: true, evidence: "results/lead_time_summary.csv" }
-      median_lead_time_h_hosp_b: { value: 32, provenance: doc_backed, renderable: true, evidence: "results/lead_time_summary.csv" }
-      recall_6h_hosp_a:     { value: 0.75,  provenance: doc_backed, renderable: true, evidence: "results/lead_time_summary.csv (RF cohort)" }
-      recall_6h_hosp_b:     { value: 0.891, provenance: doc_backed, renderable: true, evidence: "results/lead_time_summary.csv (RF cohort, 1142 septic patients)" }
-      qsofa_u_norm:         { value: -0.243, provenance: doc_backed, renderable: true, evidence: "results/rule_baselines.csv" }
-      news_u_norm:          { value: -0.463, provenance: doc_backed, renderable: true, evidence: "results/rule_baselines.csv" }
+    metric_ledger:
+      ensemble_u_norm:      { value: 0.439,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      grud_u_norm:          { value: 0.400,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      random_forest_u_norm: { value: 0.376,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      xgboost_u_norm:       { value: 0.356,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      ensemble_auroc:       { value: 0.809,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      ensemble_auprc:       { value: 0.110,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      ensemble_f1:          { value: 0.213,  provenance: doc_backed, renderable: true, note: "evidence: results/final_results.csv" }
+      rf_u_norm_with_iculos:    { value: 0.320,  provenance: doc_backed, renderable: true, note: "evidence: results/iculos_ablation.csv" }
+      rf_u_norm_without_iculos: { value: -0.006, provenance: doc_backed, renderable: true, note: "evidence: results/iculos_ablation.csv" }
+      median_lead_time_h_hosp_a: { value: 9,  provenance: doc_backed, renderable: true, note: "evidence: results/lead_time_summary.csv" }
+      median_lead_time_h_hosp_b: { value: 32, provenance: doc_backed, renderable: true, note: "evidence: results/lead_time_summary.csv" }
+      recall_6h_hosp_a:     { value: 0.75,  provenance: doc_backed, renderable: true, note: "evidence: results/lead_time_summary.csv (RF cohort)" }
+      recall_6h_hosp_b:     { value: 0.891, provenance: doc_backed, renderable: true, note: "evidence: results/lead_time_summary.csv (RF cohort, 1142 septic patients)" }
+      qsofa_u_norm:         { value: -0.243, provenance: doc_backed, renderable: true, note: "evidence: results/rule_baselines.csv" }
+      news_u_norm:          { value: -0.463, provenance: doc_backed, renderable: true, note: "evidence: results/rule_baselines.csv" }
       # WITHDRAWN. Retained only so the claim is not silently re-derived later.
       challenge_baseline_u_norm: { value: 0.18, provenance: unsourced, renderable: false }
 
@@ -825,9 +876,9 @@ projects:
     # L3/outputs/deberta_metrics.json. Three figures on the current resume are
     # NOT reproducible from this repo - see the withdrawn block.
     # -------------------------------------------------------------------------
-    metric_ledger:
     metric_scope:
       ablation_scope: "L5 holdout; L6_validation/outputs/ablation_table.csv"
+    metric_ledger:
       auc_l2_only:            { value: 0.716, provenance: doc_backed, renderable: true }
       auc_l4_only:            { value: 0.773, provenance: doc_backed, renderable: true }
       auc_l5_supervised_only: { value: 0.819, provenance: doc_backed, renderable: true }
@@ -837,10 +888,10 @@ projects:
       f1_full_plus_l3:        { value: 0.741, provenance: doc_backed, renderable: true, note: "0.7406 exactly" }
       avg_precision_full:     { value: 0.798, provenance: doc_backed, renderable: true }
       recall_at_fpr_0_1:      { value: 0.831, provenance: doc_backed, renderable: true }
-      deberta_auc_roc:        { value: 0.9305, provenance: doc_backed, renderable: true, evidence: "L3/outputs/deberta_metrics.json" }
-      deberta_f1_macro:       { value: 0.8412, provenance: doc_backed, renderable: true, evidence: "L3/outputs/deberta_metrics.json" }
-      deberta_f1_spam:        { value: 0.7221, provenance: doc_backed, renderable: true, evidence: "L3/outputs/deberta_metrics.json" }
-      deberta_avg_precision:  { value: 0.7867, provenance: doc_backed, renderable: true, evidence: "L3/outputs/deberta_metrics.json" }
+      deberta_auc_roc:        { value: 0.9305, provenance: doc_backed, renderable: true, note: "evidence: L3/outputs/deberta_metrics.json" }
+      deberta_f1_macro:       { value: 0.8412, provenance: doc_backed, renderable: true, note: "evidence: L3/outputs/deberta_metrics.json" }
+      deberta_f1_spam:        { value: 0.7221, provenance: doc_backed, renderable: true, note: "evidence: L3/outputs/deberta_metrics.json" }
+      deberta_avg_precision:  { value: 0.7867, provenance: doc_backed, renderable: true, note: "evidence: L3/outputs/deberta_metrics.json" }
       deberta_train_size:     { value: 422704, provenance: doc_backed, renderable: true }
       deberta_val_size:       { value: 53468,  provenance: doc_backed, renderable: true }
       deberta_test_size:      { value: 53687,  provenance: doc_backed, renderable: true }
@@ -1581,6 +1632,9 @@ experience:
     location: "Gurugram, India"
     start: "2023-07"
     end: "2025-06"
+    display_date: "July 2023 - June 2025"
+    role: "Backend developer on the OpenShift integration team"
+    ownership_boundary: "Backend microservices and data pipelines"
     status: completed
 
     # Printed as a one-line italic scope note under the header. Front-loads the

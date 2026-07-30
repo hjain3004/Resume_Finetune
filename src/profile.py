@@ -591,6 +591,48 @@ _REQUIRED_TOP_LEVEL_KEYS = (
 )
 
 
+
+@dataclass(frozen=True)
+class TailoringBullet:
+    id: str
+    phrasings: Phrasings
+    keywords_hit: tuple[str, ...]
+    claim_type: ClaimType
+    priority: int
+
+    @property
+    def is_blocked(self) -> bool:
+        return self.claim_type in ("ownership_unresolved", "needs_input")
+
+
+@dataclass(frozen=True)
+class CriticBullet:
+    id: str
+    phrasings: Phrasings
+    keywords_hit: tuple[str, ...]
+    claim_type: ClaimType
+    priority: int
+    evidence: tuple[str, ...]
+    defense: str
+    ownership_boundary: str
+
+
+@dataclass(frozen=True)
+class TailoringView:
+    identity: dict[str, str]
+    education: tuple[dict[str, str], ...]
+    skills: dict[str, tuple[str, ...]]
+    do_not_claim: tuple[str, ...]
+    bullets: tuple[TailoringBullet, ...]
+
+
+@dataclass(frozen=True)
+class CriticView:
+    identity: dict[str, str]
+    skills: dict[str, tuple[str, ...]]
+    do_not_claim: tuple[str, ...]
+    bullets: tuple[CriticBullet, ...]
+
 @dataclass(frozen=True)
 class MasterProfile:
     schema_version: str
@@ -603,6 +645,66 @@ class MasterProfile:
     experience: tuple[Experience, ...]
     base_variants: dict[str, "BaseVariant"]
     do_not_claim: tuple[str, ...]
+
+    def _ordered_bullets(self, base_variant: str) -> tuple[tuple[str, Bullet], ...]:
+        """(owning entry's ownership_boundary, bullet) in bullet_order order.
+
+        Blocked bullets cannot appear here: rule 9 rejects any base_variant
+        referencing one at load time.
+        """
+        if base_variant not in self.base_variants:
+            known = ", ".join(sorted(self.base_variants)) or "(none)"
+            raise ProfileValidationError(
+                f"unknown base_variant: {base_variant!r}; known: {known}"
+            )
+        index: dict[str, tuple[str, Bullet]] = {
+            bullet.id: (source.ownership_boundary, bullet)
+            for source in (*self.projects, *self.experience)
+            for bullet in source.bullets
+        }
+        return tuple(
+            index[bullet_id]
+            for bullet_id in self.base_variants[base_variant].bullet_order
+        )
+
+    def for_tailoring(self, base_variant: str) -> TailoringView:
+        return TailoringView(
+            identity=self.identity,
+            education=self.education,
+            skills=self.skills,
+            do_not_claim=self.do_not_claim,
+            bullets=tuple(
+                TailoringBullet(
+                    id=bullet.id,
+                    phrasings=bullet.phrasings,
+                    keywords_hit=bullet.keywords_hit,
+                    claim_type=bullet.claim_type,
+                    priority=bullet.priority,
+                )
+                for _, bullet in self._ordered_bullets(base_variant)
+            ),
+        )
+
+    def for_critic(self, base_variant: str) -> CriticView:
+        return CriticView(
+            identity=self.identity,
+            skills=self.skills,
+            do_not_claim=self.do_not_claim,
+            bullets=tuple(
+                CriticBullet(
+                    id=bullet.id,
+                    phrasings=bullet.phrasings,
+                    keywords_hit=bullet.keywords_hit,
+                    claim_type=bullet.claim_type,
+                    priority=bullet.priority,
+                    evidence=bullet.evidence,
+                    defense=bullet.defense,
+                    ownership_boundary=boundary,
+                )
+                for boundary, bullet in self._ordered_bullets(base_variant)
+            ),
+        )
+
 
 
 def _normalize_term(value: str) -> str:
@@ -695,3 +797,4 @@ def load_profile(path: str | Path) -> MasterProfile:
         base_variants=base_variants,
         do_not_claim=do_not_claim,
     )
+
