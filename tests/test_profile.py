@@ -378,7 +378,22 @@ def test_real_profile_loads():
         for source in (*profile.projects, *profile.experience)
         for bullet in source.bullets
     ]
-    assert len(all_bullets) == 38
+    # Every project a base variant references must actually exist. This is the
+    # drift that matters; an exact bullet count only breaks on every edit.
+    known_project_ids = {project.id for project in profile.projects}
+    for name, variant in profile.base_variants.items():
+        assert set(variant.projects) <= known_project_ids, name
+        assert variant.bullet_order, f"{name} has no bullets and cannot render"
+
+    # Both base variants must be renderable, i.e. carry project bullets rather
+    # than only the shared experience bullets.
+    project_bullet_ids = {
+        bullet.id for project in profile.projects for bullet in project.bullets
+    }
+    for name in profile.base_variants:
+        selected = {bullet.id for bullet in profile.for_tailoring(name).bullets}
+        assert selected & project_bullet_ids, f"{name} selects no project bullets"
+
     # Blocked claims exist in the corpus but must never be selectable.
     assert any(bullet.is_blocked for bullet in all_bullets)
     for name in profile.base_variants:

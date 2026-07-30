@@ -97,10 +97,12 @@ do_not_claim:
 
 base_variants:
   backend:
-    projects: [peerchat_peer_discovery]
+    projects: [campus_marketplace, clinical_trial_platform, peerchat_peer_discovery]
     bullet_order: [
       int_b1, int_b2, int_b3, int_b4, int_b5, int_b6, int_b7, int_b8,
       am_b01_dlq_consolidation, am_b02_row_level_entitlement, am_b03_audit_trail, am_b04_data_retention, am_b05_test_automation, am_b06_aws_ci_and_resilience,
+      cm_b1, cm_b2, cm_b3, cm_b4, cm_b5,
+      ct_b1, ct_b2, ct_b3, ct_b4,
       pc_b01_event_sourcing, pc_b02_network_layer, pc_b03_testing_rigor, pc_b04_transport_consolidation, pc_b05_tofu_bootstrap, pc_b06_two_laptop_validation
     ]
   ml:
@@ -1151,6 +1153,504 @@ projects:
           model, and the L6 summary was generated while the DeBERTa run was still
           pending. Any L3 row in the synthetic detection matrix is simulated.
         fix: "Re-run 02_synthetic_injection.py with real model scores, or state the limitation whenever the adversarial results come up."
+
+  - id: campus_marketplace
+    name: "Campus Marketplace"
+    display_title: "Campus Marketplace - Peer-to-Peer Marketplace Backend for a University Campus"
+    org: "San Jose State University"
+    context: >-
+      CMPE 202 team project (team "codebuggers", 3 developers). Himanshu authored
+      48 of the repository's 68 commits. The backend is a modular Spring Boot
+      monolith organized by domain (listing, user, payment, security, chat,
+      report, notification, rating, favorite, recommendations).
+    role: "Primary backend developer (3-person team)"
+    ownership_boundary: >-
+      SAFE TO CLAIM: the listing domain (search, CRUD, photo handling, S3
+      storage), the user domain (registration, profile, role model), Spring
+      Security with JWT and OAuth2 resource server, the payment flow (Stripe
+      webhook, mock payment, transaction history), Flyway schema migrations,
+      the reporting domain, the Gemini-backed natural-language listing search,
+      and the bulk of the test suite. Commit-level evidence: listing 226 file
+      touches, user 202, payment 30, security 25, plus 84 touches under
+      src/test.
+      DO NOT CLAIM: notifications, ratings, favorites, the recommendation
+      engine, or the chatbot. Those are predominantly Yashashav's and Nitish's
+      work. Do not claim the frontend as authored work.
+    start: "2025-09"
+    end: "2025-12"
+    status: completed
+
+    links:
+      repo: "https://github.com/gopinathsjsu/cmpe202-02-team-project-cmpe202-02-codebuggers"
+      subpath: "campus-marketplace/"
+      render_as: visible_url
+
+    tech:
+      primary: ["Java 21", "Spring Boot", "PostgreSQL", "Flyway", "JUnit 5"]
+      secondary: ["Spring Security", "OAuth2 Resource Server", "JJWT", "MapStruct",
+                  "Lombok", "AWS S3", "Google Vertex AI (Gemini)", "JaCoCo", "Maven"]
+      tech_line: "Java 21, Spring Boot, PostgreSQL, Flyway, Spring Security, AWS S3, JUnit 5"
+
+    keywords:
+      exact: ["Java", "Spring Boot", "PostgreSQL", "REST API", "JWT", "OAuth2",
+              "Flyway", "JUnit", "Maven", "AWS S3", "unit testing",
+              "integration testing", "role-based access control"]
+      topical: ["backend", "database migrations", "authentication", "authorization",
+                "payments", "Stripe", "webhooks", "domain-driven design",
+                "object storage", "test coverage", "generative AI",
+                "natural language search"]
+
+    scale:
+      main_java_files: 366
+      main_loc: 17194
+      test_loc: 22809
+      test_methods: 1179
+      controllers: 20
+      entities: 24
+      flyway_migrations: 30
+
+    # -------------------------------------------------------------------------
+    # METRIC LEDGER
+    # counted = statically counted from the repository at 2026-07-30
+    # -------------------------------------------------------------------------
+    metric_ledger:
+      main_loc:          { value: 17194, provenance: counted, renderable: true, render_as: "17,000+" }
+      test_loc:          { value: 22809, provenance: counted, renderable: true, render_as: "22,000+" }
+      test_methods:      { value: 1179, provenance: counted, renderable: true, render_as: "1,100+" }
+      controllers:       { value: 20, provenance: counted, renderable: true }
+      entities:          { value: 24, provenance: counted, renderable: true }
+      flyway_migrations: { value: 30, provenance: counted, renderable: true }
+      test_to_code_ratio: { value: "1.33:1", provenance: counted, renderable: true,
+                            note: "22,809 test LOC over 17,194 main LOC." }
+      commit_share:      { value: "48 of 68", provenance: counted, renderable: false,
+                           note: "Ownership evidence for interviews. Do not print a commit share on a resume." }
+      test_coverage_90pct: { value: null, provenance: contradicted, renderable: false,
+                             note: "The current resume prints 'test coverage (90%)'. JaCoCo is configured in pom.xml but no coverage report was found or executed. Render the counted test numbers instead." }
+      production_traffic:  { value: null, provenance: none, renderable: false,
+                             note: "Course project. Nothing served real users." }
+
+    metric_scope:
+      count_basis: "Static counts taken from the working tree on 2026-07-30; test methods counted by @Test occurrences under src/test."
+
+    bullets:
+
+      - id: cm_b1
+        claim_type: scoped
+        priority: 1
+        phrasings:
+          long: >-
+            Built the backend for a campus peer-to-peer marketplace as the primary
+            developer on a 3-person team, authoring 48 of 68 commits across a
+            17,000-line Java 21 and Spring Boot service organized by domain, with
+            20 REST controllers, 24 JPA entities, and 30 Flyway-controlled schema
+            migrations over PostgreSQL.
+          medium: >-
+            Built the backend for a campus peer-to-peer marketplace as primary
+            developer on a 3-person team - a 17,000-line Java 21 and Spring Boot
+            service with 20 REST controllers, 24 JPA entities, and 30
+            Flyway-controlled PostgreSQL migrations.
+          short: >-
+            Built the backend of a campus peer-to-peer marketplace in Java 21 and
+            Spring Boot - 20 REST controllers, 24 JPA entities, 30 Flyway
+            migrations.
+        evidence:
+          - "campus-marketplace/src/main/java: 366 files, 17,194 LOC counted 2026-07-30"
+          - "20 files matching @RestController; 24 matching @Entity; 30 .sql files under src/main/resources/db"
+          - "git shortlog -sne --all: hjain3004 + Himanshu Jain = 48 of 68 commits"
+        keywords_hit: ["Java", "Spring Boot", "PostgreSQL", "REST API", "Flyway"]
+        defense: >-
+          "Primary developer" is supported by a 48-of-68 commit share, not by sole
+          authorship - this was a 3-person team. The counted line and file totals
+          describe the whole backend, which is accurate for the scope of the
+          sentence; per-feature ownership is in ownership_boundary and must be
+          used if an interviewer drills into a specific subsystem.
+        interview_risk: |
+          Expect: "which parts were yours?" Answer with the ownership_boundary
+          split, unprompted if necessary - listing, user, payment, security, and
+          the test suite are yours; notifications, ratings, favorites,
+          recommendations, and the chatbot are not. Volunteering the boundary
+          reads as senior; being caught claiming a teammate's feature does not.
+
+      - id: cm_b2
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Owned the listing and user domains - the two largest in the codebase -
+            implementing listing creation and search, photo upload backed by
+            Amazon S3 object storage, and a role-based access model over Spring
+            Security with JSON Web Token (JWT) authentication and an OAuth2
+            resource server.
+          medium: >-
+            Owned the listing and user domains, implementing listing search, photo
+            upload backed by Amazon S3, and role-based access control over Spring
+            Security with JWT authentication and an OAuth2 resource server.
+          short: >-
+            Owned the listing and user domains - listing search, S3-backed photo
+            upload, and JWT role-based access control over Spring Security.
+        evidence:
+          - "git log --author=himanshu --name-only: 226 file touches under listing/, 202 under user/"
+          - "pom.xml: spring-boot-starter-security, spring-boot-starter-oauth2-resource-server, jjwt-api/impl/jackson, s3"
+          - "campus-marketplace/src/main/java/edu/campus/campus_marketplace/listing/api/storage"
+        keywords_hit: ["JWT", "OAuth2", "AWS S3", "Spring Boot", "role-based access control"]
+        defense: ""
+        interview_risk: |
+          The listing package uses an applicationservice / domainservice /
+          delegates / aspect layering. Be ready to justify it: it is closer to
+          domain-driven design than a flat service layer. If asked why, the honest
+          answer is that the listing domain had enough distinct rules (search,
+          moderation, media, expiry) that a single service class was becoming
+          unmanageable.
+
+      - id: cm_b3
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Authored the bulk of a 1,179-test suite spanning 22,809 lines of test
+            code against 17,194 lines of application code - a 1.33 to 1 test to
+            code ratio - covering the listing, user, payment, and security domains
+            with JUnit 5.
+          medium: >-
+            Authored the bulk of a 1,179-test JUnit 5 suite - 22,809 test lines
+            against 17,194 application lines, a 1.33 to 1 ratio - across the
+            listing, user, payment, and security domains.
+          short: >-
+            Authored the bulk of a 1,179-test JUnit 5 suite, a 1.33 to 1 test to
+            code ratio.
+        evidence:
+          - "1,179 @Test occurrences across 60 files under campus-marketplace/src/test"
+          - "22,809 test LOC vs 17,194 main LOC, counted 2026-07-30"
+          - "git log --author=himanshu --name-only: 84 file touches under src/test"
+        keywords_hit: ["JUnit", "unit testing", "integration testing", "test coverage"]
+        defense: ""
+        interview_risk: |
+          Do NOT say "90% coverage" - that number is on the current resume and
+          nothing in the repository supports it. JaCoCo is configured in pom.xml
+          but no report was generated. The counted test numbers are stronger
+          anyway because they reproduce in one command. If pressed on coverage,
+          say the suite was never measured and offer to run JaCoCo.
+
+      - id: cm_b4
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Implemented the payment path - Stripe webhook handling, a mock payment
+            provider for local and test environments, and immutable transaction
+            history - alongside 30 Flyway-controlled schema migrations that kept
+            the PostgreSQL schema reproducible across every environment.
+          medium: >-
+            Implemented the payment path - Stripe webhook handling, a mock payment
+            provider for testing, and transaction history - plus 30
+            Flyway-controlled PostgreSQL schema migrations.
+          short: >-
+            Implemented Stripe webhook payment handling, a mock provider for
+            testing, and 30 Flyway-controlled schema migrations.
+        evidence:
+          - "StripeWebhookController.java, MockPaymentController.java, PaymentController.java, TransactionHistoryController.java"
+          - "git log --author=himanshu --name-only: 30 file touches under payment/"
+          - "30 .sql migrations under src/main/resources/db"
+        keywords_hit: ["Stripe", "webhooks", "PostgreSQL", "Flyway", "REST API"]
+        defense: ""
+        interview_risk: |
+          Payments never processed real money - Stripe ran in test mode and a mock
+          provider backed local runs. Say so if asked; claiming production payment
+          experience from this is not defensible.
+
+      - id: cm_b5
+        claim_type: scoped
+        priority: 3
+        phrasings:
+          medium: >-
+            Added natural-language listing search backed by Google Vertex AI
+            (Gemini), translating free-text buyer queries into structured listing
+            filters.
+          short: >-
+            Added Gemini-backed natural-language search over marketplace listings.
+        evidence:
+          - "pom.xml: google-cloud-vertexai, libraries-bom"
+          - "git log --author=himanshu: 5 file touches under gemini/; commit subjects 'ai search', 'natural language working', 'gemini import error'"
+        keywords_hit: ["generative AI", "natural language search", "Java"]
+        defense: >-
+          Scoped to SEARCH only. The separate chatbot feature (ChatbotController)
+          is a teammate's work - 3 commits from Yashashav, none from Himanshu. The
+          current resume conflates the two into "Gemini-based search/chatbot"; that
+          phrasing must not be reused.
+        interview_risk: |
+          Keep this bullet last and drop it first when space is short. It is the
+          thinnest of the five - 5 file touches - and it sits next to a feature
+          owned by someone else. If asked how the query translation works, be
+          honest that it is prompt-driven structured extraction, not a trained
+          model.
+
+    known_gaps:
+      - id: cm_gap_end_date_wrong
+        severity: high
+        status: open
+        detail: >-
+          The current resume renders "September 2025 - Present". The last commit in
+          the repository is 2025-12-04 and the course ended that term. The project
+          is not ongoing.
+        fix: "Render 'Sept. 2025 - Dec. 2025'. Never render 'Present' for this entry."
+      - id: cm_gap_coverage_claim_unsupported
+        severity: high
+        status: open
+        detail: >-
+          The current resume claims "test coverage (90%)". JaCoCo is configured in
+          pom.xml but no coverage report exists in the working tree and no run was
+          recorded. The number has no source.
+        fix: >-
+          Drop the percentage. Render the counted 1,179 tests and the 1.33:1 test
+          to code ratio instead - both reproduce in one command. Only reinstate a
+          percentage after running 'mvn jacoco:report' and reading the real figure.
+      - id: cm_gap_chatbot_not_mine
+        severity: high
+        status: open
+        detail: >-
+          The current resume says "Gemini-based search/chatbot". The chatbot is a
+          teammate's feature; only the AI search is Himanshu's.
+        fix: "Claim search only, per cm_b5's defense string."
+      - id: cm_gap_team_attribution
+        severity: medium
+        status: open
+        detail: >-
+          Notifications, ratings, favorites, recommendations, and the chatbot are
+          predominantly Yashashav's and Nitish's work. A reader seeing a
+          20-controller backend on one resume line may assume all of it is
+          Himanshu's.
+        fix: >-
+          Keep cm_b1 phrased as "primary developer on a 3-person team", never
+          "sole" or "architected the platform". Lead with the ownership_boundary
+          split if an interviewer probes.
+
+  - id: clinical_trial_platform
+    name: "Synthetic Clinical Trial Data Platform"
+    display_title: "Synthetic Clinical Trial Data Platform - Microservices for Regulated Trial Data"
+    org: "San Jose State University"
+    context: >-
+      CMPE 272 project, 2 human developers plus heavy AI-assisted development. A
+      12-service Python microservices platform that generates synthetic clinical
+      trial data, integrates the AACT ClinicalTrials.gov database, and layers
+      analytics, quality scoring, and an LLM-backed medical monitor on top.
+      Deployment assets exist for Docker Compose, Kubernetes, and Terraform.
+    role: "Co-developer; sole author of the security service"
+    ownership_boundary: >-
+      SAFE TO CLAIM: the security service (24 file touches, zero from any other
+      contributor), and co-ownership of data-generation (51 touches), analytics
+      (23), quality (15), and EDC (11).
+      DO NOT CLAIM: the linkup-integration service, the GAN service, or the GAIN
+      service - those are entirely AI-generated commits with no Himanshu
+      authorship.
+      CRITICAL CONTEXT: of 251 total commits, 147 are authored by Claude
+      (AI-assisted development), 96 by Himanshu, 8 by Nitish. Himanshu directed
+      and integrated that work, which is legitimate, but no bullet here may imply
+      line-by-line authorship of the full 53,000-line codebase.
+    start: "2025-11"
+    end: "2026-03"
+    status: completed
+
+    links:
+      repo: "https://github.com/nitishhrms/Synthetic-Medical-Data-Generation"
+      render_as: visible_url
+
+    tech:
+      primary: ["Python", "FastAPI", "PostgreSQL", "Docker"]
+      secondary: ["Docker Compose", "Kubernetes", "Terraform",
+                  "AACT ClinicalTrials.gov", "pytest", "AWS"]
+      tech_line: "Python, FastAPI, PostgreSQL, Docker, Kubernetes, Terraform"
+
+    keywords:
+      exact: ["Python", "FastAPI", "PostgreSQL", "microservices", "Docker",
+              "Kubernetes", "Terraform", "REST API", "API gateway", "AWS"]
+      topical: ["healthcare", "clinical trials", "synthetic data", "data generation",
+                "data quality", "analytics", "regulated data",
+                "electronic data capture", "LLM integration", "distributed systems",
+                "infrastructure as code"]
+
+    scale:
+      microservices: 12
+      python_files: 146
+      python_loc: 53480
+      test_files: 17
+      test_functions: 22
+
+    metric_ledger:
+      microservices:     { value: 12, provenance: counted, renderable: true }
+      python_loc:        { value: 53480, provenance: counted, renderable: true, render_as: "53,000+" }
+      security_service_touches: { value: 24, provenance: counted, renderable: false,
+                                  note: "Sole-authorship evidence for the security service. Interview use only." }
+      commit_share:      { value: "96 of 251", provenance: counted, renderable: false,
+                           note: "Interview use only. Never print." }
+      ai_authored_commits: { value: 147, provenance: counted, renderable: false,
+                             note: "147 of 251 commits authored by Claude. Never printed, but Himanshu must know this number before any interview about this project." }
+      test_functions:      { value: 22, provenance: counted, renderable: false,
+                             note: "22 test functions across 53,480 lines. Actively harmful to print. Do not use this project as testing-rigor evidence - use Campus Marketplace instead." }
+      trials_557k:         { value: null, provenance: unsourced, renderable: false,
+                             note: "config/profile_summary.md claims '557K+ trials'. No artifact in the repository substantiates that count. Do not render until verified against a real AACT query." }
+      production_traffic:  { value: null, provenance: none, renderable: false,
+                             note: "Course project. Deployment assets exist; nothing served real users." }
+
+    metric_scope:
+      count_basis: "Static counts from the working tree on 2026-07-30; commit attribution from git shortlog -sne --all."
+
+    bullets:
+
+      - id: ct_b1
+        claim_type: scoped
+        priority: 1
+        phrasings:
+          long: >-
+            Co-developed a 12-service Python microservices platform for synthetic
+            clinical trial data, spanning data generation, analytics, quality
+            scoring, electronic data capture, and security, with an API gateway
+            fronting the services and deployment assets for Docker Compose,
+            Kubernetes, and Terraform.
+          medium: >-
+            Co-developed a 12-service Python and FastAPI microservices platform for
+            synthetic clinical trial data - generation, analytics, quality scoring,
+            electronic data capture, and security - deployed via Docker Compose,
+            Kubernetes, and Terraform.
+          short: >-
+            Co-developed a 12-service Python and FastAPI platform for synthetic
+            clinical trial data, deployed via Docker and Kubernetes.
+        evidence:
+          - "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared"
+          - "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root"
+          - "146 Python files, 53,480 LOC counted 2026-07-30"
+        keywords_hit: ["Python", "FastAPI", "microservices", "Docker", "Kubernetes", "Terraform"]
+        defense: >-
+          "Co-developed" is the ceiling for this project and must never be raised
+          to "built" or "architected". 147 of 251 commits are AI-authored and a
+          second human contributed. Himanshu's authorship concentrates in
+          data-generation, security, analytics, quality, and EDC.
+        interview_risk: |
+          This project was developed with heavy AI assistance - 147 of 251 commits.
+          That is defensible and worth stating plainly if asked how it was built;
+          directing and integrating AI-generated services is real engineering work.
+          What is NOT defensible is implying you hand-wrote 53,000 lines. Decide
+          the honest framing BEFORE the interview, not during it. Never bring this
+          project up as evidence of testing discipline - there are 22 tests.
+
+      - id: ct_b2
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Solely authored the platform's security service, the only service in
+            the repository with no other contributor, handling authentication and
+            access control across the microservice boundary for regulated clinical
+            trial data.
+          medium: >-
+            Solely authored the platform's security service - the only service with
+            no other contributor - handling authentication and access control for
+            regulated clinical trial data.
+          short: >-
+            Solely authored the platform's security service for authentication and
+            access control over regulated trial data.
+        evidence:
+          - "microservices/security-service: 24 file touches from hjain3004, zero from Claude or nitishhrms"
+          - "git log --all --author=Claude -- microservices/security-service returns no commits"
+        keywords_hit: ["Python", "FastAPI", "microservices", "authentication"]
+        defense: ""
+        interview_risk: |
+          This is the strongest ownership claim in the project - lead with it if
+          asked what was genuinely yours. Be ready to describe the actual auth
+          mechanism, because "solely authored" invites depth questions.
+
+      - id: ct_b3
+        claim_type: scoped
+        priority: 2
+        phrasings:
+          medium: >-
+            Built the largest share of the data generation service, producing
+            synthetic patient and trial records shaped to the AACT
+            ClinicalTrials.gov schema so downstream analytics could run without
+            touching protected health information.
+          short: >-
+            Built the largest share of the synthetic data generation service,
+            shaped to the AACT ClinicalTrials.gov schema.
+        evidence:
+          - "microservices/data-generation-service: 51 file touches from hjain3004, the largest single-service share"
+          - "test_aact_endpoints.py, demonstrate_aact_fetch.py, test_all_aact_data.py at repo root"
+        keywords_hit: ["Python", "synthetic data", "clinical trials", "healthcare"]
+        defense: >-
+          "Largest share" not "built" - Claude authored 48 file touches in the same
+          service against Himanshu's 51. The AACT schema alignment is real and
+          demonstrable; the trial-count figure is not (see known_gaps).
+        interview_risk: |
+          Do not quote "557K+ trials" - that figure appears in the old profile
+          summary and nothing in the repository backs it. If asked about scale, say
+          the generator targets the AACT schema and offer to show the fetch script
+          rather than citing a number you cannot source.
+
+      - id: ct_b4
+        claim_type: scoped
+        priority: 3
+        phrasings:
+          medium: >-
+            Contributed the analytics and quality services, scoring generated
+            cohorts for statistical fidelity against real trial distributions.
+          short: >-
+            Contributed analytics and quality-scoring services for generated trial
+            cohorts.
+        evidence:
+          - "microservices/analytics-service: 23 file touches from hjain3004 against 40 from Claude"
+          - "microservices/quality-service: 15 from hjain3004 against 8 from Claude"
+        keywords_hit: ["Python", "analytics", "data quality"]
+        defense: >-
+          "Contributed" is accurate and deliberately weaker than the security or
+          data-generation claims. Claude out-committed Himanshu in analytics 40 to
+          23; quality is the reverse at 15 to 8. Do not upgrade this verb.
+        interview_risk: |
+          The weakest bullet of the four. Drop it first when space is short. If
+          asked what "statistical fidelity" meant concretely, be prepared with a
+          real metric or concede the scoring was coarse.
+
+    known_gaps:
+      - id: ct_gap_ai_authorship
+        severity: high
+        status: open
+        detail: >-
+          147 of 251 commits (59%) are authored by Claude. Himanshu authored 96
+          (38%). Every claim about this project must survive the question "how much
+          of this did you write?".
+        fix: >-
+          Cap every verb at "co-developed" or "contributed", except the security
+          service, which is genuinely sole-authored. Rehearse an honest answer
+          about AI-assisted development before any interview where this project
+          appears. Consider leading with Campus Marketplace instead for roles that
+          probe hands-on coding depth.
+      - id: ct_gap_no_tests
+        severity: high
+        status: open
+        detail: >-
+          22 test functions across 17 files against 53,480 lines of Python. For
+          comparison, Campus Marketplace has 1,179 tests over 17,194 lines.
+        fix: >-
+          Never cite this project as testing evidence. If a JD emphasizes testing
+          rigor, select Campus Marketplace and the Amdocs experience instead. If
+          asked directly, concede the gap rather than defending it.
+      - id: ct_gap_trial_count_unsourced
+        severity: high
+        status: open
+        detail: >-
+          config/profile_summary.md claims the platform integrates "557K+ trials".
+          No artifact in the repository substantiates that number.
+        fix: >-
+          Do not render it. Either verify it with a real AACT query and record the
+          command as evidence, or drop the figure permanently.
+      - id: ct_gap_unowned_services
+        severity: medium
+        status: open
+        detail: >-
+          The linkup-integration (25 Claude commits), GAN (3), and GAIN (3)
+          services have zero Himanshu authorship. A "12-service platform" claim
+          could be read as covering them.
+        fix: >-
+          The ct_b1 phrasing says "co-developed a 12-service platform", which
+          describes the artifact rather than claiming authorship of each service.
+          Keep it that way and use ownership_boundary if an interviewer drills in.
 
 # -----------------------------------------------------------------------------
 # EXPERIENCE
