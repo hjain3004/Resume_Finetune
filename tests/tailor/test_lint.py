@@ -68,3 +68,20 @@ def test_blocked_claims():
     claims = {"b1": "verified", "b2": "ownership_unresolved"}
     assert not check_blocked_claims(["b1"], claims)
     assert len(check_blocked_claims(["b1", "b2"], claims)) == 1
+
+from src.tailor.lint import check_keyword_frequency, check_dual_placement
+
+def test_keyword_frequency():
+    text = "Python is great. We love Python. Python Python Python."
+    # Python appears 5 times
+    assert len(check_keyword_frequency(text, ["Python"])) == 1
+    assert not check_keyword_frequency(text, ["Ruby"])
+
+def test_dual_placement():
+    skills = {"languages": ["Python"]}
+    bullets = "Built with Python"
+    assert not check_dual_placement(["Python"], skills, bullets)
+    
+    assert len(check_dual_placement(["Ruby"], skills, bullets)) == 1
+    assert len(check_dual_placement(["Python"], {}, bullets)) == 1
+    assert len(check_dual_placement(["Python"], skills, "")) == 1

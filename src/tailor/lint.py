@@ -99,3 +99,35 @@ def check_blocked_claims(tailored_bullets: list[str], bullet_claim_types: dict[s
         if claim in blocked_types:
             violations.append(f"blocked claim violation: bullet {bid} has blocked claim_type '{claim}'")
     return violations
+
+from collections import Counter
+
+def check_keyword_frequency(hydrated_text: str, jd_keywords: list[str]) -> list[str]:
+    """Ensure no JD keyword occurs > 4x in the text."""
+    violations = []
+    text_norm = " ".join(_normalize_tokens(hydrated_text))
+    for keyword in jd_keywords:
+        kw_norm = " ".join(_normalize_tokens(keyword))
+        if not kw_norm:
+            continue
+        count = text_norm.count(kw_norm)
+        if count > 4:
+            violations.append(f"keyword stuffing violation: term '{keyword}' appears {count} times (max 4)")
+    return violations
+
+def check_dual_placement(must_have_keywords: list[str], skills_dict: dict[str, list[str]], hydrated_bullets_text: str) -> list[str]:
+    """Every must-have keyword must be in skills AND in >= 1 bullet."""
+    violations = []
+    skills_text = " ".join([item for items in skills_dict.values() for item in items])
+    skills_norm = " ".join(_normalize_tokens(skills_text))
+    bullets_norm = " ".join(_normalize_tokens(hydrated_bullets_text))
+    
+    for keyword in must_have_keywords:
+        kw_norm = " ".join(_normalize_tokens(keyword))
+        if not kw_norm:
+            continue
+        in_skills = kw_norm in skills_norm
+        in_bullets = kw_norm in bullets_norm
+        if not (in_skills and in_bullets):
+            violations.append(f"dual placement violation: must-have keyword '{keyword}' missing from skills or bullets")
+    return violations
