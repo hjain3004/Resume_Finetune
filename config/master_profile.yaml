@@ -1,0 +1,1933 @@
+# =============================================================================
+# master_profile.yaml
+# =============================================================================
+# The single source of truth for every factual claim that may appear on a
+# generated resume. The tailoring model SELECTS from this file; it never
+# invents, rephrases beyond the provided variants, or writes markup.
+#
+# CONTRACT (enforce in the renderer + audit suite):
+#   C1. Every bullet emitted to a .tex/Typst artifact MUST resolve to a
+#       bullet_id present in this file. No free-text bullets. Ever.
+#   C2. The model may only choose among `variants`. It may not edit variant
+#       text. Length fitting is variant selection, not rewriting.
+#   C3. Any bullet with claim_type != "verified" requires `defense` to be
+#       non-empty. The audit suite fails the build if it is missing.
+#   C4. All rendered text MUST be ASCII-only (see ats.charset_policy).
+#       Non-ASCII in a variant is a build failure, not a warning.
+#   C5. `evidence` is a code/artifact path or a reproducible command. Prose
+#       assertions ("I remember doing this") are not evidence.
+#
+# SCHEMA VERSION: 0.2.0  -- projects + experience. Skills/summary/education
+# blocks land in later milestones; stubs at the bottom mark the intended shape.
+#
+# claim_type enum (audit suite must reject unknown values):
+#   verified              reproducible from code, config, or a committed artifact
+#   scoped                true, but describes ownership inside a team effort;
+#                         phrasing must claim only Himanshu's slice
+#   estimated             reconstructed metric, no reproducible measurement
+#   observed              measured once manually, not in CI
+#   ownership_unresolved  BLOCKED. Work exists in the repo but attribution is
+#                         unconfirmed. Must not render.
+#   needs_input           BLOCKED. A required fact is missing and only Himanshu
+#                         can supply it (employer name, dates, deploy status).
+#                         Must not render.
+# Any claim_type other than `verified` requires a non-empty `defense` (C3).
+# =============================================================================
+
+schema_version: "0.2.0"
+last_updated: "2026-07-30"
+
+# -----------------------------------------------------------------------------
+# ATS policy -- derived from ATS_Guide_and_Optimization_Checklist.md
+# The renderer reads these; the audit suite asserts them.
+# -----------------------------------------------------------------------------
+ats:
+  charset_policy: ascii_strict          # rejects  ~  x  -  '  " and all smart punctuation
+  forbidden_chars: ["\u223c", "\u00d7", "\u2013", "\u2014", "\u2019", "\u201c", "\u201d", "\u2192"]
+  substitutions:                        # applied at authoring time, not render time
+    "\u223c": "~"
+    "\u00d7": "x"
+    "\u2013": "-"
+    "\u2014": "-"
+    "\u2192": "->"
+  layout:
+    columns: 1                          # single column, non-negotiable
+    contact_in_body: true               # never in header/footer (Greenhouse parse failure)
+    tables: false
+    text_boxes: false
+    graphics: false
+  headings_whitelist: ["Education", "Experience", "Projects", "Skills"]
+  max_file_size_mb: 2.5                 # Greenhouse hard limit
+  filename_pattern: "Himanshu_Jain_Resume.pdf"
+  acronym_policy: expand_on_first_use   # "Continuous Integration (CI)"
+  title_policy: spell_out_fully         # "Software Engineer", never "SWE"
+
+# -----------------------------------------------------------------------------
+# PROJECTS
+# -----------------------------------------------------------------------------
+projects:
+
+  - id: peerchat_peer_discovery
+    name: "PeerChat - Peer Discovery Module"
+    # Rendered header line. Keep <= ~95 chars so it never wraps.
+    display_title: "PeerChat - Peer Discovery for a Serverless P2P Chat System"
+    org: "San Jose State University"
+    context: >-
+      Distributed systems course project built by a ~15-person class split into
+      module teams (membership/discovery, message distribution, history,
+      security, UI). I co-owned the peer discovery module with one teammate;
+      everything claimed here lives under peer_discovery/ and is attributable to
+      my commits. I did NOT build message distribution, history recovery, the
+      crypto primitives, or the UI.
+    role: "Co-owner, peer discovery module (2-person sub-team)"
+    ownership_boundary: >-
+      SAFE TO CLAIM: event log, snapshot projection, presence/failure detection,
+      gossip dispatch, heartbeats, bootstrap/join handshake, protocol codec,
+      trust-on-first-use pubkey planting, the transport consolidation.
+      DO NOT CLAIM: BroadcastNode/WebSocket transport itself, causal ordering
+      and vector clocks, history recovery and snapshotting, signing/encryption
+      primitives, the UI. Those belong to other module teams.
+    start: "2026-01"
+    end: "2026-05"
+    status: completed
+
+    links:
+      # TODO(himanshu): replace with the real URL you just added.
+      # Prefer YOUR fork so the commit history reads as yours; if you link the
+      # class repo, add "#peer_discovery" so it deep-links your directory.
+      repo: "https://github.com/CHANGEME/peerchat"
+      subpath: "peer_discovery/"
+      # Render as visible text, not a hyperlinked word (ATS: URLs must survive
+      # text extraction).
+      render_as: visible_url
+
+    tech:
+      primary: ["Python", "WebSockets", "pytest"]
+      secondary: ["cryptography (RSA signing)", "threading", "event sourcing"]
+      # `tech_line` is what the renderer prints. Kept explicit so the model
+      # cannot reorder or invent stack items.
+      tech_line: "Python, WebSockets, cryptography, pytest"
+
+    # Keywords the JD-matcher scores against. NOT printed. Split so the
+    # scorer can weight exact-title matches higher than topical ones.
+    keywords:
+      exact: ["distributed systems", "peer-to-peer", "P2P", "event sourcing",
+              "gossip protocol", "failure detection", "fault tolerance",
+              "concurrency", "WebSockets", "Python", "unit testing"]
+      topical: ["state machine", "idempotency", "deduplication", "LRU cache",
+                "public key cryptography", "trust on first use", "consensus",
+                "eventual consistency", "backend", "systems programming"]
+
+    # -------------------------------------------------------------------------
+    # BULLET CORPUS
+    # -------------------------------------------------------------------------
+    # Select 2 for a standard render, 3 when this is the lead project for a
+    # distributed-systems/backend role, 1 when it is the third project on an
+    # ML-targeted resume.
+    #
+    # claim_type:
+    #   verified  -> reproducible from the repo (test count, code behavior)
+    #   scoped    -> true but describes team-project ownership; phrased to
+    #                claim only my slice
+    #   observed  -> measured once manually (two-laptop run), not in CI
+    # -------------------------------------------------------------------------
+    bullets:
+
+      - id: pc_b01_event_sourcing
+        claim_type: verified
+        priority: 1                     # lead bullet; almost always selected
+        theme: architecture
+        variants:
+          long: >-
+            Owned peer discovery for a decentralized peer-to-peer (P2P) chat
+            system, designing an event-sourced membership layer - an append-only
+            event log with a deterministic snapshot projection and per-event
+            transition guards - that converges every node to a consistent room
+            roster across joins, leaves, and unannounced crashes.
+          medium: >-
+            Designed an event-sourced membership layer for a decentralized P2P
+            chat system - append-only event log plus a deterministic snapshot
+            projection with transition guards - converging every node to a
+            consistent room roster across joins, leaves, and crashes.
+          short: >-
+            Built an event-sourced membership layer (append-only log plus
+            deterministic snapshot projection) converging all nodes to a
+            consistent peer roster.
+        evidence:
+          - "peer_discovery/membership/event_log.py: monotonic seq_no, RLock-guarded append, StaleTermError on term regression"
+          - "peer_discovery/membership/snapshot.py: apply_event with _ALLOWED_FROM_STATES guards; zero wall-clock reads"
+          - "test: build snapshot twice from same log, assert identical serialization"
+        keywords_hit: ["event sourcing", "distributed systems", "state machine", "P2P"]
+        defense: ""
+        interview_risk: |
+          "Deterministic" is scoped to a GIVEN local log. Two nodes receiving
+          gossip in different orders build different local logs, and apply_event
+          DROPS an illegal transition (logs a warning, returns None) rather than
+          buffering it. Say "converges", never "guarantees identical". If pushed:
+          "ordering is convergent under our single-originator gossip topology;
+          a general solution needs per-originator sequencing or a reorder buffer."
+
+      - id: pc_b02_network_layer
+        claim_type: verified
+        priority: 1
+        theme: implementation
+        variants:
+          long: >-
+            Implemented the full network layer - gossip dissemination with an
+            (originator, sequence, type, user) dedup key over a 10,000-entry LRU
+            and single-hop cycle-breaking, SWIM-inspired two-phase failure
+            detection (ACTIVE to SUSPECTED to DISCONNECTED on timers), and
+            trust-on-first-use public-key exchange - riding a shared WebSocket
+            transport.
+          medium: >-
+            Implemented the network layer: gossip dissemination with LRU-backed
+            dedup and single-hop cycle-breaking, SWIM-inspired two-phase failure
+            detection, and trust-on-first-use public-key exchange over a shared
+            WebSocket transport.
+          short: >-
+            Implemented gossip dissemination with LRU dedup, SWIM-inspired
+            failure detection, and trust-on-first-use key exchange over
+            WebSockets.
+        evidence:
+          - "peer_discovery/network/gossip.py: MAX_SEEN_EVENTS = 10_000; dedup key f'{originator}:{seq_no}:{event_type}:{user_id}'; source=='remote' not re-gossiped"
+          - "peer_discovery/membership/presence.py: injectable time_fn; ACTIVE -> SUSPECTED -> DISCONNECTED"
+          - "peer_discovery/network/discovery_node.py: lazy_register_pubkey planted on BroadcastNode.pre_verify_hook, idempotent"
+        keywords_hit: ["gossip protocol", "failure detection", "deduplication", "WebSockets", "public key cryptography"]
+        defense: ""
+        interview_risk: |
+          "SWIM-inspired" is deliberate and must NOT be upgraded to
+          "SWIM-style"/"SWIM implementation". Real SWIM uses randomized probing
+          with indirect ping-req; this broadcasts every heartbeat to every peer
+          every 5s (full mesh) and borrows only the two-phase suspicion timer.
+          Prepared answer: "broadcast heartbeats with SWIM's suspicion
+          mechanism; randomized probing would be the scale upgrade."
+
+      - id: pc_b03_testing_rigor
+        claim_type: verified
+        priority: 2
+        theme: quality
+        variants:
+          long: >-
+            Validated the module with 92 unit and integration tests, including
+            fake-clock-driven failure-detection tests that make timer behavior
+            fully deterministic, a 500-append concurrency test asserting an exact
+            contiguous sequence range, and a two-node end-to-end handshake test.
+          medium: >-
+            Validated with 92 unit and integration tests, including fake-clock
+            deterministic failure-detection tests, a 500-append concurrency
+            test, and a two-node end-to-end handshake.
+          short: >-
+            Covered the module with 92 unit and integration tests, including
+            concurrency and two-node end-to-end cases.
+        evidence:
+          - "python3 -m pytest peer_discovery/ -q  ->  92 passed"
+          - "peer_discovery/membership/tests/: FakeClock injected via PresenceManager(time_fn=...)"
+          - "peer_discovery/network/tests/test_gossip.py, _helpers.FakeBroadcastNode"
+        keywords_hit: ["unit testing", "integration testing", "concurrency", "pytest"]
+        defense: ""
+        interview_risk: |
+          Strongest code-quality signal in the repo and rare for a student
+          project - the injected clock is worth volunteering unprompted.
+          Recount the test total before shipping if the repo has moved.
+
+      - id: pc_b04_transport_consolidation
+        claim_type: scoped
+        priority: 2
+        theme: debugging
+        variants:
+          long: >-
+            Diagnosed a cross-machine discovery failure caused by two parallel
+            transports on separate ports and consolidated peer discovery onto the
+            shared WebSocket transport, deleting a redundant TCP and RSA/AES stack
+            to leave one port, one signature path, and one retry queue.
+          medium: >-
+            Diagnosed a cross-machine discovery failure caused by two parallel
+            transports and consolidated onto a shared WebSocket transport,
+            removing a redundant TCP/crypto stack.
+          short: >-
+            Consolidated two parallel transports onto one WebSocket path,
+            removing a redundant TCP and crypto stack.
+        evidence:
+          - "peer_discovery/network/gossip.py docstring: 'outbound only after the consolidation'"
+          - "Commit history under Himanshu Jain: removal of the standalone discovery transport"
+        keywords_hit: ["debugging", "refactoring", "distributed systems", "WebSockets"]
+        defense: >-
+          Scoped as a diagnosis-and-consolidation I drove within my module;
+          the shared BroadcastNode transport itself was another team's component.
+        interview_risk: |
+          Great narrative bullet ("I deleted a whole parallel system") but only
+          use it if you can name the concrete symptom: chat frames hitting the
+          discovery port produced an 'Incoming frame size 1195725856' error,
+          which is ASCII 'GET ' read as a length prefix.
+
+      - id: pc_b05_tofu_bootstrap
+        claim_type: verified
+        priority: 3
+        theme: security
+        variants:
+          medium: >-
+            Built trust-on-first-use key bootstrapping via an idempotent
+            pre-verify hook that extracts and registers a new sender's public key
+            from the same envelope it signed, so no message is ever accepted
+            unverified while the key registry self-populates on first contact.
+          short: >-
+            Implemented trust-on-first-use public-key bootstrapping via an
+            idempotent pre-verify hook, keeping every message signature-verified.
+        evidence:
+          - "peer_discovery/network/discovery_node.py: lazy_register_pubkey, registered on BroadcastNode.pre_verify_hook"
+          - "Hook is idempotent (skips if registry already holds a key) and decrypts a copy rather than mutating the message"
+        keywords_hit: ["public key cryptography", "trust on first use", "security", "authentication"]
+        defense: ""
+        interview_risk: |
+          TOFU has a real known weakness - it trusts the first key it sees, so a
+          man-in-the-middle at join time wins. Own it: "TOFU is vulnerable to a
+          first-contact MITM; hardening needs out-of-band fingerprint
+          verification or a shared room secret."
+
+      - id: pc_b06_two_laptop_validation
+        claim_type: observed
+        priority: 4
+        theme: validation
+        variants:
+          short: >-
+            Validated the join handshake across two physical machines on a LAN,
+            with a joining node reaching ACTIVE in about 200 ms and bidirectional
+            heartbeats sustained for over 30 minutes without a drop.
+        evidence:
+          - "Manual two-machine run on 10.0.0.0/24, 2026-05-17; not reproducible in CI"
+        keywords_hit: ["distributed systems", "networking", "validation"]
+        defense: >-
+          Single manual observation on one LAN, not an instrumented benchmark or
+          a CI-reproducible number. Present as "in our two-machine test", never
+          as a performance characteristic of the system.
+        interview_risk: |
+          Lowest-priority bullet; drop first under space pressure. The ~200 ms
+          figure is one observation - do not defend it as a latency SLO.
+
+    # -------------------------------------------------------------------------
+    # Known defects. NOT rendered. Kept here because the interview-prep
+    # generator reads this block, and because shipping fixes before recruiters
+    # click the repo link is a tracked task.
+    # -------------------------------------------------------------------------
+    known_gaps:
+      - id: pc_gap_gossip_lock
+        severity: medium
+        detail: >-
+          GossipDispatcher.seen_event_ids (OrderedDict) is mutated from both the
+          notifier dispatch thread and inbound message-handler threads with no
+          lock; move_to_end plus the membership check is not atomic.
+        fix: "Guard _mark_seen with a threading.Lock."
+      - id: pc_gap_presence_lock
+        severity: medium
+        detail: >-
+          PresenceManager._members is written by record_heartbeat on message
+          threads while check_liveness iterates on the tick thread.
+        fix: "Guard the members map with a lock; the list() copy only prevents iteration crashes, not interleaved transitions."
+      - id: pc_gap_dedup_key_mismatch
+        severity: medium
+        detail: >-
+          gossip.py's docstring claims DuplicateGuard uses the same 4-part key,
+          but duplicate_guard.py keys on (user_id, event_type) over a 100-entry
+          window - a double-click suppressor, not cross-node idempotency. Two
+          legitimate same-type events for one user inside the window can be
+          suppressed.
+        fix: "Either widen the guard key or correct the gossip.py docstring. Do not claim cross-restart idempotency until fixed."
+      - id: pc_gap_unbounded_log
+        severity: low
+        detail: "MembershipEventLog._log grows without bound; get_events_since is an O(n) scan."
+        fix: "Truncate below the checkpoint's as_of_seq_no, retain the tail."
+      - id: pc_gap_ipv6_split
+        severity: low
+        detail: "bootstrap peer parsing uses peer.split(':'), which breaks on IPv6; rsplit(':', 1) is used correctly elsewhere."
+        fix: "Standardize on rsplit(':', 1)."
+
+  - id: sepsis_early_warning
+    name: "Sepsis Early-Warning System (ICU Clinical Time-Series)"
+    display_title: "Early Sepsis Prediction in the ICU"
+    org: "San Jose State University - CMPE 257, Machine Learning"
+    context: "Course project, 4-person team"
+    role: "Technical lead; owned the GRU-D model and the stacking ensemble"
+    ownership_boundary: >-
+      SAFE TO CLAIM: the decay-aware GRU-D implementation, the calibrated
+      meta-stacking ensemble, training stabilization under class imbalance, the
+      ICULOS leakage ablation, and overall technical direction.
+      SHARED WORK (say "we", not "I"): preprocessing and feature engineering,
+      the tabular baselines, SHAP analysis, and reporting.
+    start: "2026-02"
+    end: "2026-05"
+    status: completed
+
+    links:
+      # Repo is private: the PhysioNet training data is redistributable only
+      # under its own terms and the notebooks embed patient records.
+      repo: null
+      public: false
+      # ACTION: create a public, data-free companion repo (code + README +
+      # results CSVs + figures, no .psv files). An unlinkable project is worth
+      # markedly less on a resume than a linkable one.
+      todo: "publish sanitized companion repo, then set links.repo"
+
+    tech:
+      primary: ["Python", "PyTorch", "XGBoost", "scikit-learn"]
+      secondary: ["pandas", "NumPy", "SHAP", "matplotlib", "seaborn", "CUDA (A100)"]
+      tech_line: "Python, PyTorch, XGBoost, scikit-learn, SHAP"
+
+    keywords:
+      exact: ["machine learning", "deep learning", "PyTorch", "recurrent neural network",
+              "GRU", "RNN", "time series", "XGBoost", "gradient boosting",
+              "random forest", "scikit-learn", "ensemble learning", "model calibration",
+              "feature engineering", "class imbalance", "AUROC", "AUPRC", "SHAP",
+              "Python", "pandas", "NumPy", "GPU"]
+      topical: ["model stacking", "isotonic regression", "hyperparameter tuning",
+                "ablation study", "model interpretability", "explainable AI",
+                "healthcare AI", "clinical machine learning", "electronic health records",
+                "predictive modeling", "early warning system", "data leakage",
+                "reproducibility", "technical leadership"]
+
+    scale:
+      patients: 40336
+      hourly_records: 1552210
+      raw_clinical_features: 40
+      engineered_features: 175
+      hospital_systems: 2
+      positive_rate: "2.17% of hours (Hospital A); pos_weight ~44"
+      runtime: "~15-20 min end-to-end on a single A100"
+
+    # -------------------------------------------------------------------------
+    # METRIC LEDGER
+    # -------------------------------------------------------------------------
+    # split_scope is the field that matters. Every utility number below was
+    # computed on a held-out patient-level split of the PUBLIC PhysioNet 2019
+    # training data (sets A + B). None was scored on the challenge's hidden
+    # test set. See known_gaps.sep_gap_benchmark_comparison before putting any
+    # of these next to a challenge ranking.
+    # -------------------------------------------------------------------------
+    metric_ledger:
+      split_scope: "held-out patient-level split of PhysioNet 2019 public training sets A+B"
+      ensemble_u_norm:      { value: 0.439,  status: doc_backed, evidence: "results/final_results.csv" }
+      grud_u_norm:          { value: 0.400,  status: doc_backed, evidence: "results/final_results.csv" }
+      random_forest_u_norm: { value: 0.376,  status: doc_backed, evidence: "results/final_results.csv" }
+      xgboost_u_norm:       { value: 0.356,  status: doc_backed, evidence: "results/final_results.csv" }
+      ensemble_auroc:       { value: 0.809,  status: doc_backed, evidence: "results/final_results.csv" }
+      ensemble_auprc:       { value: 0.110,  status: doc_backed, evidence: "results/final_results.csv" }
+      ensemble_f1:          { value: 0.213,  status: doc_backed, evidence: "results/final_results.csv" }
+      rf_u_norm_with_iculos:    { value: 0.320,  status: doc_backed, evidence: "results/iculos_ablation.csv" }
+      rf_u_norm_without_iculos: { value: -0.006, status: doc_backed, evidence: "results/iculos_ablation.csv" }
+      median_lead_time_h_hosp_a: { value: 9,  status: doc_backed, evidence: "results/lead_time_summary.csv" }
+      median_lead_time_h_hosp_b: { value: 32, status: doc_backed, evidence: "results/lead_time_summary.csv" }
+      recall_6h_hosp_a:     { value: 0.75,  status: doc_backed, evidence: "results/lead_time_summary.csv (RF cohort)" }
+      recall_6h_hosp_b:     { value: 0.891, status: doc_backed, evidence: "results/lead_time_summary.csv (RF cohort, 1142 septic patients)" }
+      qsofa_u_norm:         { value: -0.243, status: doc_backed, evidence: "results/rule_baselines.csv" }
+      news_u_norm:          { value: -0.463, status: doc_backed, evidence: "results/rule_baselines.csv" }
+      # WITHDRAWN. Retained only so the claim is not silently re-derived later.
+      challenge_baseline_u_norm: { value: 0.18, status: unsourced_do_not_use }
+
+    bullets:
+
+      - id: sepsis_b1
+        claim_type: scoped
+        priority: 1
+        theme: leadership
+        variants:
+          long: >-
+            Led a 4-person team building an ICU sepsis early-warning system over
+            1.55M hourly records from 40K patients and 40 raw clinical signals,
+            predicting onset 6 hours ahead and scoring 0.439 normalized clinical
+            utility on a held-out patient-level split under the PhysioNet 2019
+            evaluation metric.
+          medium: >-
+            Led a 4-person team building an ICU sepsis early-warning system over
+            1.55M hourly records from 40K patients, predicting onset 6 hours ahead
+            at 0.439 normalized clinical utility on a held-out patient-level split.
+          short: >-
+            Led a 4-person team building an ICU sepsis early-warning system over
+            1.55M hourly records from 40K patients, predicting onset 6 hours ahead.
+        evidence:
+          - "results/final_results.csv (Ensemble U_norm = 0.4387)"
+          - "README.md results table"
+        keywords_hit: ["machine learning", "time series", "healthcare AI", "technical leadership"]
+        defense: >-
+          "Led" is supported by the technical-lead role and personal ownership of
+          the GRU-D model and ensemble; preprocessing, tabular baselines, and
+          reporting were shared. If asked what was yours specifically, name those
+          two components and do not claim the pipeline end-to-end.
+        interview_risk: |
+          The earlier phrasing ("2.4x the official PhysioNet challenge baseline",
+          "matching top submissions") is REMOVED and must not return. The 13th-place
+          team in the actual challenge scored 0.321 on the full hidden test set and
+          the top scores were around 0.36 - so a 0.439 presented as comparable reads
+          as either a leakage bug or an inflated claim, and invites exactly the
+          scrutiny you cannot survive. Naming the metric is fine; ranking against
+          the leaderboard is not. See known_gaps.sep_gap_benchmark_comparison.
+
+      - id: sepsis_b2
+        claim_type: verified
+        priority: 1
+        theme: deep_learning
+        variants:
+          long: >-
+            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
+            original paper, learning per-feature exponential decay over
+            time-since-last-observation so irregularly sampled vitals and labs are
+            modeled without imputation leakage - the highest-scoring single model
+            in the study at 0.400 normalized utility.
+          medium: >-
+            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
+            original paper, learning per-feature decay over time-since-last-observation
+            to model irregularly sampled vitals without imputation leakage - the
+            best single model at 0.400 normalized utility.
+          short: >-
+            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
+            paper to model irregularly sampled clinical time series without
+            imputation leakage.
+        evidence:
+          - "notebooks/grud_new.ipynb (GRUDCell, GRUDModel)"
+          - "results/final_results.csv (GRU-D U_norm = 0.4003)"
+        keywords_hit: ["PyTorch", "recurrent neural network", "GRU", "deep learning", "time series"]
+        defense: ""
+        interview_risk: |
+          "From the paper" invites "which paper?" - Che et al., Recurrent Neural
+          Networks for Multivariate Time Series with Missing Values (2018). Know
+          the three GRU-D inputs cold: the value, the mask, and the time delta;
+          decay pulls unobserved features toward the empirical mean over time.
+          Be ready for "why not just forward-fill?" - forward-fill asserts a stale
+          value is current; the decay learns how fast each signal goes stale.
+
+      - id: sepsis_b3
+        claim_type: verified
+        priority: 1
+        theme: ensembling
+        variants:
+          long: >-
+            Designed a calibrated meta-stacking ensemble that isotonically calibrates
+            XGBoost and GRU-D outputs, joins them per patient-hour, and fuses them
+            through a logistic-regression stacker, lifting normalized utility about
+            10% over the best single model by combining errors that were decorrelated
+            between the tree and recurrent branches.
+          medium: >-
+            Designed a calibrated meta-stacking ensemble isotonically calibrating
+            XGBoost and GRU-D outputs and fusing them through a logistic-regression
+            stacker, lifting normalized utility about 10% over the best single model.
+          short: >-
+            Built a calibrated meta-stacking ensemble fusing XGBoost and GRU-D
+            through isotonic calibration and a logistic-regression stacker.
+        evidence:
+          - "notebooks/sepsis_ensemble.ipynb"
+          - "results/final_results.csv (0.4387 vs GRU-D 0.4003 = +9.6%)"
+        keywords_hit: ["ensemble learning", "model calibration", "XGBoost", "scikit-learn"]
+        defense: >-
+          The "+23% over XGBoost" framing from the source draft is dropped: Random
+          Forest (0.376) outscored XGBoost (0.356), so benchmarking the ensemble
+          against the weaker tree model is cherry-picking. The +10% over the best
+          single model is the honest comparison.
+        interview_risk: |
+          Expect: "why stack XGBoost rather than Random Forest, when RF scored
+          higher?" Have a real answer - either XGBoost calibrated better, or its
+          errors decorrelated more with GRU-D. If you do not know, say you would
+          check it, and note that RF-vs-XGB in the stack is an untested variant.
+          Also expect: "why isotonic and not Platt scaling?" - isotonic is
+          non-parametric and handles the sigmoid-shaped miscalibration typical of
+          boosted trees, at the cost of needing more calibration data.
+
+      - id: sepsis_b5
+        claim_type: verified
+        priority: 1
+        theme: rigor
+        variants:
+          long: >-
+            Ran a leakage ablation showing that removing the ICU length-of-stay
+            feature collapsed Random Forest utility from 0.320 to -0.006, exposing a
+            temporal shortcut that inflates reported performance across much of the
+            sepsis-prediction literature and quantifying how much of our own result
+            depended on it.
+          medium: >-
+            Ran a leakage ablation showing that removing the ICU length-of-stay
+            feature collapsed Random Forest utility from 0.320 to -0.006, exposing a
+            temporal shortcut that inflates much of the published sepsis literature.
+          short: >-
+            Ran a leakage ablation showing that removing the ICU length-of-stay
+            feature collapsed model utility from 0.320 to -0.006, exposing a
+            temporal shortcut common in this literature.
+        evidence:
+          - "results/iculos_ablation.csv (RF with ICULOS 0.3204, without -0.0063)"
+        keywords_hit: ["ablation study", "data leakage", "model evaluation", "machine learning"]
+        defense: ""
+        interview_risk: |
+          STRONGEST bullet in the entry and the most double-edged. A sharp
+          interviewer will immediately ask: "then does your headline 0.439 also
+          depend on that shortcut?" It does. Answer it before they ask - "yes, and
+          that is the point of running the ablation: we measured our own exposure
+          rather than reporting the flattering number alone." The published-lit
+          claim is broad; soften to "a shortcut that is easy to leave in and hard
+          to notice" if you cannot cite specific papers.
+
+      - id: sepsis_b4
+        claim_type: verified
+        priority: 2
+        theme: debugging
+        variants:
+          medium: >-
+            Stabilized GRU-D training under 44:1 class imbalance using weighted
+            binary cross-entropy, 200-step learning-rate warmup, gradient-norm
+            clipping, logit clamping, and variational recurrent dropout, converting a
+            divergent training loop into reproducible convergence with AUPRC-gated
+            early stopping.
+          short: >-
+            Stabilized divergent GRU-D training under 44:1 class imbalance with
+            weighted loss, LR warmup, gradient clipping, and AUPRC-gated early stopping.
+        evidence:
+          - "notebooks/grud_new.ipynb training cell: pos_weight, WARMUP_STEPS=200, clip_grad_norm_=1.0, logit clamp +/-15, recurrent dropout mask"
+        keywords_hit: ["deep learning", "PyTorch", "class imbalance", "hyperparameter tuning"]
+        defense: ""
+        interview_risk: |
+          Be able to say what "divergent" meant concretely - NaN loss, exploding
+          logits, or collapse to the majority class - and which intervention fixed
+          which symptom. A list of techniques without a failure story reads as
+          copied from a tutorial.
+
+      - id: sepsis_b6
+        claim_type: verified
+        priority: 2
+        theme: generalization
+        variants:
+          medium: >-
+            Validated generalization on a held-out second hospital system of 20K
+            unseen patients, opened only once at the end of development, where the
+            model retained a 32-hour median alarm lead time and flagged 89% of septic
+            patients at least 6 hours before onset.
+          short: >-
+            Validated on a held-out second hospital system of 20K unseen patients,
+            retaining a 32-hour median lead time and flagging 89% of septic patients
+            6+ hours before onset.
+        evidence:
+          - "results/lead_time_summary.csv (Hospital B, RF: median 32.0h, fraction >=6h = 0.891, 1142 septic patients)"
+        keywords_hit: ["model evaluation", "healthcare AI", "predictive modeling"]
+        defense: >-
+          "Second hospital system" is training set B of the PhysioNet public data,
+          not the challenge's censored hospital C. Genuine cross-site validation,
+          but not the hardest available test - do not imply otherwise.
+        interview_risk: |
+          Hospital B lead time (32h) is far longer than Hospital A (9h), which
+          usually signals a cohort difference rather than a better model - different
+          admission patterns or charting behavior. Have a hypothesis ready; being
+          suspicious of your own favorable number is the impressive move here.
+          Note that in the real challenge, the unseen hospital C is where nearly
+          every team's score went negative.
+
+      - id: sepsis_b7
+        claim_type: verified
+        priority: 2
+        theme: benchmarking
+        variants:
+          medium: >-
+            Benchmarked against the qSOFA and NEWS bedside scoring rules used in
+            clinical practice, both of which scored negative net utility (-0.24 and
+            -0.46) under the same evaluation, quantifying the concrete margin over
+            current standard of care.
+          short: >-
+            Benchmarked against the qSOFA and NEWS clinical scoring rules, both of
+            which scored negative net utility under the same evaluation.
+        evidence:
+          - "results/rule_baselines.csv (qSOFA >=2: U_norm -0.2426; NEWS >=5: U_norm -0.4630)"
+        keywords_hit: ["model evaluation", "clinical machine learning", "healthcare AI"]
+        defense: ""
+        interview_risk: |
+          Know what the rules are: qSOFA is respiratory rate, systolic BP, and
+          altered mentation; NEWS aggregates seven vitals. Negative utility means
+          the rule fires so often and so late that the metric's false-alarm and
+          late-prediction penalties exceed its credit - worth stating plainly,
+          because "the clinical baseline scored below zero" sounds implausible
+          until you explain the metric is asymmetric.
+
+      - id: sepsis_b8
+        claim_type: scoped
+        priority: 3
+        theme: feature_engineering
+        variants:
+          medium: >-
+            Built a leakage-safe 175-feature pipeline over 40 raw clinical signals -
+            per-patient temporal imputation, deltas, rolling statistics, and
+            measurement-frequency features that treat "this lab was not ordered" as
+            signal - under a strict patient-level split ordering.
+          short: >-
+            Built a leakage-safe 175-feature pipeline with rolling statistics,
+            deltas, and measurement-frequency signals under patient-level splits.
+        evidence:
+          - "notebooks/sepsis_corrected.ipynb"
+          - "README.md Method Summary section 1"
+        keywords_hit: ["feature engineering", "data preprocessing", "time series", "pandas"]
+        defense: >-
+          Shared work across the team; use "built" only in the collective sense or
+          soften to "contributed to". Do not pair this with sepsis_b1's "led" in a
+          way that implies sole authorship of both.
+        interview_risk: |
+          "Leakage-safe" will be tested: the answer is that the patient-level split
+          happens BEFORE any fitting, so imputation statistics and scalers are fit
+          on train patients only, and no patient appears in two splits. Note the
+          tension with sepsis_b5 - the pipeline was leakage-safe in the split sense
+          while still carrying the ICULOS shortcut, which is a different failure.
+
+      - id: sepsis_b10
+        claim_type: scoped
+        priority: 3
+        theme: interpretability
+        variants:
+          medium: >-
+            Interpreted model behavior with SHAP attribution and 30+ per-patient
+            trajectory case studies spanning true positives, false positives, and
+            missed cases, turning opaque risk scores into clinically reviewable
+            evidence.
+          short: >-
+            Interpreted model behavior with SHAP attribution and 30+ per-patient
+            trajectory case studies across true positives, false positives, and misses.
+        evidence:
+          - "figures/shap_xgb_summary_latest.png, figures/shap_rf_summary_latest.png"
+          - "results/figures/case_studies/ (33 plots)"
+        keywords_hit: ["SHAP", "model interpretability", "explainable AI"]
+        defense: "Shared work; phrase as team analysis if pressed."
+        interview_risk: |
+          Expect "what did SHAP actually tell you?" - a bullet about running SHAP
+          with no finding is weak. If ICULOS ranked high in the SHAP summary, that
+          is the finding, and it ties directly to sepsis_b5.
+
+      - id: sepsis_b9
+        claim_type: verified
+        priority: 4
+        theme: methodology
+        variants:
+          short: >-
+            Evaluated five tabular models, a recurrent model, and two clinical rule
+            baselines under a shared patient-level split, tuning decision thresholds
+            against the asymmetric clinical utility metric rather than accuracy.
+        evidence:
+          - "results/final_results.csv (11 model rows with per-model tuned thresholds)"
+        keywords_hit: ["model evaluation", "machine learning", "hyperparameter tuning"]
+        defense: ""
+        interview_risk: "Low risk. Drop early under space pressure - it is breadth, not depth."
+
+      - id: sepsis_b11
+        claim_type: verified
+        priority: 4
+        theme: reproducibility
+        variants:
+          short: >-
+            Made results fully reproducible with pinned dependencies, seeded splits,
+            saved model and calibrator artifacts, and a documented 3-notebook run
+            order reconstructing every reported number in under 20 minutes on one GPU.
+        evidence:
+          - "README.md Setup and How to Run; SEED=42 across notebooks; models/ artifacts"
+        keywords_hit: ["reproducibility", "Python", "Jupyter"]
+        defense: ""
+        interview_risk: >-
+          Only usable once the sanitized public repo exists - claiming
+          reproducibility for a repo nobody can open is a weak position.
+
+    talking_points:
+      - "Why utility and not accuracy: the PhysioNet metric rewards early alarms and penalizes late ones and false alarms asymmetrically, so a 0.21 F1 with 0.44 utility is a better clinical model than a higher-F1 late predictor."
+      - "AUPRC 0.110 looks low until you note the positive rate is 2.17% - that is roughly 5x the prevalence baseline, which is the right frame of reference for a rare-event detector."
+      - "The ICULOS ablation is the most interesting finding: much of the reported performance in this problem space is a time-in-ICU shortcut rather than physiology."
+      - "GRU-D vs plain GRU: masking plus time-delta decay lets the model treat 'this lab was not ordered' as signal, which matters because measurement frequency itself encodes clinician concern."
+      - "The ensemble gain came from decorrelation - the tree model and the recurrent model fail on different patients, which is why the stacker beats both."
+      - "Hospital B was opened once, at the end, and never touched during development."
+
+    known_gaps:
+      - id: sep_gap_benchmark_comparison
+        severity: high
+        detail: >-
+          The source draft claimed 0.439 was "2.4x the official PhysioNet 2019
+          challenge baseline" (0.18), and an earlier resume said it "matched top
+          submissions". Both are withdrawn. The 0.18 figure has no evidence pointer.
+          More importantly the comparison is invalid: challenge scores come from a
+          censored hidden test set spanning three hospital systems, while 0.439 is a
+          held-out split of the public training data. For calibration, the team
+          placing 13th of 78 scored 0.321 overall on the full hidden test set, with
+          the top of the leaderboard near 0.36 - so a 0.439 presented as comparable
+          implies beating the winner, which no reviewer will believe.
+        fix: >-
+          Name the metric, never the ranking. Approved phrasing: "0.439 normalized
+          clinical utility on a held-out patient-level split under the PhysioNet 2019
+          evaluation metric." Any variant containing "baseline", "challenge
+          leaderboard", "top submissions", or a multiple thereof is a build failure.
+      - id: sep_gap_no_public_repo
+        severity: high
+        detail: >-
+          Repo is private because the notebooks embed PhysioNet patient records.
+          Every other project entry carries a clickable link; this one currently
+          cannot, which materially reduces its value on the page.
+        fix: >-
+          Publish a sanitized companion repo: code, README, results CSVs, and
+          figures, with all .psv data files and notebook outputs containing patient
+          rows removed. Then set links.repo and flip public to true.
+      - id: sep_gap_iculos_dependency
+        severity: medium
+        detail: >-
+          The ICULOS ablation implies the headline utility numbers themselves lean
+          on the length-of-stay shortcut. sepsis_b1 and sepsis_b5 are therefore in
+          tension when rendered together.
+        fix: >-
+          Render both anyway - owning the tension is stronger than hiding it - but
+          rehearse the answer. Consider re-running the ensemble without ICULOS and
+          reporting that number; a lower but shortcut-free result would be a
+          genuinely better bullet than the current one.
+      - id: sep_gap_model_selection
+        severity: low
+        detail: >-
+          Random Forest (0.376) outscored XGBoost (0.356) among tabular models, yet
+          the ensemble stacks XGBoost. The choice is currently unexplained.
+        fix: "Check the calibration curves and error correlation; if RF stacks better, re-run and update the bullet."
+
+  - id: fake_review_detection
+    name: "Fake Review Detection on Yelp (Multi-Signal Pipeline)"
+    display_title: "Fake Review Detection on Yelp - Multi-Signal Detection Pipeline"
+    org: "San Jose State University - CMPE 255, Data Mining"
+    context: >-
+      Course project, Group 7, 4-person team, organized as six layers:
+      L1 ETL/OLAP, L2 FP-Growth association rules, L3 DeBERTa text model,
+      L4 K-Means/DBSCAN clustering, L5 supervised + anomaly detection,
+      L6 validation and ablation.
+    role: "Owner, L1 data engineering layer (see ownership_boundary - L3/L6 unresolved)"
+    ownership_boundary: >-
+      CONFIRMED IN CODE: L1_ETL_OLAP is attributed to Himanshu Jain in both
+      L1_ETL_OLAP/README.md ("Owner: Himanshu Jain") and main.py ("Author:
+      Himanshu Jain"). Claim the ETL, feature engineering, OLAP cubes, and
+      quality checks without hedging.
+      ASSIGNED TO TEAMMATES in main.py's handoff summary: L2 and L4 to Dhruv,
+      L3 to Nitish, L5 to Disha.
+      UNRESOLVED: L3 scripts carry Himanshu's local paths
+      (/Users/himanshu_jain/255/github_repo/...), so he clearly worked on the
+      DeBERTa layer despite the handoff assigning it to Nitish. L6 ownership is
+      not stated anywhere in the repo. See known_gaps.frd_gap_l3_l6_ownership -
+      the L3 and L6 bullets are BLOCKED until this is settled.
+    start: "2026-02"
+    end: "2026-05"
+    status: completed
+
+    links:
+      repo: null
+      # Repo is cmpe-255-01-group-7 (org-owned). Confirm it is public and that
+      # the YelpZip data files are not committed before linking.
+      todo: "confirm repo visibility and data hygiene, then set links.repo"
+
+    tech:
+      primary: ["Python", "PySpark", "PyTorch", "Transformers", "scikit-learn"]
+      secondary: ["Delta Lake", "pandas", "NumPy", "matplotlib", "joblib"]
+      tech_line: "Python, PySpark, Delta Lake, PyTorch, Transformers, scikit-learn"
+
+    keywords:
+      exact: ["PySpark", "Apache Spark", "ETL", "data pipeline", "Delta Lake", "OLAP",
+              "data engineering", "feature engineering", "machine learning",
+              "deep learning", "PyTorch", "transformers", "BERT", "NLP",
+              "text classification", "clustering", "K-Means", "DBSCAN",
+              "anomaly detection", "scikit-learn", "Python", "AUC-ROC"]
+      topical: ["fraud detection", "spam detection", "association rule mining",
+                "FP-Growth", "Isolation Forest", "data leakage", "ablation study",
+                "adversarial robustness", "group-aware cross-validation",
+                "class imbalance", "big data", "data quality"]
+
+    scale:
+      reviews: 608598
+      reviewer_profiles: 260277
+      seller_profiles: 5044
+      dataset: "YelpZip"
+      spam_rate: "13.2% of reviews labeled spam"
+      olap_cubes: 4
+      quality_checks: 8
+
+    # -------------------------------------------------------------------------
+    # METRIC LEDGER
+    # -------------------------------------------------------------------------
+    # Ablation numbers come from L6_validation/outputs/ablation_table.csv and are
+    # measured on the L5 holdout. DeBERTa numbers come from
+    # L3/outputs/deberta_metrics.json. Three figures on the current resume are
+    # NOT reproducible from this repo - see the withdrawn block.
+    # -------------------------------------------------------------------------
+    metric_ledger:
+      ablation_scope: "L5 holdout; L6_validation/outputs/ablation_table.csv"
+      auc_l2_only:            { value: 0.716, status: doc_backed }
+      auc_l4_only:            { value: 0.773, status: doc_backed }
+      auc_l5_supervised_only: { value: 0.819, status: doc_backed }
+      auc_behavioral_full:    { value: 0.815, status: doc_backed, note: "L2+L4+L5, no text layer" }
+      auc_full_plus_l3:       { value: 0.936, status: doc_backed, note: "0.9358 exactly" }
+      f1_behavioral_full:     { value: 0.438, status: doc_backed }
+      f1_full_plus_l3:        { value: 0.741, status: doc_backed, note: "0.7406 exactly" }
+      avg_precision_full:     { value: 0.798, status: doc_backed }
+      recall_at_fpr_0_1:      { value: 0.831, status: doc_backed }
+      deberta_auc_roc:        { value: 0.9305, status: doc_backed, evidence: "L3/outputs/deberta_metrics.json" }
+      deberta_f1_macro:       { value: 0.8412, status: doc_backed, evidence: "L3/outputs/deberta_metrics.json" }
+      deberta_f1_spam:        { value: 0.7221, status: doc_backed, evidence: "L3/outputs/deberta_metrics.json" }
+      deberta_avg_precision:  { value: 0.7867, status: doc_backed, evidence: "L3/outputs/deberta_metrics.json" }
+      deberta_train_size:     { value: 422704, status: doc_backed }
+      deberta_val_size:       { value: 53468,  status: doc_backed }
+      deberta_test_size:      { value: 53687,  status: doc_backed }
+      deberta_train_minutes:  { value: 515.9,  status: doc_backed }
+      synthetic_profiles:     { value: 70, status: doc_backed, note: "TIER_COUNTS easy 15 + medium 15 + hard 40" }
+      hard_tier_detection_l5: { value: 0.33, status: doc_backed, note: "L5-supervised; every other layer scored 0.00-0.17" }
+      # WITHDRAWN - on the current resume, not reproducible from this repo.
+      auc_start_0683:  { value: 0.683, status: unsourced_do_not_use, note: "no ablation row matches; lowest is L5-anomaly 0.572, then L2-only 0.716" }
+      auc_final_0944:  { value: 0.944, status: contradicted_do_not_use, note: "actual Full+L3 AUC is 0.9358, not 0.944" }
+
+    bullets:
+
+      - id: frd_b1
+        claim_type: verified
+        priority: 1
+        theme: data_engineering
+        variants:
+          long: >-
+            Owned the data-engineering layer of a six-stage fake-review detection
+            pipeline, building a PySpark ETL over 608K YelpZip reviews that derives
+            260K reviewer and 5K seller behavioral profiles - burst scores, rating
+            entropy, tenure, and seller-concentration features - persisted as
+            partitioned Delta Lake tables with four OLAP cubes and eight automated
+            quality checks.
+          medium: >-
+            Owned the data-engineering layer of a six-stage fake-review detection
+            pipeline: a PySpark ETL over 608K Yelp reviews deriving 260K reviewer and
+            5K seller behavioral profiles, persisted as partitioned Delta Lake tables
+            with OLAP cubes and eight automated quality checks.
+          short: >-
+            Built a PySpark ETL over 608K Yelp reviews deriving 260K reviewer and 5K
+            seller behavioral profiles into partitioned Delta Lake tables with
+            automated quality checks.
+        evidence:
+          - "L1_ETL_OLAP/README.md (Owner: Himanshu Jain); L1_ETL_OLAP/main.py (Author: Himanshu Jain)"
+          - "608,598 reviews -> 260,277 reviewer profiles + 5,044 seller profiles; 4 OLAP cubes; 8 quality checks"
+          - "etl/transform_reviews.py, transform_reviewers.py, transform_sellers.py; olap/cube_builder.py"
+        keywords_hit: ["PySpark", "ETL", "Delta Lake", "OLAP", "data engineering", "feature engineering"]
+        defense: ""
+        interview_risk: |
+          This is the safest and most differentiated bullet in the entry - explicit
+          code-level ownership, and distributed data engineering is rarer on new-grad
+          resumes than "I trained a classifier". LEAD WITH IT.
+          Be ready to explain the derived features: burst_score (review clustering in
+          time), rating_entropy (distribution flatness across stars),
+          max_seller_fraction (concentration on one business). Also know why Delta
+          Lake over plain Parquet: ACID commits and schema enforcement on rewrite.
+
+      - id: frd_b3
+        claim_type: verified
+        priority: 1
+        theme: analysis
+        variants:
+          long: >-
+            Ran a layer ablation across seven pipeline configurations showing that
+            behavioral signals alone plateaued at 0.815 AUC and 0.438 F1, while adding
+            the transformer text layer lifted them to 0.936 AUC and 0.741 F1 -
+            isolating the contribution of text over user-behavior features rather than
+            reporting a single end-to-end score.
+          medium: >-
+            Ran a seven-configuration layer ablation showing behavioral signals alone
+            plateaued at 0.815 AUC / 0.438 F1 while adding the transformer text layer
+            lifted them to 0.936 AUC / 0.741 F1, isolating the text layer's true
+            contribution.
+          short: >-
+            Ran a layer ablation isolating each signal's contribution: behavioral
+            features plateaued at 0.815 AUC, and adding the text layer lifted it to
+            0.936 AUC / 0.741 F1.
+        evidence:
+          - "L6_validation/outputs/ablation_table.csv (7 configurations)"
+          - "L2-only 0.716; L4-only 0.773; L5-supervised-only 0.819; L2+L4+L5 0.815; Full+L3 0.9358 / F1 0.7406 / AP 0.798"
+        keywords_hit: ["ablation study", "model evaluation", "AUC-ROC", "machine learning"]
+        defense: >-
+          Replaces the resume's "lifting AUC from 0.683 to 0.944". Neither endpoint
+          is reproducible: no ablation row equals 0.683, and the actual Full+L3 AUC
+          is 0.9358, not 0.944. The 0.815 -> 0.936 framing is both correct and a
+          stronger claim, because it attributes the gain to a specific layer.
+        interview_risk: |
+          Expect: "why did behavioral features plateau?" Good answer: L2 rules, L4
+          clusters, and L5 supervised all read the same reviewer-activity fingerprint,
+          so stacking them adds little (L2+L4+L5 at 0.815 is no better than
+          L5-supervised alone at 0.819). Text is the first genuinely independent
+          signal. The Jaccard overlap analysis in L6 supports this directly.
+
+      - id: frd_b2
+        claim_type: ownership_unresolved
+        priority: 1
+        theme: nlp
+        variants:
+          long: >-
+            Fine-tuned DeBERTa-base end-to-end (all 12 transformer layers, 99M
+            trainable parameters) on 423K Yelp reviews, using StratifiedGroupKFold on
+            user ID with asserted train/validation/test disjointness to eliminate
+            author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1 on a
+            53,687-review held-out test set.
+          medium: >-
+            Fine-tuned DeBERTa-base end-to-end on 423K Yelp reviews using
+            StratifiedGroupKFold on user ID with asserted split disjointness to
+            eliminate author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1
+            on a 53,687-review held-out test set.
+          short: >-
+            Fine-tuned DeBERTa-base on 423K Yelp reviews with user-grouped splits to
+            eliminate author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1.
+        evidence:
+          - "L3/outputs/deberta_metrics.json: auc_roc 0.9305, f1_macro_default 0.8412, f1_spam 0.7221, train 422704 / val 53468 / test 53687, unfreeze_layers 12, trainable_params 99,802,370, runtime 515.9 min"
+          - "L3/l3_deberta_finetune.py group_split(): two-round StratifiedGroupKFold with assert train_users.isdisjoint(val_users/test_users)"
+        keywords_hit: ["PyTorch", "transformers", "NLP", "text classification", "deep learning"]
+        defense: >-
+          BLOCKED PENDING OWNERSHIP CONFIRMATION. main.py's handoff summary assigns
+          L3 to Nitish, but the L3 scripts carry Himanshu's local filesystem paths.
+          Do not render until resolved. If the work was shared, change "Fine-tuned"
+          to "Contributed to fine-tuning" and keep the numbers, which are solid.
+          Model name corrected: the config says microsoft/deberta-base. Write
+          "DeBERTa-base", never "DeBERTa-v1-base", which is not a real model name.
+        interview_risk: |
+          The metrics themselves are the most defensible in the entry - exact values
+          in a committed JSON, with split sizes and hyperparameters. The only
+          exposure is the ownership question, and an interviewer asking "what did you
+          personally do on this project?" is guaranteed.
+
+      - id: frd_b6
+        claim_type: ownership_unresolved
+        priority: 2
+        theme: debugging
+        variants:
+          medium: >-
+            Diagnosed two failed text-model configurations before landing the working
+            one - a frozen-backbone head-only baseline that reached only 0.74 AUC, and
+            a DeBERTa-v3 run that collapsed to 0.50 AUC (chance) under fp16 numerical
+            instability - then recovered 0.93 AUC by fully unfreezing DeBERTa-base.
+          short: >-
+            Diagnosed two failed text-model configurations - a frozen-backbone
+            baseline at 0.74 AUC and a v3 run collapsing to chance under fp16
+            instability - before reaching 0.93 AUC with a full fine-tune.
+        evidence:
+          - "L3/L3_colab.ipynb: deberta-v3-base, auc_roc 0.5013, f1_spam_default 0.0"
+          - "L3/deberta_finetune_notebook.ipynb: frozen backbone, head only (~1,540 trainable params), AUC 0.7421"
+          - "L3/l3_deberta_finetune_v2.py docstring: 'v3 + bf16 sidesteps the v3+fp16 NaN issue'"
+        keywords_hit: ["deep learning", "debugging", "PyTorch", "transformers"]
+        defense: >-
+          Same ownership block as frd_b2. Also note the 0.50 AUC run is inferred to be
+          the fp16 issue from the v2 docstring; if you did not personally diagnose it,
+          do not claim the diagnosis.
+        interview_risk: |
+          A failure-to-fix narrative is worth more than a clean result if you can tell
+          it precisely. Know why fp16 breaks DeBERTa-v3 specifically (its
+          disentangled-attention arithmetic overflows in half precision) and why
+          full unfreezing beat a frozen backbone here (spam style is a domain shift
+          the pretrained representation does not already encode).
+
+      - id: frd_b5
+        claim_type: verified
+        priority: 2
+        theme: rigor
+        variants:
+          medium: >-
+            Prevented target leakage by auditing every engineered feature for
+            label derivation and excluding reviewer and seller spam counts and spam
+            rates - features computed from labels across the full corpus that would
+            have inflated every downstream metric.
+          short: >-
+            Prevented target leakage by excluding reviewer and seller spam-rate
+            features that were derived from labels across the full corpus.
+        evidence:
+          - "L3/l3_deberta_finetune_v2.py LEAKAGE NOTE: reviewer_profiles.{spam_count,spam_rate} and seller_profiles.{spam_reviews,spam_rate,suspicious_reviewer_fraction} excluded"
+          - "USER_META and PROD_META constants exclude those columns explicitly"
+        keywords_hit: ["data leakage", "feature engineering", "machine learning"]
+        defense: ""
+        interview_risk: |
+          Strong rigor signal and cheap to defend. The point: spam_rate is computed
+          from is_spam over the whole corpus, so a model given it is reading the
+          answer key. Pairs well with frd_b1 since you built the profile tables that
+          contain those columns.
+
+      - id: frd_b4
+        claim_type: ownership_unresolved
+        priority: 3
+        theme: adversarial
+        variants:
+          medium: >-
+            Stress-tested the pipeline against 70 synthetic attacker profiles across
+            three camouflage tiers, exposing a hard-tier blind spot where every
+            behavioral layer detected 17% or less and the best supervised layer
+            reached only 33% - a finding that motivated the text signal rather than
+            being reported as a success.
+          short: >-
+            Stress-tested the pipeline against 70 synthetic attacker profiles across
+            three camouflage tiers, exposing a hard-tier blind spot where behavioral
+            layers detected 17% or less.
+        evidence:
+          - "L6_validation/02_synthetic_injection.py: TIER_COUNTS = easy 15, medium 15, hard 40"
+          - "L6_validation/outputs/l6_validation_summary.txt: hard-tier L2 0.00, L4-kmeans 0.00, L4-dbscan 0.17, L5-anomaly 0.05, L5-supervised 0.33"
+        keywords_hit: ["adversarial robustness", "anomaly detection", "model evaluation"]
+        defense: >-
+          Ownership unresolved (L6 is unattributed in the repo). Also reframed: the
+          resume's "validated against 70 synthetic adversarial attackers with 33%
+          hard-tier detection" reads as advertising a 67% miss rate. The finding is
+          the blind spot, not the detection rate.
+        interview_risk: |
+          CAUTION: the synthetic harness does not use real DeBERTa scores - the
+          deberta_spam_prob field for synthetic profiles is sampled from per-tier
+          uniform distributions in 02_synthetic_injection.py, and
+          l6_validation_summary.txt states "L3 signal absent until DeBERTa
+          fine-tuning completes on HPC". So any L3 detection rate from this harness
+          is simulated, not measured. Only quote the behavioral-layer numbers, and
+          say "simulated text signal" if the topic comes up.
+
+      - id: frd_b7
+        claim_type: ownership_unresolved
+        priority: 4
+        theme: analysis
+        variants:
+          short: >-
+            Quantified signal redundancy across detection layers with Jaccard overlap
+            at multiple top-K cutoffs, showing the rule and clustering layers largely
+            re-flag the same reviewers while text and behavior disagree - the
+            justification for a multi-signal rather than single-model design.
+        evidence:
+          - "L6_validation/03_summary_report.py; l6_validation_summary.txt Jaccard stability table across K = 500..10000"
+          - "L3-text vs L5-supervised J = 0.785 at K=5000; L4-dbscan vs L5-supervised J = 0.007"
+        keywords_hit: ["model evaluation", "clustering", "machine learning"]
+        defense: "Ownership unresolved (L6 unattributed). Drop if L6 was not your work."
+        interview_risk: >-
+          Note the L3-vs-L5 Jaccard is high (0.785 at K=5000), which slightly
+          undercuts the "text is independent" story - be ready to reconcile that with
+          the ablation gain.
+
+    known_gaps:
+      - id: frd_gap_l3_l6_ownership
+        severity: high
+        detail: >-
+          main.py's teammate handoff assigns L3 (DeBERTa) to Nitish and L5 to Disha,
+          while L1 is explicitly Himanshu's. But L3/l3_deberta_finetune_local.py
+          contains Himanshu's own filesystem paths, so he demonstrably worked on the
+          text layer. L6 has no stated owner. Four bullets (frd_b2, frd_b4, frd_b6,
+          frd_b7) are marked ownership_unresolved and must not render until this is
+          settled.
+        fix: >-
+          Check git log --author on L3/ and L6_validation/. If the commits are
+          Himanshu's, promote those bullets to verified. If shared, soften to
+          "contributed to" and keep the metrics. If they are entirely a teammate's,
+          delete the bullets - frd_b1, frd_b3, and frd_b5 alone still make a strong
+          entry built on the data-engineering ownership that is beyond dispute.
+      - id: frd_gap_resume_metrics_wrong
+        severity: high
+        detail: >-
+          The current resume says the pipeline lifted "AUC from 0.683 to 0.944".
+          Neither number appears in ablation_table.csv: there is no 0.683 row, and
+          the Full+L3 configuration scores 0.9358. The F1 of 0.741 is correct.
+        fix: "Use 0.815 -> 0.936 (behavioral-only to full). Never render 0.683 or 0.944."
+      - id: frd_gap_stale_docstring
+        severity: low
+        detail: >-
+          02_synthetic_injection.py's docstring says 40 profiles with a hard tier of
+          10, but TIER_COUNTS in the same file is easy 15 / medium 15 / hard 40 = 70.
+          The code is authoritative; the docstring is stale. Anyone reading the repo
+          after seeing "70" on the resume will hit this contradiction.
+        fix: "Update the docstring to match TIER_COUNTS before linking the repo."
+      - id: frd_gap_simulated_l3_in_l6
+        severity: medium
+        detail: >-
+          The synthetic-injection harness fabricates deberta_spam_prob from per-tier
+          uniform distributions instead of scoring synthetic text with the real
+          model, and the L6 summary was generated while the DeBERTa run was still
+          pending. Any L3 row in the synthetic detection matrix is simulated.
+        fix: "Re-run 02_synthetic_injection.py with real model scores, or state the limitation whenever the adversarial results come up."
+
+# -----------------------------------------------------------------------------
+# EXPERIENCE
+# -----------------------------------------------------------------------------
+experience:
+
+  - id: bank_integration_internship
+    employer: "MalyTech"
+    employer_note: >-
+      Confirm whether the legal name carries a suffix (Ltd./Inc./Pvt Ltd) and add
+      it - Greenhouse's parser expects company identifiers. Gulf African Bank
+      (GAB) is the bank whose integration layer was built; MalyTech is the
+      employer. Check the engagement is not under NDA before naming GAB on paper.
+    title: "Software Engineering Intern"
+    location: "Dubai, UAE"
+    render_location: false
+    location_note: >-
+      Himanshu's choice to omit. NOTE: the Amdocs entry renders "Gurugram, India",
+      so omitting here creates an inconsistent column. Either drop locations from
+      all experience entries or keep them all - a single blank looks like an
+      oversight rather than a decision.
+    start: "2026-06"
+    end: "2026-08"
+    display_date: "June 2026 - Present"
+    display_date_alt: "June 2026 - August 2026"
+    date_note: >-
+      CONFIRMED 2026-07-30: 06/2026 - 08/2026. Consistent with the repo artifacts
+      (PesaLink git history 2026-07-24 to 2026-07-27; CIP spec dated 2026-07-13).
+      Role is CURRENT - render "June 2026 - Present" while still in it, and switch
+      to display_date_alt once it ends. Reverse-chronologically this entry sits
+      above Amdocs.
+    status: ongoing
+    date_note: >-
+      Not recoverable from the repo. PesaLink git history runs 2026-07-24 to
+      2026-07-27; the CIP technical doc is dated 2026-07-13; gab_sms and
+      gab_iprs have no commit history in the working copy. Today is 2026-07-30,
+      so this is current or very recent work. Use personal records.
+
+    role: "Built the anti-corruption layer between Gulf African Bank and its third-party providers"
+    ownership_boundary: >-
+      CONFIRMED BY HIMANSHU 2026-07-30: the role's scope WAS the anti-corruption
+      layer - the four adapter services standing between the bank and its external
+      providers. That is the whole assignment, so "built" is accurate for the ACL
+      itself. NOT his: GAB's core banking platform, the SCAPI ESB, the digital
+      channels calling in (portals, USSD, mobile), or any third-party system on the
+      far side. If asked "what was yours?", the answer is the integration layer and
+      nothing on either side of it.
+    scope_line: >-
+      Built the anti-corruption layer between Gulf African Bank's core systems and
+      four external providers - a telecom SMS and email gateway, the PesaLink
+      real-time interbank transfer network, Kenya's IPRS national identity
+      registry, and the Infrasoft OMNIEnterprise AML sanctions-screening service -
+      as four asynchronous Python microservices.
+
+    tech:
+      primary: ["Python 3.12", "FastAPI", "async SQLAlchemy 2.0", "Pydantic v2", "PostgreSQL"]
+      secondary: ["HTTPX", "RabbitMQ (aio-pika)", "lxml", "structlog", "pytest", "respx",
+                  "Docker", "Docker Compose", "GitLab CI", "uv"]
+      tech_line: "Python, FastAPI, SQLAlchemy 2.0, Pydantic v2, PostgreSQL, RabbitMQ, Docker, GitLab CI"
+
+    keywords:
+      exact: ["Python", "FastAPI", "SQLAlchemy", "Pydantic", "PostgreSQL", "REST API",
+              "SOAP", "XML", "RabbitMQ", "Docker", "GitLab CI", "CI/CD", "pytest",
+              "async", "asyncio", "microservices", "webhooks", "HMAC", "idempotency",
+              "rate limiting", "audit trail", "AML", "KYC", "OFAC", "sanctions screening"]
+      topical: ["payments", "real-time payments", "interbank transfer", "core banking",
+                "enterprise service bus", "anti-corruption layer", "domain-driven design",
+                "event sourcing", "exactly-once semantics", "fail-closed design",
+                "distributed systems", "PII redaction", "secrets management",
+                "XML injection", "strangler fig migration", "identity verification",
+                "regulatory compliance", "fintech"]
+
+    scale:
+      services: 4
+      app_loc: 5900
+      test_loc: 4100
+      automated_tests: 233
+      postman_scenarios: 103
+      test_to_code_ratio: "~0.7:1"
+
+    # -------------------------------------------------------------------------
+    # METRIC LEDGER
+    # -------------------------------------------------------------------------
+    # counted        = statically counted from source (defensible, reproducible)
+    # configured     = a config value, NOT observed load. Never render as throughput.
+    # unverified     = asserted in a doc but not independently confirmed
+    # -------------------------------------------------------------------------
+    metric_ledger:
+      app_loc:            { value: "~5,900", status: counted }
+      test_loc:           { value: "~4,100", status: counted }
+      automated_tests:    { value: 233, status: counted, render_as: "230+" }
+      postman_scenarios:  { value: 103, status: counted }
+      services:           { value: 4, status: counted }
+      pesalink_types:     { value: 8, status: counted, note: "4 PESALINK + 4 PESALINK_LOOKUP" }
+      concurrency_fanout: { value: 8, status: counted, note: "8-way parallel duplicate harness" }
+      webhook_attempts:   { value: 5, status: counted, note: "0s/10s/30s/2m/10m ladder" }
+      caller_rate_limit:  { value: "600/min", status: configured, note: "CONFIGURED LIMIT, not observed throughput" }
+      identity_rate_limit: { value: "20/min",  status: configured, note: "CONFIGURED LIMIT, per queried identity" }
+      # PROHIBITED
+      tests_all_passing:  { value: null, status: unverified_do_not_use, note: "test functions counted statically; suites never executed" }
+      production_traffic: { value: null, status: confirmed_none, note: "CONFIRMED BY HIMANSHU 2026-07-30: nothing deployed to production, no observed metrics of any kind exist" }
+      # There are NO outcome metrics for this entry and there will not be any.
+      # Every number here is a static count or a config value. The bullets carry
+      # engineering substance instead, which is the correct trade for
+      # pre-production work - do not attempt to manufacture impact figures.
+      outcome_metrics:    { value: null, status: none_exist_by_design }
+
+    bullets:
+
+      - id: int_b1
+        claim_type: verified
+        priority: 1
+        theme: architecture
+        variants:
+          long: >-
+            Built the anti-corruption layer between Gulf African Bank's core systems
+            and four external providers - a telecom messaging gateway, the PesaLink
+            real-time interbank transfer network, Kenya's IPRS national identity
+            registry, and an AML sanctions-screening service - as four asynchronous
+            Python microservices (FastAPI, async SQLAlchemy 2.0, Pydantic v2,
+            PostgreSQL) sharing one standardized adapter architecture that isolates
+            every third-party quirk behind a single client boundary.
+          medium: >-
+            Built the anti-corruption layer between a commercial bank's core systems
+            and four external providers - telecom messaging, real-time interbank
+            transfers, national identity verification, and AML sanctions screening -
+            as four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0,
+            PostgreSQL) on one standardized adapter architecture.
+          short: >-
+            Built the anti-corruption layer between a commercial bank and four
+            external providers - messaging, real-time payments, identity
+            verification, and AML sanctions screening - as four asynchronous Python
+            microservices.
+        evidence:
+          - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML)"
+          - "Shared layered architecture: HTTP middleware onion -> service layer -> domain (Pydantic/errors/config) -> data (async engine, append-only event log ORM)"
+          - "Each service isolates vendor quirks behind a single client class (ACL pattern); ~5,900 app LOC counted"
+        keywords_hit: ["Python", "FastAPI", "microservices", "PostgreSQL", "payments", "AML", "anti-corruption layer"]
+        defense: >-
+          The anti-corruption layer was the entire scope of the role, so "built" is
+          accurate. "Four external providers" describes what the layer connects
+          without implying ownership of the bank's core platform or the ESB.
+        interview_risk: |
+          Naming the ACL pattern explicitly is worth it - it is Domain-Driven Design
+          vocabulary and signals architectural literacy beyond "I built REST APIs".
+          Be ready to define it: a translation boundary that keeps a foreign system's
+          model and quirks from leaking into yours.
+          Do NOT claim any deployment state. Nothing reached production; if asked,
+          say so plainly.
+
+      - id: int_b2
+        claim_type: verified
+        priority: 1
+        theme: reliability
+        variants:
+          long: >-
+            Engineered exactly-once semantics on the money-movement path using
+            INSERT-first idempotency-key reservation with atomic ON CONFLICT DO
+            NOTHING claims, SHA-256 payload fingerprinting, and TTL-based reclamation
+            of reservations abandoned by crashed callers - proven under an 8-way
+            parallel duplicate-request harness to yield exactly one winning request
+            and exactly one downstream banking-vendor call.
+          medium: >-
+            Engineered exactly-once semantics on the money-movement path via
+            INSERT-first idempotency-key reservation with atomic ON CONFLICT claims
+            and SHA-256 payload fingerprinting, proven under an 8-way parallel
+            duplicate harness to yield one winner and exactly one vendor call.
+          short: >-
+            Engineered exactly-once payment semantics using atomic INSERT-first
+            idempotency reservation, proven under 8-way concurrent duplicate load to
+            invoke the banking vendor exactly once.
+        evidence:
+          - "concurrency_test.py: 8 identical parallel requests -> exactly one 200, losers 409/429, zero 5xx, mock vendor call counter == 1"
+          - "Idempotency state machine: reserved / completed-replay / 422 IDEMPOTENCY_CONFLICT on hash mismatch / 409 DUPLICATE_IN_PROGRESS / 24h TTL reclamation"
+          - "Payload hash = SHA-256 over canonical JSON with message_validation stripped"
+        keywords_hit: ["idempotency", "async", "PostgreSQL", "payments", "distributed systems"]
+        defense: >-
+          Fully code-backed. This is the strongest bullet in the entire profile - it
+          should appear on every fintech-targeted resume.
+        interview_risk: |
+          Rehearse the full state machine, not the headline. The nuance that shows
+          depth: on vendor failure the key is RELEASED so retries remain possible,
+          but a completed key replays forever regardless of age - those two rules
+          together make a double-send structurally impossible while keeping the system
+          retryable. Expect "why not SELECT-then-INSERT?" - there is a race window
+          between the check and the write; ON CONFLICT lets the database arbitrate.
+
+      - id: int_b3
+        claim_type: verified
+        priority: 1
+        theme: compliance
+        variants:
+          long: >-
+            Designed a fail-closed AML sanctions screening gateway that surfaces an
+            explicit typed error rather than a false "no matches" on any backend
+            outage, timeout, SOAP fault, or unparseable response - including a
+            fail-closed database path, since a screening decision with no audit trail
+            is not defensible - and exposed it over both modern REST/JSON and the
+            legacy SOAP/XML contract through shared orchestration, enabling
+            incremental channel migration without breaking existing consumers.
+          medium: >-
+            Designed a fail-closed AML sanctions screening gateway that returns an
+            explicit error rather than a false "clear" on any backend fault, timeout,
+            or unparseable response, exposed over both REST/JSON and the legacy
+            SOAP/XML contract through shared orchestration so legacy consumers
+            migrate incrementally.
+          short: >-
+            Designed a fail-closed AML sanctions screening gateway that errors rather
+            than reporting a false "clear" on backend faults, serving both REST and
+            legacy SOAP consumers from shared orchestration.
+        evidence:
+          - "Typed error map: AML_UNAVAILABLE / AML_FAULT / AML_BAD_RESPONSE -> 502; DATABASE_UNAVAILABLE -> 503 with session rollback"
+          - "Dual ingress: POST /api/v1/screening (JSON) and POST /services/NameScreening (SOAP getCIPMatch) over one orchestration layer"
+          - "lxml for XML-bomb resistance; xml.sax.saxutils.escape on all outbound interpolation"
+          - "Mock AML trigger keywords TRIGGER_503 / TRIGGER_FAULT / TRIGGER_MALFORMED / TRIGGER_TIMEOUT, themselves unit-tested"
+        keywords_hit: ["AML", "sanctions screening", "OFAC", "SOAP", "XML", "fail-closed design", "regulatory compliance"]
+        defense: >-
+          Ownership here is the best-documented of the four services - the CIP
+          technical doc explicitly lists Himanshu as Owner.
+        interview_risk: |
+          The line to deliver: "a screening service that returns clear when it cannot
+          reach the sanctions list is worse than one that errors - it manufactures
+          documented false compliance." Be ready for "why not retry a SOAP fault?" -
+          a well-formed fault is a real answer from a healthy backend; only
+          transport-level failures (connection, timeout, 502/503/504) are retried.
+
+      - id: int_b4
+        claim_type: verified
+        priority: 2
+        theme: payments
+        variants:
+          long: >-
+            Delivered a PesaLink real-time interbank transfer adapter supporting eight
+            transaction types across two ESB interfaces, implementing per-request-type
+            Base64 cryptographic security-stamp generation from a declarative
+            field-spec table with fail-fast local validation, mandatory
+            institution-code injection, and three-layer response interpretation that
+            validates the ESB, core-banking, and PesaLink status codes independently
+            before declaring a transfer successful.
+          medium: >-
+            Delivered a PesaLink real-time interbank transfer adapter supporting eight
+            transaction types with per-request-type Base64 security-stamp generation
+            from a declarative field-spec table, and three-layer response
+            interpretation validating ESB, core-banking, and network status codes
+            before declaring settlement success.
+          short: >-
+            Built a real-time interbank transfer adapter with per-request-type
+            cryptographic request signing and three-layer response validation before
+            declaring settlement success.
+        evidence:
+          - "8 request types: PESALINK (IDENTIFICATION_VERIFICATION, CREDIT_TRANSFER, PHONE_/WALLET_CREDIT_TRANSFER) + PESALINK_LOOKUP (QUERY/REGISTER/UPDATE/DELINK_CUSTOMER)"
+          - "Declarative stamp field-spec per request type; colon-joined then Base64; missing required field raises before the wire call"
+          - "Success requires all three: general_data.error_code 00 AND core_response.olErrorCode 0 AND pesalinkDetails.err_code 000"
+          - "Money validated as ^\\d+\\.\\d{2}$ (no floating-point currency); phone as ^\\+254-\\d{9}$"
+        keywords_hit: ["payments", "real-time payments", "interbank transfer", "Python", "FastAPI"]
+        defense: "All technical detail is code-read; PesaLink sat inside the ACL scope Himanshu owned."
+        interview_risk: |
+          This is the designated "hard technical problem" answer: the stamp
+          composition varies by request type, has undocumented field-resolution
+          fallbacks, and a wrong stamp fails downstream at the network layer with an
+          opaque error - so the fix was a declarative spec table plus local fail-fast
+          validation. Also know why three-layer checking matters: a naive
+          implementation reads only the outer code and reports phantom settlements.
+
+      - id: int_b5
+        claim_type: verified
+        priority: 2
+        theme: auditability
+        variants:
+          long: >-
+            Implemented regulatory-grade audit infrastructure across all four services
+            - append-only event logs where status is never mutated in place, request
+            intent committed to the database before every vendor call so a mid-flight
+            crash still leaves durable proof of the attempt, and raw request and
+            response payloads retained for full reconstruction - alongside
+            dual-dimension database-backed rate limiting with per-caller limits for
+            availability and per-recipient or per-identity limits as a PII-abuse
+            control.
+          medium: >-
+            Implemented append-only audit event logs with request intent committed
+            before every vendor call so mid-flight crashes remain diagnosable, plus
+            dual-dimension rate limiting - per-caller for availability and
+            per-queried-identity as a PII-abuse control.
+          short: >-
+            Implemented append-only audit event logs with intent persisted before
+            every vendor call, plus dual-dimension rate limiting including a
+            per-identity PII-abuse control.
+        evidence:
+          - "db_models.py append-only event log ORM; transitions INITIATED -> ACCEPTED|FAILED add rows, never update"
+          - "Fixed-window counters keyed (bucket_key, window_start) via atomic ON CONFLICT DO UPDATE ... RETURNING count"
+          - "IPRS second dimension is id:{id_number} at 20/min - the individual looked up, not the caller"
+        keywords_hit: ["audit trail", "event sourcing", "rate limiting", "PostgreSQL", "PII redaction"]
+        defense: >-
+          600/min and 20/min are CONFIGURED limits, never observed throughput - the
+          repo contains no load or latency data of any kind. Never write "handled 600
+          requests per minute".
+        interview_risk: |
+          The per-identity limit is the sharpest single detail in the portfolio for a
+          compliance-minded interviewer - frame it explicitly as a privacy control,
+          not a performance control: a compromised channel cannot enumerate or
+          repeatedly probe one citizen's record. Expect "why DB-backed instead of
+          Redis?" - counters survive restarts and are shared across horizontally
+          scaled instances without operating a second system; Redis is correct at
+          higher throughput.
+
+      - id: int_b6
+        claim_type: verified
+        priority: 2
+        theme: quality
+        variants:
+          long: >-
+            Authored 230+ automated tests (roughly a 0.7:1 test-to-code ratio) plus
+            103 Postman negative-path scenarios, layering Pydantic edge-case tests,
+            respx-mocked vendor contract tests covering retry-then-succeed and retry
+            exhaustion, full ASGI end-to-end tests, and custom concurrency harnesses
+            for race conditions unit tests cannot reach; containerized all four
+            services with Docker Compose topologies and branch-gated GitLab CI
+            pipelines.
+          medium: >-
+            Authored 230+ automated tests (~0.7:1 test-to-code ratio) plus 103 Postman
+            negative-path scenarios, including respx-mocked vendor contract tests and
+            custom concurrency harnesses for races unit tests cannot reach;
+            containerized all four services with Docker Compose and GitLab CI.
+          short: >-
+            Authored 230+ automated tests (~0.7:1 test-to-code ratio) and 103 Postman
+            negative-path scenarios; containerized all four services with Docker
+            Compose and GitLab CI.
+        evidence:
+          - "Static count of test functions: 60 + 54 + 52 + 67 = 233 across the four services"
+          - "~4,100 test LOC vs ~5,900 app LOC"
+          - "respx HTTP mocking; pytest-asyncio; mock vendor backends with injectable failure modes"
+        keywords_hit: ["pytest", "test automation", "Docker", "GitLab CI", "CI/CD"]
+        defense: >-
+          Render as "230+", not "233" - round numbers invite fewer nitpicks and the
+          exact figure is available if asked. DO NOT claim "all tests passing": the
+          test functions were counted statically and the suites were never executed.
+          Run them first if you want that claim.
+        interview_risk: |
+          The 0.7:1 ratio is worth saying out loud - most intern codebases sit near
+          0.05:1. Be ready to describe the layering in order, and to name one race
+          the concurrency harness caught that a unit test could not.
+
+      - id: int_b7
+        claim_type: verified
+        priority: 3
+        theme: distributed_systems
+        variants:
+          medium: >-
+            Added a RabbitMQ asynchronous processing path with durable persistent
+            delivery and a dedicated consumer worker (prefetch 10, robust
+            reconnection), returning 202 Accepted immediately to decouple slow
+            upstream identity lookups from caller request threads, and implemented
+            HMAC-SHA256-signed webhook delivery over canonical JSON with a 5-attempt
+            backoff ladder executed as post-response background tasks on isolated
+            database sessions.
+          short: >-
+            Added a RabbitMQ async path with a dedicated consumer worker returning 202
+            Accepted, and HMAC-SHA256-signed webhook delivery on a 5-attempt backoff
+            ladder run as post-response background tasks.
+        evidence:
+          - "aio_pika.connect_robust; durable iprs_webhook_tasks queue, DeliveryMode.PERSISTENT, prefetch_count=10; separate `python -m app.worker` consumer"
+          - "PesaLink webhooks: canonical JSON (sort_keys, tight separators), HMAC-SHA256 in X-PesaLink-Signature, ladder 0s/10s/30s/2m/10m then permanent failed"
+        keywords_hit: ["RabbitMQ", "distributed systems", "webhooks", "HMAC", "async"]
+        defense: >-
+          CRITICAL SCOPING: webhook delivery is fully implemented in the PesaLink
+          service only. The SMS service's webhook_attempt table is explicitly
+          documented as unimplemented scaffolding - never list webhook delivery as an
+          SMS-service capability.
+        interview_risk: >-
+          The RabbitMQ path is the clearest distributed-systems artifact in the
+          portfolio. Know why the worker uses its own DB session, and why
+          fire-and-forget after the response is safe here (the webhook is a
+          notification, and delivery is tracked and retried in a table).
+
+      - id: int_b8
+        claim_type: verified
+        priority: 3
+        theme: security
+        variants:
+          medium: >-
+            Hardened all four services with a credential isolation boundary that
+            parses and deliberately discards caller-supplied vendor credentials so
+            callers structurally cannot smuggle auth upstream, SecretStr handling that
+            keeps secrets out of reprs and logs, recursive redaction of credentials
+            and PII before anything touches disk, XML injection and XML-bomb
+            resistance, and correlation-ID propagation with structured logging wrapped
+            so a logging failure can never break the request path.
+          short: >-
+            Hardened all four services with a credential isolation boundary,
+            SecretStr secret handling, recursive log redaction of credentials and PII,
+            XML injection and XML-bomb resistance, and correlation-ID propagation.
+        evidence:
+          - "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side"
+          - "pydantic.SecretStr for all credentials; recursive redaction of api_user/api_password/token/password and x-api-key/authorization headers"
+          - "redact_pii() preserves last 4 chars only, applied across JSON and XML name/passport/dob/nationality fields"
+          - "Vendor client: asyncio.Lock with double-checked locking on the token cache; 401 -> flush, re-auth, replay exactly once; second 401 -> 502"
+        keywords_hit: ["secrets management", "PII redaction", "XML injection", "security", "authentication"]
+        defense: "All controls are code-read."
+        interview_risk: >-
+          The credential isolation boundary is an unusually mature control for an
+          intern to have designed - lead with it in a security-flavored interview.
+          Also know the double-checked locking rationale: without it, N concurrent
+          requests on a cold cache all trigger a token fetch (stampede).
+
+    known_gaps:
+      - id: int_gap_employer_and_dates
+        severity: resolved
+        detail: >-
+          RESOLVED 2026-07-30: employer MalyTech; location Dubai, UAE (not rendered by
+          Himanshu's choice); dates stated as 06/2025 - 08/2025. See
+          int_gap_date_conflict, which supersedes this as the blocker.
+        fix: "Confirm any legal suffix on 'MalyTech' and settle the date conflict."
+
+      - id: int_gap_date_conflict
+        severity: resolved
+        detail: >-
+          RESOLVED 2026-07-30: Himanshu confirms 06/2026 - 08/2026, not 2025. This
+          matches every dated artifact in the repo (PesaLink git history 2026-07-24 to
+          2026-07-27; CIP specification 2026-07-13) and fits the standard first-summer
+          internship window for an MS started in August 2025. The initial 06/2025 -
+          08/2025 reading was a typo.
+        fix: >-
+          Entry is now unblocked. Render "June 2026 - Present" while the role is
+          current; switch to display_date_alt ("June 2026 - August 2026") once it
+          ends. int_gap_timeline_coherence is also closed by this: the git history
+          dates and the employment dates now agree.
+
+      - id: int_gap_ownership_scope
+        severity: resolved
+        detail: >-
+          RESOLVED 2026-07-30: Himanshu confirms the role's entire scope was the
+          anti-corruption layer - the four adapter services between GAB and its
+          third-party providers. "Built" is therefore accurate for the layer itself.
+        fix: >-
+          Keep the boundary crisp in interviews: the integration layer was his, and
+          nothing on either side of it (GAB core banking, the SCAPI ESB, the calling
+          channels, or the third-party systems).
+      - id: int_gap_production_status
+        severity: resolved
+        detail: >-
+          RESOLVED 2026-07-30: Himanshu confirms nothing was deployed to production
+          and no observed metrics exist. GitLab CI is branch-gated to stage/prod and
+          ships artifacts to S3, but no service serves real traffic.
+        fix: >-
+          RULE NOW LOCKED. Rendered variants must be silent on deployment state -
+          they describe what was built, which needs no operational claim. Never write
+          "in production", "live", "live traffic", or any transaction volume. If an
+          interviewer asks directly, answer plainly: "pre-production; CI deploys to
+          staging and the live bank endpoint still needs IP whitelisting and
+          IT-provisioned credentials." Volunteering that honestly costs nothing -
+          nobody expects an intern's integration layer to be carrying money yet.
+      - id: int_gap_configured_vs_observed
+        severity: medium
+        detail: >-
+          600/min and 20/min are configuration values. The repo contains no
+          throughput, latency, or volume measurements of any kind.
+        fix: "Render only as limits. Never as observed load or capacity."
+      - id: int_gap_tests_not_executed
+        severity: medium
+        detail: >-
+          233 is a static count of test functions. No suite was executed during the
+          source review, so "all tests passing" is unsubstantiated even though the
+          IPRS doc asserts its 52 pass.
+        fix: "Run all four suites and record the result, or omit any pass-rate claim."
+      - id: int_gap_sms_webhook_scaffolding
+        severity: medium
+        detail: >-
+          The SMS service's webhook_attempt table is explicitly documented as
+          unimplemented scaffolding. Webhook delivery is real in PesaLink only.
+        fix: "Attribute webhooks to PesaLink exclusively (already scoped in int_b7's defense)."
+      - id: int_gap_timeline_coherence
+        severity: resolved
+        detail: >-
+          RESOLVED 2026-07-30 by the date correction. Employment dates (06/2026 -
+          08/2026) now agree with the repo artifacts, so ~5,900 app LOC and ~4,100
+          test LOC across four services sit inside a full summer rather than a
+          four-day window. The two services with no history in the working copy are a
+          local-checkout artifact, not a timeline problem.
+        fix: >-
+          If asked "how long did this take?", the answer is the internship duration.
+          No reconciliation needed.
+
+  - id: amdocs_software_developer
+    employer: "Amdocs Ltd."             # entity suffix: Greenhouse parse rule
+    title: "Software Developer"         # NEVER altered. Target-title seeding
+                                        # happens in the summary line only.
+    location: "Gurugram, India"
+    start: "2023-07"
+    end: "2025-06"
+    status: completed
+
+    # Printed as a one-line italic scope note under the header. Front-loads the
+    # stack for keyword search and gives the reader domain context in one pass.
+    scope_line: >-
+      Order Management domain (Catalog, Shopping Cart, Proposal and Agreement) -
+      Java and Spring Boot microservices on Apache Kafka, Couchbase, and
+      Elasticsearch, deployed through Jenkins pipelines to OpenShift.
+
+    keywords:
+      exact: ["Java", "Spring Boot", "Apache Kafka", "microservices", "REST API",
+              "Elasticsearch", "Couchbase", "Jenkins", "CI/CD", "OpenShift",
+              "Kubernetes", "HELM", "AWS", "JUnit", "Mockito", "SonarQube"]
+      topical: ["event-driven architecture", "dead letter queue", "distributed systems",
+                "authorization", "multi-tenancy", "JWT", "OAuth2", "audit trail",
+                "data retention", "observability", "test automation", "feature flags"]
+      # Fintech translation layer. These are the terms a fintech JD uses for
+      # work Himanshu did under telecom vocabulary. The scorer should treat a
+      # match here as strong, and the tailoring model should prefer the variant
+      # that surfaces the mapped term.
+      domain_translation:
+        "data fencing": "row-level entitlement / multi-tenant authorization"
+        "proposal tracking": "immutable audit trail / books-and-records"
+        "purge and archive": "data retention and records management policy"
+        "DLQ consolidation": "event-driven reliability and failure handling"
+
+    # -------------------------------------------------------------------------
+    # METRIC LEDGER -- read this before selecting any bullet with a number.
+    # -------------------------------------------------------------------------
+    # doc_backed  -> appears in the source material; assert plainly.
+    # estimated   -> reconstructed from before/after reasoning two years later.
+    #                Render only with a hedge-compatible variant, and the
+    #                defense string must survive a 30-second challenge.
+    #
+    # RULE: a resume may carry at most TWO estimated metrics. Beyond that the
+    # page reads as uniformly confident and a reviewer cannot tell which
+    # numbers are real. The audit suite enforces this cap.
+    # -------------------------------------------------------------------------
+    metric_ledger:
+      dlq_topic_count:      { value: 862,  status: doc_backed }
+      dlq_deployments:      { value: 11,   status: doc_backed }
+      dlq_partition_share:  { value: "5%", status: doc_backed }
+      dlq_idle_reduction:   { value: "70%", status: doc_backed }
+      dlq_partition_reclaim: { value: "80%", status: doc_backed }
+      unit_test_coverage:   { value: "90%", status: doc_backed }
+      sonarqube_smells:     { value: "~500", status: doc_backed }
+      purge_footprint:      { value: "~40%", status: estimated }
+      purge_query_gain:     { value: "~25%", status: estimated }
+      qa_effort_reduction:  { value: "~50%", status: estimated }
+      defect_reduction:     { value: "~40%", status: estimated }
+      resolution_time_gain: { value: "~60%", status: estimated }
+
+    bullets:
+
+      - id: am_b01_dlq_consolidation
+        claim_type: verified
+        priority: 1                     # strongest bullet; lead with it always
+        theme: architecture
+        variants:
+          long: >-
+            Redesigned the Apache Kafka dead-letter-queue architecture for the
+            Order Management domain, consolidating 862 per-consumer DLQ topics
+            across 11 deployments into one shared DLQ per subdomain via a new
+            HELM binding function with a feature-flagged, zero-downtime rollout -
+            cutting idle topic sprawl by 70% and reclaiming roughly 80% of the
+            partitions held by empty DLQs.
+          medium: >-
+            Redesigned the Kafka dead-letter-queue architecture, consolidating
+            862 per-consumer DLQ topics across 11 deployments into one shared DLQ
+            per subdomain behind a feature-flagged HELM binding function - cutting
+            idle topic sprawl by 70% and reclaiming ~80% of wasted partitions.
+          short: >-
+            Consolidated 862 per-consumer Kafka dead-letter topics into shared
+            per-subdomain DLQs via a feature-flagged HELM function, cutting idle
+            topic sprawl by 70%.
+        evidence:
+          - "Interview prep doc, DLQ section: instanceBind HELM function, sharedDlqTopicsEnabled flag defaulting false, error.<subdomain> naming"
+          - "Migration runbook: enable flag -> drain under retention -> cleanup script -> rollback via flag or per-topic dlqTopicName override"
+          - "D1 test suite defect found and fixed: HELM function reading wrong values path"
+        keywords_hit: ["Apache Kafka", "HELM", "event-driven architecture", "dead letter queue", "feature flags", "Kubernetes"]
+        defense: ""
+        interview_risk: |
+          Expect: "how do you know which consumer a failed message came from?"
+          Answer: Spring Kafka's DeadLetterPublishingRecoverer stamps
+          kafka_dlt-original-topic/-partition/-offset plus exception class, so
+          the shared DLQ is self-describing and replay filters on those headers.
+          Expect: noisy-neighbor objection. Answer: per-topic dlqTopicName
+          override existed; DLQ traffic is exceptional by definition.
+          Boundary: broker internals were a platform team's. Say so.
+
+      - id: am_b02_row_level_entitlement
+        claim_type: verified
+        priority: 1
+        theme: security
+        variants:
+          long: >-
+            Co-built a modular Java row-level entitlement library for the shared
+            microservices base, chaining JSON Web Token (JWT) claim validators for
+            multi-tenant telecom operators, and integrated it at the Proposal and
+            Agreement delegate layer - pushing claim predicates directly into
+            Couchbase N1QL and Elasticsearch queries behind new secondary indexes
+            so the database returned only authorized rows, failing closed with
+            HTTP 403 on claim mismatch.
+          medium: >-
+            Co-built a Java row-level entitlement library chaining JSON Web Token
+            (JWT) claim validators for multi-tenant operators, pushing claim
+            predicates into Couchbase N1QL and Elasticsearch queries behind new
+            secondary indexes so only authorized rows were returned, failing
+            closed with HTTP 403.
+          short: >-
+            Co-built a Java row-level entitlement library chaining JWT claim
+            validators, pre-filtering authorized rows at the database layer and
+            failing closed with HTTP 403.
+        evidence:
+          - "Prep doc, data fencing section: CustomerIdValidator, MultiCustomerIdValidator, ExtUserAccessGroupIdListValidator (highest priority, fail-closed)"
+          - "datafencing.extensions.customValidators flag making single- and multi-customer validators mutually exclusive"
+          - "updateResource() hook stamping caller access groups into new resources' ExternalIdentifier array"
+        keywords_hit: ["Java", "JWT", "authorization", "multi-tenancy", "Couchbase", "Elasticsearch", "REST API"]
+        defense: ""
+        interview_risk: |
+          "Co-built" is load-bearing - the library had multiple contributors.
+          If asked what YOU built: own the Proposal and Agreement integration
+          end-to-end, the pre-filtering query work, and the secondary indexes.
+          Do not claim sole authorship of the validator chain.
+          Prepared answer on pre- vs post-filtering: post-filtering pays network,
+          deserialization, and memory for rows the user cannot see AND breaks
+          pagination; pre-filtering makes claims into WHERE predicates so
+          indexes do the work and pagination is correct by construction.
+          RECONSTRUCTED and must stay hedged: cache TTL/size, and cross-pod
+          cache coherence. Prepared line: "each instance cached locally with
+          invalidation tied to the group-management endpoint; if I built it
+          today I'd broadcast invalidation over Kafka with a short TTL backstop."
+
+      - id: am_b03_audit_trail
+        claim_type: estimated
+        priority: 2
+        theme: architecture
+        variants:
+          long: >-
+            Architected an immutable audit-trail system for contract lifecycle
+            events: delegate-level triggers published standardized Kafka events
+            with correlation-ID propagation, and a new Proposal Tracking consumer
+            enriched them with JWT-resolved actor identity and configurable action
+            filtering before persisting append-only records in Elasticsearch,
+            replacing multi-service log correlation with a single filtered query.
+          medium: >-
+            Architected an immutable audit-trail system - delegate-level Kafka
+            triggers with correlation-ID propagation feeding a new consumer that
+            persisted append-only, actor-attributed records in Elasticsearch -
+            replacing multi-service log correlation with one filtered query.
+          short: >-
+            Built an immutable audit trail for contract lifecycle events using
+            Kafka triggers and append-only Elasticsearch records, replacing
+            multi-service log correlation with a single query.
+        evidence:
+          - "Prep doc, traceability section: catalog config table driving which actions are tracked; tracking ID generation"
+          - "Actor resolution: preferred_username from JWT mapped through workforce API to user ID"
+          - "Cross-domain case: Product Order events resolved to proposalId via PO externalIdentifier array by category"
+        keywords_hit: ["Apache Kafka", "Elasticsearch", "audit trail", "event-driven architecture", "observability"]
+        defense: >-
+          The ~60% resolution-time figure is an estimate from before/after
+          support experience, not an instrumented metric: reconstructing an
+          incident previously meant correlating logs across four or five
+          services (hours); afterward it was one filtered query (minutes).
+          NOTE: the selected variants deliberately omit the number - prefer
+          these. Only reintroduce "~60%" if a specific JD rewards quantified
+          operational impact, and only if it is one of at most two estimated
+          metrics on the page.
+        interview_risk: |
+          "Immutable" is a design contract, not a database guarantee - ES docs
+          are updatable. Answer: the consumer only ever creates; there is no
+          update path in the API. Hardening would be index-level write-once or
+          ILM roll-over to read-only.
+          RECONSTRUCTED: partitioning on entity ID. Hedge with "as I recall".
+
+      - id: am_b04_data_retention
+        claim_type: estimated
+        priority: 2
+        theme: architecture
+        variants:
+          long: >-
+            Built a policy-driven data-retention capability across three
+            microservices - REST lifecycle APIs plus Kafka event-driven archival
+            to a dedicated Archive service - with archive-before-delete ordering
+            so a source document was removed only on a confirmed archive
+            completion event, keeping the transactional store lean while archived
+            agreements stayed retrievable through a dedicated API.
+          medium: >-
+            Built a policy-driven data-retention capability across three
+            microservices using REST lifecycle APIs and Kafka event-driven
+            archival, with archive-before-delete ordering so documents were
+            removed only after a confirmed archive completion event.
+          short: >-
+            Built policy-driven data retention across three microservices with
+            REST lifecycle APIs and Kafka-driven archival, using
+            archive-before-delete ordering for safe purges.
+        evidence:
+          - "Prep doc, purge and archive section: retention rules (rejected/cancelled proposals >1mo purge; active agreements >1yr archive; rejected agreements >1mo purge)"
+          - "Mass-process framework for bulk execution; Archive service completion and failure events; get-from-archive API"
+        keywords_hit: ["Apache Kafka", "REST API", "microservices", "data retention", "Couchbase"]
+        defense: >-
+          ~40% footprint reduction reflects the eligible fraction of documents in
+          terminal or archivable states under the retention rules, from rollout
+          data-distribution analysis; ~25% query improvement follows from smaller
+          collections and smaller secondary indexes. Both are recalled estimates,
+          not reproducible measurements. Selected variants omit both numbers by
+          design - the mechanism (archive-before-delete, worst case a duplicate,
+          never a deleted-but-not-archived document) is the defensible part and
+          is what interviewers actually probe.
+        interview_risk: |
+          Expect the failure-mode question: "what if archive succeeds but delete
+          fails, or vice versa?" Answer is already in the bullet - ordering makes
+          the dangerous direction structurally impossible.
+          RECONSTRUCTED: retry idempotency on document ID. Hedge.
+
+      - id: am_b05_test_automation
+        claim_type: verified
+        priority: 2
+        theme: quality
+        variants:
+          long: >-
+            Automated end-to-end API testing with Postman collections executed
+            headlessly through Newman in Jenkins, adding JSON-schema response
+            validation to catch cross-service contract drift at build time, and
+            raised unit-test coverage to 90% across four microservices using
+            JUnit 5, Mockito, and WireMock stubs while clearing roughly 500
+            SonarQube code smells behind enforced quality gates.
+          medium: >-
+            Automated end-to-end API testing with Postman and Newman in Jenkins
+            with JSON-schema response validation, and raised unit-test coverage to
+            90% across four microservices using JUnit 5, Mockito, and WireMock
+            while clearing ~500 SonarQube code smells behind enforced quality gates.
+          short: >-
+            Automated end-to-end API tests via Newman in Jenkins and raised unit
+            coverage to 90% across four microservices, clearing ~500 SonarQube
+            code smells behind enforced quality gates.
+        evidence:
+          - "Prep doc, testing section: pre-request scripts for correlation IDs, pm.test assertions, per-environment variable files"
+          - "WireMock scenarios: 201 happy path, 500 to verify non-blocking handling, 30s fixed delay for timeout behavior"
+          - "Jenkins quality gates failing builds on new-code coverage and new critical issues"
+        keywords_hit: ["Jenkins", "CI/CD", "JUnit", "Mockito", "test automation", "REST API"]
+        defense: >-
+          90% coverage and ~500 smells are doc-backed - assert plainly. The
+          ~50% QA effort and ~40% defect figures are estimates and are
+          deliberately ABSENT from all three variants. Do not add them back.
+        interview_risk: |
+          Expect the vanity-metric challenge on 90%. Answer: JaCoCo line coverage
+          via SonarQube (hedge - RECONSTRUCTED that it was line-via-JaCoCo);
+          prioritized service, delegate, and mapper layers over getter padding;
+          the gate that mattered was the NEW-CODE threshold, not the absolute.
+
+      - id: am_b06_aws_ci_and_resilience
+        claim_type: verified
+        priority: 3
+        theme: infrastructure
+        variants:
+          medium: >-
+            Contributed to migrating the domain's continuous integration to
+            Amazon Web Services (AWS) through AWS-specific Jenkinsfiles, Maven
+            profile updates, and HELM value refactors, and integrated an external
+            human-task service into agreement sign-off with per-flow feature flags
+            and non-blocking failure handling so a downstream outage could never
+            block the core business transaction.
+          short: >-
+            Contributed to migrating continuous integration to Amazon Web Services
+            (AWS), and integrated an external task service into sign-off with
+            feature flags and non-blocking failure handling.
+        evidence:
+          - "Prep doc: new Jenkinsfile_Org_aws, Maven AWS profiles, HELM value changes, backward-compatible cutover"
+          - "Human Task integration: rich payload mapping, dedicated task types per flow, searchable Agreement/Site IDs, warn-and-proceed on failure"
+        keywords_hit: ["AWS", "Jenkins", "CI/CD", "HELM", "Maven", "feature flags"]
+        defense: >-
+          "Contributed to" is accurate for the AWS migration and must not be
+          upgraded to "led" or "owned" - it was a domain-wide effort.
+        interview_risk: |
+          Expect: "fire-and-forget means tasks can be silently lost - acceptable?"
+          Answer: deliberate and documented; the requirement was that task
+          creation must not fail sign-off, mitigated by a surfaced warning.
+          Volunteer the upgrade path (publish task creation as a Kafka event with
+          a retrying consumer) - offering it unprompted reads as senior.
+
+    known_gaps:
+      - id: am_gap_estimated_metrics
+        severity: high
+        detail: >-
+          Five figures (~40%, ~25%, ~50%, ~40%, ~60%) are two-year-old
+          reconstructions with no reproducible measurement behind them. Current
+          variant selection omits ALL of them; only am_b01 and am_b05 carry
+          numbers, and both are doc-backed.
+        fix: >-
+          Keep it that way unless a JD explicitly rewards quantified business
+          impact. If reintroduced, cap at two per page and rehearse the defense
+          string verbatim.
+      - id: am_gap_title_mismatch
+        severity: medium
+        detail: >-
+          Actual title is "Software Developer"; most target postings say
+          "Software Engineer". Jobscan reports a large interview-rate lift on
+          job-title match.
+        fix: >-
+          Seed the target title in the summary line ONLY. The employment title
+          in this block is immutable - altering it is resume fraud, not tailoring.
+      - id: am_gap_no_code_access
+        severity: medium
+        detail: >-
+          All evidence traces to a self-authored prep document, not to code or
+          artifacts Himanshu can still access. Provenance is weaker here than for
+          any project entry.
+        fix: >-
+          Treat mechanism claims as defensible and specific runtime details as
+          hedged. Never invent a detail to fill a silence in an interview.
+
+# summary:
+#   # One line, rebuilt per application. This is the ONLY place the target job
+#   # title is seeded (Jobscan: 10.6x interview rate on title match). It must
+#   # remain factually true about Himanshu at all times.
+#   template_ids: [...]
+#
+# education: [...]
+# skills: [...]
