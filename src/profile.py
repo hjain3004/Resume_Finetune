@@ -499,7 +499,120 @@ def _build_known_gaps(raw: dict[Any, Any], path: str) -> tuple[KnownGap, ...]:
     return tuple(gaps)
 
 
-def load_profile(path: str | Path) -> "MasterProfile":
+_REQUIRED_TOP_LEVEL_KEYS = (
+    "schema_version",
+    "last_updated",
+    "ats",
+    "identity",
+    "education",
+    "skills",
+    "projects",
+    "experience",
+    "base_variants",
+)
+
+
+@dataclass(frozen=True)
+class MasterProfile:
+    schema_version: str
+    last_updated: str
+    ats: dict[str, Any]
+    identity: dict[str, str]
+    education: tuple[dict[str, str], ...]
+    skills: dict[str, tuple[str, ...]]
+    projects: tuple[Project, ...]
+    experience: tuple[Experience, ...]
+    base_variants: dict[str, "BaseVariant"]
+    do_not_claim: tuple[str, ...]
+
+
+def _normalize_term(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _build_str_mapping(value: Any, path: str) -> dict[str, str]:
+    raw = _require_mapping(value, path)
+    result: dict[str, str] = {}
+    for key, item in raw.items():
+        name = _require_string(key, path)
+        result[name] = _require_string(item, f"{path}.{name}")
+    return result
+
+
+def _build_education(value: Any) -> tuple[dict[str, str], ...]:
+    return tuple(
+        _build_str_mapping(entry, f"education.{index}")
+        for index, entry in enumerate(_require_list(value, "education"))
+    )
+
+
+def _build_skills(value: Any) -> dict[str, tuple[str, ...]]:
+    raw = _require_mapping(value, "skills")
+    result: dict[str, tuple[str, ...]] = {}
+    for key, item in raw.items():
+        category = _require_string(key, "skills")
+        result[category] = _string_list(
+            item, f"skills.{category}", allow_empty=False
+        )
+    return result
+
+
+def _build_do_not_claim(value: Any) -> tuple[str, ...]:
+    entries = _string_list(value, "do_not_claim")
+    seen: set[str] = set()
+    for index, entry in enumerate(entries):
+        normalized = _normalize_term(entry)
+        if normalized in seen:
+            raise ProfileValidationError(
+                f"do_not_claim.{index}: duplicate entry: {entry}"
+            )
+        seen.add(normalized)
+    return entries
+
+
+def _check_do_not_claim_against_skills(
+    do_not_claim: tuple[str, ...], skills: dict[str, tuple[str, ...]]
+) -> None:
+    banned = {_normalize_term(entry) for entry in do_not_claim}
+    if not banned:
+        return
+    for category, values in skills.items():
+        for index, skill in enumerate(values):
+            if _normalize_term(skill) in banned:
+                raise ProfileValidationError(
+                    f"skills.{category}.{index}: do_not_claim term listed as "
+                    f"skill: {skill}"
+                )
+
+
+def load_profile(path: str | Path) -> MasterProfile:
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")
-    raise NotImplementedError("built up across Tasks 2-9")
+    for key in _REQUIRED_TOP_LEVEL_KEYS:
+        if key not in root:
+            raise ProfileValidationError(
+                f"master_profile.yaml.{key}: missing required key"
+            )
+
+    projects = _build_projects(root["projects"])
+    experience = _build_experience_list(root["experience"])
+    skills = _build_skills(root["skills"])
+    do_not_claim = _build_do_not_claim(root.get("do_not_claim", []))
+
+    _check_unique_bullet_ids(experience, projects)
+    _check_do_not_claim_against_skills(do_not_claim, skills)
+
+    base_variants = _build_base_variants(root["base_variants"], projects, experience)
+
+    return MasterProfile(
+        schema_version=_require_string(root["schema_version"], "schema_version"),
+        last_updated=_require_string(root["last_updated"], "last_updated"),
+        ats=_require_mapping(root["ats"], "ats"),
+        identity=_build_str_mapping(root["identity"], "identity"),
+        education=_build_education(root["education"]),
+        skills=skills,
+        projects=projects,
+        experience=experience,
+        base_variants=base_variants,
+        do_not_claim=do_not_claim,
+    )

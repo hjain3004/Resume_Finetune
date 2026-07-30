@@ -1,6 +1,92 @@
 import pytest
 
 from src.profile import ProfileValidationError, load_profile
+_MINIMAL_PROFILE = """
+schema_version: "0.3.0"
+last_updated: "2026-07-30"
+ats:
+  charset_policy: ascii_strict
+  forbidden_chars: ["\\u2014"]
+  substitutions:
+    "\\u2014": "-"
+identity:
+  name: Himanshu Jain
+  email: himanshu.jain@sjsu.edu
+education:
+  - institution: San Jose State University
+    degree: Master of Science in Software Engineering
+    display_date: "Aug. 2025 - May 2027"
+skills:
+  languages: ["Python", "Java"]
+projects:
+  - id: proj_one
+    name: Project One
+    display_title: Project One - A Thing
+    ownership_boundary: "SAFE TO CLAIM: all of it."
+    tech:
+      tech_line: "Python, pytest"
+    keywords:
+      exact: ["Python"]
+      topical: ["backend"]
+    metric_ledger:
+      tests:
+        value: 12
+        provenance: counted
+        renderable: true
+    metric_scope:
+      test_scope: "unit tests only"
+    known_gaps:
+      - id: gap_one
+        severity: medium
+        detail: "A gap."
+        fix: "Close it."
+    bullets:
+      - id: proj_b1
+        claim_type: verified
+        priority: 1
+        phrasings:
+          short: Built a thing
+        evidence:
+          - "src/thing.py: does the thing"
+        keywords_hit: ["Python"]
+experience:
+  - id: exp_one
+    employer: Amdocs
+    title: Software Developer
+    scope_line: "Did backend work."
+    display_date: "July 2023 - June 2025"
+    ownership_boundary: "SAFE TO CLAIM: my slice."
+    bullets:
+      - id: exp_b1
+        claim_type: verified
+        priority: 1
+        phrasings:
+          short: Shipped a service
+        evidence:
+          - "prep doc: service description"
+base_variants:
+  backend:
+    projects: [proj_one]
+    bullet_order: [exp_b1, proj_b1]
+do_not_claim:
+  - Kubernetes
+"""
+
+_DUPLICATE_PROJECT_BLOCK = """  - id: proj_one
+    name: Project One Again
+    display_title: Project One Again
+    ownership_boundary: "SAFE TO CLAIM: all of it."
+    tech:
+      tech_line: "Python"
+    bullets:
+      - id: proj_b_dup
+        claim_type: verified
+        priority: 1
+        phrasings:
+          short: Built another thing
+        evidence:
+          - "src/other.py: does another thing"
+"""
 
 
 def _write(tmp_path, text: str):
@@ -187,3 +273,50 @@ def test_known_gap_defaults_to_open(tmp_path):
     gap = profile.projects[0].known_gaps[0]
     assert gap.severity is Severity.MEDIUM
     assert gap.status is GapStatus.OPEN
+
+
+def test_happy_path_loads_every_section(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    assert profile.schema_version == "0.3.0"
+    assert profile.identity["name"] == "Himanshu Jain"
+    assert profile.education[0]["institution"] == "San Jose State University"
+    assert profile.skills["languages"] == ("Python", "Java")
+    assert len(profile.projects) == 1
+    assert len(profile.experience) == 1
+    assert profile.do_not_claim == ("Kubernetes",)
+
+
+def test_missing_required_top_level_key_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace("identity:", "identity_typo:", 1))
+    with pytest.raises(ProfileValidationError, match="identity: missing required key"):
+        load_profile(path)
+
+
+def test_do_not_claim_defaults_to_empty(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "do_not_claim:\n  - Kubernetes\n", ""))
+    assert load_profile(path).do_not_claim == ()
+
+
+def test_duplicate_do_not_claim_entry_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "  - Kubernetes\n", "  - Kubernetes\n  - kubernetes\n"))
+    with pytest.raises(ProfileValidationError, match="duplicate entry"):
+        load_profile(path)
+
+
+def test_do_not_claim_term_may_not_appear_in_skills(tmp_path):
+    # TAILORING_METHODOLOGY.md §2: never surface these as skills.
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        'languages: ["Python", "Java"]', 'languages: ["Python", "kubernetes"]'))
+    with pytest.raises(
+        ProfileValidationError, match="do_not_claim term listed as skill"
+    ):
+        load_profile(path)
+
+
+def test_skills_category_may_not_be_empty(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        'languages: ["Python", "Java"]', "languages: []"))
+    with pytest.raises(ProfileValidationError, match="nonempty string list"):
+        load_profile(path)
