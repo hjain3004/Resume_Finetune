@@ -1873,3 +1873,36 @@ deviation` and Phase 3 `UNLOCKED; not yet implemented`.
 **Conflict:** `docs/SELF_HEALING.md:146` dictates that schema files are the contract and code must conform to them, which would imply stripping `borderline` from the scorer output. However, doing so would break downstream consumers (digest, importer).
 **Decision:** A schema-vs-code conflict resolves in favor of the code *only* when the field is deliberately wired through the pipeline—persisted, validated, and consumed—rather than incidentally emitted. `borderline` met that test on 2026-07-30: db column, importer validation, digest section. Fields failing that test must be removed from the output, per SELF_HEALING.md:146. Widening a schema by relaxing `additionalProperties` is never an acceptable fix; instead, `borderline` was added explicitly as an optional boolean property.
 **Note:** I5 has been failing since `borderline` was introduced and was unrelated to the M8 profile work, so the audit's green history should not be read as this having regressed recently.
+
+## 2026-07-31: M10 dependency expansion (approved, tiered)
+
+**Context:** M10 (render bake-off + L7 parseability gate) cannot be built inside the
+dependency list frozen by `CLAUDE.md` prime directive 4 (`requests`, `trafilatura`,
+`PyYAML`, `pytest`, `crawl4ai`). Rendering needs a renderer; the L7 gate needs a PDF parser.
+
+**Decision:** The user approved three additions on 2026-07-31. They are adopted at
+different tiers -- approval to *evaluate* is not approval to *depend on at runtime*:
+
+- `pdfminer.six` -- **hard runtime dependency.** Chosen over `pypdf` because L7 must detect
+  reading-order and column failures, which requires glyph bounding boxes (`LTTextBox.bbox`);
+  `pypdf` exposes text without reliable geometry.
+- RenderCV (+ Typst) -- **bake-off only.** Becomes a runtime dependency only if it wins the
+  bake-off. If the existing LaTeX template wins, RenderCV is uninstalled and this list is
+  corrected.
+- OpenResume parser (Node) -- **opt-in test oracle, never a test dependency.** Gated behind
+  a `pytest` `oracle` marker, deselected by default.
+
+**Constraint that governs all three:** `pytest -q` must stay green on a machine with no Node
+installed. The repo is pure Python and `CLAUDE.md` requires that tests never touch the
+network; making a Node toolchain mandatory to run the suite would violate both in spirit.
+
+**Rationale for the tiering:** the durable M10 deliverable is the L7 gate, not the renderer
+choice. Tiering keeps the gate shippable even if both renderer arms are rejected, and keeps
+the renderer decision reversible via the `RenderDoc` IR.
+
+**Recorded but not yet actioned:** `CLAUDE.md` prime directive 4 is updated by M10 Task 0,
+and corrected again by Task 10 Step 5 once the bake-off winner is known.
+
+**Open blocker at time of writing:** the user's interview-tested LaTeX source is not in the
+repo (`profile/` holds six PDFs, no `.tex`/`.cls`). The user is exporting it from Overleaf.
+Until it lands, bake-off arm (a) is un-runnable; arm (b) and the L7 gate proceed regardless.
