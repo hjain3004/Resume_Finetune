@@ -51,6 +51,78 @@ def _read_yaml(path: Path) -> Any:
         raise ProfileValidationError(f"{path}: malformed YAML: {exc}") from exc
 
 
+_ASCII_EXEMPT_PATHS = ("ats.forbidden_chars", "ats.substitutions")
+
+
+def _is_ascii_exempt(path: str) -> bool:
+    return any(path.startswith(prefix) for prefix in _ASCII_EXEMPT_PATHS)
+
+
+def _check_ascii(value: str, path: str) -> None:
+    if _is_ascii_exempt(path):
+        return
+    if not value.isascii():
+        offenders = sorted({ch for ch in value if not ch.isascii()})
+        rendered = ", ".join(f"{ch!r} (U+{ord(ch):04X})" for ch in offenders)
+        raise ProfileValidationError(f"{path}: non-ASCII character(s): {rendered}")
+
+
+def _require_mapping(value: Any, path: str) -> dict[Any, Any]:
+    if not isinstance(value, dict):
+        raise ProfileValidationError(
+            f"{path}: expected mapping, got {type(value).__name__}"
+        )
+    return value
+
+
+def _require_list(value: Any, path: str) -> list[Any]:
+    if not isinstance(value, list):
+        raise ProfileValidationError(
+            f"{path}: expected list, got {type(value).__name__}"
+        )
+    return value
+
+
+def _require_string(value: Any, path: str) -> str:
+    if not isinstance(value, str):
+        raise ProfileValidationError(
+            f"{path}: expected string, got {type(value).__name__}"
+        )
+    stripped = value.strip()
+    if not stripped:
+        raise ProfileValidationError(f"{path}: expected nonempty string")
+    _check_ascii(stripped, path)
+    return stripped
+
+
+def _string_list(value: Any, path: str, *, allow_empty: bool = True) -> tuple[str, ...]:
+    items = _require_list(value, path)
+    if not allow_empty and not items:
+        raise ProfileValidationError(f"{path}: expected nonempty string list")
+    return tuple(
+        _require_string(item, f"{path}.{index}") for index, item in enumerate(items)
+    )
+
+
+def _require_positive_int(value: Any, path: str) -> int:
+    # bool must be rejected explicitly: isinstance(True, int) is True in Python,
+    # so `priority: true` would otherwise validate as 1.
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProfileValidationError(
+            f"{path}: expected integer, got {type(value).__name__}"
+        )
+    if value < 1:
+        raise ProfileValidationError(f"{path}: expected positive integer, got {value}")
+    return value
+
+
+def _required_field(raw: dict[Any, Any], field: str, path: str) -> str:
+    field_path = f"{path}.{field}"
+    if field not in raw:
+        raise ProfileValidationError(f"{field_path}: missing required key")
+    return _require_string(raw[field], field_path)
+
+
 def load_profile(path: str | Path) -> "MasterProfile":
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")
