@@ -123,6 +123,116 @@ def _required_field(raw: dict[Any, Any], field: str, path: str) -> str:
     return _require_string(raw[field], field_path)
 
 
+class ClaimType(str, Enum):
+    VERIFIED = "verified"
+    SCOPED = "scoped"
+    ESTIMATED = "estimated"
+    OBSERVED = "observed"
+    OWNERSHIP_UNRESOLVED = "ownership_unresolved"
+    NEEDS_INPUT = "needs_input"
+
+
+#: claim_types whose bullets must never reach a rendered resume.
+BLOCKED_CLAIM_TYPES = frozenset(
+    {ClaimType.OWNERSHIP_UNRESOLVED, ClaimType.NEEDS_INPUT}
+)
+
+
+@dataclass(frozen=True)
+class Phrasings:
+    short: str
+    medium: str | None = None
+    long: str | None = None
+
+    def best_within(self, limit: int) -> str:
+        """Longest phrasing that fits `limit` characters, else `short`."""
+        for candidate in (self.long, self.medium, self.short):
+            if candidate is not None and len(candidate) <= limit:
+                return candidate
+        return self.short
+
+
+@dataclass(frozen=True)
+class Bullet:
+    id: str
+    claim_type: ClaimType
+    priority: int
+    phrasings: Phrasings
+    evidence: tuple[str, ...]
+    keywords_hit: tuple[str, ...]
+    defense: str
+    interview_risk: str
+
+    @property
+    def is_blocked(self) -> bool:
+        return self.claim_type in BLOCKED_CLAIM_TYPES
+
+
+def _build_enum(enum_cls, raw_value: str, path: str):
+    try:
+        return enum_cls(raw_value)
+    except ValueError:
+        allowed = ", ".join(member.value for member in enum_cls)
+        raise ProfileValidationError(
+            f"{path}: expected one of {allowed}, got {raw_value!r}"
+        ) from None
+
+
+def _build_phrasings(value: Any, path: str) -> Phrasings:
+    raw = _require_mapping(value, path)
+    unknown = set(map(str, raw)) - {"short", "medium", "long"}
+    if unknown:
+        raise ProfileValidationError(
+            f"{path}: unknown phrasing tier(s): {', '.join(sorted(unknown))}"
+        )
+    if "short" not in raw:
+        raise ProfileValidationError(f"{path}.short: missing required key")
+    return Phrasings(
+        short=_require_string(raw["short"], f"{path}.short"),
+        medium=(
+            _require_string(raw["medium"], f"{path}.medium")
+            if "medium" in raw
+            else None
+        ),
+        long=_require_string(raw["long"], f"{path}.long") if "long" in raw else None,
+    )
+
+
+def _build_bullet(value: Any, path: str) -> Bullet:
+    raw = _require_mapping(value, path)
+    claim_type = _build_enum(
+        ClaimType, _required_field(raw, "claim_type", path), f"{path}.claim_type"
+    )
+
+    for required in ("phrasings", "evidence", "priority"):
+        if required not in raw:
+            raise ProfileValidationError(f"{path}.{required}: missing required key")
+
+    defense = (raw.get("defense") or "").strip()
+    if claim_type is not ClaimType.VERIFIED and not defense:
+        raise ProfileValidationError(
+            f"{path}.defense: required when claim_type is {claim_type.value!r} "
+            f"(contract C3)"
+        )
+    if defense:
+        _check_ascii(defense, f"{path}.defense")
+
+    interview_risk = (raw.get("interview_risk") or "").strip()
+    if interview_risk:
+        _check_ascii(interview_risk, f"{path}.interview_risk")
+
+    return Bullet(
+        id=_required_field(raw, "id", path),
+        claim_type=claim_type,
+        priority=_require_positive_int(raw["priority"], f"{path}.priority"),
+        phrasings=_build_phrasings(raw["phrasings"], f"{path}.phrasings"),
+        evidence=_string_list(raw["evidence"], f"{path}.evidence", allow_empty=False),
+        keywords_hit=_string_list(raw.get("keywords_hit", ()), f"{path}.keywords_hit"),
+        defense=defense,
+        interview_risk=interview_risk,
+    )
+
+
 def load_profile(path: str | Path) -> "MasterProfile":
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")

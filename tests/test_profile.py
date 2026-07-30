@@ -43,3 +43,71 @@ def test_blank_string_is_rejected(tmp_path):
         "name: Himanshu Jain", 'name: "   "'))
     with pytest.raises(ProfileValidationError, match="nonempty"):
         load_profile(path)
+
+
+from src.profile import ClaimType
+
+
+def test_bullet_requires_short_phrasing(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "short: Built a thing", "tiny: Built a thing"))
+    with pytest.raises(ProfileValidationError, match=r"phrasings"):
+        load_profile(path)
+
+
+def test_unknown_claim_type_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "claim_type: verified", "claim_type: probably_true", 1))
+    with pytest.raises(ProfileValidationError, match="claim_type"):
+        load_profile(path)
+
+
+def test_non_verified_claim_requires_defense(tmp_path):
+    # Contract C3: any claim_type other than `verified` must carry a defense.
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "claim_type: verified", "claim_type: estimated", 1))
+    with pytest.raises(ProfileValidationError, match="defense"):
+        load_profile(path)
+
+
+def test_empty_evidence_is_rejected(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        '        evidence:\n          - "src/thing.py: does the thing"\n',
+        "        evidence: []\n"))
+    with pytest.raises(ProfileValidationError, match="nonempty string list"):
+        load_profile(path)
+
+
+def test_null_evidence_is_rejected(tmp_path):
+    # Deleting the only list item leaves `evidence:` parsing as None, which is
+    # a different failure path than an explicitly empty list.
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        '          - "src/thing.py: does the thing"\n', ""))
+    with pytest.raises(ProfileValidationError, match="expected list, got NoneType"):
+        load_profile(path)
+
+
+def test_priority_must_be_positive_int(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace("priority: 1", "priority: 0", 1))
+    with pytest.raises(ProfileValidationError, match="positive integer"):
+        load_profile(path)
+
+
+def test_priority_rejects_boolean(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace("priority: 1", "priority: true", 1))
+    with pytest.raises(ProfileValidationError, match="expected integer"):
+        load_profile(path)
+
+
+def test_verified_bullet_is_not_blocked(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    bullet = profile.projects[0].bullets[0]
+    assert bullet.claim_type is ClaimType.VERIFIED
+    assert bullet.is_blocked is False
+
+
+def test_best_within_falls_back_to_short(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    phrasings = profile.projects[0].bullets[0].phrasings
+    assert phrasings.best_within(5) == "Built a thing"
+    assert phrasings.best_within(500) == "Built a thing"
