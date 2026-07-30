@@ -453,6 +453,52 @@ def _build_metric_scope(raw: dict[Any, Any], path: str) -> dict[str, str]:
     return result
 
 
+class Severity(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class GapStatus(str, Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+
+
+@dataclass(frozen=True)
+class KnownGap:
+    id: str
+    severity: Severity
+    status: GapStatus
+    detail: str
+    fix: str
+
+
+def _build_known_gaps(raw: dict[Any, Any], path: str) -> tuple[KnownGap, ...]:
+    gaps_path = f"{path}.known_gaps"
+    gaps: list[KnownGap] = []
+    for index, entry in enumerate(_require_list(raw.get("known_gaps", []), gaps_path)):
+        entry_path = f"{gaps_path}.{index}"
+        raw_gap = _require_mapping(entry, entry_path)
+        gaps.append(
+            KnownGap(
+                id=_required_field(raw_gap, "id", entry_path),
+                severity=_build_enum(
+                    Severity,
+                    _required_field(raw_gap, "severity", entry_path),
+                    f"{entry_path}.severity",
+                ),
+                status=_build_enum(
+                    GapStatus,
+                    (raw_gap.get("status") or "open"),
+                    f"{entry_path}.status",
+                ),
+                detail=_required_field(raw_gap, "detail", entry_path),
+                fix=_required_field(raw_gap, "fix", entry_path),
+            )
+        )
+    return tuple(gaps)
+
+
 def load_profile(path: str | Path) -> "MasterProfile":
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")

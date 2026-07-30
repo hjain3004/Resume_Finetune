@@ -170,3 +170,20 @@ def test_metric_ledger_happy_path(tmp_path):
     assert entry.provenance is Provenance.COUNTED
     assert entry.renderable is True
     assert profile.projects[0].metric_scope["test_scope"] == "unit tests only"
+
+
+from src.profile import GapStatus, Severity
+
+
+def test_resolved_is_not_a_severity(tmp_path):
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace(
+        "severity: medium", "severity: resolved"))
+    with pytest.raises(ProfileValidationError, match="severity"):
+        load_profile(path)
+
+
+def test_known_gap_defaults_to_open(tmp_path):
+    profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
+    gap = profile.projects[0].known_gaps[0]
+    assert gap.severity is Severity.MEDIUM
+    assert gap.status is GapStatus.OPEN
