@@ -66,8 +66,8 @@ identity:
   name: "Himanshu Jain"
   phone: "408-390-0164"
   email: "himanshu.jain@sjsu.edu"
-  linkedin: "<user-supplied URL>"
-  github: "<user-supplied URL>"
+  linkedin: "https://www.linkedin.com/in/himanshu-jain-5203751b8/"
+  github: "https://github.com/hjain3004"
   location: "San Jose, CA"
 
 education:
