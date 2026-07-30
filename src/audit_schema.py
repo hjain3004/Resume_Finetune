@@ -41,6 +41,11 @@ def validate(instance, schema: dict, *, path: str = "$") -> list[str]:
             for key in instance:
                 if key not in properties:
                     errors.append(f"{path}: unexpected additional property '{key}'")
+        elif isinstance(schema.get("additionalProperties"), dict):
+            additional_schema = schema["additionalProperties"]
+            for key in instance:
+                if key not in properties:
+                    errors.extend(validate(instance[key], additional_schema, path=f"{path}.{key}"))
         for field, field_schema in properties.items():
             if field in instance:
                 errors.extend(validate(instance[field], field_schema, path=f"{path}.{field}"))
@@ -63,6 +68,9 @@ def validate(instance, schema: dict, *, path: str = "$") -> list[str]:
             errors.append(f"{path}: {instance} is above maximum {maximum}")
 
     if expected_type == "string" and isinstance(instance, str):
+        min_length = schema.get("minLength")
+        if min_length is not None and len(instance) < min_length:
+            errors.append(f"{path}: length {len(instance)} is below minLength {min_length}")
         max_length = schema.get("maxLength")
         if max_length is not None and len(instance) > max_length:
             errors.append(f"{path}: length {len(instance)} exceeds maxLength {max_length}")

@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["base_variant", "reasoning", "skills", "projects", "experience"],
+  "properties": {
+    "base_variant": {
+      "type": "string"
+    },
+    "reasoning": {
+      "type": "string"
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 1
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["project_id", "bullets"],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "bullets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bullet_id", "phrasing_tier"],
+              "properties": {
+                "bullet_id": {
+                  "type": "string"
+                },
+                "phrasing_tier": {
+                  "type": "string",
+                  "enum": ["long", "medium", "short"]
+                },
+                "motivating_jd_quote": {
+                  "type": "string"
+                },
+                "proposed_rewrite": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["experience_id", "bullets"],
+        "properties": {
+          "experience_id": {
+            "type": "string"
+          },
+          "bullets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bullet_id", "phrasing_tier"],
+              "properties": {
+                "bullet_id": {
+                  "type": "string"
+                },
+                "phrasing_tier": {
+                  "type": "string",
+                  "enum": ["long", "medium", "short"]
+                },
+                "motivating_jd_quote": {
+                  "type": "string"
+                },
+                "proposed_rewrite": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
