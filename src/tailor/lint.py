@@ -54,3 +54,48 @@ def check_skills_do_not_claim(tailored_skills: dict[str, list[str]], do_not_clai
                     violations.append(f"do_not_claim violation: '{original_dnc}' found in skills")
 
     return violations
+
+def check_selection_budget(base_project_ids: list[str], tailored_project_ids: list[str]) -> list[str]:
+    """Ensure <= 1 project swap compared to base variant."""
+    base_set = set(base_project_ids)
+    tailored_set = set(tailored_project_ids)
+    
+    # Missing projects (swapped out)
+    missing = base_set - tailored_set
+    # New projects (swapped in)
+    new = tailored_set - base_set
+    
+    violations = []
+    # If the user swapped out more than 1, or swapped in more than 1
+    if len(missing) > 1 or len(new) > 1:
+        violations.append(f"selection budget exceeded: swapped out {len(missing)} projects, swapped in {len(new)} projects (max 1)")
+    
+    return violations
+
+def check_experience_immutable(base_exp_ids: list[str], tailored_exp_ids: list[str]) -> list[str]:
+    """Verify every experience_id from base variant is present in exactly the same reverse-chronological order."""
+    violations = []
+    if base_exp_ids != tailored_exp_ids:
+        violations.append(f"experience entries are immutable: expected {base_exp_ids}, got {tailored_exp_ids}")
+    return violations
+
+def check_flagship_ordering(tailored_bullets: list[str], bullet_priorities: dict[str, int]) -> list[str]:
+    """Verify no filler bullet precedes a flagship bullet (priority must monotonically increase or stay same, lower number = higher precedence)."""
+    violations = []
+    last_priority = 1
+    for bid in tailored_bullets:
+        priority = bullet_priorities.get(bid, 4)
+        if priority < last_priority:
+            violations.append(f"flagship ordering violation: bullet {bid} (priority {priority}) placed after a bullet with priority {last_priority}")
+        last_priority = max(last_priority, priority)
+    return violations
+
+def check_blocked_claims(tailored_bullets: list[str], bullet_claim_types: dict[str, str]) -> list[str]:
+    """Reject any bullet_id with a blocked claim_type."""
+    blocked_types = {"ownership_unresolved", "needs_input"}
+    violations = []
+    for bid in tailored_bullets:
+        claim = bullet_claim_types.get(bid, "")
+        if claim in blocked_types:
+            violations.append(f"blocked claim violation: bullet {bid} has blocked claim_type '{claim}'")
+    return violations

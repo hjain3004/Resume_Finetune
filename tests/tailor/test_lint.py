@@ -40,3 +40,31 @@ def test_skills_do_not_claim_clean():
     dnc = ["Kubernetes"]
     violations = check_skills_do_not_claim(tailored, dnc)
     assert len(violations) == 0
+
+from src.tailor.lint import check_selection_budget, check_experience_immutable, check_flagship_ordering, check_blocked_claims
+
+def test_selection_budget():
+    base = ["A", "B", "C"]
+    tailored_valid = ["A", "B", "D"] # Swap 1 out, 1 in
+    assert not check_selection_budget(base, tailored_valid)
+    
+    tailored_invalid = ["A", "D", "E"] # Swap 2 out, 2 in
+    assert len(check_selection_budget(base, tailored_invalid)) == 1
+
+def test_experience_immutable():
+    base = ["E1", "E2"]
+    assert not check_experience_immutable(base, ["E1", "E2"])
+    assert len(check_experience_immutable(base, ["E1"])) == 1
+    assert len(check_experience_immutable(base, ["E2", "E1"])) == 1
+
+def test_flagship_ordering():
+    priorities = {"b1": 1, "b2": 2, "b3": 4}
+    assert not check_flagship_ordering(["b1", "b2", "b3"], priorities)
+    assert not check_flagship_ordering(["b1", "b3"], priorities)
+    assert len(check_flagship_ordering(["b2", "b1"], priorities)) == 1
+    assert len(check_flagship_ordering(["b3", "b2"], priorities)) == 1
+
+def test_blocked_claims():
+    claims = {"b1": "verified", "b2": "ownership_unresolved"}
+    assert not check_blocked_claims(["b1"], claims)
+    assert len(check_blocked_claims(["b1", "b2"], claims)) == 1
