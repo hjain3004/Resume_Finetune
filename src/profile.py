@@ -233,6 +233,136 @@ def _build_bullet(value: Any, path: str) -> Bullet:
     )
 
 
+@dataclass(frozen=True)
+class Project:
+    id: str
+    name: str
+    display_title: str
+    tech_line: str
+    ownership_boundary: str
+    bullets: tuple[Bullet, ...]
+    keywords_exact: tuple[str, ...]
+    keywords_topical: tuple[str, ...]
+    metric_ledger: dict[str, "MetricEntry"]
+    metric_scope: dict[str, str]
+    known_gaps: tuple["KnownGap", ...]
+
+
+@dataclass(frozen=True)
+class Experience:
+    id: str
+    employer: str
+    title: str
+    scope_line: str
+    display_date: str
+    ownership_boundary: str
+    bullets: tuple[Bullet, ...]
+    keywords_exact: tuple[str, ...]
+    keywords_topical: tuple[str, ...]
+    metric_ledger: dict[str, "MetricEntry"]
+    metric_scope: dict[str, str]
+    known_gaps: tuple["KnownGap", ...]
+
+
+def _build_bullets(raw: dict[Any, Any], path: str) -> tuple[Bullet, ...]:
+    if "bullets" not in raw:
+        raise ProfileValidationError(f"{path}.bullets: missing required key")
+    entries = _require_list(raw["bullets"], f"{path}.bullets")
+    if not entries:
+        raise ProfileValidationError(f"{path}.bullets: expected nonempty list")
+    return tuple(
+        _build_bullet(entry, f"{path}.bullets.{index}")
+        for index, entry in enumerate(entries)
+    )
+
+
+def _build_keywords(
+    raw: dict[Any, Any], path: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    keywords = _require_mapping(raw.get("keywords", {}), f"{path}.keywords")
+    return (
+        _string_list(keywords.get("exact", ()), f"{path}.keywords.exact"),
+        _string_list(keywords.get("topical", ()), f"{path}.keywords.topical"),
+    )
+
+
+def _build_project(value: Any, path: str) -> Project:
+    raw = _require_mapping(value, path)
+    exact, topical = _build_keywords(raw, path)
+    tech = _require_mapping(raw.get("tech", {}), f"{path}.tech")
+    return Project(
+        id=_required_field(raw, "id", path),
+        name=_required_field(raw, "name", path),
+        display_title=_required_field(raw, "display_title", path),
+        tech_line=_required_field(tech, "tech_line", f"{path}.tech"),
+        ownership_boundary=_required_field(raw, "ownership_boundary", path),
+        bullets=_build_bullets(raw, path),
+        keywords_exact=exact,
+        keywords_topical=topical,
+        metric_ledger=_build_metric_ledger(raw, path),
+        metric_scope=_build_metric_scope(raw, path),
+        known_gaps=_build_known_gaps(raw, path),
+    )
+
+
+def _build_experience(value: Any, path: str) -> Experience:
+    raw = _require_mapping(value, path)
+    exact, topical = _build_keywords(raw, path)
+    return Experience(
+        id=_required_field(raw, "id", path),
+        employer=_required_field(raw, "employer", path),
+        title=_required_field(raw, "title", path),
+        scope_line=_required_field(raw, "scope_line", path),
+        display_date=_required_field(raw, "display_date", path),
+        ownership_boundary=_required_field(raw, "ownership_boundary", path),
+        bullets=_build_bullets(raw, path),
+        keywords_exact=exact,
+        keywords_topical=topical,
+        metric_ledger=_build_metric_ledger(raw, path),
+        metric_scope=_build_metric_scope(raw, path),
+        known_gaps=_build_known_gaps(raw, path),
+    )
+
+
+def _build_projects(value: Any) -> tuple[Project, ...]:
+    seen: set[str] = set()
+    projects: list[Project] = []
+    for index, entry in enumerate(_require_list(value, "projects")):
+        project = _build_project(entry, f"projects.{index}")
+        if project.id in seen:
+            raise ProfileValidationError(
+                f"projects.{index}.id: duplicate project id: {project.id}"
+            )
+        seen.add(project.id)
+        projects.append(project)
+    return tuple(projects)
+
+
+def _build_experience_list(value: Any) -> tuple[Experience, ...]:
+    seen: set[str] = set()
+    entries: list[Experience] = []
+    for index, entry in enumerate(_require_list(value, "experience")):
+        item = _build_experience(entry, f"experience.{index}")
+        if item.id in seen:
+            raise ProfileValidationError(
+                f"experience.{index}.id: duplicate experience id: {item.id}"
+            )
+        seen.add(item.id)
+        entries.append(item)
+    return tuple(entries)
+
+
+def _check_unique_bullet_ids(
+    experience: tuple[Experience, ...], projects: tuple[Project, ...]
+) -> None:
+    seen: set[str] = set()
+    for source in (*projects, *experience):
+        for bullet in source.bullets:
+            if bullet.id in seen:
+                raise ProfileValidationError(f"duplicate bullet id: {bullet.id}")
+            seen.add(bullet.id)
+
+
 def load_profile(path: str | Path) -> "MasterProfile":
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")

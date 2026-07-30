@@ -111,3 +111,18 @@ def test_best_within_falls_back_to_short(tmp_path):
     phrasings = profile.projects[0].bullets[0].phrasings
     assert phrasings.best_within(5) == "Built a thing"
     assert phrasings.best_within(500) == "Built a thing"
+
+
+def test_duplicate_bullet_id_across_entries_is_rejected(tmp_path):
+    # Contract C1: bullet ids are the fabrication anchor, globally unique.
+    path = _write(tmp_path, _MINIMAL_PROFILE.replace("id: exp_b1", "id: proj_b1"))
+    with pytest.raises(ProfileValidationError, match="duplicate bullet id: proj_b1"):
+        load_profile(path)
+
+
+def test_duplicate_project_id_is_rejected(tmp_path):
+    doubled = _MINIMAL_PROFILE.replace(
+        "projects:\n", "projects:\n" + _DUPLICATE_PROJECT_BLOCK, 1
+    )
+    with pytest.raises(ProfileValidationError, match="duplicate project id"):
+        load_profile(_write(tmp_path, doubled))
