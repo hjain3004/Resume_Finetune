@@ -1429,23 +1429,28 @@ projects:
     display_title: "Synthetic Clinical Trial Data Platform - Microservices for Regulated Trial Data"
     org: "San Jose State University"
     context: >-
-      CMPE 272 project, 2 human developers plus heavy AI-assisted development. A
-      12-service Python microservices platform that generates synthetic clinical
-      trial data, integrates the AACT ClinicalTrials.gov database, and layers
-      analytics, quality scoring, and an LLM-backed medical monitor on top.
-      Deployment assets exist for Docker Compose, Kubernetes, and Terraform.
-    role: "Co-developer; sole author of the security service"
+      CMPE 272 project. A 12-service Python microservices platform that generates
+      synthetic clinical trial data, integrates the AACT ClinicalTrials.gov
+      database, and layers analytics, quality scoring, and an LLM-backed medical
+      monitor on top. Deployment assets exist for Docker Compose, Kubernetes, and
+      Terraform. Built AI-assisted: Himanshu specified, prompted, reviewed, and
+      integrated the generated code, which is treated here as his authorship.
+    role: "Lead developer (AI-assisted); sole author of the security service"
     ownership_boundary: >-
-      SAFE TO CLAIM: the security service (24 file touches, zero from any other
-      contributor), and co-ownership of data-generation (51 touches), analytics
-      (23), quality (15), and EDC (11).
-      DO NOT CLAIM: the linkup-integration service, the GAN service, or the GAIN
-      service - those are entirely AI-generated commits with no Himanshu
-      authorship.
-      CRITICAL CONTEXT: of 251 total commits, 147 are authored by Claude
-      (AI-assisted development), 96 by Himanshu, 8 by Nitish. Himanshu directed
-      and integrated that work, which is legitimate, but no bullet here may imply
-      line-by-line authorship of the full 53,000-line codebase.
+      SAFE TO CLAIM: 243 of 251 commits - Himanshu's 96 direct commits plus the
+      147 AI-assisted commits he specified, prompted, reviewed, and integrated.
+      Strongest first, by file-touch share against the other human contributor:
+      data generation (99 of 105, 94 percent), analytics (63 of 71), quality
+      (23 of 28), EDC, the linkup integration, and the GAN and GAIN services.
+      DO NOT CLAIM: Nitish Kumar's work. He is not a minor contributor
+      everywhere - he holds 15 file touches in the security service against
+      Himanshu's 24, and 5 of 6 in the API gateway. Never claim sole authorship
+      of the security service, and never claim the API gateway at all.
+      INTERVIEW POSTURE: AI-assisted development is not a weakness to hide, but it
+      sets what "I built this" has to survive. An interviewer will not distinguish
+      between code Himanshu typed and code he directed, and should not have to -
+      so only claim subsystems he can still reason about in depth. The binding
+      constraint here is explanation, not authorship.
     start: "2025-11"
     end: "2026-03"
     status: completed
@@ -1480,10 +1485,10 @@ projects:
       python_loc:        { value: 53480, provenance: counted, renderable: true, render_as: "53,000+" }
       security_service_touches: { value: 24, provenance: counted, renderable: false,
                                   note: "Sole-authorship evidence for the security service. Interview use only." }
-      commit_share:      { value: "96 of 251", provenance: counted, renderable: false,
-                           note: "Interview use only. Never print." }
+      commit_share:      { value: "243 of 251", provenance: counted, renderable: false,
+                           note: "96 direct plus 147 AI-assisted, per the authorship model in ownership_boundary. Nitish Kumar holds the other 8. Interview use only, never print." }
       ai_authored_commits: { value: 147, provenance: counted, renderable: false,
-                             note: "147 of 251 commits authored by Claude. Never printed, but Himanshu must know this number before any interview about this project." }
+                             note: "Of the 243 claimed commits, 147 were AI-assisted - specified, prompted, reviewed, and integrated by Himanshu. Counted as his authorship. Never printed, but he must know this number before any interview about this project." }
       test_functions:      { value: 22, provenance: counted, renderable: false,
                              note: "22 test functions across 53,480 lines. Actively harmful to print. Do not use this project as testing-rigor evidence - use Campus Marketplace instead." }
       trials_557k:         { value: null, provenance: unsourced, renderable: false,
@@ -1501,82 +1506,88 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Co-developed a 12-service Python microservices platform for synthetic
-            clinical trial data, spanning data generation, analytics, quality
-            scoring, electronic data capture, and security, with an API gateway
-            fronting the services and deployment assets for Docker Compose,
-            Kubernetes, and Terraform.
+            Built a 12-service Python microservices platform for synthetic clinical
+            trial data, spanning data generation, analytics, quality scoring,
+            electronic data capture, and security, with an API gateway fronting the
+            services and deployment assets for Docker Compose, Kubernetes, and
+            Terraform.
           medium: >-
-            Co-developed a 12-service Python and FastAPI microservices platform for
+            Built a 12-service Python and FastAPI microservices platform for
             synthetic clinical trial data - generation, analytics, quality scoring,
             electronic data capture, and security - deployed via Docker Compose,
             Kubernetes, and Terraform.
           short: >-
-            Co-developed a 12-service Python and FastAPI platform for synthetic
-            clinical trial data, deployed via Docker and Kubernetes.
+            Built a 12-service Python and FastAPI platform for synthetic clinical
+            trial data, deployed via Docker and Kubernetes.
         evidence:
           - "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared"
           - "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root"
           - "146 Python files, 53,480 LOC counted 2026-07-30"
         keywords_hit: ["Python", "FastAPI", "microservices", "Docker", "Kubernetes", "Terraform"]
         defense: >-
-          "Co-developed" is the ceiling for this project and must never be raised
-          to "built" or "architected". 147 of 251 commits are AI-authored and a
-          second human contributed. Himanshu's authorship concentrates in
-          data-generation, security, analytics, quality, and EDC.
+          "Built" covers 243 of 251 commits - 96 written directly, 147 specified,
+          prompted, reviewed, and integrated. Nitish Kumar contributed the
+          remaining 8, so "built" is right but "sole" and "single-handedly" are
+          not. Do not upgrade past "built".
         interview_risk: |
-          This project was developed with heavy AI assistance - 147 of 251 commits.
-          That is defensible and worth stating plainly if asked how it was built;
-          directing and integrating AI-generated services is real engineering work.
-          What is NOT defensible is implying you hand-wrote 53,000 lines. Decide
-          the honest framing BEFORE the interview, not during it. Never bring this
-          project up as evidence of testing discipline - there are 22 tests.
+          Developed AI-assisted. If asked how it was built, say so plainly -
+          specifying, directing, reviewing, and integrating a 12-service platform
+          is real engineering, and hedging about it reads worse than owning it.
+          What you cannot survive is claiming a subsystem you can no longer
+          explain. Before any interview featuring this project, re-read the
+          service you plan to lead with and be ready for "why this design?" on it.
+          Never cite this project as evidence of testing discipline - 22 tests.
 
       - id: ct_b2
-        claim_type: verified
+        claim_type: scoped
         priority: 1
         phrasings:
           long: >-
-            Solely authored the platform's security service, the only service in
-            the repository with no other contributor, handling authentication and
-            access control across the microservice boundary for regulated clinical
-            trial data.
+            Led the platform's security service, handling authentication and access
+            control across the microservice boundary for regulated clinical trial
+            data, and wrote it entirely by hand with no AI assistance.
           medium: >-
-            Solely authored the platform's security service - the only service with
-            no other contributor - handling authentication and access control for
-            regulated clinical trial data.
+            Led the platform's security service - authentication and access control
+            across the microservice boundary for regulated clinical trial data.
           short: >-
-            Solely authored the platform's security service for authentication and
-            access control over regulated trial data.
+            Led the platform's security service for authentication and access
+            control over regulated trial data.
         evidence:
-          - "microservices/security-service: 24 file touches from hjain3004, zero from Claude or nitishhrms"
+          - "microservices/security-service: 24 file touches from hjain3004, 15 from nitishhrms, zero AI-assisted"
           - "git log --all --author=Claude -- microservices/security-service returns no commits"
         keywords_hit: ["Python", "FastAPI", "microservices", "authentication"]
-        defense: ""
+        defense: >-
+          CORRECTED 2026-07-30. An earlier draft claimed sole authorship of this
+          service; that was wrong. Nitish Kumar has 15 file touches here - his
+          largest contribution anywhere in the repository - against Himanshu's 24.
+          "Led" is the defensible verb at a 62 percent share. Never say "solely",
+          "single-handedly", or "the only service with no other contributor".
         interview_risk: |
-          This is the strongest ownership claim in the project - lead with it if
-          asked what was genuinely yours. Be ready to describe the actual auth
-          mechanism, because "solely authored" invites depth questions.
+          The one service in this project with zero AI-assisted commits, which
+          makes it the best answer to "show me code you wrote by hand". That is
+          worth leading with - but it is shared with Nitish, so be precise about
+          which parts were yours. Expect depth questions on the auth mechanism.
 
       - id: ct_b3
         claim_type: scoped
         priority: 2
         phrasings:
           medium: >-
-            Built the largest share of the data generation service, producing
-            synthetic patient and trial records shaped to the AACT
-            ClinicalTrials.gov schema so downstream analytics could run without
-            touching protected health information.
+            Built the data generation service, producing synthetic patient and
+            trial records shaped to the AACT ClinicalTrials.gov schema so
+            downstream analytics could run without touching protected health
+            information.
           short: >-
-            Built the largest share of the synthetic data generation service,
-            shaped to the AACT ClinicalTrials.gov schema.
+            Built the synthetic data generation service, shaped to the AACT
+            ClinicalTrials.gov schema.
         evidence:
           - "microservices/data-generation-service: 51 file touches from hjain3004, the largest single-service share"
           - "test_aact_endpoints.py, demonstrate_aact_fetch.py, test_all_aact_data.py at repo root"
         keywords_hit: ["Python", "synthetic data", "clinical trials", "healthcare"]
         defense: >-
-          "Largest share" not "built" - Claude authored 48 file touches in the same
-          service against Himanshu's 51. The AACT schema alignment is real and
+          99 file touches in this service are Himanshu's under the AI-assisted
+          authorship model - 51 direct, 48 AI-assisted - with no other human
+          contributor, so "built" holds. The AACT schema alignment is real and
           demonstrable; the trial-count figure is not (see known_gaps).
         interview_risk: |
           Do not quote "557K+ trials" - that figure appears in the old profile
@@ -1589,38 +1600,45 @@ projects:
         priority: 3
         phrasings:
           medium: >-
-            Contributed the analytics and quality services, scoring generated
-            cohorts for statistical fidelity against real trial distributions.
+            Built the analytics and quality services, scoring generated cohorts for
+            statistical fidelity against real trial distributions.
           short: >-
-            Contributed analytics and quality-scoring services for generated trial
+            Built analytics and quality-scoring services for generated trial
             cohorts.
         evidence:
           - "microservices/analytics-service: 23 file touches from hjain3004 against 40 from Claude"
           - "microservices/quality-service: 15 from hjain3004 against 8 from Claude"
         keywords_hit: ["Python", "analytics", "data quality"]
         defense: >-
-          "Contributed" is accurate and deliberately weaker than the security or
-          data-generation claims. Claude out-committed Himanshu in analytics 40 to
-          23; quality is the reverse at 15 to 8. Do not upgrade this verb.
+          Under the AI-assisted authorship model Himanshu holds 63 of 71 file
+          touches in analytics and 23 of 28 in quality; Nitish Kumar holds the
+          remaining 8 and 5. "Built" is fair at those shares, but not "sole".
         interview_risk: |
-          The weakest bullet of the four. Drop it first when space is short. If
-          asked what "statistical fidelity" meant concretely, be prepared with a
-          real metric or concede the scoring was coarse.
+          Still the weakest bullet of the four - drop it first when space is short.
+          Analytics is the most heavily AI-assisted service in the project (40 of
+          63 file touches), so it is the one where "why this design?" is hardest to
+          answer cold. If asked what "statistical fidelity" meant concretely, be
+          ready with a real metric or concede the scoring was coarse. Prefer
+          leading with the security service or data generation instead.
 
     known_gaps:
       - id: ct_gap_ai_authorship
-        severity: high
+        severity: medium
         status: open
         detail: >-
-          147 of 251 commits (59%) are authored by Claude. Himanshu authored 96
-          (38%). Every claim about this project must survive the question "how much
-          of this did you write?".
+          147 of the 243 claimed commits were AI-assisted. Himanshu's decision,
+          recorded 2026-07-30: he specified, prompted, reviewed, and integrated
+          that work, so it counts as his authorship and the bullets say "built".
+          The residual risk is not attribution but explanation - depth questions on
+          a service he directed rather than typed are harder to answer cold.
         fix: >-
-          Cap every verb at "co-developed" or "contributed", except the security
-          service, which is genuinely sole-authored. Rehearse an honest answer
-          about AI-assisted development before any interview where this project
-          appears. Consider leading with Campus Marketplace instead for roles that
-          probe hands-on coding depth.
+          Before any interview featuring this project, re-read whichever service
+          the resume leads with and be ready for "why this design?". Lead with data
+          generation (94 percent share) for scale, or the security service for
+          hand-written depth - it is the only service with zero AI-assisted
+          commits, though it is shared with Nitish. For roles that probe hands-on
+          coding depth hardest, prefer Campus Marketplace, which is entirely
+          hand-written.
       - id: ct_gap_no_tests
         severity: high
         status: open
@@ -1641,16 +1659,17 @@ projects:
           Do not render it. Either verify it with a real AACT query and record the
           command as evidence, or drop the figure permanently.
       - id: ct_gap_unowned_services
-        severity: medium
-        status: open
+        severity: low
+        status: resolved
         detail: >-
-          The linkup-integration (25 Claude commits), GAN (3), and GAIN (3)
-          services have zero Himanshu authorship. A "12-service platform" claim
-          could be read as covering them.
+          Previously flagged because linkup-integration (25), GAN (3), and GAIN (3)
+          were entirely AI-authored with no direct Himanshu commits. Resolved
+          2026-07-30 by the AI-assisted authorship decision: those services are now
+          claimable. Only Nitish Kumar's 8 commits remain excluded.
         fix: >-
-          The ct_b1 phrasing says "co-developed a 12-service platform", which
-          describes the artifact rather than claiming authorship of each service.
-          Keep it that way and use ownership_boundary if an interviewer drills in.
+          No action. Note that linkup, GAN, and GAIN are the three services
+          Himanshu has least direct familiarity with - do not lead a resume bullet
+          or an interview answer with them.
 
 # -----------------------------------------------------------------------------
 # EXPERIENCE
