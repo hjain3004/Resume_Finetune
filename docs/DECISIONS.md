@@ -1866,3 +1866,10 @@ deviation` and Phase 3 `UNLOCKED; not yet implemented`.
 - The canonical path for the master profile moves from `profile/` to `config/master_profile.yaml`.
 - `do_not_claim` and the `priority` <-> `strength` mapping are restored per `TAILORING_METHODOLOGY.md` §2.
 - Part B of the profile authoring is deferred because evidence for the two new projects (campus_marketplace, clinical_trial_platform) cannot be model-authored (requires user input).
+
+## 2026-07-30: Schema vs Code Conflict Resolution (`borderline`)
+
+**Context:** The `borderline` field was added to the pipeline (persisted as an INTEGER column in the DB, explicitly validated by the importer, and rendered in the digest) but was not added to `config/scored_schema.json`. This caused invariant I5 to fail.
+**Conflict:** `docs/SELF_HEALING.md:146` dictates that schema files are the contract and code must conform to them, which would imply stripping `borderline` from the scorer output. However, doing so would break downstream consumers (digest, importer).
+**Decision:** A schema-vs-code conflict resolves in favor of the code *only* when the field is deliberately wired through the pipeline—persisted, validated, and consumed—rather than incidentally emitted. `borderline` met that test on 2026-07-30: db column, importer validation, digest section. Fields failing that test must be removed from the output, per SELF_HEALING.md:146. Widening a schema by relaxing `additionalProperties` is never an acceptable fix; instead, `borderline` was added explicitly as an optional boolean property.
+**Note:** I5 has been failing since `borderline` was introduced and was unrelated to the M8 profile work, so the audit's green history should not be read as this having regressed recently.

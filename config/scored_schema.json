@@ -8,6 +8,7 @@
     "fit_score": {"type": "number", "minimum": 0, "maximum": 10},
     "base_variant": {"type": "string", "enum": ["backend", "ml"]},
     "missing_keywords": {"type": "array", "items": {"type": "string"}},
-    "rationale": {"type": "string", "maxLength": 160}
+    "rationale": {"type": "string", "maxLength": 160},
+    "borderline": {"type": "boolean"}
   }
 }

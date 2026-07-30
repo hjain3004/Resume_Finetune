@@ -12,6 +12,7 @@ _TYPE_MAP = {
     "string": str,
     "number": (int, float),
     "integer": int,
+    "boolean": bool,
 }
 
 
