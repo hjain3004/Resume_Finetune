@@ -124,22 +124,73 @@ produce a resume missing content, which is the exact failure mode L7 exists to c
 
 ## 4. The bake-off
 
-### 4.1 Blocking input
+### 4.1 Template inputs (resolved 2026-07-31)
 
-Arm (a) requires the user's interview-tested LaTeX source, which is **currently absent from
-the repo** — `profile/` holds six PDFs and no `.tex`/`.cls`. The user is exporting it from
-Overleaf to `profile/template/`. Until it lands, arm (a) cannot run.
+The user supplied three sources in `profile/` (a **gitignored** directory — `.gitignore:5`,
+so nothing there is ever committed):
 
-Arm (b) and all of §5 (the L7 gate) are **independent of this** and proceed regardless.
-This is deliberate: the milestone's durable deliverable is the gate, and it must not be
-held hostage to an export.
+| `.tex` | Renders | Note |
+|---|---|---|
+| `Himanshu_Resume_Gen.tex` | `Himanshu_Jain_Gen.pdf` | no clinical-trial project |
+| `Himanshu_Resume_cv.tex` | `Himanshu_Jain_cv.pdf` | |
+| `Himanshu_Resume_New.tex` | **`Himanshu_Jain.pdf`** | **not** the same-named `Himanshu_Resume_New.pdf` |
+
+Correspondence was established by word-overlap scoring against `pdftotext` output (89–91%
+for each true pair vs ≤79% next-best) and confirmed by distinguishing content.
+`Himanshu_Jain_old.pdf`, `Himanshu_Jain_previous.pdf`, and `Himanshu_Resume_New.pdf` have no
+source and are out of scope.
+
+**All three preambles are byte-identical (105 lines).** They are one layout carrying three
+content sets, so the layout donor can be any of them; `Himanshu_Resume_New.tex` is used
+because its content is closest to the current `master_profile.yaml`.
+
+**Toolchain gap.** `pdflatex` is present (`/Library/TeX/texbin/pdflatex`) but this is a
+BasicTeX install: `titlesec`, `enumitem`, and `marvosym` are missing and all three sources
+fail to compile without them. `sudo tlmgr install titlesec enumitem marvosym` is a
+prerequisite requiring the user's password — not something the implementer can work around.
 
 ### 4.2 Arm (a) — existing LaTeX
 
 `RenderDoc` → string templating over the user's `.tex` (no new templating dependency;
-`string.Template` over a tokenized copy of the user's template) → `pdflatex`. LaTeX is
-either installed on the user's machine or it is not; if absent, arm (a) is reported as
-un-runnable rather than silently skipped.
+`string.Template` over a tokenized copy) → `pdflatex`.
+
+The template's macro contract, read from the source rather than assumed:
+
+```latex
+\resumeSubheading{arg1}{arg2}{arg3}{arg4}   % 4 args, but the slots SWAP by section:
+%   Education:  {institution}{location}{degree}{dates}
+%   Experience: {employer}{dates}{title}{location}
+\resumeProjectHeading{\textbf{Name} $|$ \emph{tech} $|$ org}{dates}   % 2 args
+\resumeItem{...}                            % one bullet
+\resumeSubHeadingListStart / End            % wraps a section's entries
+\resumeItemListStart / End                  % wraps an entry's bullets
+```
+
+Skills are **not** a list: that section is free-form inline text of the form
+`\textbf{Category}: term, term \textbar\ \textbf{Category}: ...`.
+
+### 4.2.1 Template ↔ profile discrepancies (reconcile, do not paper over)
+
+Reading the real template surfaced three genuine contract conflicts. Each is a decision, and
+none may be resolved by silently loosening a check — that would defeat the milestone:
+
+1. **`\section{Technical Skills}` vs `ats.headings_whitelist`.** The whitelist
+   (`master_profile.yaml:59`) lists `Skills`; the template emits `Technical Skills`. As
+   specified, `build_render_doc` raises and L7's heading check fails on the user's own
+   interview-tested resume. *Recommended:* add `Technical Skills` to the whitelist — it is a
+   standard, ATS-safe heading and the template is the interview-tested artifact. Do **not**
+   rename the template's section to satisfy the config.
+2. **Projects carry dates in the template, but `Project` has no date field**
+   (`src/profile.py:237-248`); `\resumeProjectHeading`'s second argument is a date range.
+   *Resolution:* add an optional `display_date` to `Project` in the profile schema, or render
+   projects with an empty second argument. A schema decision for the user.
+3. **The template's skills include an `AI/ML` category** that `master_profile.yaml:87-93`
+   does not define (it has languages, frameworks, libraries, apis_and_standards,
+   developer_tools, databases). Rendering from the profile silently drops that category.
+   *Resolution:* add an `ai_ml` category to the profile, or accept the omission explicitly.
+
+These are exactly the class of defect M10 exists to make visible: each is invisible to every
+other gate and would surface as missing content in a delivered PDF.
 
 ### 4.3 Arm (b) — RenderCV
 
@@ -192,10 +243,18 @@ order-aware for headings.
 Per `CLAUDE.md`, tests never touch the network and fixtures are committed. Two PDFs are
 recorded once and committed as binary:
 
-- `tests/fixtures/render/good_single_column.pdf` — the winning renderer's real output; must PASS.
+- `tests/fixtures/render/good_single_column.pdf` — the winning renderer's output; must PASS.
 - `tests/fixtures/render/bad_two_column.pdf` — deliberately corrupted (`\twocolumn` or a
   tabular layout); must FAIL, and must fail on the *column* and *bullet survival* checks
   specifically, not merely fail somehow.
+
+**Fixtures MUST render from a synthetic identity, never the real profile.** `profile/` is
+gitignored, but `tests/fixtures/` is tracked, and this repo's `origin` is a public GitHub
+remote. A fixture rendered from `master_profile.yaml` would put the user's real phone and
+email into tracked history. The fixture generator therefore substitutes a synthetic identity
+(`Test User`, `555-0100`, `test@example.com`, `San Jose, CA`) before rendering. L7's
+identity-survival check exercises the same code path either way — it compares the
+`RenderDoc` against the PDF, and does not care whose name it is.
 
 Asserting *which* check fires is what makes the acceptance criterion in
 `UPGRADE_PLAN.md:103` meaningful rather than a tautology.
@@ -238,9 +297,15 @@ Per `UPGRADE_PLAN.md:103`, plus the dependency constraint:
 
 ## 8. Open questions for the user
 
-1. **LaTeX export** — arm (a) is blocked until `profile/template/` contains the `.tex`
-   (and any `.cls`). If the export does not happen, M10 proceeds with arm (b) + L7 only,
-   and the renderer decision is deferred.
-2. **`pdflatex` availability** — unverified on this machine at design time. If absent, arm
-   (a) is un-runnable even with the source, and that fact gets recorded rather than worked
-   around.
+Both original open questions are **resolved** (§4.1): the sources arrived and `pdflatex`
+exists. What remains open are the three reconciliations in §4.2.1, which need user
+decisions before arm (a) can render faithfully:
+
+1. **`Technical Skills` vs the `Skills` whitelist entry** — recommended fix is widening the
+   whitelist.
+2. **Project date fields** — add optional `display_date` to `Project`, or render projects
+   dateless.
+3. **The `AI/ML` skills category** — add to the profile, or accept its omission.
+
+Plus one prerequisite that is not a decision, just an action the user must take:
+`sudo tlmgr install titlesec enumitem marvosym`.

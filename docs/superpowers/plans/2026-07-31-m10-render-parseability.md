@@ -80,6 +80,57 @@ git commit -m "chore(m10): add pdfminer.six dep and oracle pytest marker"
 
 ---
 
+### Task 0b: HUMAN DECISION — reconcile template vs profile contracts
+
+**Three conflicts between the real template and `master_profile.yaml` must be settled before
+Task 2, or `build_render_doc` raises on the user's own resume. Ask the user; do not choose
+unilaterally, and never resolve one by weakening a check.**
+
+**Files:**
+- Modify: `config/master_profile.yaml` (whichever of the three the user approves)
+- Modify: `src/profile.py` only if conflict 2 is resolved by adding a field
+- Modify: `docs/DECISIONS.md`
+
+- [ ] **Step 1: Present the three conflicts and get decisions**
+
+1. **`Technical Skills` vs `Skills`.** The template emits `\section{Technical Skills}`;
+   `ats.headings_whitelist` (`config/master_profile.yaml:59`) lists `Skills`.
+   *Recommended:* add `Technical Skills` to the whitelist. It is a standard ATS-safe
+   heading and the template is the interview-tested artifact. Do **not** rename the
+   template's section to match the config.
+2. **Project dates.** `\resumeProjectHeading`'s second argument is a date range, but
+   `Project` (`src/profile.py:237-248`) has no date field. *Options:* add an optional
+   `display_date` to `Project` and the YAML, or render projects with an empty date.
+3. **`AI/ML` skills category.** The template's skills line includes `AI/ML`
+   (LLM Integration, Prompt Engineering, AI Agent Design, Structured Output Parsing);
+   `config/master_profile.yaml:87-93` has no such category, so rendering from the profile
+   silently drops it. *Options:* add an `ai_ml` category, or accept the omission.
+
+- [ ] **Step 2: Apply the approved changes**
+
+If conflict 1 is resolved as recommended, `ats.headings_whitelist` becomes
+`["Education", "Experience", "Projects", "Skills", "Technical Skills"]`, and
+`_SECTION_ORDER` in Task 2 uses `"Technical Skills"` as its fourth element.
+
+- [ ] **Step 3: Verify the profile still loads and record the decisions**
+
+Run: `.venv/bin/python -m scripts.validate_profile`
+Expected: OK, 5 projects, 47 bullets (4 blocked), base_variants backend and ml.
+
+Run: `.venv/bin/pytest -q`
+Expected: 785 passed.
+
+Append a dated `docs/DECISIONS.md` entry recording all three resolutions and their rationale.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add config/master_profile.yaml src/profile.py docs/DECISIONS.md
+git commit -m "fix(m10): reconcile template section names and skills with master profile"
+```
+
+---
+
 ### Task 1: The RenderDoc IR
 
 **Files:**
@@ -612,12 +663,12 @@ git commit -m "feat(m10): add pdfminer-based PDF parsing with geometry"
 
 ---
 
-### Task 4: HUMAN CHECKPOINT — obtain the LaTeX source and record fixtures
+### Task 4: HUMAN CHECKPOINT — install TeX packages and record synthetic fixtures
 
-**This task cannot be completed by an agent alone. Stop and involve the user.**
+**Step 1 cannot be completed by an agent. Stop and involve the user.**
 
 **Files:**
-- Expect: `profile/template/*.tex` (+ any `.cls`) — supplied by the user from Overleaf
+- Read: `profile/Himanshu_Resume_New.tex` (the layout donor; `profile/` is gitignored)
 - Create: `scripts/record_render_fixture.py`
 - Create: `tests/fixtures/render/good_single_column.pdf` (binary, committed)
 - Create: `tests/fixtures/render/bad_two_column.pdf` (binary, committed)
@@ -626,15 +677,40 @@ git commit -m "feat(m10): add pdfminer-based PDF parsing with geometry"
 - Consumes: nothing from earlier tasks.
 - Produces: the two fixture PDFs that Tasks 3, 5, and 6 assert against.
 
-- [ ] **Step 1: Check whether the LaTeX source arrived**
+**Verified state as of 2026-07-31 — do not re-derive:**
+Three sources exist in the gitignored `profile/`. All three preambles are byte-identical
+(105 lines), so they are one layout with three content sets. Correspondence, established by
+`pdftotext` word-overlap (89–91% vs ≤79% next-best):
+`Himanshu_Resume_Gen.tex`→`Himanshu_Jain_Gen.pdf`, `Himanshu_Resume_cv.tex`→`Himanshu_Jain_cv.pdf`,
+and `Himanshu_Resume_New.tex`→**`Himanshu_Jain.pdf`** (*not* the same-named
+`Himanshu_Resume_New.pdf`). Use `Himanshu_Resume_New.tex` as the layout donor.
+`pdflatex` is at `/Library/TeX/texbin/pdflatex`.
 
-Run: `ls -la profile/template/ 2>&1`
-If the directory is missing or holds no `.tex`, **stop and ask the user for the Overleaf export.** Do not synthesize a substitute template and do not proceed to Task 7 (arm (a)); Tasks 5, 6, 8 do not depend on it and may proceed.
+- [ ] **Step 1: Ask the user to install the three missing TeX packages**
 
-- [ ] **Step 2: Check whether pdflatex exists**
+This is a BasicTeX install; `titlesec`, `enumitem`, and `marvosym` are absent and **all three
+sources fail to compile without them**. This needs the user's password — do not attempt it.
 
-Run: `which pdflatex || echo "MISSING"`
-If `MISSING`, record that fact for the DECISIONS.md entry in Task 10 and generate fixtures with the RenderCV/Typst path (Task 8) instead.
+```bash
+sudo tlmgr install titlesec enumitem marvosym
+```
+
+- [ ] **Step 2: Verify the template now compiles**
+
+Run: `pdflatex -interaction=nonstopmode -halt-on-error -output-directory /tmp profile/Himanshu_Resume_New.tex`
+Expected: exit 0, `/tmp/Himanshu_Resume_New.pdf` produced. If it still fails on a missing
+`.sty`, install that package too and repeat — do not comment out packages to force a build.
+
+- [ ] **Step 2b: Build the synthetic-identity variant**
+
+**Fixtures must never carry the user's real contact details.** `profile/` is gitignored but
+`tests/fixtures/` is tracked and `origin` is a public remote. Copy the donor to
+`/tmp/fixture_src.tex` and replace the real name, phone, email, and LinkedIn/GitHub URLs
+with `Test User`, `555-0100`, `test@example.com`, `https://example.com`. Verify before
+rendering:
+
+Run: `grep -cE "408-390-0164|himanshu\.jain@sjsu\.edu" /tmp/fixture_src.tex`
+Expected: `0`
 
 - [ ] **Step 3: Write the fixture recorder**
 
@@ -683,14 +759,19 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Record the good fixture**
+- [ ] **Step 4: Record the good fixture from the synthetic source**
 
-Run: `.venv/bin/python scripts/record_render_fixture.py profile/template/<name>.tex good_single_column`
+Run: `.venv/bin/python scripts/record_render_fixture.py /tmp/fixture_src.tex good_single_column`
 
 - [ ] **Step 5: Record the deliberately-bad fixture**
 
-Copy the template to a scratch file, add `\twocolumn` to the documentclass options (or wrap the body in a `tabular`), then:
+Copy `/tmp/fixture_src.tex` (the synthetic one, not the real profile) to `/tmp/bad_two_column.tex`, change `\documentclass[letterpaper,11pt]{article}` to `\documentclass[letterpaper,11pt,twocolumn]{article}`, then:
 Run: `.venv/bin/python scripts/record_render_fixture.py /tmp/bad_two_column.tex bad_two_column`
+
+- [ ] **Step 5b: Prove no real PII entered the fixtures**
+
+Run: `pdftotext tests/fixtures/render/good_single_column.pdf - | grep -cE "408-390-0164|himanshu\.jain@sjsu\.edu"`
+Expected: `0`. Repeat for `bad_two_column.pdf`. **If either returns non-zero, delete both fixtures and redo Step 2b** — do not commit them.
 
 The bad fixture must be genuinely two-column — open it and confirm. A fixture that fails for an unrelated reason makes Task 6's acceptance criterion vacuous.
 
@@ -1168,7 +1249,7 @@ git commit -m "feat(m10): add L7 layout checks and run_l7 aggregator"
 
 ### Task 7: Arm (a) — LaTeX renderer
 
-**Blocked on Task 4 Step 1 producing `profile/template/*.tex`. If absent, skip to Task 8 and record the block in Task 10.**
+**Blocked on Task 4 Steps 1-2 (the missing TeX packages installed and the donor compiling). If the user declines the install, skip to Task 8 and record the block in Task 10.**
 
 **Files:**
 - Create: `src/render/latex.py`
@@ -1178,10 +1259,31 @@ git commit -m "feat(m10): add L7 layout checks and run_l7 aggregator"
 - Consumes: `RenderDoc` from `src.render.model`.
 - Produces: `escape_latex(str) -> str`, the pure `emit_latex_body(doc: RenderDoc) -> str`, and `render_latex(doc: RenderDoc, template_path: Path, out_pdf: Path) -> Path`.
 
-- [ ] **Step 1: Read the user's template and identify its substitution points**
+- [ ] **Step 1: Tokenize the template**
 
-Run: `.venv/bin/python -c "import pathlib,glob; print(pathlib.Path(glob.glob('profile/template/*.tex')[0]).read_text()[:3000])"`
-Identify the macros the template uses for entries and bullets. **Do not restructure the user's template** — it is interview-tested. Replace only its content region with `string.Template` placeholders (`$BODY`, `$NAME`, `$PHONE`, `$EMAIL`, `$LINKEDIN`, `$GITHUB`, `$LOCATION`), preserving every preamble line and macro definition.
+The macro contract is already verified (2026-07-31) — do not re-derive it:
+
+```latex
+\resumeSubheading{arg1}{arg2}{arg3}{arg4}   % slots SWAP by section:
+%   Education:  {institution}{location}{degree}{dates}
+%   Experience: {employer}{dates}{title}{location}
+\resumeProjectHeading{\textbf{Name} $|$ \emph{tech} $|$ org}{dates}   % 2 args
+\resumeItem{...}
+\resumeSubHeadingListStart / End    \resumeItemListStart / End
+```
+Sections in the real template: `Education`, `Experience`, `Projects`, **`Technical Skills`**.
+Skills are free-form inline text separated by `\textbar\`, not an itemize list.
+
+Copy `profile/Himanshu_Resume_New.tex` to `profile/template.tex` (still gitignored) and
+replace only its content region — everything between `\begin{document}` and
+`\end{document}` — with `string.Template` placeholders `$BODY`, `$NAME`, `$PHONE`,
+`$EMAIL`, `$LINKEDIN`, `$GITHUB`, `$LOCATION`. **Preserve all 105 preamble lines and every
+`\newcommand` byte-for-byte.** The template is interview-tested; this code adapts to it,
+never the reverse.
+
+Note: the donor has an unbalanced-looking `\resumeItem` run in the Amdocs block (one item's
+closing brace lands after two later items). It compiles, and regenerating the body from
+`RenderDoc` fixes it structurally. Do not hand-patch the donor.
 
 - [ ] **Step 2: Write the failing test for the pure emitter**
 
@@ -1265,8 +1367,35 @@ def escape_latex(value: str) -> str:
     return "".join(_LATEX_ESCAPES.get(char, char) for char in value)
 
 
-def _entries_block(entries) -> str:
-    lines = []
+def _bullets(entry) -> list[str]:
+    if not entry.bullets:
+        return []
+    return [
+        r"\resumeItemListStart",
+        *(rf"\resumeItem{{{escape_latex(b.text)}}}" for b in entry.bullets),
+        r"\resumeItemListEnd",
+    ]
+
+
+def _education_block(entries) -> str:
+    """\\resumeSubheading{institution}{location}{degree}{dates}"""
+    lines = [r"\resumeSubHeadingListStart"]
+    for entry in entries:
+        lines.append(
+            rf"\resumeSubheading{{{escape_latex(entry.heading)}}}"
+            rf"{{{escape_latex(entry.location)}}}"
+            rf"{{{escape_latex(entry.subheading)}}}"
+            rf"{{{escape_latex(entry.date_range)}}}"
+        )
+        lines.extend(_bullets(entry))
+    lines.append(r"\resumeSubHeadingListEnd")
+    return "\n".join(lines)
+
+
+def _experience_block(entries) -> str:
+    """\\resumeSubheading{employer}{dates}{title}{location} -- slots 2 and 4 are
+    swapped relative to Education. This asymmetry is the template's, not a bug."""
+    lines = [r"\resumeSubHeadingListStart"]
     for entry in entries:
         lines.append(
             rf"\resumeSubheading{{{escape_latex(entry.heading)}}}"
@@ -1274,28 +1403,44 @@ def _entries_block(entries) -> str:
             rf"{{{escape_latex(entry.subheading)}}}"
             rf"{{{escape_latex(entry.location)}}}"
         )
-        if entry.bullets:
-            lines.append(r"\resumeItemListStart")
-            for bullet in entry.bullets:
-                lines.append(rf"\resumeItem{{{escape_latex(bullet.text)}}}")
-            lines.append(r"\resumeItemListEnd")
+        lines.extend(_bullets(entry))
+    lines.append(r"\resumeSubHeadingListEnd")
+    return "\n".join(lines)
+
+
+def _projects_block(entries) -> str:
+    r"""\resumeProjectHeading{\textbf{Name} $|$ \emph{tech} $|$ org}{dates}"""
+    lines = [r"\resumeSubHeadingListStart"]
+    for entry in entries:
+        title = rf"\textbf{{{escape_latex(entry.heading)}}}"
+        if entry.subheading:
+            title += rf" $|$ \emph{{{escape_latex(entry.subheading)}}}"
+        lines.append(
+            rf"\resumeProjectHeading{{{title}}}{{{escape_latex(entry.date_range)}}}"
+        )
+        lines.extend(_bullets(entry))
+    lines.append(r"\resumeSubHeadingListEnd")
     return "\n".join(lines)
 
 
 def _skills_block(skills) -> str:
-    return r" \\ ".join(
-        rf"\textbf{{{escape_latex(category)}}}{{: {escape_latex(', '.join(terms))}}}"
+    r"""Free-form inline text, NOT a list:
+    \textbf{Category}: term, term \textbar\ \textbf{Category}: ..."""
+    chunks = [
+        rf"\textbf{{{escape_latex(category)}}}: {escape_latex(', '.join(terms))}"
         for category, terms in skills.items()
-    )
+    ]
+    return "\\small\n" + " \\textbar\\ ".join(chunks)
 
 
 def emit_latex_body(doc: RenderDoc) -> str:
     """Pure: RenderDoc -> LaTeX body. Bullet ids are stripped here (G0 boundary)."""
     groups = {
-        "Education": lambda: _entries_block(doc.education),
-        "Experience": lambda: _entries_block(doc.experience),
-        "Projects": lambda: _entries_block(doc.projects),
+        "Education": lambda: _education_block(doc.education),
+        "Experience": lambda: _experience_block(doc.experience),
+        "Projects": lambda: _projects_block(doc.projects),
         "Skills": lambda: _skills_block(doc.skills),
+        "Technical Skills": lambda: _skills_block(doc.skills),
     }
     parts = []
     for name in doc.section_order:
@@ -1343,9 +1488,20 @@ def render_latex(doc: RenderDoc, template_path: Path, out_pdf: Path) -> Path:
 Run: `.venv/bin/pytest tests/render/test_latex.py -v`
 Expected: 4 passed
 
-- [ ] **Step 6: Adapt the macro names to the actual template**
+- [ ] **Step 6: Compile the emitted body end to end**
 
-`\resumeSubheading` / `\resumeItem` / `\resumeItemListStart` are the common Jake-Gutierrez-style macro names. If the user's template defines different macros or a different argument order, change `_entries_block` and `_skills_block` to match **the template** and update the tests. The template is authoritative; it is interview-tested and this code adapts to it, never the reverse.
+Unit tests on the emitter prove nothing about whether `pdflatex` accepts the output.
+
+Run: `.venv/bin/python -c "
+from pathlib import Path
+from src.profile import load_profile
+from src.render.mapping import build_render_doc
+from src.render.latex import render_latex
+p = load_profile('config/master_profile.yaml')
+render_latex(build_render_doc(p, 'backend'), Path('profile/template.tex'), Path('/tmp/smoke/out.pdf'))
+print('compiled')
+"`
+Expected: `compiled`. A LaTeX error here means an unescaped character reached the body — fix `escape_latex`, not the template.
 
 - [ ] **Step 7: Commit**
 
@@ -1677,7 +1833,7 @@ Run: `grep -q "^build/" .gitignore || echo "build/" >> .gitignore`
 
 - [ ] **Step 3: Run the bake-off**
 
-Run: `.venv/bin/python -m scripts.render_bakeoff --variant backend --template profile/template/<name>.tex`
+Run: `.venv/bin/python -m scripts.render_bakeoff --variant backend --template profile/template.tex`
 
 - [ ] **Step 4: HUMAN CHECKPOINT — present both PDFs to the user**
 
@@ -1685,7 +1841,7 @@ Stop here. Show the user `build/bakeoff/latex.pdf` and `build/bakeoff/rendercv.p
 
 - [ ] **Step 5: Record the decision in `docs/DECISIONS.md`**
 
-Append a dated entry containing: the winner and why; each arm's L7 result; whether `pdflatex` was available; whether the Overleaf export arrived; and — if LaTeX won — an explicit note that RenderCV is **not** adopted as a runtime dependency and should be uninstalled, with `CLAUDE.md`'s dependency list corrected to match.
+Append a dated entry containing: the winner and why; each arm's L7 result; whether the three missing TeX packages were installed; how the Task 0b conflicts were resolved; and — if LaTeX won — an explicit note that RenderCV is **not** adopted as a runtime dependency and should be uninstalled, with `CLAUDE.md`'s dependency list corrected to match.
 
 - [ ] **Step 6: Re-record the good fixture from the winning renderer**
 
@@ -1714,4 +1870,4 @@ git commit -m "feat(m10): add render bake-off script and record renderer decisio
 
 - **Do not push.** `origin/main` is a **public** GitHub repo (`hjain3004/Resume_Finetune`) and `config/master_profile.yaml` — phone, email, `known_gaps`, `interview_risk` — sits entirely in the unpushed set. Pushing publishes it. The local branch was 37 commits ahead as of 2026-07-31; that gap is deliberate until the user decides how to handle the PII.
 - M10 does not start M8's render step. Wiring the tailor's structural output into `build_render_doc(tier_overrides=...)` and delivering an application PDF is M8 work, in a separate session.
-- If the Overleaf export never arrives, M10 still closes on arm (b) + the L7 gate, with the renderer decision explicitly deferred in `DECISIONS.md`. The gate is the durable deliverable.
+- If `sudo tlmgr install titlesec enumitem marvosym` never happens, M10 still closes on arm (b) + the L7 gate, with the renderer decision explicitly deferred in `DECISIONS.md`. The gate is the durable deliverable.
