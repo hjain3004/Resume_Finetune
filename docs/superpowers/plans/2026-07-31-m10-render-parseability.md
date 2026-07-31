@@ -124,11 +124,12 @@ Then set these in `config/master_profile.yaml`, matching the existing
 | `campus_marketplace` | `"Sep. 2025 - Dec. 2025"` |
 | `sepsis_early_warning` | `"Feb. 2026 - Apr. 2026"` |
 | `fake_review_detection` | `"Feb. 2026 - Apr. 2026"` |
-| `peerchat_peer_discovery` | **PENDING — ask the user; absent from all three resumes** |
+| `peerchat_peer_discovery` | `"Feb. 2026 - May 2026"` |
 
 Dates were harvested from the user's own resumes. `Himanshu_Resume_New.tex` said Sep-Nov
 2025 for the clinical platform and `Himanshu_Resume_cv.tex` said Sep-Dec 2025; the user
-confirmed **Dec** on 2026-07-31.
+confirmed **Dec** on 2026-07-31. PeerChat appears on no resume; the user supplied
+`Feb. 2026 - May 2026` directly. **No project dates remain outstanding.**
 
 - [ ] **Step 3: Add the AI/ML skills category**
 

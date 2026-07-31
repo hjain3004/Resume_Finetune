@@ -1919,7 +1919,8 @@ All resolved by the user the same day.
   user's own resumes: clinical_trial_platform and campus_marketplace `Sep. 2025 - Dec. 2025`;
   sepsis_early_warning and fake_review_detection `Feb. 2026 - Apr. 2026`. The two resumes
   disagreed on the clinical platform's end (Nov vs Dec 2025); the user confirmed **Dec**.
-  `peerchat_peer_discovery` has no date on any resume and remains pending user input.
+  `peerchat_peer_discovery` appears on no resume; the user supplied `Feb. 2026 - May 2026`
+  directly on 2026-07-31. All five projects now carry a date.
 - **AI/ML skills.** Added as `ai_and_machine_learning`, displayed as
   `AI and Machine Learning (AI/ML)`. Bare `AI/ML` would violate the profile's own
   `acronym_policy: expand_on_first_use` and, more importantly, would fail a substring match
