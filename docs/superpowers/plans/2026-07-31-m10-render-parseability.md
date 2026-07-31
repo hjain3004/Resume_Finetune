@@ -91,20 +91,62 @@ unilaterally, and never resolve one by weakening a check.**
 - Modify: `src/profile.py` only if conflict 2 is resolved by adding a field
 - Modify: `docs/DECISIONS.md`
 
-- [ ] **Step 1: Present the three conflicts and get decisions**
+**All three conflicts were RESOLVED by the user on 2026-07-31. Apply these exact values;
+do not re-ask.**
 
-1. **`Technical Skills` vs `Skills`.** The template emits `\section{Technical Skills}`;
-   `ats.headings_whitelist` (`config/master_profile.yaml:59`) lists `Skills`.
-   *Recommended:* add `Technical Skills` to the whitelist. It is a standard ATS-safe
-   heading and the template is the interview-tested artifact. Do **not** rename the
-   template's section to match the config.
-2. **Project dates.** `\resumeProjectHeading`'s second argument is a date range, but
-   `Project` (`src/profile.py:237-248`) has no date field. *Options:* add an optional
-   `display_date` to `Project` and the YAML, or render projects with an empty date.
-3. **`AI/ML` skills category.** The template's skills line includes `AI/ML`
-   (LLM Integration, Prompt Engineering, AI Agent Design, Structured Output Parsing);
-   `config/master_profile.yaml:87-93` has no such category, so rendering from the profile
-   silently drops it. *Options:* add an `ai_ml` category, or accept the omission.
+- [ ] **Step 1: Widen the ATS headings whitelist**
+
+`config/master_profile.yaml:59` becomes:
+
+```yaml
+  headings_whitelist: ["Education", "Experience", "Projects", "Skills", "Technical Skills"]
+```
+
+Rationale: the template's `\section{Technical Skills}` is the interview-tested artifact and
+both forms parse cleanly (header matchers keying on "skill" hit either). Changing a proven
+resume for no measurable parsing gain is the wrong trade. `_SECTION_ORDER` in Task 2 uses
+`"Technical Skills"` as its fourth element.
+
+- [ ] **Step 2: Add an optional `display_date` to projects**
+
+Add `display_date: str = ""` to the `Project` dataclass (`src/profile.py:237-248`) and build
+it in `_build_project` via `raw.get("display_date", "")`. It is **optional** — absent means
+empty, which renders as an empty second argument to `\resumeProjectHeading`. Experience
+already has a required `display_date`; projects must not copy that requirement.
+
+Then set these in `config/master_profile.yaml`, matching the existing
+`"Aug. 2025 - May 2027"` education format (ASCII hyphen, abbreviated month, per
+`ats.charset_policy: ascii_strict`):
+
+| project id | `display_date` |
+|---|---|
+| `clinical_trial_platform` | `"Sep. 2025 - Dec. 2025"` |
+| `campus_marketplace` | `"Sep. 2025 - Dec. 2025"` |
+| `sepsis_early_warning` | `"Feb. 2026 - Apr. 2026"` |
+| `fake_review_detection` | `"Feb. 2026 - Apr. 2026"` |
+| `peerchat_peer_discovery` | **PENDING — ask the user; absent from all three resumes** |
+
+Dates were harvested from the user's own resumes. `Himanshu_Resume_New.tex` said Sep-Nov
+2025 for the clinical platform and `Himanshu_Resume_cv.tex` said Sep-Dec 2025; the user
+confirmed **Dec** on 2026-07-31.
+
+- [ ] **Step 3: Add the AI/ML skills category**
+
+Add to `config/master_profile.yaml` `skills:`:
+
+```yaml
+  ai_and_machine_learning: ["LLM Integration", "Prompt Engineering", "AI Agent Design", "Structured Output Parsing"]
+```
+
+Render its label as **`AI and Machine Learning (AI/ML)`**, not bare `AI/ML`. Two reasons, and
+both matter: `ats.acronym_policy: expand_on_first_use` (`master_profile.yaml:62`) requires
+the expansion, and job descriptions overwhelmingly write "machine learning" as a phrase — a
+bare `AI/ML` fails a substring match against a JD requiring "machine learning", which is
+precisely what the L3 dual-placement lint tests. The expanded form matches both surface
+forms.
+
+The four terms are exactly those already on the user's resume and are evidenced by the
+clinical-trial bullets, so this adds no new claim.
 
 - [ ] **Step 2: Apply the approved changes**
 

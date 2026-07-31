@@ -1906,3 +1906,28 @@ and corrected again by Task 10 Step 5 once the bake-off winner is known.
 **Open blocker at time of writing:** the user's interview-tested LaTeX source is not in the
 repo (`profile/` holds six PDFs, no `.tex`/`.cls`). The user is exporting it from Overleaf.
 Until it lands, bake-off arm (a) is un-runnable; arm (b) and the L7 gate proceed regardless.
+
+## 2026-07-31: M10 template/profile reconciliation
+
+Three conflicts surfaced when the real LaTeX template was read against `master_profile.yaml`.
+All resolved by the user the same day.
+
+- **`Technical Skills` heading.** `ats.headings_whitelist` gains `Technical Skills` rather
+  than the template being renamed to `Skills`. The template is interview-tested; both forms
+  parse; changing a proven artifact for no measurable gain is the wrong trade.
+- **Project dates.** `Project` gains an *optional* `display_date`. Values harvested from the
+  user's own resumes: clinical_trial_platform and campus_marketplace `Sep. 2025 - Dec. 2025`;
+  sepsis_early_warning and fake_review_detection `Feb. 2026 - Apr. 2026`. The two resumes
+  disagreed on the clinical platform's end (Nov vs Dec 2025); the user confirmed **Dec**.
+  `peerchat_peer_discovery` has no date on any resume and remains pending user input.
+- **AI/ML skills.** Added as `ai_and_machine_learning`, displayed as
+  `AI and Machine Learning (AI/ML)`. Bare `AI/ML` would violate the profile's own
+  `acronym_policy: expand_on_first_use` and, more importantly, would fail a substring match
+  against a JD requiring "machine learning" -- the exact condition the L3 dual-placement lint
+  enforces. Terms are unchanged from the user's resume and evidenced by clinical-trial
+  bullets, so no new claim is introduced.
+
+**Known profile gap (recorded, not actioned):** `Himanshu_Resume_cv.tex` carries a sixth
+project, "Performance Modeling for Cloud Message Queue Systems" (Sep - Dec 2025), absent from
+`master_profile.yaml`. Authoring it at v0.3.0 depth requires evidence, a metric ledger, and
+bullet variants -- M8 Part B-style work for a separate session, not M10.
