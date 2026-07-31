@@ -702,6 +702,22 @@ cross-release installs. Without it the install fails regardless of sudo. The thr
 packages total ~355 KB of runtime files. Alternative: `brew upgrade --cask basictex`
 to move to 2026 first, then install from the default repo.
 
+- [ ] **Step 1b: Delete the orphan `\end{itemize}`**
+
+`profile/Himanshu_Resume_New.tex:217` closes a list that `\section{Technical Skills}` never
+opens (that section is free-form text). It is a hard compile error: `! Undefined control
+sequence` in `\enit@enditemize`. Everything else balances — Education, Experience, and both
+Projects blocks each pair correctly, and the extra `\resumeSubHeadingListEnd` at line 167 is
+commented out. Delete line 217 only; change nothing else.
+
+Verified 2026-07-31: with that single line removed the donor compiles to a 1-page PDF whose
+extracted text is a **100% word-overlap match** with `Himanshu_Jain.pdf` (313 shared terms,
+0 present only in the original).
+
+Note: M10 replaces the entire region between `\begin{document}` and `\end{document}` with
+`$BODY` (Task 7 Step 1), so this defect disappears from generated output regardless. It must
+still be fixed here because Task 4 compiles the donor as-is to record fixtures.
+
 - [ ] **Step 2: Verify the template now compiles**
 
 Run: `pdflatex -interaction=nonstopmode -halt-on-error -output-directory /tmp profile/Himanshu_Resume_New.tex`
