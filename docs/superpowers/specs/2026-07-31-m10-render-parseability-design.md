@@ -146,8 +146,10 @@ because its content is closest to the current `master_profile.yaml`.
 
 **Toolchain gap.** `pdflatex` is present (`/Library/TeX/texbin/pdflatex`) but this is a
 BasicTeX install: `titlesec`, `enumitem`, and `marvosym` are missing and all three sources
-fail to compile without them. `sudo tlmgr install titlesec enumitem marvosym` is a
-prerequisite requiring the user's password — not something the implementer can work around.
+fail to compile without them. Installing them requires pinning `tlmgr` to the frozen 2025 repo first (local TeX Live is
+2025; CTAN is on 2026 and cross-release installs are refused), then
+`sudo tlmgr install titlesec enumitem marvosym` (~355 KB). Needs the user's password —
+not something the implementer can work around.
 
 ### 4.2 Arm (a) — existing LaTeX
 

@@ -692,8 +692,15 @@ This is a BasicTeX install; `titlesec`, `enumitem`, and `marvosym` are absent an
 sources fail to compile without them**. This needs the user's password — do not attempt it.
 
 ```bash
+sudo tlmgr option repository https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final
 sudo tlmgr install titlesec enumitem marvosym
 ```
+
+The repository line is **required**: this machine runs TeX Live 2025 (BasicTeX, brew
+cask `basictex` 2025.0308) while CTAN has moved to 2026, and `tlmgr` refuses
+cross-release installs. Without it the install fails regardless of sudo. The three
+packages total ~355 KB of runtime files. Alternative: `brew upgrade --cask basictex`
+to move to 2026 first, then install from the default repo.
 
 - [ ] **Step 2: Verify the template now compiles**
 
