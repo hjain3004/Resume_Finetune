@@ -8,6 +8,7 @@ dependencies = [
     "trafilatura",
     "PyYAML",
     "crawl4ai",
+    "pdfminer.six>=20231228",
 ]
 
 [project.optional-dependencies]
@@ -17,3 +18,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "oracle: opt-in Tier B parser cross-check; requires Node. Deselected by default.",
+]
+addopts = "-m 'not oracle'"

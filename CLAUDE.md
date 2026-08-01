@@ -16,10 +16,8 @@ the current/target boundary is fixed in `docs/ARCHITECTURE.md`, the phase status
 2. **One milestone at a time.** Never start milestone N+1 in the same session as N.
 3. **Idempotency is sacred.** Any change that could make a second identical run mutate the DB
    is a bug, full stop.
-4. **No unapproved dependencies.** The currently approved list is: requests, trafilatura,
-   PyYAML, pytest, crawl4ai (M6.5 tier-2 resolver; M9D may evaluate bounded deep crawling).
-   Crawlee Python and Apify integrations are design candidates, not approved runtime
-   dependencies. Ask before adding either or anything else, including BeautifulSoup.
+4. **No unapproved dependencies.** The currently approved list is: requests, trafilatura, PyYAML, pytest, crawl4ai (M6.5 tier-2 resolver), pdfminer.six (M10 L7 gate). RenderCV/Typst are bake-off-only and become runtime deps only if adopted by the M10 decision; Node/OpenResume is an opt-in test oracle and must never be required by pytest -q.
+   Ask before adding anything else.
 5. **Tests never touch the network.** Fixtures live in `tests/fixtures/`, recorded via
    `scripts/record_fixture.py`. Live checks are manual "smoke" steps run with the user.
 6. **Etiquette is non-negotiable:** no LinkedIn scraping, no auth/CAPTCHA bypass, ≥2 s
