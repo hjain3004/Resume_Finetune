@@ -246,6 +246,7 @@ class Project:
     metric_ledger: dict[str, "MetricEntry"]
     metric_scope: dict[str, str]
     known_gaps: tuple["KnownGap", ...]
+    display_date: str = ""
 
 
 @dataclass(frozen=True)
@@ -302,6 +303,7 @@ def _build_project(value: Any, path: str) -> Project:
         metric_ledger=_build_metric_ledger(raw, path),
         metric_scope=_build_metric_scope(raw, path),
         known_gaps=_build_known_gaps(raw, path),
+        display_date=raw.get("display_date", ""),
     )
 
 

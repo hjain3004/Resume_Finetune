@@ -56,7 +56,7 @@ ats:
     tables: false
     text_boxes: false
     graphics: false
-  headings_whitelist: ["Education", "Experience", "Projects", "Skills"]
+  headings_whitelist: ["Education", "Experience", "Projects", "Skills", "Technical Skills"]
   max_file_size_mb: 2.5                 # Greenhouse hard limit
   filename_pattern: "Himanshu_Jain_Resume.pdf"
   acronym_policy: expand_on_first_use   # "Continuous Integration (CI)"
@@ -85,6 +85,7 @@ education:
     display_date: "Aug. 2019 - May 2023"
 
 skills:
+  ai_and_machine_learning: ["LLM Integration", "Prompt Engineering", "AI Agent Design", "Structured Output Parsing"]
   languages: ["Java", "Python", "C++", "SQL"]
   frameworks: ["Spring Boot", "Spring MVC (REST)", "FastAPI", "JUnit", "Mockito"]
   libraries: ["Apache Kafka", "Elasticsearch", "PyTorch", "scikit-learn", "XGBoost", "PySpark"]
@@ -121,6 +122,7 @@ base_variants:
 projects:
 
   - id: peerchat_peer_discovery
+    display_date: "Feb. 2026 - May 2026"
     name: "PeerChat - Peer Discovery Module"
     # Rendered header line. Keep <= ~95 chars so it never wraps.
     display_title: "PeerChat - Peer Discovery for a Serverless P2P Chat System"
@@ -389,6 +391,7 @@ projects:
         fix: "Standardize on rsplit(':', 1)."
 
   - id: sepsis_early_warning
+    display_date: "Feb. 2026 - Apr. 2026"
     name: "Sepsis Early-Warning System (ICU Clinical Time-Series)"
     display_title: "Early Sepsis Prediction in the ICU"
     org: "San Jose State University - CMPE 257, Machine Learning"
@@ -814,6 +817,7 @@ projects:
         fix: "Check the calibration curves and error correlation; if RF stacks better, re-run and update the bullet."
 
   - id: fake_review_detection
+    display_date: "Feb. 2026 - Apr. 2026"
     name: "Fake Review Detection on Yelp (Multi-Signal Pipeline)"
     display_title: "Fake Review Detection on Yelp - Multi-Signal Detection Pipeline"
     org: "San Jose State University - CMPE 255, Data Mining"
@@ -1155,6 +1159,7 @@ projects:
         fix: "Re-run 02_synthetic_injection.py with real model scores, or state the limitation whenever the adversarial results come up."
 
   - id: campus_marketplace
+    display_date: "Sep. 2025 - Dec. 2025"
     name: "Campus Marketplace"
     display_title: "Campus Marketplace - Peer-to-Peer Marketplace Backend for a University Campus"
     org: "San Jose State University"
@@ -1425,6 +1430,7 @@ projects:
           split if an interviewer probes.
 
   - id: clinical_trial_platform
+    display_date: "Sep. 2025 - Dec. 2025"
     name: "Synthetic Clinical Trial Data Platform"
     display_title: "Synthetic Clinical Trial Data Platform - Microservices for Regulated Trial Data"
     org: "San Jose State University"
