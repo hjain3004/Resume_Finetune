@@ -71,3 +71,107 @@ def check_file_size(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
             f"of {limit_mb}"
         ]
     return []
+
+_COLUMN_SEPARATION_RATIO = 0.25
+_COLUMN_POPULATION_FLOOR = 0.25
+_HEADER_BAND_RATIO = 0.95
+
+
+def check_single_column(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    """Flag a bimodal x distribution: the classic ATS reading-order killer."""
+    if doc.ats.get("layout", {}).get("columns", 1) != 1:
+        return []
+
+    pages: dict[int, list] = {}
+    for box in parsed.boxes:
+        pages.setdefault(box.page, []).append(box)
+
+    threshold = parsed.page_width * _COLUMN_SEPARATION_RATIO
+    violations = []
+    for page, boxes in sorted(pages.items()):
+        if len(boxes) < 4:
+            continue
+        starts = sorted(box.x0 for box in boxes)
+        split_at = next(
+            (i for i in range(1, len(starts))
+             if starts[i] - starts[i - 1] > threshold),
+            None,
+        )
+        if split_at is None:
+            continue
+        left, right = starts[:split_at], starts[split_at:]
+        floor = len(boxes) * _COLUMN_POPULATION_FLOOR
+        if len(left) >= floor and len(right) >= floor:
+            violations.append(
+                f"L7 layout: page {page} has two column clusters "
+                f"(x~{left[0]:.0f} and x~{right[0]:.0f}); ats.layout.columns is 1"
+            )
+    return violations
+
+
+def check_contact_in_body(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    """Contact details in a true header/footer are dropped by Greenhouse."""
+    if not doc.ats.get("layout", {}).get("contact_in_body", True):
+        return []
+    name = doc.identity.get("name", "")
+    if not name:
+        return []
+    body_ceiling = parsed.page_height * _HEADER_BAND_RATIO
+    for box in parsed.boxes:
+        if _normalize(name) in _normalize(box.text) and box.y1 <= body_ceiling:
+            return []
+    return [
+        "L7 layout: contact block sits in the header band, not the document body; "
+        "ats.layout.contact_in_body is true"
+    ]
+
+
+def check_section_headings(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    violations = []
+    whitelist = doc.ats.get("headings_whitelist")
+    if whitelist:
+        illegal = [n for n in doc.section_order if n not in whitelist]
+        if illegal:
+            violations.append(
+                f"L7 headings: section name(s) {illegal} not in ats.headings_whitelist"
+            )
+
+    positions = []
+    for name in doc.section_order:
+        target = _normalize(name)
+        found = next(
+            (i for i, box in enumerate(parsed.boxes) if target in _normalize(box.text)),
+            None,
+        )
+        if found is None:
+            violations.append(
+                f"L7 headings: section {name!r} did not survive PDF extraction"
+            )
+        else:
+            positions.append((name, found))
+
+    for (prev_name, prev_idx), (name, idx) in zip(positions, positions[1:]):
+        if idx <= prev_idx:
+            violations.append(
+                f"L7 headings: {name!r} appears before {prev_name!r} in reading "
+                f"order; ATS section attribution will be wrong"
+            )
+    return violations
+
+
+def run_l7(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    """Aggregate every L7 check. Empty list == the PDF is deliverable."""
+    violations: list[str] = []
+    for check in (
+        check_identity_survives,
+        check_bullets_survive,
+        check_skills_survive,
+        check_charset,
+        check_file_size,
+        check_single_column,
+        check_contact_in_body,
+        check_section_headings,
+    ):
+        violations.extend(check(doc, parsed))
+    logger.info("L7: %d violation(s)", len(violations))
+    return violations
