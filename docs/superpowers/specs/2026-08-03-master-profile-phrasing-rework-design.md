@@ -166,7 +166,7 @@ working untouched. Bold is purely additive — **`src/render/l7.py` requires no 
 
 - New pure module **`src/render/emphasis.py`**: `parse_emphasis(raw: str) -> tuple[str, tuple[tuple[int, int], ...]]`
   returning plain text and span offsets into that plain text. Offsets, not substrings, so
-  repeated text is unambiguous. Raises on unbalanced, empty, or nested markers.
+  repeated text is unambiguous. Parses according to a whitespace-based delimiter grammar (markers can open if followed by non-whitespace, close if preceded by non-whitespace). Raises on unbalanced, empty, or nested markers.
 - **`RenderBullet`** gains `emphasis: tuple[tuple[int, int], ...] = ()`. The default keeps
   the one construction site in `src/render/mapping.py:68` and all six test construction
   sites valid — no churn.
@@ -265,7 +265,12 @@ have no `medium`. Rules 1, 5, and 6 must skip a missing `medium` rather than cra
 - **`tests/render/test_mapping.py`** — requires updating; it asserts over `bullet_order`,
   which changes from 29 entries to 13.
 
-Baseline is **785 tests passing**.
+Baseline is **827 passed, 1 deselected** (measured 2026-08-03). The deselected test is
+the opt-in Tier B parser oracle, excluded by `addopts = "-m 'not oracle'"` in
+`pyproject.toml` — that is correct and required by CLAUDE.md.
+
+The handoff document's figure of 785 was stale; it predates the M10 test commits
+(`9c50f8e`, `bb37acf`, `30f537e`, `e955633`).
 
 ## 9. Constraints and non-goals
 

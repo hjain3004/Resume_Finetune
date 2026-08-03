@@ -34,7 +34,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `parse_emphasis(raw: str) -> tuple[str, tuple[tuple[int, int], ...]]` returning `(plain_text, spans)` where each span is a `(start, end)` half-open offset pair into `plain_text`. Raises `EmphasisError(ValueError)` on unbalanced, empty, or nested markers.
+- Produces: `parse_emphasis(raw: str) -> tuple[str, tuple[tuple[int, int], ...]]` returning `(plain_text, spans)` where each span is a `(start, end)` half-open offset pair into `plain_text`. Uses a whitespace-based delimiter grammar to handle adjacent markers and detect nesting. Raises `EmphasisError(ValueError)` on unbalanced, empty, or nested markers.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -150,8 +150,7 @@ def parse_emphasis(raw: str) -> tuple[str, tuple[tuple[int, int], ...]]:
     return "".join(plain_parts), tuple(spans)
 ```
 
-Note: because `positions` are consumed in pairs, a nested `**` lands inside `body`
-and is caught there. `test_nested_marker_raises` exercises exactly that path.
+Note: The parser uses a state machine observing leading and trailing whitespace around each marker to properly pair markers and detect nested openers correctly without mistakenly swallowing literal markers or failing on adjacent spans.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
