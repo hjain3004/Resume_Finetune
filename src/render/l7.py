@@ -86,6 +86,60 @@ _COLUMN_SEPARATION_RATIO = 0.25
 _COLUMN_POPULATION_FLOOR = 0.25
 _HEADER_BAND_RATIO = 0.99
 
+#: pdfminer text containers include leading, so adjacent lines routinely share a
+#: point or two of vertical extent. Only a larger intersection is real collision.
+_OVERLAP_TOLERANCE_PT = 2.0
+#: Text reaching past this far outside the page is off the paper, not kerning.
+_PAGE_BLEED_TOLERANCE_PT = 1.0
+
+
+def check_no_overlap(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    """Text printed through other text. Extraction cannot see this; a reader can.
+
+    A page overflow is loud, but crushed vertical spacing fails silently: every
+    string still extracts, so every content check passes while the page is
+    visibly broken.
+    """
+    violations = []
+    by_page: dict[int, list] = {}
+    for box in parsed.boxes:
+        if box.text.strip():
+            by_page.setdefault(box.page, []).append(box)
+
+    for page, boxes in sorted(by_page.items()):
+        for index, first in enumerate(boxes):
+            for second in boxes[index + 1:]:
+                overlap_y = min(first.y1, second.y1) - max(first.y0, second.y0)
+                overlap_x = min(first.x1, second.x1) - max(first.x0, second.x0)
+                if overlap_y > _OVERLAP_TOLERANCE_PT and overlap_x > 0:
+                    violations.append(
+                        f"L7 layout: page {page} text collision of "
+                        f"{overlap_y:.1f}pt between "
+                        f"{first.text.strip()[:40]!r} and "
+                        f"{second.text.strip()[:40]!r}"
+                    )
+    return violations
+
+
+def check_within_page(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    """Text running off the paper. Extraction still sees it; nobody can read it."""
+    violations = []
+    for box in parsed.boxes:
+        if not box.text.strip():
+            continue
+        if box.x1 > parsed.page_width + _PAGE_BLEED_TOLERANCE_PT:
+            violations.append(
+                f"L7 layout: page {box.page} text extends "
+                f"{box.x1 - parsed.page_width:.1f}pt past the right page edge: "
+                f"{box.text.strip()[:40]!r}"
+            )
+        elif box.x0 < -_PAGE_BLEED_TOLERANCE_PT:
+            violations.append(
+                f"L7 layout: page {box.page} text starts {-box.x0:.1f}pt "
+                f"left of the page: {box.text.strip()[:40]!r}"
+            )
+    return violations
+
 
 def check_single_column(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
     """Flag a bimodal x distribution: the classic ATS reading-order killer."""
@@ -182,6 +236,8 @@ def run_l7(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
         check_single_column,
         check_contact_in_body,
         check_section_headings,
+        check_no_overlap,
+        check_within_page,
     ):
         violations.extend(check(doc, parsed))
     logger.info("L7: %d violation(s)", len(violations))

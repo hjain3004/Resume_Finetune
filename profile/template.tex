@@ -78,11 +78,11 @@
 }
 
 \newcommand{\resumeSubheading}[4]{
-  \vspace{-2pt}\item
+  \vspace{1pt}\item
     \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
       \textbf{#1} & #2 \\
       \textit{\small#3} & \textit{\small #4} \\
-    \end{tabular*}\vspace{-7pt}
+    \end{tabular*}\vspace{-4pt}
 }
 
 \newcommand{\resumeSubSubheading}[2]{
@@ -96,21 +96,26 @@
     \item
     \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
       \small#1 & #2 \\
-    \end{tabular*}\vspace{-7pt}
+    \end{tabular*}\vspace{-4pt}
 }
 
 \newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
 
 \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
 
-% Remove inter-item vertical padding at every list level. Horizontal geometry
+% Trim inter-item vertical padding at every list level. Horizontal geometry
 % (leftmargin, label) stays per-list, so indentation is unchanged.
-\setlist{itemsep=0pt, parsep=0pt, topsep=0pt, partopsep=0pt}
+% topsep stays POSITIVE on purpose: the heading macros below already end in a
+% negative \vspace, and zeroing topsep makes the net spacing negative, which
+% prints entry headings straight through their own first bullet.
+\setlist{itemsep=0pt, parsep=0pt, topsep=2pt, partopsep=0pt}
 
 \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
 \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
 \newcommand{\resumeItemListStart}{\begin{itemize}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+% Only -1pt: a larger negative pull drags the NEXT entry heading up into this
+% list's final bullet, which is how the headings ended up overprinting text.
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-1pt}}
 
 %-------------------------------------------
 %%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%

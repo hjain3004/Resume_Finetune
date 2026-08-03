@@ -1,7 +1,8 @@
 from pathlib import Path
 import pytest
 from src.render.l7 import (
-    check_single_column, check_contact_in_body, check_section_headings, check_page_count, run_l7,
+    check_single_column, check_contact_in_body, check_section_headings, check_page_count,
+    check_no_overlap, check_within_page, run_l7,
 )
 from src.render.model import RenderDoc
 from src.render.parse import ParsedPdf, TextBox, parse_pdf
@@ -114,6 +115,67 @@ def test_too_many_pages_fails():
 def test_absent_max_pages_is_noop():
     doc = _doc(ats={})  # no max_pages
     assert check_page_count(doc, _pdf([], page_count=5)) == []
+
+
+def _line(text, y0, y1, x0=50.0, x1=550.0, page=0) -> TextBox:
+    return TextBox(text=text, x0=x0, y0=y0, x1=x1, y1=y1, page=page)
+
+
+def test_normally_spaced_lines_do_not_report_overlap():
+    boxes = [_line("alpha", 700, 712), _line("bravo", 686, 698)]
+    assert check_no_overlap(_doc(), _pdf(boxes)) == []
+
+
+def test_touching_lines_within_tolerance_are_not_reported():
+    # pdfminer containers include leading; a 2pt shared extent is normal.
+    boxes = [_line("alpha", 700, 712), _line("bravo", 690, 702)]
+    assert check_no_overlap(_doc(), _pdf(boxes)) == []
+
+
+def test_heading_printed_through_a_bullet_is_reported():
+    boxes = [_line("Amdocs Ltd.", 700, 712), _line("Built the layer", 694, 706)]
+    violations = check_no_overlap(_doc(), _pdf(boxes))
+    assert len(violations) == 1
+    assert "collision" in violations[0]
+    assert "Amdocs Ltd." in violations[0]
+
+
+def test_vertically_overlapping_but_side_by_side_text_is_not_a_collision():
+    boxes = [_line("left", 700, 712, x0=50, x1=200),
+             _line("right", 700, 712, x0=400, x1=550)]
+    assert check_no_overlap(_doc(), _pdf(boxes)) == []
+
+
+def test_collisions_are_not_reported_across_pages():
+    boxes = [_line("alpha", 700, 712, page=0), _line("bravo", 700, 712, page=1)]
+    assert check_no_overlap(_doc(), _pdf(boxes, page_count=2)) == []
+
+
+def test_text_inside_the_page_passes_the_bleed_check():
+    assert check_within_page(_doc(), _pdf([_line("fits", 700, 712)])) == []
+
+
+def test_text_running_off_the_right_edge_is_reported():
+    boxes = [_line("Campus Marketplace - Peer-to-Peer Backend", 700, 712,
+                   x0=25.0, x1=905.0)]
+    violations = check_within_page(_doc(), _pdf(boxes))
+    assert len(violations) == 1
+    assert "past the right page edge" in violations[0]
+    assert "293.0pt" in violations[0]
+
+
+def test_text_starting_left_of_the_page_is_reported():
+    boxes = [_line("clipped", 700, 712, x0=-9.0, x1=200.0)]
+    violations = check_within_page(_doc(), _pdf(boxes))
+    assert len(violations) == 1
+    assert "left of the page" in violations[0]
+
+
+def test_run_l7_includes_the_overlap_and_bleed_checks():
+    boxes = [_line("Amdocs Ltd.", 700, 712), _line("Built the layer", 694, 706, x1=905.0)]
+    violations = run_l7(_doc(), _pdf(boxes))
+    assert any("collision" in v for v in violations)
+    assert any("past the right page edge" in v for v in violations)
 
 
 @pytest.mark.skipif(not (FIXTURES / "bad_two_column.pdf").exists(),
