@@ -26,6 +26,7 @@ class ParsedPdf:
     page_height: float
     page_width: float
     size_bytes: int
+    page_count: int
 
     @property
     def text(self) -> str:
@@ -42,8 +43,10 @@ def parse_pdf(path: str | Path) -> ParsedPdf:
     boxes: list[TextBox] = []
     page_height = 0.0
     page_width = 0.0
+    page_count = 0
 
     for page_number, layout in enumerate(extract_pages(str(path), laparams=LAParams())):
+        page_count = page_number + 1
         page_width = max(page_width, float(layout.width))
         page_height = max(page_height, float(layout.height))
         for element in layout:
@@ -70,4 +73,5 @@ def parse_pdf(path: str | Path) -> ParsedPdf:
         page_height=page_height,
         page_width=page_width,
         size_bytes=path.stat().st_size,
+        page_count=page_count,
     )

@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 from src.render.l7 import (
-    check_single_column, check_contact_in_body, check_section_headings, run_l7,
+    check_single_column, check_contact_in_body, check_section_headings, check_page_count, run_l7,
 )
 from src.render.model import RenderDoc
 from src.render.parse import ParsedPdf, TextBox, parse_pdf
@@ -23,9 +23,9 @@ def _doc(**kw) -> RenderDoc:
     return RenderDoc(**base)
 
 
-def _pdf(boxes) -> ParsedPdf:
+def _pdf(boxes, page_count=1) -> ParsedPdf:
     return ParsedPdf(boxes=tuple(boxes), page_height=792.0,
-                     page_width=612.0, size_bytes=1000)
+                     page_width=612.0, size_bytes=1000, page_count=page_count)
 
 
 def test_single_column_layout_passes():
@@ -97,6 +97,23 @@ def test_run_l7_aggregates_all_checks():
     violations = run_l7(_doc(), _pdf(boxes))
     assert any("identity" in v for v in violations)
     assert any("Experience" in v for v in violations)
+
+
+def test_valid_one_page_output_passes():
+    doc = _doc(ats={"max_pages": 1})
+    assert check_page_count(doc, _pdf([], page_count=1)) == []
+
+
+def test_too_many_pages_fails():
+    doc = _doc(ats={"max_pages": 1})
+    violations = check_page_count(doc, _pdf([], page_count=2))
+    assert len(violations) == 1
+    assert "exceeds ats.max_pages" in violations[0]
+
+
+def test_absent_max_pages_is_noop():
+    doc = _doc(ats={})  # no max_pages
+    assert check_page_count(doc, _pdf([], page_count=5)) == []
 
 
 @pytest.mark.skipif(not (FIXTURES / "bad_two_column.pdf").exists(),

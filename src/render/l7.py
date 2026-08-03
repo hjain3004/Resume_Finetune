@@ -72,6 +72,16 @@ def check_file_size(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
         ]
     return []
 
+
+def check_page_count(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
+    max_pages = doc.ats.get("max_pages")
+    if max_pages is None:
+        return []
+    if parsed.page_count > max_pages:
+        return [f"L7 size: PDF has {parsed.page_count} pages, exceeds ats.max_pages of {max_pages}"]
+    return []
+
+
 _COLUMN_SEPARATION_RATIO = 0.25
 _COLUMN_POPULATION_FLOOR = 0.25
 _HEADER_BAND_RATIO = 0.95
@@ -168,6 +178,7 @@ def run_l7(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
         check_skills_survive,
         check_charset,
         check_file_size,
+        check_page_count,
         check_single_column,
         check_contact_in_body,
         check_section_headings,

@@ -768,6 +768,17 @@ def _check_do_not_claim_against_skills(
                 )
 
 
+def _build_ats(value: Any) -> dict[str, Any]:
+    raw = _require_mapping(value, "ats")
+    if "max_pages" in raw:
+        val = raw["max_pages"]
+        if not isinstance(val, int) or isinstance(val, bool) or val <= 0:
+            raise ProfileValidationError(
+                "ats.max_pages must be a positive integer"
+            )
+    return dict(raw)
+
+
 def load_profile(path: str | Path) -> MasterProfile:
     raw = _read_yaml(Path(path))
     root = _require_mapping(raw, "master_profile.yaml")
@@ -790,7 +801,7 @@ def load_profile(path: str | Path) -> MasterProfile:
     return MasterProfile(
         schema_version=_require_string(root["schema_version"], "schema_version"),
         last_updated=_require_string(root["last_updated"], "last_updated"),
-        ats=_require_mapping(root["ats"], "ats"),
+        ats=_build_ats(root["ats"]),
         identity=_build_str_mapping(root["identity"], "identity"),
         education=_build_education(root["education"]),
         skills=skills,

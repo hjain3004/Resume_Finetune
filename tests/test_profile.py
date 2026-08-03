@@ -6,6 +6,7 @@ schema_version: "0.3.0"
 last_updated: "2026-07-30"
 ats:
   charset_policy: ascii_strict
+  max_pages: 1
   forbidden_chars: ["\\u2014"]
   substitutions:
     "\\u2014": "-"
@@ -426,3 +427,10 @@ def test_unknown_base_variant_is_rejected(tmp_path):
     profile = load_profile(_write(tmp_path, _MINIMAL_PROFILE))
     with pytest.raises(ProfileValidationError, match="unknown base_variant"):
         profile.for_tailoring("quantum")
+
+
+def test_ats_max_pages_must_be_positive_integer(tmp_path):
+    for bad in ('"1"', "0", "-1", "true", "false", "1.5"):
+        path = _write(tmp_path, _MINIMAL_PROFILE.replace("max_pages: 1", f"max_pages: {bad}"))
+        with pytest.raises(ProfileValidationError, match="max_pages must be a positive integer"):
+            load_profile(path)
