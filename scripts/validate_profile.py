@@ -9,9 +9,22 @@ from __future__ import annotations
 import argparse
 import sys
 
-from src.profile import ProfileValidationError, load_profile
+from pathlib import Path
 
+from src.profile import ProfileValidationError, load_profile
+from src.profile_lint import lint_profile
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_BANNED_WORDS_PATH = _REPO_ROOT / "config" / "banned_words.txt"
 _DEFAULT_PATH = "config/master_profile.yaml"
+
+
+def _load_banned_terms(path: Path = _BANNED_WORDS_PATH) -> tuple[str, ...]:
+    return tuple(
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +41,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"UNREADABLE {args.path}: {exc}", file=sys.stderr)
         return 2
 
+    violations = lint_profile(profile, _load_banned_terms())
+    if violations:
+        for violation in violations:
+            print(violation, file=sys.stderr)
+        print(f"LINT FAILED: {len(violations)} violation(s)", file=sys.stderr)
+        return 1
+
     sources = (*profile.projects, *profile.experience)
     bullets = sum(len(source.bullets) for source in sources)
     blocked = sum(
@@ -39,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         f"entry(ies), {bullets} bullet(s) ({blocked} blocked), "
         f"base_variants: {', '.join(sorted(profile.base_variants)) or '(none)'}"
     )
+    print("LINT OK")
     return 0
 
 

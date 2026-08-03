@@ -1,0 +1,57 @@
+schema_version: "0.3.0"
+last_updated: "2026-08-03"
+ats:
+  charset_policy: ascii_strict
+  forbidden_chars: ["\u2014"]
+  substitutions: {"\u2014": "-"}
+identity:
+  name: Test User
+  email: test@example.com
+education:
+  - institution: Example University
+    degree: Master of Science
+    display_date: "Aug. 2025 - May 2027"
+skills:
+  languages: [Python]
+projects:
+  - id: proj_one
+    name: Project One
+    display_title: Project One
+    ownership_boundary: "SAFE TO CLAIM: synthetic fixture."
+    tech: {tech_line: "Python"}
+    keywords: {exact: [Python], topical: [backend]}
+    metric_ledger: {}
+    metric_scope: {}
+    known_gaps: []
+    bullets:
+      - id: proj_b1
+        claim_type: verified
+        priority: 1
+        phrasings: {short: "Built a project."}
+        evidence: ["synthetic fixture"]
+        keywords_hit: [Python]
+experience:
+  - id: exp_one
+    employer: Example Corp
+    title: Engineer
+    scope_line: "Synthetic backend work."
+    display_date: "July 2023 - June 2025"
+    ownership_boundary: "SAFE TO CLAIM: synthetic fixture."
+    bullets:
+      - id: exp_b1
+        claim_type: verified
+        priority: 1
+        phrasings:
+          short: "SHORT_SENTINEL"
+          medium: "MEDIUM_SENTINEL"
+        evidence: ["synthetic fixture"]
+      - id: exp_b2
+        claim_type: verified
+        priority: 1
+        phrasings: {short: "Shipped a worker."}
+        evidence: ["synthetic fixture"]
+base_variants:
+  backend:
+    projects: [proj_one]
+    bullet_order: [exp_b1, exp_b2, proj_b1]
+do_not_claim: [Kubernetes]
