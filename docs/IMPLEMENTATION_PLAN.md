@@ -147,8 +147,10 @@ Acceptance criteria:
   a clear message and zero DB changes.
 - `jd_text` truncation to ~6k chars verified in export.
 
-## Phase 3 (separate track, after dry runs)
+## Phase 3 (M8 and M10)
 
-Tailoring per `docs/TAILORING_SPEC.md`: master profile construction, tailor + critic prompts,
-diff-based output, taste feedback loop. Do not start until the user has reviewed at least one
-week of real digests and several manual scoring dry-runs — the spec depends on their feedback.
+M8 item 1 (profile loader), M8 item 2 (schema update and deterministic sections), and M8 item 3 (tailor and critic) are implemented.
+The M8 phrasing rework is complete: base variants cut to 13 bullets on a measured one-page budget, phrasing lint wired in, and emphasis pipeline added.
+M10 (renderer bake-off + L7 parseability gate) is complete: both arms were built, L7 parseability rules implemented, and LaTeX selected as the production renderer.
+
+What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
