@@ -2178,18 +2178,12 @@ experience:
         "purge and archive": "data retention and records management policy"
         "DLQ consolidation": "event-driven reliability and failure handling"
 
-    # -------------------------------------------------------------------------
-    # METRIC LEDGER -- read this before selecting any bullet with a number.
-    # -------------------------------------------------------------------------
-    # doc_backed  -> appears in the source material; assert plainly.
-    # estimated   -> reconstructed from before/after reasoning two years later.
-    #                Render only with a hedge-compatible variant, and the
-    #                defense string must survive a 30-second challenge.
-    #
-    # RULE: a resume may carry at most TWO estimated metrics. Beyond that the
-    # page reads as uniformly confident and a reviewer cannot tell which
-    # numbers are real. The audit suite enforces this cap.
-    # -------------------------------------------------------------------------
+    # ESTIMATED-METRIC POLICY -- USER-APPROVED AMDOCS EXCEPTION, 2026-08-03:
+    # purge_footprint, purge_query_gain, qa_effort_reduction, defect_reduction,
+    # and resolution_time_gain may appear together in the backend and ml base
+    # variants. Keep every value visibly hedged with ASCII "~", preserve
+    # provenance: estimated, and keep each bullet's interview defense. This
+    # exception authorizes no other estimated metric.
     metric_ledger:
       dlq_topic_count:      { value: 862,  provenance: doc_backed, renderable: true }
       dlq_deployments:      { value: 11,   provenance: doc_backed, renderable: true }
@@ -2198,13 +2192,26 @@ experience:
       dlq_partition_reclaim: { value: "80%", provenance: doc_backed, renderable: true }
       unit_test_coverage:   { value: "90%", provenance: doc_backed, renderable: true }
       sonarqube_smells:     { value: "~500", provenance: doc_backed, renderable: true }
-      purge_footprint:      { value: "~40%", provenance: estimated, renderable: false }
-      purge_query_gain:     { value: "~25%", provenance: estimated, renderable: false }
-      qa_effort_reduction:  { value: "~50%", provenance: estimated, renderable: false }
-      defect_reduction:     { value: "~40%", provenance: estimated, renderable: false }
-      resolution_time_gain: { value: "~60%", provenance: estimated, renderable: false }
+      purge_footprint:      { value: "~40%", provenance: estimated, renderable: true, note: "Reinstated 2026-08-03 by user decision; present on the interview-tested resume." }
+      purge_query_gain:     { value: "~25%", provenance: estimated, renderable: true, note: "Reinstated 2026-08-03 by user decision; present on the interview-tested resume." }
+      qa_effort_reduction:  { value: "~50%", provenance: estimated, renderable: true, note: "Reinstated 2026-08-03 by user decision; present on the interview-tested resume." }
+      defect_reduction:     { value: "~40%", provenance: estimated, renderable: true, note: "Reinstated 2026-08-03 by user decision; present on the interview-tested resume." }
+      resolution_time_gain: { value: "~60%", provenance: estimated, renderable: true, note: "Reinstated 2026-08-03 by user decision; present on the interview-tested resume." }
 
     bullets:
+
+      - id: am_b00_order_management_domain
+        claim_type: verified
+        priority: 1
+        phrasings:
+          medium: "Engineered and maintained **Java and Spring Boot microservices for the Order Management domain** (Catalog, Shopping Cart, Proposal and Agreement), with a **Jenkins-driven CI/CD pipeline** automating builds, tests, and deployments across OpenShift environments."
+          short: "Engineered Java and Spring Boot microservices for the Order Management domain, deployed through Jenkins CI/CD pipelines to OpenShift."
+        evidence:
+          - "amdocs_software_developer.scope_line names the Order Management domain (Catalog, Shopping Cart, Proposal and Agreement), Java and Spring Boot microservices, Jenkins pipelines, and OpenShift deployment"
+          - "Present as the opening bullet on all three prior resume versions"
+        keywords_hit: [Java, Spring Boot, microservices, Jenkins, "CI/CD", OpenShift]
+        defense: "A plain description of the domain and stack worked in for two years. Carries no metric and asserts no individual ownership of the domain."
+        interview_risk: "Low. Be ready to name the four microservices and describe what each does."
 
       - id: am_b01_dlq_consolidation
         claim_type: verified
@@ -2217,11 +2224,7 @@ experience:
             HELM binding function with a feature-flagged, zero-downtime rollout -
             cutting idle topic sprawl by 70% and reclaiming roughly 80% of the
             partitions held by empty DLQs.
-          medium: >-
-            Redesigned the Kafka dead-letter-queue architecture, consolidating
-            862 per-consumer DLQ topics across 11 deployments into one shared DLQ
-            per subdomain behind a feature-flagged HELM binding function - cutting
-            idle topic sprawl by 70% and reclaiming ~80% of wasted partitions.
+          medium: "Redesigned the Kafka dead-letter-queue architecture, consolidating 862 per-consumer DLQ topics across 11 deployments into one shared DLQ per subdomain behind a feature-flagged HELM binding function - **cutting idle topic sprawl by 70% and reclaiming ~80% of wasted partitions**."
           short: >-
             Consolidated 862 per-consumer Kafka dead-letter topics into shared
             per-subdomain DLQs via a feature-flagged HELM function, cutting idle
@@ -2253,12 +2256,7 @@ experience:
             Couchbase N1QL and Elasticsearch queries behind new secondary indexes
             so the database returned only authorized rows, failing closed with
             HTTP 403 on claim mismatch.
-          medium: >-
-            Co-built a Java row-level entitlement library chaining JSON Web Token
-            (JWT) claim validators for multi-tenant operators, pushing claim
-            predicates into Couchbase N1QL and Elasticsearch queries behind new
-            secondary indexes so only authorized rows were returned, failing
-            closed with HTTP 403.
+          medium: "Co-built a Java **row-level entitlement library** chaining JSON Web Token (JWT) claim validators for multi-tenant operators, pushing claim predicates into **Couchbase N1QL and Elasticsearch** queries behind new secondary indexes so only authorized rows were returned, failing closed with HTTP 403."
           short: >-
             Co-built a Java row-level entitlement library chaining JWT claim
             validators, pre-filtering authorized rows at the database layer and
@@ -2285,7 +2283,7 @@ experience:
 
       - id: am_b03_audit_trail
         claim_type: estimated
-        priority: 2
+        priority: 1
         phrasings:
           long: >-
             Architected an immutable audit-trail system for contract lifecycle
@@ -2294,11 +2292,7 @@ experience:
             enriched them with JWT-resolved actor identity and configurable action
             filtering before persisting append-only records in Elasticsearch,
             replacing multi-service log correlation with a single filtered query.
-          medium: >-
-            Architected an immutable audit-trail system - delegate-level Kafka
-            triggers with correlation-ID propagation feeding a new consumer that
-            persisted append-only, actor-attributed records in Elasticsearch -
-            replacing multi-service log correlation with one filtered query.
+          medium: "Architected an immutable audit-trail system that **cut issue-resolution time by ~60%** - delegate-level Kafka triggers with correlation-ID propagation feeding a new consumer that persisted append-only, actor-attributed records in **Elasticsearch** - replacing multi-service log correlation with one filtered query."
           short: >-
             Built an immutable audit trail for contract lifecycle events using
             Kafka triggers and append-only Elasticsearch records, replacing
@@ -2308,15 +2302,7 @@ experience:
           - "Actor resolution: preferred_username from JWT mapped through workforce API to user ID"
           - "Cross-domain case: Product Order events resolved to proposalId via PO externalIdentifier array by category"
         keywords_hit: ["Apache Kafka", "Elasticsearch", "audit trail", "event-driven architecture", "observability"]
-        defense: >-
-          The ~60% resolution-time figure is an estimate from before/after
-          support experience, not an instrumented metric: reconstructing an
-          incident previously meant correlating logs across four or five
-          services (hours); afterward it was one filtered query (minutes).
-          NOTE: the selected variants deliberately omit the number - prefer
-          these. Only reintroduce "~60%" if a specific JD rewards quantified
-          operational impact, and only if it is one of at most two estimated
-          metrics on the page.
+        defense: "The ~60% resolution-time figure is a reconstructed estimate from before/after support work, not an instrumented metric. The user approved printing it on 2026-08-03. Defend it as hours of multi-service log correlation reduced to one filtered query, and state the estimation method plainly."
         interview_risk: |
           "Immutable" is a design contract, not a database guarantee - ES docs
           are updatable. Answer: the consumer only ever creates; there is no
@@ -2326,7 +2312,7 @@ experience:
 
       - id: am_b04_data_retention
         claim_type: estimated
-        priority: 2
+        priority: 1
         phrasings:
           long: >-
             Built a policy-driven data-retention capability across three
@@ -2335,11 +2321,7 @@ experience:
             so a source document was removed only on a confirmed archive
             completion event, keeping the transactional store lean while archived
             agreements stayed retrievable through a dedicated API.
-          medium: >-
-            Built a policy-driven data-retention capability across three
-            microservices using REST lifecycle APIs and Kafka event-driven
-            archival, with archive-before-delete ordering so documents were
-            removed only after a confirmed archive completion event.
+          medium: "**Reduced production data footprint by ~40% and query time by ~25%** with policy-driven retention across three microservices; built REST lifecycle APIs, **Kafka-based archival**, and archive-before-delete ordering so removal followed confirmed archive completion."
           short: >-
             Built policy-driven data retention across three microservices with
             REST lifecycle APIs and Kafka-driven archival, using
@@ -2348,15 +2330,7 @@ experience:
           - "Prep doc, purge and archive section: retention rules (rejected/cancelled proposals >1mo purge; active agreements >1yr archive; rejected agreements >1mo purge)"
           - "Mass-process framework for bulk execution; Archive service completion and failure events; get-from-archive API"
         keywords_hit: ["Apache Kafka", "REST API", "microservices", "data retention", "Couchbase"]
-        defense: >-
-          ~40% footprint reduction reflects the eligible fraction of documents in
-          terminal or archivable states under the retention rules, from rollout
-          data-distribution analysis; ~25% query improvement follows from smaller
-          collections and smaller secondary indexes. Both are recalled estimates,
-          not reproducible measurements. Selected variants omit both numbers by
-          design - the mechanism (archive-before-delete, worst case a duplicate,
-          never a deleted-but-not-archived document) is the defensible part and
-          is what interviewers actually probe.
+        defense: "The ~40% footprint and ~25% query-time figures are reconstructed estimates from rollout data-distribution analysis, not reproducible measurements. The user approved printing both on 2026-08-03. The archive-before-delete mechanism is code-path detail and remains the strongest defense."
         interview_risk: |
           Expect the failure-mode question: "what if archive succeeds but delete
           fails, or vice versa?" Answer is already in the bullet - ordering makes
@@ -2364,8 +2338,8 @@ experience:
           RECONSTRUCTED: retry idempotency on document ID. Hedge.
 
       - id: am_b05_test_automation
-        claim_type: verified
-        priority: 2
+        claim_type: estimated
+        priority: 1
         phrasings:
           long: >-
             Automated end-to-end API testing with Postman collections executed
@@ -2374,11 +2348,7 @@ experience:
             raised unit-test coverage to 90% across four microservices using
             JUnit 5, Mockito, and WireMock stubs while clearing roughly 500
             SonarQube code smells behind enforced quality gates.
-          medium: >-
-            Automated end-to-end API testing with Postman and Newman in Jenkins
-            with JSON-schema response validation, and raised unit-test coverage to
-            90% across four microservices using JUnit 5, Mockito, and WireMock
-            while clearing ~500 SonarQube code smells behind enforced quality gates.
+          medium: "**Reduced manual E2E effort by ~50% and cross-service defects by ~40%** with Postman/Newman tests in Jenkins and JSON-schema validation; **raised unit coverage to 90%** across four services using JUnit 5, Mockito, and WireMock while clearing ~500 SonarQube smells."
           short: >-
             Automated end-to-end API tests via Newman in Jenkins and raised unit
             coverage to 90% across four microservices, clearing ~500 SonarQube
@@ -2388,10 +2358,7 @@ experience:
           - "WireMock scenarios: 201 happy path, 500 to verify non-blocking handling, 30s fixed delay for timeout behavior"
           - "Jenkins quality gates failing builds on new-code coverage and new critical issues"
         keywords_hit: ["Jenkins", "CI/CD", "JUnit", "Mockito", "test automation", "REST API"]
-        defense: >-
-          90% coverage and ~500 smells are doc-backed - assert plainly. The
-          ~50% QA effort and ~40% defect figures are estimates and are
-          deliberately ABSENT from all three variants. Do not add them back.
+        defense: "The 90% coverage and ~500 SonarQube-smell figures are doc-backed. The ~50% E2E-effort and ~40% defect reductions are reconstructed estimates approved for printing on 2026-08-03. Distinguish the two provenance classes explicitly if challenged."
         interview_risk: |
           Expect the vanity-metric challenge on 90%. Answer: JaCoCo line coverage
           via SonarQube (hedge - RECONSTRUCTED that it was line-via-JaCoCo);
@@ -2430,15 +2397,8 @@ experience:
     known_gaps:
       - id: am_gap_estimated_metrics
         severity: high
-        detail: >-
-          Five figures (~40%, ~25%, ~50%, ~40%, ~60%) are two-year-old
-          reconstructions with no reproducible measurement behind them. Current
-          variant selection omits ALL of them; only am_b01 and am_b05 carry
-          numbers, and both are doc-backed.
-        fix: >-
-          Keep it that way unless a JD explicitly rewards quantified business
-          impact. If reintroduced, cap at two per page and rehearse the defense
-          string verbatim.
+        detail: "Five figures (~40%, ~25%, ~50%, ~40%, ~60%) are two-year-old reconstructions with no reproducible measurement behind them. The user reinstated all five on 2026-08-03: they appear on the interview-tested resume and describe work the user personally did."
+        fix: "USER-APPROVED EXCEPTION (2026-08-03): print all five together in the backend and ml base variants, visibly hedged with ASCII '~'. Rehearse each defense verbatim and describe them as reconstructed estimates, not instrumented measurements."
       - id: am_gap_title_mismatch
         severity: medium
         detail: >-
