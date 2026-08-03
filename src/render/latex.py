@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 from string import Template
 
-from src.render.model import RenderDoc
+from src.render.model import RenderBullet, RenderDoc, RenderEntry
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,31 @@ def escape_latex(value: str) -> str:
     return "".join(_LATEX_ESCAPES.get(char, char) for char in value)
 
 
-def _bullets(entry) -> list[str]:
+def _emphasized(bullet: RenderBullet) -> str:
+    """Escape per segment, then wrap emphasized segments in \\textbf{}.
+
+    Escaping must precede brace insertion, or escape_latex would escape the
+    \\textbf braces themselves.
+    """
+    if not bullet.emphasis:
+        return escape_latex(bullet.text)
+
+    parts: list[str] = []
+    cursor = 0
+    for start, end in bullet.emphasis:
+        parts.append(escape_latex(bullet.text[cursor:start]))
+        parts.append(rf"\textbf{{{escape_latex(bullet.text[start:end])}}}")
+        cursor = end
+    parts.append(escape_latex(bullet.text[cursor:]))
+    return "".join(parts)
+
+
+def _bullets(entry: RenderEntry) -> list[str]:
     if not entry.bullets:
         return []
     return [
         r"\resumeItemListStart",
-        *(rf"\resumeItem{{{escape_latex(b.text)}}}" for b in entry.bullets),
+        *(rf"\resumeItem{{{_emphasized(b)}}}" for b in entry.bullets),
         r"\resumeItemListEnd",
     ]
 

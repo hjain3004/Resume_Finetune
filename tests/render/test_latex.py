@@ -21,6 +21,50 @@ def test_percent_is_escaped():
     assert escape_latex("Cut p99 by 40%.") == r"Cut p99 by 40\%."
 
 
+def test_unsupported_latex_chars_are_not_escaped():
+    # If a character isn't in _LATEX_ESCAPES, it passes through untouched
+    assert escape_latex("hello * world") == "hello * world"
+
+
+def _bullet(raw: str) -> RenderBullet:
+    from src.render.emphasis import parse_emphasis
+    plain, spans = parse_emphasis(raw)
+    return RenderBullet(bullet_id="b1", text=plain, emphasis=spans)
+
+
+def test_plain_bullet_emits_no_textbf():
+    from src.render.latex import _emphasized
+    assert _emphasized(_bullet("Cut p99 by 40 percent.")) == "Cut p99 by 40 percent."
+
+
+def test_emphasized_span_is_wrapped_in_textbf():
+    from src.render.latex import _emphasized
+    assert _emphasized(_bullet("Cut **p99 latency** here.")) == (
+        r"Cut \textbf{p99 latency} here."
+    )
+
+
+def test_latex_special_inside_an_emphasized_span_is_escaped():
+    from src.render.latex import _emphasized
+    assert _emphasized(_bullet("**Cut p99 by 40%** now.")) == (
+        r"\textbf{Cut p99 by 40\%} now."
+    )
+
+
+def test_latex_special_outside_an_emphasized_span_is_escaped():
+    from src.render.latex import _emphasized
+    assert _emphasized(_bullet("Cut **p99** by 40% & held.")) == (
+        r"Cut \textbf{p99} by 40\% \& held."
+    )
+
+
+def test_span_at_string_start_and_end():
+    from src.render.latex import _emphasized
+    assert _emphasized(_bullet("**alpha** mid **omega**")) == (
+        r"\textbf{alpha} mid \textbf{omega}"
+    )
+
+
 def test_ampersand_and_underscore_are_escaped():
     assert escape_latex("R&D_team") == r"R\&D\_team"
 
