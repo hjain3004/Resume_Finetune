@@ -98,22 +98,37 @@ do_not_claim:
 
 base_variants:
   backend:
-    projects: [campus_marketplace, clinical_trial_platform, peerchat_peer_discovery]
-    bullet_order: [
-      int_b1, int_b2, int_b3, int_b4, int_b5, int_b6, int_b7, int_b8,
-      am_b01_dlq_consolidation, am_b02_row_level_entitlement, am_b03_audit_trail, am_b04_data_retention, am_b05_test_automation, am_b06_aws_ci_and_resilience,
-      cm_b1, cm_b2, cm_b3, cm_b4, cm_b5,
-      ct_b1, ct_b2, ct_b3, ct_b4,
-      pc_b01_event_sourcing, pc_b02_network_layer, pc_b03_testing_rigor, pc_b04_transport_consolidation, pc_b05_tofu_bootstrap, pc_b06_two_laptop_validation
-    ]
+    projects: [clinical_trial_platform, campus_marketplace]
+    bullet_order:
+      - int_b1
+      - int_b2
+      - int_b3
+      - am_b00_order_management_domain
+      - am_b04_data_retention
+      - am_b05_test_automation
+      - am_b03_audit_trail
+      - am_b01_dlq_consolidation
+      - am_b02_row_level_entitlement
+      - ct_b1
+      - ct_b2
+      - cm_b1
+      - cm_b2
   ml:
     projects: [sepsis_early_warning, fake_review_detection]
-    bullet_order: [
-      int_b1, int_b2, int_b3, int_b4, int_b5, int_b6, int_b7, int_b8,
-      am_b01_dlq_consolidation, am_b02_row_level_entitlement, am_b03_audit_trail, am_b04_data_retention, am_b05_test_automation, am_b06_aws_ci_and_resilience,
-      sepsis_b1, sepsis_b2, sepsis_b3, sepsis_b5, sepsis_b4, sepsis_b6, sepsis_b7, sepsis_b8, sepsis_b10, sepsis_b9, sepsis_b11,
-      frd_b1, frd_b3, frd_b5
-    ]
+    bullet_order:
+      - int_b1
+      - int_b2
+      - int_b3
+      - am_b00_order_management_domain
+      - am_b04_data_retention
+      - am_b05_test_automation
+      - am_b03_audit_trail
+      - am_b01_dlq_consolidation
+      - am_b02_row_level_entitlement
+      - sepsis_b3
+      - sepsis_b8
+      - frd_b1
+      - frd_b3
 
 
 # -----------------------------------------------------------------------------
@@ -552,10 +567,7 @@ projects:
             through a logistic-regression stacker, lifting normalized utility about
             10% over the best single model by combining errors that were decorrelated
             between the tree and recurrent branches.
-          medium: >-
-            Designed a calibrated meta-stacking ensemble isotonically calibrating
-            XGBoost and GRU-D outputs and fusing them through a logistic-regression
-            stacker, lifting normalized utility about 10% over the best single model.
+          medium: "Designed a **calibrated meta-stacking ensemble** isotonically calibrating XGBoost and GRU-D outputs and fusing them through a logistic-regression stacker, **lifting normalized utility about 10%** over the best single model."
           short: >-
             Built a calibrated meta-stacking ensemble fusing XGBoost and GRU-D
             through isotonic calibration and a logistic-regression stacker.
@@ -687,11 +699,7 @@ projects:
         claim_type: scoped
         priority: 3
         phrasings:
-          medium: >-
-            Built a leakage-safe 175-feature pipeline over 40 raw clinical signals -
-            per-patient temporal imputation, deltas, rolling statistics, and
-            measurement-frequency features that treat "this lab was not ordered" as
-            signal - under a strict patient-level split ordering.
+          medium: "Built a **leakage-safe 175-feature pipeline** over 40 raw clinical signals - per-patient temporal imputation, deltas, rolling statistics, and measurement-frequency features that treat missing labs as signal - under a **strict patient-level split**."
           short: >-
             Built a leakage-safe 175-feature pipeline with rolling statistics,
             deltas, and measurement-frequency signals under patient-level splits.
@@ -736,10 +744,7 @@ projects:
         claim_type: verified
         priority: 4
         phrasings:
-          short: >-
-            Evaluated five tabular models, a recurrent model, and two clinical rule
-            baselines under a shared patient-level split, tuning decision thresholds
-            against the asymmetric clinical utility metric rather than accuracy.
+          short: "Evaluated five tabular models, GRU-D, and two clinical-rule baselines on one patient-level split, tuning thresholds against asymmetric clinical utility rather than accuracy."
         evidence:
           - "results/final_results.csv (11 model rows with per-model tuned thresholds)"
         keywords_hit: ["model evaluation", "machine learning", "hyperparameter tuning"]
@@ -750,10 +755,7 @@ projects:
         claim_type: verified
         priority: 4
         phrasings:
-          short: >-
-            Made results fully reproducible with pinned dependencies, seeded splits,
-            saved model and calibrator artifacts, and a documented 3-notebook run
-            order reconstructing every reported number in under 20 minutes on one GPU.
+          short: "Made results reproducible with pinned dependencies, seeded splits, saved model/calibrator artifacts, and a three-notebook run order reconstructing every metric on one GPU."
         evidence:
           - "README.md Setup and How to Run; SEED=42 across notebooks; models/ artifacts"
         keywords_hit: ["reproducibility", "Python", "Jupyter"]
@@ -921,11 +923,7 @@ projects:
             entropy, tenure, and seller-concentration features - persisted as
             partitioned Delta Lake tables with four OLAP cubes and eight automated
             quality checks.
-          medium: >-
-            Owned the data-engineering layer of a six-stage fake-review detection
-            pipeline: a PySpark ETL over 608K Yelp reviews deriving 260K reviewer and
-            5K seller behavioral profiles, persisted as partitioned Delta Lake tables
-            with OLAP cubes and eight automated quality checks.
+          medium: "Owned the data-engineering layer of a six-stage fake-review detection pipeline: a **PySpark ETL over 608K Yelp reviews** deriving 260K reviewer and 5K seller behavioral profiles, persisted as **partitioned Delta Lake tables** with OLAP cubes and eight automated quality checks."
           short: >-
             Built a PySpark ETL over 608K Yelp reviews deriving 260K reviewer and 5K
             seller behavioral profiles into partitioned Delta Lake tables with
@@ -955,11 +953,7 @@ projects:
             the transformer text layer lifted them to 0.936 AUC and 0.741 F1 -
             isolating the contribution of text over user-behavior features rather than
             reporting a single end-to-end score.
-          medium: >-
-            Ran a seven-configuration layer ablation showing behavioral signals alone
-            plateaued at 0.815 AUC / 0.438 F1 while adding the transformer text layer
-            lifted them to 0.936 AUC / 0.741 F1, isolating the text layer's true
-            contribution.
+          medium: "Ran a seven-configuration layer ablation showing **behavioral signals plateaued at 0.815 AUC / 0.438 F1** while adding the transformer text layer lifted them to **0.936 AUC / 0.741 F1**, isolating the text layer's true contribution."
           short: >-
             Ran a layer ablation isolating each signal's contribution: behavioral
             features plateaued at 0.815 AUC, and adding the text layer lifted it to
@@ -1103,11 +1097,7 @@ projects:
         claim_type: ownership_unresolved
         priority: 4
         phrasings:
-          short: >-
-            Quantified signal redundancy across detection layers with Jaccard overlap
-            at multiple top-K cutoffs, showing the rule and clustering layers largely
-            re-flag the same reviewers while text and behavior disagree - the
-            justification for a multi-signal rather than single-model design.
+          short: "Measured cross-layer redundancy with Jaccard overlap at multiple top-K cutoffs, showing rule and clustering layers re-flagged many of the same reviewers while text added independent signal."
         evidence:
           - "L6_validation/03_summary_report.py; l6_validation_summary.txt Jaccard stability table across K = 500..10000"
           - "L3-text vs L5-supervised J = 0.785 at K=5000; L4-dbscan vs L5-supervised J = 0.007"
@@ -1249,11 +1239,7 @@ projects:
             17,000-line Java 21 and Spring Boot service organized by domain, with
             20 REST controllers, 24 JPA entities, and 30 Flyway-controlled schema
             migrations over PostgreSQL.
-          medium: >-
-            Built the backend for a campus peer-to-peer marketplace as primary
-            developer on a 3-person team - a 17,000-line Java 21 and Spring Boot
-            service with 20 REST controllers, 24 JPA entities, and 30
-            Flyway-controlled PostgreSQL migrations.
+          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a 3-person team - a **17,000-line Java 21 and Spring Boot service** with 20 REST controllers, 24 JPA entities, and **30 Flyway-controlled PostgreSQL migrations**."
           short: >-
             Built the backend of a campus peer-to-peer marketplace in Java 21 and
             Spring Boot - 20 REST controllers, 24 JPA entities, 30 Flyway
@@ -1286,10 +1272,7 @@ projects:
             Amazon S3 object storage, and a role-based access model over Spring
             Security with JSON Web Token (JWT) authentication and an OAuth2
             resource server.
-          medium: >-
-            Owned the listing and user domains, implementing listing search, photo
-            upload backed by Amazon S3, and role-based access control over Spring
-            Security with JWT authentication and an OAuth2 resource server.
+          medium: "Owned the listing and user domains, implementing **listing search and Amazon S3-backed photo upload**, plus role-based access control over **Spring Security with JWT authentication** and an OAuth2 resource server."
           short: >-
             Owned the listing and user domains - listing search, S3-backed photo
             upload, and JWT role-based access control over Spring Security.
@@ -1519,11 +1502,7 @@ projects:
             electronic data capture, and security, with an API gateway fronting the
             services and deployment assets for Docker Compose, Kubernetes, and
             Terraform.
-          medium: >-
-            Built a 12-service Python and FastAPI microservices platform for
-            synthetic clinical trial data - generation, analytics, quality scoring,
-            electronic data capture, and security - deployed via Docker Compose,
-            Kubernetes, and Terraform.
+          medium: "Built a **12-service Python and FastAPI microservices platform** for synthetic clinical trial data - generation, analytics, quality scoring, electronic data capture, and security - deployed via **Docker Compose, Kubernetes, and Terraform**."
           short: >-
             Built a 12-service Python and FastAPI platform for synthetic clinical
             trial data, deployed via Docker and Kubernetes.
@@ -1554,9 +1533,7 @@ projects:
             Led the platform's security service, handling authentication and access
             control across the microservice boundary for regulated clinical trial
             data, and wrote it entirely by hand with no AI assistance.
-          medium: >-
-            Led the platform's security service - authentication and access control
-            across the microservice boundary for regulated clinical trial data.
+          medium: "Led the platform's **security service** - authentication and access control across the microservice boundary for regulated clinical trial data."
           short: >-
             Led the platform's security service for authentication and access
             control over regulated trial data.
