@@ -1,8 +1,108 @@
+import textwrap
+
 import pytest
 from src.profile import load_profile
 from src.render.mapping import build_render_doc, RenderMappingError
 
 PROFILE = load_profile("config/master_profile.yaml")
+
+# Definition order inside `exp_one` is [exp_b1, exp_b2, exp_b3]; the variant asks
+# for [exp_b3, exp_b1, exp_b2]. All three share priority 1, so the flagship
+# ordering rule permits the mismatch. Rendering must follow the variant.
+_ORDER_MISMATCH_PROFILE = textwrap.dedent("""
+    schema_version: "0.3.0"
+    last_updated: "2026-08-03"
+    ats:
+      charset_policy: ascii_strict
+      forbidden_chars: []
+      substitutions: {}
+      headings_whitelist: ["Education", "Experience", "Projects", "Technical Skills"]
+    identity:
+      name: Test User
+      email: test@example.com
+    education:
+      - institution: Example University
+        degree: Master of Science
+        display_date: "Aug. 2025 - May 2027"
+    skills:
+      languages: [Python]
+    projects:
+      - id: proj_one
+        name: Project One
+        display_title: Project One
+        display_date: "Sep 2025 - Dec 2025"
+        ownership_boundary: "SAFE TO CLAIM: synthetic fixture."
+        tech: {tech_line: "Python"}
+        keywords: {exact: [Python], topical: [backend]}
+        metric_ledger: {}
+        metric_scope: {}
+        known_gaps: []
+        bullets:
+          - id: proj_b1
+            claim_type: verified
+            priority: 1
+            phrasings: {short: "Built a project."}
+            evidence: ["synthetic fixture"]
+            keywords_hit: [Python]
+    experience:
+      - id: exp_one
+        employer: Example Corp
+        title: Engineer
+        scope_line: "Synthetic backend work."
+        display_date: "July 2023 - June 2025"
+        ownership_boundary: "SAFE TO CLAIM: synthetic fixture."
+        bullets:
+          - id: exp_b1
+            claim_type: verified
+            priority: 1
+            phrasings: {short: "Alpha bullet."}
+            evidence: ["synthetic fixture"]
+          - id: exp_b2
+            claim_type: verified
+            priority: 1
+            phrasings: {short: "Bravo bullet."}
+            evidence: ["synthetic fixture"]
+          - id: exp_b3
+            claim_type: verified
+            priority: 1
+            phrasings: {short: "Charlie bullet."}
+            evidence: ["synthetic fixture"]
+    base_variants:
+      backend:
+        projects: [proj_one]
+        bullet_order: [exp_b3, exp_b1, exp_b2, proj_b1]
+    do_not_claim: [Kubernetes]
+""")
+
+
+def _order_mismatch_profile(tmp_path):
+    path = tmp_path / "order_mismatch.yaml"
+    path.write_text(_ORDER_MISMATCH_PROFILE)
+    return load_profile(str(path))
+
+
+def test_entry_bullets_follow_variant_order_not_definition_order(tmp_path):
+    """The variant is the authority on sequence; YAML definition order is not.
+
+    Regression guard for the defect that made a YAML reorder look necessary:
+    _entry_bullets walked each entry's source bullets, so per-entry sequence
+    silently came from the file instead of base_variants.*.bullet_order.
+    """
+    profile = _order_mismatch_profile(tmp_path)
+    doc = build_render_doc(profile, "backend")
+
+    entry = doc.experience[0]
+    assert [b.bullet_id for b in entry.bullets] == ["exp_b3", "exp_b1", "exp_b2"]
+
+
+def test_variant_order_survives_a_tier_override(tmp_path):
+    """Overrides change the text of a bullet, never its position."""
+    profile = _order_mismatch_profile(tmp_path)
+    doc = build_render_doc(profile, "backend", tier_overrides={"exp_b1": "short"})
+
+    entry = doc.experience[0]
+    assert [b.bullet_id for b in entry.bullets] == ["exp_b3", "exp_b1", "exp_b2"]
+    assert entry.bullets[1].text == "Alpha bullet."
 
 
 def test_backend_variant_maps_all_ordered_bullets():

@@ -76,8 +76,15 @@ def build_render_doc(
         for _, bullet in ordered
     }
 
+    # The variant is the authority on sequence. Ranking by bullet_order rather
+    # than walking source_bullets keeps rendering independent of the order
+    # bullets happen to be defined in the YAML.
+    rank = {bullet_id: position for position, bullet_id in enumerate(wanted_ids)}
+
     def _entry_bullets(source_bullets) -> tuple[RenderBullet, ...]:
-        return tuple(selected[b.id] for b in source_bullets if b.id in selected)
+        owned = [b.id for b in source_bullets if b.id in selected]
+        owned.sort(key=rank.__getitem__)
+        return tuple(selected[bullet_id] for bullet_id in owned)
 
     variant_projects = set(profile.base_variants[base_variant].projects)
     projects = tuple(
