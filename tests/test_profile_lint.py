@@ -5,6 +5,10 @@ import pytest
 
 from src.profile import MasterProfile, load_profile
 from src.profile_lint import MEDIUM_MAX, SHORT_MAX, lint_profile
+from scripts.validate_profile import _load_banned_terms
+from src.render.emphasis import parse_emphasis
+
+_EXPECTED_REAL_TOTALS = {"backend": 3399, "ml": 3537}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."
@@ -81,3 +85,34 @@ def test_short_only_bullet_does_not_crash(tmp_path):
 def test_variant_budget_counts_short_fallback(tmp_path):
     violations = _lint(_profile(tmp_path), variant_budget=10)
     assert any("budget" in v and "base_variants" in v for v in violations)
+
+
+def _real_variant_total(profile: MasterProfile, name: str) -> int:
+    index = {
+        bullet.id: bullet
+        for source in (*profile.projects, *profile.experience)
+        for bullet in source.bullets
+    }
+    return sum(
+        len(
+            parse_emphasis(
+                index[bullet_id].phrasings.medium
+                or index[bullet_id].phrasings.short
+            )[0]
+        )
+        for bullet_id in profile.base_variants[name].bullet_order
+    )
+
+
+def test_real_profile_passes_the_lint():
+    profile = load_profile("config/master_profile.yaml")
+    assert lint_profile(profile, _load_banned_terms()) == []
+
+
+def test_real_variants_have_exact_shape_and_budget():
+    profile = load_profile("config/master_profile.yaml")
+    assert set(profile.base_variants) == set(_EXPECTED_REAL_TOTALS)
+    for name, expected_total in _EXPECTED_REAL_TOTALS.items():
+        assert len(profile.base_variants[name].bullet_order) == 13
+        assert _real_variant_total(profile, name) == expected_total
+        assert expected_total <= 3600
