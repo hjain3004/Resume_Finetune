@@ -3,6 +3,7 @@ data/
 snapshots/
 inbox/processed/
 profile/
+!profile/template.tex
 .env
 __pycache__/
 *.pyc

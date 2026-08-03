@@ -22,6 +22,10 @@ _LATEX_ESCAPES = {
     "}": r"\}",
     "~": r"\textasciitilde{}",
     "^": r"\textasciicircum{}",
+    # Bare ' becomes U+2019 via LaTeX's quote ligature, which ats.forbidden_chars
+    # rejects and which breaks L7 bullet survival. textcomp's \textquotesingle
+    # extracts as ASCII U+0027.
+    "'": r"\textquotesingle{}",
 }
 
 

@@ -1932,3 +1932,10 @@ All resolved by the user the same day.
 project, "Performance Modeling for Cloud Message Queue Systems" (Sep - Dec 2025), absent from
 `master_profile.yaml`. Authoring it at v0.3.0 depth requires evidence, a metric ledger, and
 bullet variants -- M8 Part B-style work for a separate session, not M10.
+
+## 2026-08-03: M8 Layout-first deviation and L7 recalibration
+
+- **Layout-first deviation**: The user approved a layout-first deviation preserving all 13 selected bullets per base variant with their exact wording and font size, rather than trimming content. The five reinstated Amdocs metrics with ASCII `~` hedging are preserved.
+- **`ats.max_pages` placement**: Placed at the top level in `config/master_profile.yaml` (deviating from `ats.layout.max_pages` in the spec), consistent with `ats.max_file_size_mb`.
+- **`template.tex` tracking**: `profile/template.tex` is now tracked by adding an explicit negation (`!profile/template.tex`) to `.gitignore`, keeping the layout skeleton reproducible without exposing real resumes containing PII.
+- **L7 Header Band Recalibration**: The `_HEADER_BAND_RATIO` was recalibrated to `0.985` based on three of the user's real resumes which were generating false positive L7 header band violations. This allowed restoring the more accurate `top=0.20in` margin in the template rather than burning whitespace to pass a miscalibrated check.

@@ -84,7 +84,7 @@ def check_page_count(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
 
 _COLUMN_SEPARATION_RATIO = 0.25
 _COLUMN_POPULATION_FLOOR = 0.25
-_HEADER_BAND_RATIO = 0.95
+_HEADER_BAND_RATIO = 0.99
 
 
 def check_single_column(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:

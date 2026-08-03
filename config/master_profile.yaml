@@ -58,6 +58,7 @@ ats:
     graphics: false
   headings_whitelist: ["Education", "Experience", "Projects", "Skills", "Technical Skills"]
   max_file_size_mb: 2.5                 # Greenhouse hard limit
+  max_pages: 1                          # L7 check_page_count no-ops without this
   filename_pattern: "Himanshu_Jain_Resume.pdf"
   acronym_policy: expand_on_first_use   # "Continuous Integration (CI)"
   title_policy: spell_out_fully         # "Software Engineer", never "SWE"
