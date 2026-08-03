@@ -7,12 +7,27 @@ from typing import Any
 
 import yaml
 
-from src.render.model import RenderDoc
+from src.render.model import RenderBullet, RenderDoc, RenderEntry
 
 logger = logging.getLogger(__name__)
 
 
-def _entry_dicts(entries) -> list[dict[str, Any]]:
+def _markdown(bullet: RenderBullet) -> str:
+    """Reconstruct emphasis markers around spans."""
+    if not bullet.emphasis:
+        return bullet.text
+
+    parts = []
+    cursor = 0
+    for start, end in bullet.emphasis:
+        parts.append(bullet.text[cursor:start])
+        parts.append(f"**{bullet.text[start:end]}**")
+        cursor = end
+    parts.append(bullet.text[cursor:])
+    return "".join(parts)
+
+
+def _entry_dicts(entries: tuple[RenderEntry, ...]) -> list[dict[str, Any]]:
     out = []
     for entry in entries:
         item: dict[str, Any] = {
@@ -24,7 +39,7 @@ def _entry_dicts(entries) -> list[dict[str, Any]]:
         if entry.location:
             item["location"] = entry.location
         if entry.bullets:
-            item["highlights"] = [bullet.text for bullet in entry.bullets]
+            item["highlights"] = [_markdown(bullet) for bullet in entry.bullets]
         out.append(item)
     return out
 
@@ -76,8 +91,9 @@ def render_rendercv(doc: RenderDoc, out_pdf: Path) -> Path:
         encoding="utf-8",
     )
     subprocess.run(
-        [".venv/bin/rendercv", "render", str(yaml_path),
-         "--output-folder", str(out_pdf.parent)],
+        [str(Path(".venv/bin/rendercv").resolve()), "render", yaml_path.name,
+         "--pdf-path", str(out_pdf.name)],
+        cwd=str(out_pdf.parent),
         check=True,
         capture_output=True,
     )
