@@ -9,7 +9,7 @@ from src.render.parse import ParsedPdf, TextBox
 def _parsed(text: str, size_bytes: int = 1000) -> ParsedPdf:
     return ParsedPdf(
         boxes=(TextBox(text=text, x0=50, y0=100, x1=550, y1=120, page=0),),
-        page_height=792.0, page_width=612.0, size_bytes=size_bytes,
+        page_height=792.0, page_width=612.0, size_bytes=size_bytes, page_count=1
     )
 
 
