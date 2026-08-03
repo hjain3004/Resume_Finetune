@@ -3,7 +3,8 @@
 import logging
 import re
 
-from src.profile import MasterProfile
+from src.profile import Bullet, MasterProfile
+from src.render.emphasis import parse_emphasis
 from src.render.model import RenderBullet, RenderDoc, RenderEntry
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
 
 
-def _resolve_text(bullet, requested: str | None) -> str:
+def _resolve_text(bullet: Bullet, requested: str | None) -> str:
     """Pick the phrasing. A requested-but-absent tier is an error, not a downgrade."""
     if requested is not None:
         if requested not in ("short", "medium", "long"):
@@ -39,6 +40,12 @@ def _resolve_text(bullet, requested: str | None) -> str:
         if text is not None:
             return text
     return bullet.phrasings.short
+
+
+def _to_render_bullet(bullet: Bullet, requested: str | None) -> RenderBullet:
+    plain, spans = parse_emphasis(_resolve_text(bullet, requested))
+    return RenderBullet(bullet_id=bullet.id, text=plain, emphasis=spans)
+
 
 
 def build_render_doc(
@@ -65,10 +72,7 @@ def build_render_doc(
         )
 
     selected = {
-        bullet.id: RenderBullet(
-            bullet_id=bullet.id,
-            text=_resolve_text(bullet, overrides.get(bullet.id)),
-        )
+        bullet.id: _to_render_bullet(bullet, overrides.get(bullet.id))
         for _, bullet in ordered
     }
 

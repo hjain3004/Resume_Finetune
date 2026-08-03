@@ -5,7 +5,6 @@ the PDF will contain, and therefore what L7 asserts against) plus offsets into
 that plain text. Offsets rather than substrings so repeated text is unambiguous.
 """
 
-import re
 
 _MARKER = "**"
 

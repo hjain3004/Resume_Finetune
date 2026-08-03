@@ -68,3 +68,19 @@ def test_override_for_unknown_bullet_id_raises():
 def test_unknown_base_variant_raises():
     with pytest.raises(Exception):
         build_render_doc(PROFILE, "does_not_exist")
+
+
+def test_to_render_bullet_parses_emphasis():
+    import dataclasses
+    from src.profile import Phrasings
+    from src.render.mapping import _to_render_bullet
+
+    # Get a real bullet to clone
+    base_bullet = PROFILE.projects[0].bullets[0]
+    marked = dataclasses.replace(
+        base_bullet,
+        phrasings=Phrasings(medium="Built **an event store** on PostgreSQL.", short="")
+    )
+    rb = _to_render_bullet(marked, "medium")
+    assert rb.text == "Built an event store on PostgreSQL."
+    assert rb.emphasis == ((6, 20),)

@@ -28,3 +28,14 @@ def test_render_bullet_carries_id_for_traceability():
     bullet = RenderBullet(bullet_id="pc_b01_event_sourcing", text="Built an event store.")
     assert bullet.bullet_id == "pc_b01_event_sourcing"
     assert bullet.text == "Built an event store."
+
+
+def test_render_bullet_emphasis_defaults_to_empty():
+    bullet = RenderBullet(bullet_id="b1", text="Built an event store.")
+    assert bullet.emphasis == ()
+
+
+def test_render_bullet_carries_emphasis_spans():
+    bullet = RenderBullet(bullet_id="b1", text="Cut p99 by 40%.", emphasis=((4, 7),))
+    assert bullet.text[4:7] == "p99"
+

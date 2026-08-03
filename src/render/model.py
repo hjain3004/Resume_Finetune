@@ -6,10 +6,16 @@ from typing import Any
 
 @dataclass(frozen=True)
 class RenderBullet:
-    """One bullet. `bullet_id` carries G0 traceability to the renderer boundary."""
+    """One bullet. `bullet_id` carries G0 traceability to the renderer boundary.
+
+    `text` is always plain: emphasis markup is stripped at mapping time so L7's
+    survival checks compare against exactly what the PDF will contain.
+    `emphasis` holds (start, end) half-open offsets into `text`.
+    """
 
     bullet_id: str
     text: str
+    emphasis: tuple[tuple[int, int], ...] = ()
 
 
 @dataclass(frozen=True)
