@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-03
 **Supersedes:** `docs/HANDOFF_PHRASING_REWORK.md` (kept for history; see §7 for its errors)
-**Status:** approved direction; revised contract awaiting final user review
+**Status:** approved; reconciled with the in-place implementation plan on 2026-08-03
 
 ## 1. Problem
 
@@ -88,7 +88,7 @@ session:
 This boundary satisfies the repository's one-milestone-per-session directive without
 discarding the useful umbrella analysis in this document.
 
-## 4. Content plan — 13 bullets, ~3,300 chars
+## 4. Content plan — 13 bullets (`backend` 3,399 chars; `ml` 3,537 chars)
 
 ### 4.1 Internship: 8 → 3
 
@@ -183,7 +183,10 @@ are `sepsis_b3` followed by `sepsis_b8`, preserving the current same-entry prior
 - Metric-first when a metric exists; technique follows via "by …"; supporting detail follows
   a semicolon.
 - Concrete named technology in nearly every bullet — this is what carries ATS weight.
-- `medium` 200–395 chars. `short` is a genuine one-line variant, ~110–150. `long` optional.
+- Rewritten headline `medium` phrasings generally target 200–395 characters, with 400 as the
+  hard maximum. Existing concise project mediums may remain below 200 when expanding them
+  would add no information (`ct_b2` is intentionally 139). `short` is a genuine one-line
+  variant, normally ~110–150; `long` is optional.
 - Preserve every bullet `id`. Rewrite `phrasings`; never renumber.
 
 ## 5. Emphasis pipeline
@@ -280,9 +283,9 @@ Rule 6 must count the `short` fallback rather than silently undercounting what t
 will emit. A synthetic ordered short-only bullet is a required regression test.
 
 The 3,800-character lint is a reusable backstop. The two rewritten real base variants have
-a stricter acceptance target of **3,600 characters each**. Their exact totals must be
-reported and asserted after the final phrasings are fixed; "roughly 3,700–3,800 and trim if
-needed" is not an acceptable final contract.
+a stricter acceptance target of **3,600 characters each**. The implementation plan fixes and
+asserts their exact resolved plain-text totals: **backend 3,399** and **ML 3,537**. "Roughly
+3,700–3,800 and trim if needed" is not an acceptable final contract.
 
 `scripts.validate_profile` prints its success line only after both schema validation and
 phrasing lint pass. A lint failure may print `SCHEMA OK` followed by `LINT FAILED`, but it may
@@ -396,8 +399,8 @@ The handoff document's figure of 785 was stale; it predates the M10 test commits
 
 1. In a fresh session, `.venv/bin/python -m scripts.validate_profile` reports schema and lint
    success without printing a contradictory success line on failure.
-2. Backend and ML each contain exactly 13 ordered bullets and at most 3,600 characters of
-   resolved plain bullet text; exact totals are asserted and reported.
+2. Backend and ML each contain exactly 13 ordered bullets. Their resolved plain-text totals
+   are asserted as backend **3,399** and ML **3,537**, both below 3,600.
 3. Every merged bullet's own evidence, keywords, defense, and interview-risk fields support
    its final phrasing.
 4. All five named Amdocs estimates appear in both base variants under the explicit D1
