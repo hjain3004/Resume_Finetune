@@ -1812,17 +1812,8 @@ experience:
             Python microservices (FastAPI, async SQLAlchemy 2.0, Pydantic v2,
             PostgreSQL) sharing one standardized adapter architecture that isolates
             every third-party quirk behind a single client boundary.
-          medium: >-
-            Built the anti-corruption layer between a commercial bank's core systems
-            and four external providers - telecom messaging, real-time interbank
-            transfers, national identity verification, and AML sanctions screening -
-            as four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0,
-            PostgreSQL) on one standardized adapter architecture.
-          short: >-
-            Built the anti-corruption layer between a commercial bank and four
-            external providers - messaging, real-time payments, identity
-            verification, and AML sanctions screening - as four asynchronous Python
-            microservices.
+          medium: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, national identity verification, and AML sanctions screening - as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)** on one standardized adapter architecture."
+          short: "Built the anti-corruption layer between a commercial bank and four external providers as four asynchronous Python microservices."
         evidence:
           - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML)"
           - "Shared layered architecture: HTTP middleware onion -> service layer -> domain (Pydantic/errors/config) -> data (async engine, append-only event log ORM)"
@@ -1851,11 +1842,7 @@ experience:
             of reservations abandoned by crashed callers - proven under an 8-way
             parallel duplicate-request harness to yield exactly one winning request
             and exactly one downstream banking-vendor call.
-          medium: >-
-            Engineered exactly-once semantics on the money-movement path via
-            INSERT-first idempotency-key reservation with atomic ON CONFLICT claims
-            and SHA-256 payload fingerprinting, proven under an 8-way parallel
-            duplicate harness to yield one winner and exactly one vendor call.
+          medium: "Engineered **exactly-once money movement** with INSERT-first idempotency reservation, atomic ON CONFLICT claims, and SHA-256 payload fingerprints, proven by an **8-way duplicate harness** to make one vendor call; the underlying real-time transfer adapter supported 8 transaction types with three-layer settlement validation."
           short: >-
             Engineered exactly-once payment semantics using atomic INSERT-first
             idempotency reservation, proven under 8-way concurrent duplicate load to
@@ -1864,10 +1851,10 @@ experience:
           - "concurrency_test.py: 8 identical parallel requests -> exactly one 200, losers 409/429, zero 5xx, mock vendor call counter == 1"
           - "Idempotency state machine: reserved / completed-replay / 422 IDEMPOTENCY_CONFLICT on hash mismatch / 409 DUPLICATE_IN_PROGRESS / 24h TTL reclamation"
           - "Payload hash = SHA-256 over canonical JSON with message_validation stripped"
-        keywords_hit: ["idempotency", "async", "PostgreSQL", "payments", "distributed systems"]
-        defense: >-
-          Fully code-backed. This is the strongest bullet in the entire profile - it
-          should appear on every fintech-targeted resume.
+          - "8 request types: PESALINK (IDENTIFICATION_VERIFICATION, CREDIT_TRANSFER, PHONE_/WALLET_CREDIT_TRANSFER) + PESALINK_LOOKUP (QUERY/REGISTER/UPDATE/DELINK_CUSTOMER)"
+          - "Success requires all three: general_data.error_code 00 AND core_response.olErrorCode 0 AND pesalinkDetails.err_code 000"
+        keywords_hit: ["idempotency", "async", "PostgreSQL", "payments", "distributed systems", "real-time payments", "interbank transfer", "Python", "FastAPI"]
+        defense: "Fully code-backed. The idempotency state machine and concurrency harness are supported by int_b2's original evidence; the 8 transfer types and three-layer settlement condition are copied from int_b4's evidence."
         interview_risk: |
           Rehearse the full state machine, not the headline. The nuance that shows
           depth: on vendor failure the key is RELEASED so retries remain possible,
@@ -1875,6 +1862,9 @@ experience:
           together make a double-send structurally impossible while keeping the system
           retryable. Expect "why not SELECT-then-INSERT?" - there is a race window
           between the check and the write; ON CONFLICT lets the database arbitrate.
+          Also rehearse the eight transfer request types and the three independent success codes. The
+          adapter declared success only when the ESB, core-banking, and PesaLink network layers all
+          returned their success values.
 
       - id: int_b3
         claim_type: verified
@@ -1888,31 +1878,27 @@ experience:
             is not defensible - and exposed it over both modern REST/JSON and the
             legacy SOAP/XML contract through shared orchestration, enabling
             incremental channel migration without breaking existing consumers.
-          medium: >-
-            Designed a fail-closed AML sanctions screening gateway that returns an
-            explicit error rather than a false "clear" on any backend fault, timeout,
-            or unparseable response, exposed over both REST/JSON and the legacy
-            SOAP/XML contract through shared orchestration so legacy consumers
-            migrate incrementally.
-          short: >-
-            Designed a fail-closed AML sanctions screening gateway that errors rather
-            than reporting a false "clear" on backend faults, serving both REST and
-            legacy SOAP consumers from shared orchestration.
+          medium: "Designed a **fail-closed AML sanctions gateway** that errors on backend faults or invalid responses instead of returning a false clear, serving REST/JSON and legacy SOAP/XML from shared orchestration; hardened all four services with **credential isolation, recursive PII redaction, and XML-injection resistance**."
+          short: "Designed a fail-closed AML sanctions screening gateway serving REST and legacy SOAP consumers, with credential isolation and PII redaction."
         evidence:
           - "Typed error map: AML_UNAVAILABLE / AML_FAULT / AML_BAD_RESPONSE -> 502; DATABASE_UNAVAILABLE -> 503 with session rollback"
           - "Dual ingress: POST /api/v1/screening (JSON) and POST /services/NameScreening (SOAP getCIPMatch) over one orchestration layer"
           - "lxml for XML-bomb resistance; xml.sax.saxutils.escape on all outbound interpolation"
           - "Mock AML trigger keywords TRIGGER_503 / TRIGGER_FAULT / TRIGGER_MALFORMED / TRIGGER_TIMEOUT, themselves unit-tested"
-        keywords_hit: ["AML", "sanctions screening", "OFAC", "SOAP", "XML", "fail-closed design", "regulatory compliance"]
-        defense: >-
-          Ownership here is the best-documented of the four services - the CIP
-          technical doc explicitly lists Himanshu as Owner.
+          - "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side"
+          - "pydantic.SecretStr for all credentials; recursive redaction of api_user/api_password/token/password and x-api-key/authorization headers"
+          - "redact_pii() preserves last 4 chars only, applied across JSON and XML name/passport/dob/nationality fields"
+        keywords_hit: ["AML", "sanctions screening", "OFAC", "SOAP", "XML", "fail-closed design", "regulatory compliance", "secrets management", "PII redaction", "XML injection", "security", "authentication"]
+        defense: "Ownership of the AML gateway is explicitly documented. The merged credential-isolation, PII-redaction, and XML-hardening claims are code-backed across the four adapter services; the bullet makes no deployment claim."
         interview_risk: |
           The line to deliver: "a screening service that returns clear when it cannot
           reach the sanctions list is worse than one that errors - it manufactures
           documented false compliance." Be ready for "why not retry a SOAP fault?" -
           a well-formed fault is a real answer from a healthy backend; only
           transport-level failures (connection, timeout, 502/503/504) are retried.
+          For the merged security clause, be ready to explain why caller-supplied vendor credentials
+          are parsed and discarded, which fields recursive redaction covers, and how lxml plus escaped
+          outbound interpolation address XML bombs and XML injection.
 
       - id: int_b4
         claim_type: verified
@@ -2031,14 +2017,7 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: >-
-            Added a RabbitMQ asynchronous processing path with durable persistent
-            delivery and a dedicated consumer worker (prefetch 10, robust
-            reconnection), returning 202 Accepted immediately to decouple slow
-            upstream identity lookups from caller request threads, and implemented
-            HMAC-SHA256-signed webhook delivery over canonical JSON with a 5-attempt
-            backoff ladder executed as post-response background tasks on isolated
-            database sessions.
+          medium: "Added a RabbitMQ async path with durable delivery and a dedicated consumer (prefetch 10) returning 202 Accepted to decouple slow identity lookups from request threads; implemented HMAC-SHA256-signed webhooks over canonical JSON with a 5-attempt backoff ladder running as post-response tasks on isolated database sessions."
           short: >-
             Added a RabbitMQ async path with a dedicated consumer worker returning 202
             Accepted, and HMAC-SHA256-signed webhook delivery on a 5-attempt backoff
@@ -2062,17 +2041,10 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: >-
-            Hardened all four services with a credential isolation boundary that
-            parses and deliberately discards caller-supplied vendor credentials so
-            callers structurally cannot smuggle auth upstream, SecretStr handling that
-            keeps secrets out of reprs and logs, recursive redaction of credentials
-            and PII before anything touches disk, XML injection and XML-bomb
-            resistance, and correlation-ID propagation with structured logging wrapped
-            so a logging failure can never break the request path.
+          medium: "Hardened all four services with a credential-isolation boundary that discarded caller-supplied vendor credentials, SecretStr handling, recursive credential and PII redaction before persistence, XML-injection and XML-bomb resistance, and correlation-ID logging that could not break the request path."
           short: >-
-            Hardened all four services with a credential isolation boundary,
-            SecretStr secret handling, recursive log redaction of credentials and PII,
+            Hardened four services with a credential isolation boundary,
+            SecretStr handling, recursive log redaction of credentials and PII,
             XML injection and XML-bomb resistance, and correlation-ID propagation.
         evidence:
           - "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side"
