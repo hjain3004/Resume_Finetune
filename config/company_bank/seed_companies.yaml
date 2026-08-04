@@ -1,0 +1,32 @@
+schema_version: "0.1.0"
+companies:
+  palantir: Palantir
+  cisco: Cisco
+  notion: Notion
+  atos: Atos
+  bytedance: ByteDance
+  newsbreak: NewsBreak
+  quantcast: Quantcast
+  google: Google
+  microsoft: Microsoft
+  amazon: Amazon
+  meta: Meta
+  apple: Apple
+  nvidia: NVIDIA
+  netflix: Netflix
+  linkedin: LinkedIn
+  uber: Uber
+  airbnb: Airbnb
+  stripe: Stripe
+  databricks: Databricks
+  snowflake: Snowflake
+  cloudflare: Cloudflare
+  mongodb: MongoDB
+  datadog: Datadog
+  doordash: DoorDash
+  roblox: Roblox
+  capital_one: Capital One
+  salesforce: Salesforce
+  rippling: Rippling
+  plaid: Plaid
+  ramp: Ramp
