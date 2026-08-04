@@ -13,7 +13,7 @@ from src.company_bank.serde import (
     load_seed_companies,
     parse_research_bundle,
 )
-from src.company_bank.store import load_company_bank
+from src.company_bank.store import _load_company_directory
 
 
 class ImportStatus(str, Enum):
@@ -102,7 +102,7 @@ def import_corpus(inbox_root: Path, bank_root: Path, seed_path: Path, *, now: da
             (stage / f"{dossier.company_id}.yaml").write_text(yaml_content, encoding="utf-8")
             
         # Parse and validate the staged YAML corpus
-        load_company_bank(stage)
+        _load_company_directory(stage)
         
         companies_dir = bank_root / "companies"
         

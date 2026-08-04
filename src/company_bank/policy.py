@@ -77,7 +77,7 @@ def _validate_url(url: str, official_domains: tuple[str, ...], source_kind: Sour
     # Remove trailing dot if present
     if host.endswith("."):
         host = host[:-1]
-    
+
     # IDNA encode then decode to normalize
     try:
         host = host.encode("idna").decode("utf-8")
@@ -91,7 +91,7 @@ def _validate_url(url: str, official_domains: tuple[str, ...], source_kind: Sour
         is_ip = True
     except ValueError:
         pass
-        
+
     if is_ip:
         raise CompanyBankValidationError(f"URL host is an IP literal: {url}")
 
@@ -108,8 +108,14 @@ def _validate_semantics(obj) -> None:
     # Basic field checks not caught by types alone
     if obj.schema_version != "0.1.0":
         raise CompanyBankValidationError("schema_version must be '0.1.0'")
+
+    if not isinstance(obj.company_id, str):
+        raise CompanyBankValidationError("company_id: expected string")
     if not re.match(r"^[a-z][a-z0-9_]*$", obj.company_id):
         raise CompanyBankValidationError("company_id: invalid")
+
+    if not isinstance(obj.display_name, str):
+        raise CompanyBankValidationError("display_name: expected string")
     if not obj.display_name.strip():
         raise CompanyBankValidationError("display_name: expected nonempty string")
 
@@ -150,9 +156,16 @@ def _validate_semantics(obj) -> None:
             raise CompanyBankValidationError(f"Duplicate source id: {s.id}")
         source_ids.add(s.id)
 
+        if not isinstance(s.scope.name, str):
+            raise CompanyBankValidationError(f"Source {s.id} scope name: expected string")
+        if not s.scope.name.strip():
+            raise CompanyBankValidationError(f"Source {s.id} scope name: expected nonempty string")
+
         if s.retrieved_at > obj.researched_at:
             raise CompanyBankValidationError(f"Source {s.id} retrieved after researched_at")
 
+        if not isinstance(s.url, str):
+            raise CompanyBankValidationError(f"Source {s.id} URL: expected string")
         _validate_url(s.url, obj.official_domains, s.source_kind)
 
     # 4. Fact checks
@@ -162,6 +175,11 @@ def _validate_semantics(obj) -> None:
             raise CompanyBankValidationError(f"Duplicate fact id: {f.id}")
         fact_ids.add(f.id)
 
+        if not isinstance(f.scope.name, str):
+            raise CompanyBankValidationError(f"Fact {f.id} scope name: expected string")
+        if not f.scope.name.strip():
+            raise CompanyBankValidationError(f"Fact {f.id} scope name: expected nonempty string")
+
         if f.source_id not in source_ids:
             raise CompanyBankValidationError(f"Fact {f.id} refers to unresolved source {f.source_id}")
 
@@ -169,6 +187,8 @@ def _validate_semantics(obj) -> None:
         if f.kind not in SOURCE_FACT_KINDS[source_kind]:
             raise CompanyBankValidationError(f"Fact kind {f.kind.value} not allowed for source kind {source_kind.value}")
 
+        if not isinstance(f.quote, str):
+            raise CompanyBankValidationError(f"Fact {f.id} quote: expected string")
         words = f.quote.split()
         if not words:
             raise CompanyBankValidationError(f"Fact {f.id} quote is empty")
@@ -186,10 +206,10 @@ def _validate_semantics(obj) -> None:
         for bf_id in sig.basis_fact_ids:
             if bf_id not in fact_ids:
                 raise CompanyBankValidationError(f"Signal {sig.id} refers to unresolved fact {bf_id}")
-            
+
             fact_kind = next(f.kind for f in obj.facts if f.id == bf_id)
             uses_for_fact = FACT_PERMITTED_USES[fact_kind]
-            
+
             if allowed_uses_for_signal is None:
                 allowed_uses_for_signal = set(uses_for_fact)
             else:
@@ -209,10 +229,10 @@ def validate_research_bundle(bundle: ResearchBundle, bundle_dir: Path) -> None:
         sources_dir = (bundle_dir / "sources").resolve()
         if not snap_path.is_relative_to(sources_dir):
             raise CompanyBankValidationError(f"Snapshot path traversal: {rs.snapshot_file}")
-        
+
         if not snap_path.is_file():
             raise CompanyBankValidationError(f"Snapshot file missing: {rs.snapshot_file}")
-            
+
         try:
             content = snap_path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
@@ -236,7 +256,7 @@ def validate_company_dossier(dossier: CompanyDossier) -> None:
 
 def to_company_dossier(bundle: ResearchBundle, bundle_dir: Path) -> CompanyDossier:
     validate_research_bundle(bundle, bundle_dir)
-    
+
     expires_at = bundle.researched_at + timedelta(days=TTL_DAYS)
     sources = tuple(rs.source for rs in bundle.sources)
 
@@ -252,6 +272,6 @@ def to_company_dossier(bundle: ResearchBundle, bundle_dir: Path) -> CompanyDossi
         facts=bundle.facts,
         signals=bundle.signals,
     )
-    
+
     validate_company_dossier(dossier)
     return dossier

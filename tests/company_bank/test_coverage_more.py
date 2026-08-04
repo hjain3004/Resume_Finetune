@@ -101,3 +101,44 @@ def test_policy_validate_dossier_expires_at_before_researched_at():
 def test_serde_strict_loader_duplicate_key():
     with pytest.raises(CompanyBankValidationError, match="duplicate key: 'a'"):
         yaml.load("a: 1\na: 2", Loader=_StrictLoader)
+
+def test_policy_validate_semantics_non_string_types():
+    from src.company_bank.policy import _validate_semantics
+    from tests.company_bank.test_store import make_dossier
+    from src.company_bank.serde import CompanyBankValidationError
+
+    dossier = make_dossier("acme", "Acme")
+
+    # 1. company_id
+    d1 = type(dossier)(**{**dossier.__dict__, "company_id": 123})
+    with pytest.raises(CompanyBankValidationError, match="company_id: expected string"):
+        _validate_semantics(d1)
+
+    # 2. display_name
+    d2 = type(dossier)(**{**dossier.__dict__, "display_name": 123})
+    with pytest.raises(CompanyBankValidationError, match="display_name: expected string"):
+        _validate_semantics(d2)
+
+    # 3. Source scope name
+    d3 = make_dossier("acme", "Acme")
+    s = d3.sources[0]
+    s_new = type(s)(**{**s.__dict__, "scope": type(s.scope)(kind=s.scope.kind, name=123)})
+    d3 = type(d3)(**{**d3.__dict__, "sources": (s_new,)})
+    with pytest.raises(CompanyBankValidationError, match="scope name: expected string"):
+        _validate_semantics(d3)
+
+    # 4. Fact scope name
+    d4 = make_dossier("acme", "Acme")
+    f = d4.facts[0]
+    f_new = type(f)(**{**f.__dict__, "scope": type(f.scope)(kind=f.scope.kind, name=123)})
+    d4 = type(d4)(**{**d4.__dict__, "facts": (f_new,)})
+    with pytest.raises(CompanyBankValidationError, match="scope name: expected string"):
+        _validate_semantics(d4)
+
+    # 5. Fact quote
+    d5 = make_dossier("acme", "Acme")
+    f2 = d5.facts[0]
+    f2_new = type(f2)(**{**f2.__dict__, "quote": 123})
+    d5 = type(d5)(**{**d5.__dict__, "facts": (f2_new,)})
+    with pytest.raises(CompanyBankValidationError, match="quote: expected string"):
+        _validate_semantics(d5)

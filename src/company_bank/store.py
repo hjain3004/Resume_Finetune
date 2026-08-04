@@ -16,9 +16,8 @@ from src.company_bank.policy import normalize_company_name
 from src.company_bank.serde import CompanyBankValidationError, parse_company_dossier
 
 
-def load_company_bank(root: str | Path) -> CompanyBank:
-    root = Path(root) / "companies"
-    if not root.is_dir():
+def _load_company_directory(companies_dir: Path) -> CompanyBank:
+    if not companies_dir.is_dir():
         return CompanyBank(
             dossiers=types.MappingProxyType({}),
             alias_index=types.MappingProxyType({}),
@@ -29,7 +28,7 @@ def load_company_bank(root: str | Path) -> CompanyBank:
 
     from src.company_bank.policy import validate_company_dossier
 
-    for path in sorted(root.glob("*.yaml")):
+    for path in sorted(companies_dir.glob("*.yaml")):
         dossier = parse_company_dossier(path)
         validate_company_dossier(dossier)
         
@@ -58,6 +57,10 @@ def load_company_bank(root: str | Path) -> CompanyBank:
         dossiers=types.MappingProxyType(dossiers),
         alias_index=types.MappingProxyType(alias_index),
     )
+
+
+def load_company_bank(root: str | Path) -> CompanyBank:
+    return _load_company_directory(Path(root) / "companies")
 
 
 def lookup_company(
