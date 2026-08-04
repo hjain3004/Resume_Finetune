@@ -40,9 +40,9 @@ as a skeleton superseded by this work.
 | D2 | **File contracts** for model invocation, per AGENTS.md / CLAUDE.md | Supersedes the direct `claude -p` call. **Open sub-question, see O1** |
 | D3 | First increment = **contract/trace foundation + S1** | S1's quote-anchored `must_have` terms feed both L3 keyword bounds and S2's coverage table |
 | D4 | **Company context from external research, evidence-anchored** | Every fact must carry `{claim, source_url, retrieved_quote}` |
-| D5 | External company research feeds **S0's positioning brief only** | Never S2 selection, never S3 bullet edits. Bounds the blast radius of unverifiable claims |
-| D6 | Company research is **cached per company**, TTL'd | Cache key = normalised company name. Company facts go stale in months, not days |
-| D7 | **Merge S1 and S0** into one call | S0 consumes S1 directly and emits 2-4 sentences. Role separation (P4/Zheng) governs the *critic*, not two analysis stages |
+| D5 | Raw external research feeds **S0 only**; validated S0 strategy may influence S2 as a tie-break after JD coverage | S3 receives no raw company research and may introduce terminology only from the JD |
+| D6 | Company research is stored in the versioned Company Knowledge Bank with a **90-day TTL** | Exact alias matching; company/business-unit/role-family scopes; missing or expired data falls back to JD-only tailoring |
+| D7 | **Keep S1 and S0 separate** | S1 reads and validates the JD alone; S0 runs only after S1 and company evidence validate, preventing external research from contaminating requirements |
 | D8 | **Never merge S2 and S3** | The deterministic validator sits between them by design; that is what makes selection fabrication-proof |
 
 ### Resulting LLM call budget
@@ -50,13 +50,15 @@ as a skeleton superseded by this work.
 | Call | Scope | Cached |
 |---|---|---|
 | Company research | per company | yes, TTL'd |
-| S1 + S0 (merged) | per application | no |
+| S1 extraction | per application | no |
+| S0 positioning | per application | no |
 | S2 selection | per application | no |
 | S3 alignment | per application | no |
 | G2 critic | per application, <=2 rounds | no |
 
-4-6 calls per application plus one amortised per company, against 5-7 today with
-no company research at all.
+5-7 calls per application plus one amortised research/synthesis call per company or
+business-unit scope. The extra S0 call preserves the evidence boundary between JD-only
+requirement extraction and external company context.
 
 ## Review corrections to fold in (Codex, 2026-08-04 — independently verified)
 
@@ -96,11 +98,12 @@ no company research at all.
   touches repo files; or (b) the user runs the prompt by hand and saves the output.
   Both satisfy "the model only ever sees one self-contained prompt," but (a) makes
   I11 raw-output capture trivial while (b) makes it a manual step. **Unresolved.**
-- **O2. Company research fetch path.** D4 requires `source_url` + `retrieved_quote`.
-  Whether retrieval is a web fetch, a user-pasted snapshot, or a cached artifact is
-  undecided — and it determines whether "tests never touch the network" is at risk.
-- **O3. Cache location and invalidation.** D6 needs a concrete store (SQLite table
-  vs on-disk JSON) and a TTL value.
+- **O2 RESOLVED by the Company Knowledge Bank design.** Claude Web produces untrusted
+  research bundles plus plain-text source snapshots in `data/company_research/inbox/`.
+  Gemini's offline importer validates them; tests use fixtures and never touch the network.
+- **O3 RESOLVED by the Company Knowledge Bank design.** Canonical dossiers are versioned
+  YAML under `config/company_bank/companies/`, use exact deterministic aliases/scopes, and
+  expire after 90 days. No SQLite migration is added.
 
 ## Recorded for later — not this increment
 

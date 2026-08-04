@@ -98,7 +98,7 @@ remediation transactional and state-safe, and repaired the 35 overwritten `FILTE
 Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
 ## Phase 3 — Tailoring (M8)
-**Status: UNLOCKED; M8 item 1 and item 2 COMPLETE (2026-07-30). M8 item 3 (tailor and critic) is implemented. The M8 phrasing rework is complete.**
+**Status: UNLOCKED; M8 item 1 and item 2 COMPLETE (2026-07-30). The prior M8 item 3 tailor/critic code is a non-production skeleton, not the live workflow. The M8 phrasing rework is complete.**
 Unlock condition met by explicit Phase 2 closure above plus the ATS-quality shortlist gate.
 Gate status (2026-07-25): 16 `SHORTLISTED` rows carry `jd_quality='ats'` in `data/jobs.db`.
 Quantcast contributes one of those rows (job 279), so removing Quantcast would still leave
