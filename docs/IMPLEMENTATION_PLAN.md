@@ -159,6 +159,10 @@ The approved Company Knowledge Bank supporting subsystem is split into three ord
 
 1. **Track A — Gemini foundation:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-foundation.md`
+   Acceptance criteria:
+   - Complete implementation of Track A offline foundation, including model, policy, and validation.
+   - 100% test coverage.
+   - No integration with live DB or web research.
 2. **Track B — Claude Web research:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-web-research.md`
 3. **Track C — Gemini seed-corpus adoption:**

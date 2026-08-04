@@ -148,3 +148,5 @@ rejected; LinkedIn alert emails remain permitted.
   fetch/checkpoint issues are structured in run notes/digest warnings; source-yield/backlog
   baseline captured read-only. M9D-1 through M9D-5 remain unimplemented.
 - 2026-08-04: M10 completed (LaTeX selected) and M8 phrasing rework completed. Statuses set from verified repo state. The previously circulated baseline of "785 tests passing" and "11 RenderCV violations" were stale; the verified baseline is now 883 passed / 1 deselected, and 14 RenderCV violations (due to later overlap and page-bleed checks).
+
+Company Bank foundation complete; research corpus, adoption, and S0/S2 integration pending.
