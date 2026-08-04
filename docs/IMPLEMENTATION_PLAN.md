@@ -149,8 +149,21 @@ Acceptance criteria:
 
 ## Phase 3 (M8 and M10)
 
-M8 item 1 (profile loader), M8 item 2 (schema update and deterministic sections), and M8 item 3 (tailor and critic) are implemented.
+M8 item 1 (profile loader) and M8 item 2 (schema update and deterministic sections) are implemented. The prior item 3 tailor/critic code is a non-production skeleton and does not implement the live workflow.
 The M8 phrasing rework is complete: base variants cut to 13 bullets on a measured one-page budget, phrasing lint wired in, and emphasis pipeline added.
 M10 (renderer bake-off + L7 parseability gate) is complete: both arms were built, L7 parseability rules implemented, and LaTeX selected as the production renderer.
 
 What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
+
+The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
+
+1. **Track A — Gemini foundation:**
+   `docs/superpowers/plans/2026-08-04-m8-company-bank-foundation.md`
+2. **Track B — Claude Web research:**
+   `docs/superpowers/plans/2026-08-04-m8-company-bank-web-research.md`
+3. **Track C — Gemini seed-corpus adoption:**
+   `docs/superpowers/plans/2026-08-04-m8-company-bank-adoption.md`
+
+All three are approved plans, not implemented status. Track A and Track C are separate
+milestones/sessions. Track B writes ignored research proposals only. Live S0/S2/G3
+integration remains outside all three tracks and requires the broader live-tailoring plan.

@@ -108,6 +108,10 @@ M8 item 1 adds only the pure, schema-validating `config/master_profile.yaml` loa
 M8 item 2 rewrites the loader to schema v0.3.0 and authors the deterministic sections of `config/master_profile.yaml`.
 The M8 phrasing rework is complete: both base variants cut to 13 bullets on a measured one-page budget; `src/profile_lint.py` added and wired into `scripts/validate_profile.py`; the emphasis pipeline (`src/render/emphasis.py`, `RenderBullet.emphasis`, `\textbf` in the LaTeX arm, markdown in the RenderCV arm) added.
 What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
+The Company Knowledge Bank design was approved on 2026-08-04 as a supporting M8 subsystem.
+Its foundation, separate 30-company web-research run, and corpus adoption are fully planned
+but not yet implemented; completing the bank will still not complete or integrate the live
+tailoring workflow.
 
 
 ## Upgrades (M9–M12)

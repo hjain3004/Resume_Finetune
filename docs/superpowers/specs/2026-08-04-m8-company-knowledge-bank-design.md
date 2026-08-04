@@ -1,7 +1,7 @@
 # M8 Company Knowledge Bank — Design
 
 **Date:** 2026-08-04
-**Status:** Proposed for user review; no implementation is authorized by this document
+**Status:** Approved by user on 2026-08-04; implementation is governed by the three Track A/B/C plans
 **Phase:** 3 (M8 Tailoring), supporting subsystem for S0 positioning and S2 tie-breaking
 
 ## 1. Goal
