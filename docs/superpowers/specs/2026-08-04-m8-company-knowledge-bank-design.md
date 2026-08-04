@@ -6,7 +6,7 @@
 
 ## 1. Goal
 
-Build a versioned, evidence-anchored knowledge bank for 30 approved target companies so
+Build a versioned, evidence-anchored knowledge bank for 31 approved target companies so
 company and product context can be reused across applications without repeating web research
 or an LLM research call for every role.
 
@@ -34,7 +34,7 @@ small typed view for S0. No live-tailoring model receives raw web pages.
 
 ## 3. Fixed seed corpus
 
-Version 0.1.0 covers exactly these 30 canonical company ids and display names:
+Version 0.1.0 covers exactly these 31 canonical company ids and display names:
 
 | `company_id` | Display name |
 |---|---|
@@ -68,13 +68,14 @@ Version 0.1.0 covers exactly these 30 canonical company ids and display names:
 | `rippling` | Rippling |
 | `plaid` | Plaid |
 | `ramp` | Ramp |
+| `expedia` | Expedia Group |
 
 Citadel, Citadel Securities, and Bloomberg were deliberately excluded at the user's request.
 Quantcast remains because it is an advertising/ML infrastructure company, not a quantitative
 finance employer.
 
 After version 0.1.0, unseen companies are added lazily through the same research/import
-contract. Expanding beyond these 30 is not part of the first implementation or research run.
+contract. Expanding beyond these 31 is not part of the first implementation or research run.
 
 ## 4. Source-of-truth and storage boundaries
 
@@ -92,7 +93,7 @@ The individual YAML dossiers are the only canonical company-knowledge source. Th
 hand-maintained duplicate index. The loader scans `companies/*.yaml` in sorted filename order
 and builds its alias index in memory.
 
-`seed_companies.yaml` fixes the 30-company acceptance set and the expected display name for
+`seed_companies.yaml` fixes the 31-company acceptance set and the expected display name for
 each id. It contains no research facts.
 
 ### 4.2 Untrusted research inbox and source snapshots
@@ -303,15 +304,16 @@ tests. It uses no real company research and no network.
 
 ### Track B — Claude Web research run
 
-Research the fixed 30 companies in six batches of five. Produce one `bundle.json` and the
+Research the fixed 31 companies in six batches (Batch 1 covers six companies; Batches 2-6
+cover five each). Produce one `bundle.json` and the
 referenced plain-text source snapshots per company. Use primary sources, exact quotes, and
 the fixed contract. Do not edit production code or canonical dossiers.
 
 ### Track C — Gemini adoption milestone
 
-Treat all 30 bundles as untrusted. Validate the complete set, import only if all 30 pass,
+Treat all 31 bundles as untrusted. Validate the complete set, import only if all 31 pass,
 generate the human-readable coverage report, run bank tests and the full suite, and commit
-the canonical 30-company corpus. No web research occurs in this track.
+the canonical 31-company corpus. No web research occurs in this track.
 
 Tracks A and C are separate implementation sessions and commits. Track C cannot begin until
 Track B has produced all required artifacts. Live S0/S2 integration is a later M8 milestone
@@ -358,13 +360,13 @@ Foundation coverage includes:
 - 90-day TTL computation and expired lookup;
 - missing lookup fallback and load-time alias-collision rejection;
 - scope filtering;
-- all-or-nothing 30-company corpus import;
+- all-or-nothing 31-company corpus import;
 - byte-identical re-import;
 - privacy projection excludes raw pages and unrelated fields.
 
 Adoption acceptance includes:
 
-- exactly 30 canonical dossiers;
+- exactly 31 canonical dossiers;
 - exact agreement with `seed_companies.yaml`;
 - at least one official source and one product/domain/engineering fact per company;
 - any `hiring_guidance` fact is backed by an official careers or hiring-guide source;
@@ -389,7 +391,7 @@ workflow.
 
 ## 15. Accepted trade-offs
 
-- Thirty dossiers provide useful coverage without attempting an unmaintainable universal
+- Thirty-one dossiers provide useful coverage without attempting an unmaintainable universal
   database.
 - Primary-source requirements reduce coverage but keep decisions defensible.
 - A 90-day TTL creates periodic maintenance but prevents silent use of stale guidance.

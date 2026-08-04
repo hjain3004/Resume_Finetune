@@ -1946,3 +1946,31 @@ bullet variants -- M8 Part B-style work for a separate session, not M10.
 - **Basis:** The LaTeX arm renders successfully on one page and survives L7 content, charset, page-count, section-ordering, single-column, and overlap checks (yielding only 2 accepted violations). Conversely, the RenderCV arm produces 2 pages and 14 L7 violations, dropping the phone number and 'Technical Skills' heading during extraction. Furthermore, RenderCV fails `check_no_overlap` with three text collisions (both project display dates and the internship date collide with adjacent text), meaning it is typographically broken in addition to being unparseable.
 - **Accepted known issue (deliberately not fixed):** Both Projects headings overflow the right page edge, generating 2 `check_within_page` violations for the LaTeX arm. The tech list is clipped mid-word and both project display dates print off the paper. The user reviewed the rendered PDF and accepted this current output, noting that a fix (shortening the display title / tech line lengths) loses zero ATS keywords but remains available if the user later wants dates visible.
 - **RenderCV disposition:** The arm stays in the repo as a comparison implementation but is not on the production path.
+
+## 2026-08-04: Expedia Group added to the Company Bank seed corpus (30 -> 31)
+
+- **Decision:** The user asked for Expedia after the seed set was approved. It is added as
+  `expedia: Expedia Group`, appended last in `config/company_bank/seed_companies.yaml`
+  (position 31).
+- **Deviation from the approved spec:** `2026-08-04-m8-company-knowledge-bank-design.md` fixed
+  version 0.1.0 at exactly 30 companies and routed later additions through the lazy
+  post-0.1.0 path in section 3. The user was offered that path and explicitly chose to amend
+  the spec instead so Expedia ships in the first corpus.
+- **Employer vs consumer brand:** the hiring entity is **Expedia Group**. "Expedia",
+  Hotels.com, and Vrbo are consumer brands and may appear only as sourced product or
+  business-unit scopes -- never as employer aliases. This is the same boundary the spec
+  already applies to TikTok/ByteDance.
+- **Batch arithmetic:** 31 no longer divides into six batches of five. Batch 1 now carries six
+  companies (`palantir`, `cisco`, `notion`, `atos`, `bytedance`, `expedia`); Batches 2-6 stay
+  at five each.
+- **Files changed:** `config/company_bank/seed_companies.yaml`;
+  `tests/company_bank/test_model.py` (count 30 -> 31 plus an `expedia` display-name
+  assertion, test renamed); the design spec (count references and the fixed-corpus table);
+  `2026-08-04-m8-company-bank-web-research.md` (Batch 1 membership, `company_count` 31, the
+  ordered id list, and the Expedia brand-alias caution); and
+  `2026-08-04-m8-company-bank-adoption.md` (16 count references).
+- **Deliberately not updated:** `2026-08-04-m8-company-bank-foundation.md` is the completed
+  record of Track A. Its "30-company" phrasing and `assert len(seeds) == 30` sample describe
+  what was built and committed at `0396bd3` before this change. Retroactively editing a
+  finished plan would falsify the historical record, so the correction is recorded here
+  instead.

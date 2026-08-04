@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available and execute one five-company batch at a time. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Use Claude Web to create evidence-anchored, importer-ready research bundles and short source snapshots for the approved 30 companies, without editing production code or canonical dossiers.
+**Goal:** Use Claude Web to create evidence-anchored, importer-ready research bundles and short source snapshots for the approved 31 companies, without editing production code or canonical dossiers.
 
 **Architecture:** Web research is an untrusted proposal stage. Claude Web gathers primary-source facts, saves only the minimum exact source excerpts needed for verification, and emits one strict `bundle.json` per company under the ignored research inbox. The completed artifacts cross into the repository only through Gemini's offline deterministic importer in the separate adoption milestone.
 
@@ -178,17 +178,18 @@ Expected: `OK` and the company id. Do not edit validator code to make a bundle p
 
 ### Task 2: Batch 1 — existing shortlist leaders
 
-**Companies:** `palantir`, `cisco`, `notion`, `atos`, `bytedance`
+**Companies:** `palantir`, `cisco`, `notion`, `atos`, `bytedance`, `expedia`
 
 - [ ] Research and validate Palantir.
 - [ ] Research and validate Cisco.
 - [ ] Research and validate Notion.
 - [ ] Research and validate Atos.
 - [ ] Research and validate ByteDance.
-- [ ] Run each `validate-bundle` command again after the fifth company.
-- [ ] Report a five-row summary: company id, source count, fact count by kind, signal count, scopes, and evidence gaps. Stop for review if any company lacks an official product/domain/engineering fact.
+- [ ] Research and validate Expedia Group.
+- [ ] Run each `validate-bundle` command again after the sixth company.
+- [ ] Report a six-row summary: company id, source count, fact count by kind, signal count, scopes, and evidence gaps. Stop for review if any company lacks an official product/domain/engineering fact.
 
-Special caution: do not map TikTok to ByteDance as an alias. TikTok may appear only as an explicitly sourced product/business-unit scope.
+Special caution: do not map TikTok to ByteDance as an alias. TikTok may appear only as an explicitly sourced product/business-unit scope. The same rule applies to Expedia Group: the employer is `Expedia Group`, and consumer brands such as Expedia, Hotels.com, and Vrbo are products, not employer aliases.
 
 ---
 
@@ -270,7 +271,7 @@ Special caution: fintech product/domain facts do not imply quantitative-finance 
 ### Task 8: Complete-corpus research handoff
 
 **Files:**
-- Read only: all 30 bundle directories
+- Read only: all 31 bundle directories
 - Create only: `data/company_research/inbox/research_summary.json`
 
 - [ ] **Step 1: Validate the entire seed corpus offline**
@@ -283,18 +284,18 @@ Run:
   --seeds config/company_bank/seed_companies.yaml
 ```
 
-Expected: `OK`, exactly 30 companies, zero missing ids, zero unexpected ids, zero invalid bundles. If it fails, fix research artifacts only and rerun.
+Expected: `OK`, exactly 31 companies, zero missing ids, zero unexpected ids, zero invalid bundles. If it fails, fix research artifacts only and rerun.
 
 - [ ] **Step 2: Write the ignored research summary**
 
 Create `research_summary.json` with `schema_version` equal to `0.1.0`, `company_count` equal
-to integer `30`, and `company_ids` equal to this exact seed-file order:
+to integer `31`, and `company_ids` equal to this exact seed-file order:
 
 ```text
 palantir, cisco, notion, atos, bytedance, newsbreak, quantcast, google,
 microsoft, amazon, meta, apple, nvidia, netflix, linkedin, uber, airbnb,
 stripe, databricks, snowflake, cloudflare, mongodb, datadog, doordash,
-roblox, capital_one, salesforce, rippling, plaid, ramp
+roblox, capital_one, salesforce, rippling, plaid, ramp, expedia
 ```
 
 Set `validated_at` to the actual UTC time of the successful corpus-validation command,
@@ -306,7 +307,7 @@ limitations remain. This summary is an operator handoff, not importer input.
 
 Report:
 
-- exact 30/30 validation result;
+- exact 31/31 validation result;
 - total source, fact, and signal counts;
 - per-company coverage table;
 - every remaining evidence gap;
