@@ -96,7 +96,7 @@ def test_policy_validate_dossier_expires_at_before_researched_at():
     from datetime import timedelta
     dossier = make_dossier("acme", "Acme")
     dossier = type(dossier)(**{**dossier.__dict__, "expires_at": dossier.researched_at - timedelta(days=1)})
-    with pytest.raises(CompanyBankValidationError, match="expires_at must be after researched_at"):
+    with pytest.raises(CompanyBankValidationError, match="expires_at must be exactly researched_at \+ 90 days"):
         validate_company_dossier(dossier)
 def test_serde_strict_loader_duplicate_key():
     with pytest.raises(CompanyBankValidationError, match="duplicate key: 'a'"):

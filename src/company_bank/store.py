@@ -17,7 +17,7 @@ from src.company_bank.serde import CompanyBankValidationError, parse_company_dos
 
 
 def load_company_bank(root: str | Path) -> CompanyBank:
-    root = Path(root)
+    root = Path(root) / "companies"
     if not root.is_dir():
         return CompanyBank(
             dossiers=types.MappingProxyType({}),
@@ -27,8 +27,12 @@ def load_company_bank(root: str | Path) -> CompanyBank:
     dossiers = {}
     alias_index = {}
 
+    from src.company_bank.policy import validate_company_dossier
+
     for path in sorted(root.glob("*.yaml")):
         dossier = parse_company_dossier(path)
+        validate_company_dossier(dossier)
+        
         if dossier.company_id in dossiers:
             raise CompanyBankValidationError(f"duplicate company id: {dossier.company_id}")
 

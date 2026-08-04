@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — Job Pipeline System Design
 
 Status: authoritative. If code and this document disagree, this document wins unless the user
-says otherwise. Implementation questions not answered here should be raised to the user, no
+says otherwise. Implementation questions not answered here should be raised to the user, not
 guessed.
 
 Implementation notation: sections labeled **CURRENT** describe deployed code. Sections
@@ -23,7 +23,7 @@ its implementation milestone, migration, tests, or user smoke gate. The detailed
   └──────┬───────┴──────┬───────┴──────┬────────┴──────┬──────┘
          └──────────────┴───── normalize ──────────────┘
                                │
-                        dedupe + inser
+                        dedupe + insert
                                │
                         ┌──────▼──────┐
                         │  SQLite DB  │  status: DISCOVERED
@@ -56,16 +56,16 @@ deterministic adapters, bounded crawlers, and an agentic scout may all produce s
 candidates. The scout produces versioned proposals only. Deterministic validation, policy,
 provenance, canonicalization, and deduplication remain the only path into SQLite.
 
-```tex
+```text
 deterministic sources ─┐
 bounded crawlers ──────┼──> candidate staging -> deterministic verifier -> observations/jobs
 agentic scout ─────────┘             ^
                               user/policy promotion
 ```
 
-## 2. Repository layou
+## 2. Repository layout
 
-*Note on M8 Company Bank*: The M8 Track A implementation provides the offline foundation only (`config/company_bank`, `src/company_bank`, and `data/company_research/inbox`). It does not integrate with SQLite, eligibility, scoring, or live live-tailoring.*
+*Note on M8 Company Bank*: The M8 Track A implementation provides the offline foundation only (`config/company_bank`, `src/company_bank`, and `data/company_research/inbox`). It does not integrate with SQLite, eligibility, scoring, or live tailoring.*
 
 ```
 job-pipeline/
@@ -110,7 +110,7 @@ job-pipeline/
 │   │   └── generic.py         # trafilatura fallback
 │   ├── prefilter.py
 │   ├── digest.py
-│   └── run_ingest.py          # CLI entry poin
+│   └── run_ingest.py          # CLI entry point
 ├── tests/
 │   ├── fixtures/              # saved HTML/JSON responses
 │   └── test_*.py
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS jobs (
                                          -- 'aggregator' (jobright's own summary); Phase 3
                                          -- tailoring requires jd_quality='ats'
     last_seen_at    TEXT,               -- M6.8: last time this dedup_key was seen anywhere —
-                                         -- set at insert, touched on every dedup-key conflic
+                                         -- set at insert, touched on every dedup-key conflict
                                          -- and on every liveness-recheck GET (alive or dead)
     repost_count    INTEGER NOT NULL DEFAULT 0  -- M6.8: dedup-key conflicts seen, i.e. how many
                                          -- times a tracker has re-listed this same posting
@@ -248,10 +248,10 @@ Rules:
   2. **Content-based closure (M6.13R).** The stored `jd_text` is a dead-page notice rather
      than JD content — the resolver fetched the ATS's "this job is no longer available"
      shell, which is long enough and job-adjacent enough to pass the length/keyword gate.
-     Detected by `resolve.generic.dead_posting_evidence()`, which requires an explici
+     Detected by `resolve.generic.dead_posting_evidence()`, which requires an explicit
      subject naming *this* posting bound to a dead predicate in the same sentence; bare
      fragments such as "has been filled" are not evidence, so careers-page FAQ wording
-     ("when an opportunity has been filled, we will remove the job posting") does no
+     ("when an opportunity has been filled, we will remove the job posting") does not
      qualify. The same function backs `passes_quality()`, so freshly fetched text and
      already-stored `jd_text` are judged identically on both the generic and browser tiers.
 
@@ -357,7 +357,7 @@ Shared strategy, implemented once in a helper and parameterized per repo:
    deferred pending keys are returned. The adapter does **not** write the snapshot. It returns
    a pending checkpoint to `run_ingest.py`.
 4. **Commit only after durable insert.** `run_ingest.py` inserts accepted jobs into SQLite
-   first. Only after `db.insert_discovered()` succeeds does it atomically replace the snapsho
+   first. Only after `db.insert_discovered()` succeeds does it atomically replace the snapshot
    via sibling temp file plus `os.replace`. A crash may leave the checkpoint behind SQLite;
    it must never advance ahead of SQLite. Legacy snapshots containing only `{keys,
    source_path}` load with empty `pending_keys`.
@@ -397,8 +397,8 @@ once, hardcode per-repo config, and save a real README as a test fixture.
 - `inbox/*.md`: manual JD paste. File format:
   - Line 1: the job URL
   - Line 2: `Company — Title — Location` (em-dash or `|` separated; be lenient)
-  - Rest: the JD tex
-  These become `DiscoveredJob`s AND are immediately marked `RESOLVED` with the pasted tex
+  - Rest: the JD text
+  These become `DiscoveredJob`s AND are immediately marked `RESOLVED` with the pasted text
   (`resolver='manual'`).
 - After successful ingestion, move processed files to `inbox/processed/` (create it), and
   rewrite `urls.txt` keeping only unprocessed lines (a line is processed once its job row
@@ -434,7 +434,7 @@ Transport selection is exclusive per fetch:
 | durable multi-page queue/routing | Crawlee Python only if the M9D bake-off wins |
 | cloud execution | allowlisted, pinned Apify Actor -> staging only |
 
-Crawlee and Crawl4AI do not fetch the same URL in the same stage. All crawls have explici
+Crawlee and Crawl4AI do not fetch the same URL in the same stage. All crawls have explicit
 domain/path allowlists and page/depth/time/byte/cost budgets. The ≥2-second same-host delay,
 honest User-Agent, no-login, and no-evasion rules apply regardless of library or platform.
 
@@ -462,7 +462,7 @@ that cannot outrun SQLite.
 Redirect handling: tracker links are often shorteners (e.g. `simplify.jobs/p/...`). The polite
 session follows redirects; route on the **final** URL after redirects, not the original.
 
-M6.0 wrapper unwrap (checked before falling through to generic, on the final URL): firs
+M6.0 wrapper unwrap (checked before falling through to generic, on the final URL): first
 `wrapper.resolve_wrapper_map()` (known hostname → fixed ATS board, `config/wrapper_map.yaml`),
 then `wrapper.resolve_gh_jid()` (URL carries a `gh_jid` query param → derive a Greenhouse board
 token and resolve through the greenhouse resolver). Either path sets `resolver` to the
@@ -522,7 +522,7 @@ increments `resolve_attempts`).
 - **amazon_jobs.py** (M6.0(d)): pattern `amazon.jobs/{lang}/jobs/{id}`. The obvious per-job
   `{job_path}.json` endpoint is bot-gated (406 without a browser session); instead GET
   `https://www.amazon.jobs/en/search.json?base_query={id}` (public, not bot-gated) and match
-  the result whose `job_path` contains `/jobs/{id}/` — defensive against the search endpoin
+  the result whose `job_path` contains `/jobs/{id}/` — defensive against the search endpoint
   returning unrelated hits. Fields: `title`, `description`, `basic_qualifications`,
   `preferred_qualifications` (HTML), `normalized_location`.
 - **wrapper.py** (M6.0(b)-(c)): not hostname-routed — checked by the router before falling
@@ -537,7 +537,7 @@ increments `resolve_attempts`).
     `ats: greenhouse` + `id_from: path` are implemented, matching the seeded `roblox` entry —
     extend when a new shape is actually needed, not speculatively).
 - **jobright.py** (M6.2): jobright.com/jobright.ai postings never host the employer's literal
-  JD, so this resolver signature is `resolve(url, html_text, session)` — the router passes i
+  JD, so this resolver signature is `resolve(url, html_text, session)` — the router passes it
   the page HTML it already fetched (§6.1). Two-part fix, in order:
   1. `find_ats_link(html_text)`: scan outbound anchors (host not jobright) for either a known
      ATS host (per §6.1's router table) or "Apply"/"Original" anchor text. On a match, re-route
@@ -546,7 +546,7 @@ increments `resolve_attempts`).
      resolver's name. Live-verified (2026-07-06): jobright's actual apply flow is
      client-rendered, so this path does not find a link in practice today — kept as the
      preferred path per spec, in case a page ever includes one statically.
-  2. Fallback: parse the page's `__NEXT_DATA__` Next.js JSON blob (present on every jobrigh
+  2. Fallback: parse the page's `__NEXT_DATA__` Next.js JSON blob (present on every jobright
      posting) for `props.pageProps.dataSource.jobResult`, and build `jd_text` from
      `jobSummary` + `coreResponsibilities` + `qualifications` (mustHave/preferredHave).
      `isH1bSponsor: true` → `"sponsor_likely"` in `flags`. Sets `resolver='jobright'`,
@@ -557,7 +557,7 @@ increments `resolve_attempts`).
      regex-based text-cleaning spec — see `DECISIONS.md` 2026-07-07.
 
 HTML→text stripping: use a small shared helper (regex-free where possible; `html.unescape`
-+ a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do no
++ a minimal tag stripper, preserving list items as `- ` lines and paragraph breaks). Do not
 add BeautifulSoup as a dependency unless the helper proves insufficient — if it does, ask.
 
 ### 6.4 Tier-2 browser resolver (`resolve/browser.py`, M6.5)
@@ -567,7 +567,7 @@ Three-tier resolution ladder:
 1. **Tier 1** — structured resolvers + unwrap rules (§6.1/§6.3, unchanged). Always tried first.
 2. **Tier 2** — `resolve/browser.py`, used only when routing fell through to `generic` and
    either the initial plain-`requests` fetch failed (non-200 — a bot-blocked host, e.g.
-   qualtrics.com returns 410 to `requests` but renders fine in a headless browser) or i
+   qualtrics.com returns 410 to `requests` but renders fine in a headless browser) or it
    succeeded but `generic.resolve()` failed its quality heuristic — and only if
    `browser_resolver` is enabled. A blocked *tier-1* host (routed to a specific resolver, e.g.
    a Tesla-style Akamai block) does NOT get a tier-2 retry: only hosts with no tier-1 resolver
@@ -581,8 +581,8 @@ Implementation:
 - `Crawl4AIBrowserClient`: owns one event loop and one `crawl4ai.AsyncWebCrawler` for a
   resolution run. It uses `CacheMode.BYPASS`, keeps Crawl4AI behind a synchronous boundary,
   and raises `BrowserUnavailableError` for lifecycle/start/operation failures.
-- `CircuitBreakingBrowserClient`: run-local wrapper around a `BrowserClient`. The firs
-  `BrowserUnavailableError` trips the breaker; subsequent browser-required rows fail fas
+- `CircuitBreakingBrowserClient`: run-local wrapper around a `BrowserClient`. The first
+  `BrowserUnavailableError` trips the breaker; subsequent browser-required rows fail fast
   with the same transient browser-unavailable outcome instead of retrying browser startup.
 - `fetch_markdown(url, session, browser_client)` / `fetch_html(url, session, browser_client)`:
   both call `session.throttle(url)` first (§6.2) so browser fetches count against the same
@@ -597,7 +597,7 @@ Implementation:
   (e.g. tesla.com) is expected to stay tier-3 — this is not a bug to work around.
 - M6.2/M6.10 Jobright ordering: `jobright.resolve()` checks static ATS links first, then
   accepts a valid static `__NEXT_DATA__` aggregator payload, and only then uses
-  `browser.fetch_html()` to inspect rendered DOM for an ATS link. Browser work is not spen
+  `browser.fetch_html()` to inspect rendered DOM for an ATS link. Browser work is not spent
   on every valid Jobright aggregator row merely to look for a possible upgrade link.
 - Config: `browser_resolver: true` is a top-level key in `config/sources.yaml` (sibling to
   `sources:`, not per-source — the fallback applies pipeline-wide). Read by
@@ -619,13 +619,13 @@ M6.10 changes runtime orchestration without weakening the three-tier content pol
   `resolve_attempts`; connection resets, browser launch failures, and unexpected internal
   exceptions leave the job eligible without spending its content-failure budget.
 - `run_resolution()` retains a final per-row `except Exception` isolation boundary, but an
-  unexpected exception is logged with its traceback and recorded as an internal issue, no
+  unexpected exception is logged with its traceback and recorded as an internal issue, not
   converted to `None` and counted as a content failure.
 - Resolution accepts a separate deterministic `--resolve-limit N`; discovery's `--limit`
   semantics are unchanged. Selection is ordered by job id so bounded runs are repeatable.
 - Production browser fallback uses one run-scoped `CircuitBreakingBrowserClient(
   Crawl4AIBrowserClient())`, not one Chromium launch per URL. If browser startup/lifecycle
-  fails, a circuit breaker defers subsequent browser-required rows for the remainder of tha
+  fails, a circuit breaker defers subsequent browser-required rows for the remainder of that
   run while tier-1 work continues. Tests mock the browser boundary and never launch a browser.
 - Jobright uses a static ATS link when present, otherwise accepts its static
   `__NEXT_DATA__` aggregator payload before considering browser rendering. Browser work is
@@ -693,7 +693,7 @@ Config in `config/freshness.yaml`: `stale_days: 21`, `reopen_days: 45`, `livenes
 Four independent behaviors:
 
 1. **Stale-at-discovery flag.** `db.insert_discovered()`: a genuinely new row whose
-   `date_posted` is present and older than `stale_days` gets `flags=["stale_listing"]` a
+   `date_posted` is present and older than `stale_days` gets `flags=["stale_listing"]` at
    insert time. Missing `date_posted` is never flagged (no evidence either way). This flag
    must survive resolution — `db.mark_resolved()` merges (unions) `ResolvedJD.flags` into the
    row's existing flags rather than overwriting, the same class of fix as M6.2's prefilter
@@ -727,7 +727,7 @@ Four independent behaviors:
    unchecked, retried next run) rather than failing the whole run over one dead link.
 
 I13 (audit hook for SHORTLISTED rows overdue a liveness check, and high-score `stale_listing`
-rows whose rationale doesn't mention staleness) is deferred to M7 (`SELF_HEALING.md` §5), no
+rows whose rationale doesn't mention staleness) is deferred to M7 (`SELF_HEALING.md` §5), not
 built in M6.8.
 
 ## 8. Digest (`digest.py`)
@@ -775,7 +775,7 @@ python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discove
 - `--snapshot-dir DIR`: override tracker checkpoint location, primarily for isolated smoke
   runs and tests.
 - Exit code 0 on success even if some resolutions failed (failures are data, not errors);
-  nonzero on infrastructure errors, all selected discovery sources failing, or checkpoin
+  nonzero on infrastructure errors, all selected discovery sources failing, or checkpoint
   commit failure after durable insert. Partial source failure is nonfatal and visible in
   `runs.notes`/digest warnings.
 - `runs.notes` is valid JSON for new runs. It always includes `run_outcome` and
@@ -805,13 +805,13 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
   title, jd_text truncated to ~6k chars each) to `data/batch/YYYY-MM-DD.json`. A headless
   Claude Code invocation reads that file plus `config/profile_summary.md` and writes
   `data/batch/YYYY-MM-DD.scored.json` (`[{id, row_ids, fit_score 0-10, base_variant (`backend`
-  or `ml`, closed enum), missing_keywords[], rationale ≤160 chars}]`). A deterministic scrip
+  or `ml`, closed enum), missing_keywords[], rationale ≤160 chars}]`). A deterministic script
   validates the JSON against a schema and writes scores back to SQLite (`SCORED`; ≥ threshold →
   `SHORTLISTED`). Claude never touches the DB directly — files in, files out, validation in
   between.
 - **Calibration Contract v2 (2026-07-16)**: `scripts/calibration_packet.py start` takes an
   exported batch and writes an immutable `data/calibration/YYYY-MM-DD.batch.json` plus a
-  metadata-only `YYYY-MM-DD.interest.md` worksheet. `reveal` validates completed interes
+  metadata-only `YYYY-MM-DD.interest.md` worksheet. `reveal` validates completed interest
   calls, opens SQLite read-only, retrieves complete untruncated representative JDs through
   `src.db.calibration_jobs_by_ids()`, and writes `YYYY-MM-DD.fit.md`. `scripts/calibration_report.py`
   compares scored output only against JD-informed `fit_call` labels. `interest_call` remains
@@ -819,7 +819,7 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
   shortlist boundary; SKIP is negative. Legacy `data/calibration/2026-07-12.user.md` is
   preserved as historical interest-only evidence and cannot be used as fit ground truth.
 - **Sub-batched scoring (M6.7 item 1, `scripts/score_batch.py`)**: rather than one Claude
-  invocation over the whole exported batch, `score_batch()` splits it into chunks of at mos
+  invocation over the whole exported batch, `score_batch()` splits it into chunks of at most
   6 objects (`CHUNK_SIZE`), writes each chunk to `data/batch/chunk_N.json`, and invokes
   `claude -p` once per chunk with the same prompt body as `docs/scoring_prompt.md` (only the
   file-path instructions are overridden — see `build_chunk_prompt()`). Chunk results are
@@ -831,13 +831,13 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
   synthetic JDs in `tests/fixtures/scoring_stress/cases.json`, each paired with an
   `expected_band` derived from `docs/scoring_prompt.md`'s anchored scale (perfect backend/
   LLM-agent match, strong-overlap-minor-gap, two partial-overlap variants, wrong specialty,
-  hard-requirement-miss-years, sponsorship-risk cap, keyword-stuffed, stale/vague — the las
+  hard-requirement-miss-years, sponsorship-risk cap, keyword-stuffed, stale/vague — the last
   two don't have doc-specified bands, so their bands were chosen by the implementer and
   approved by the user; see DECISIONS.md). `scoring_stress.py` builds a batch from the
   fixture, scores it via `score_batch.score_batch()`, and reports per-case band adherence.
   Run at calibration start and after ANY change to `scoring_prompt.md`/`profile_summary.md`
   (both are PROTECTED per `SELF_HEALING.md` §4 once calibration locks them).
-- **Exemplar injection (M6.7 item 3)**: deferred until ≥20 calibration labels exist (no
+- **Exemplar injection (M6.7 item 3)**: deferred until ≥20 calibration labels exist (not
   built in M6.7) — see `PHASE2_KICKOFF.md`.
 - **Tailoring**: see `docs/TAILORING_SPEC.md`.
 - **Authorized alert-email adapter** (company, LinkedIn, Indeed, Jobright, and similar alerts):
@@ -854,7 +854,7 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
 - Do not use proxy/session/fingerprint features to evade resistance, even if a selected
   crawler or Actor supports them.
 - Respect the rate limits in §6.2 even when it makes runs slower.
-- Treat all page text and Actor output as untrusted data, never tool instructions. The scou
+- Treat all page text and Actor output as untrusted data, never tool instructions. The scout
   receives least privilege, explicit budgets, and no direct DB credentials.
 - Public Apify Actors are never selected dynamically in unattended production. Recurring use
   requires an allowlisted Actor and recorded build/version/input/run/dataset metadata.

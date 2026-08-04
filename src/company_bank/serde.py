@@ -86,21 +86,23 @@ def load_seed_companies(path: str | Path) -> dict[str, str]:
 
 
 def parse_utc_timestamp(value: object, path: str) -> datetime.datetime:
-    """Accept only a string ending in Z and return an aware UTC datetime."""
+    """Accept only a string matching exactly YYYY-MM-DDTHH:MM:SSZ and return an aware UTC datetime."""
     if not isinstance(value, str):
         raise CompanyBankValidationError(f"{path}: expected string, got {type(value).__name__}")
-    if not value.endswith("Z"):
-        raise CompanyBankValidationError(f"{path}: expected trailing Z")
+    if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", value):
+        raise CompanyBankValidationError(f"{path}: expected exact YYYY-MM-DDTHH:MM:SSZ format")
     try:
-        dt = datetime.datetime.fromisoformat(value[:-1]).replace(tzinfo=datetime.timezone.utc)
+        dt = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
     except ValueError as exc:
-        raise CompanyBankValidationError(f"{path}: invalid ISO-8601: {exc}") from exc
+        raise CompanyBankValidationError(f"{path}: invalid ISO-8601 date/time values: {exc}") from exc
     return dt
 
 
 def format_utc_timestamp(value: datetime.datetime) -> str:
     """Return seconds-precision ISO-8601 with a trailing Z."""
-    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if value.tzinfo is None:
+        raise ValueError("Cannot format a naive datetime")
+    return value.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _reject_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -261,11 +263,14 @@ def _parse_signal(data: Any, path: str) -> model.TailoringSignal:
     )
 
 
-def _check_string_array(data: Any, path: str, unique: bool = True, pattern: str = None) -> tuple[str, ...]:
+def _normalize_alias(name: str) -> str:
+    name = unicodedata.normalize("NFKC", name).casefold()
+    name = re.sub(r"[^a-z0-9]+", " ", name).strip()
+    return re.sub(r"\s+", " ", name)
+
+def _check_string_array(data: Any, path: str, unique: bool = True, pattern: str = None, normalize_fn: callable = None) -> tuple[str, ...]:
     if not isinstance(data, list):
         raise CompanyBankValidationError(f"{path}: expected list")
-    if unique and len(set(data)) != len(data):
-        raise CompanyBankValidationError(f"{path}: duplicate items")
     for i, item in enumerate(data):
         if not isinstance(item, str):
             raise CompanyBankValidationError(f"{path}.{i}: expected string")
@@ -273,6 +278,13 @@ def _check_string_array(data: Any, path: str, unique: bool = True, pattern: str 
             raise CompanyBankValidationError(f"{path}.{i}: expected nonempty string")
         if pattern and not re.match(pattern, item):
             raise CompanyBankValidationError(f"{path}.{i}: invalid format")
+    if unique:
+        seen = set()
+        for i, item in enumerate(data):
+            val = normalize_fn(item) if normalize_fn else item
+            if val in seen:
+                raise CompanyBankValidationError(f"{path}.{i}: duplicate item")
+            seen.add(val)
     return tuple(data)
 
 
@@ -300,9 +312,9 @@ def parse_research_bundle(path: str | Path) -> model.ResearchBundle:
     if not isinstance(data["display_name"], str) or not data["display_name"].strip():
         raise CompanyBankValidationError("display_name: expected nonempty string")
 
-    aliases = _check_string_array(data.get("aliases", []), "aliases")
+    aliases = _check_string_array(data.get("aliases", []), "aliases", normalize_fn=_normalize_alias)
     official_domains = _check_string_array(
-        data.get("official_domains", []), "official_domains", pattern=r"^[a-z0-9.-]+$"
+        data.get("official_domains", []), "official_domains", pattern=r"^[a-z0-9.-]+$", normalize_fn=lambda s: s.lower()
     )
     if not official_domains:
         raise CompanyBankValidationError("official_domains: expected nonempty list")
@@ -356,9 +368,9 @@ def parse_company_dossier(path: str | Path) -> model.CompanyDossier:
     if data["schema_version"] != "0.1.0":
         raise CompanyBankValidationError("schema_version must be '0.1.0'")
 
-    aliases = _check_string_array(data.get("aliases", []), "aliases")
+    aliases = _check_string_array(data.get("aliases", []), "aliases", normalize_fn=_normalize_alias)
     official_domains = _check_string_array(
-        data.get("official_domains", []), "official_domains", pattern=r"^[a-z0-9.-]+$"
+        data.get("official_domains", []), "official_domains", pattern=r"^[a-z0-9.-]+$", normalize_fn=lambda s: s.lower()
     )
     researched_at = parse_utc_timestamp(data["researched_at"], "researched_at")
     expires_at = parse_utc_timestamp(data["expires_at"], "expires_at")

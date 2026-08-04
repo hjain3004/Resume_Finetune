@@ -17,7 +17,21 @@ from src.company_bank.store import load_company_bank, lookup_company
 
 
 def make_dossier(company_id: str, display_name: str, aliases: tuple[str, ...] = ()) -> CompanyDossier:
+    from src.company_bank.model import CompanySource, CompanyScope, SourceKind, ScopeKind, CompanyFact, FactKind, TailoringSignal, PermittedUse
     now = datetime(2026, 8, 4, 0, 0, 0, tzinfo=timezone.utc)
+    
+    source = CompanySource(
+        id="s1", url=f"https://{company_id}.example", title="Title",
+        source_kind=SourceKind.OFFICIAL_COMPANY,
+        scope=CompanyScope(ScopeKind.COMPANY, display_name),
+        retrieved_at=now, content_sha256="0" * 64
+    )
+    fact = CompanyFact(
+        id="f1", kind=FactKind.PRODUCT, scope=CompanyScope(ScopeKind.COMPANY, display_name),
+        claim="Claim", quote="Quote", source_id="s1"
+    )
+    signal = TailoringSignal("sig1", "text", ("f1",), (PermittedUse.S0,))
+
     return CompanyDossier(
         schema_version="0.1.0",
         company_id=company_id,
@@ -26,41 +40,46 @@ def make_dossier(company_id: str, display_name: str, aliases: tuple[str, ...] = 
         official_domains=(f"{company_id}.example",),
         researched_at=now,
         expires_at=now + timedelta(days=90),
-        sources=(),
-        facts=(),
-        signals=(),
+        sources=(source,),
+        facts=(fact,),
+        signals=(signal,),
     )
 
 
 def test_sorted_scan(tmp_path):
-    (tmp_path / "zeta.yaml").write_text(dump_company_dossier(make_dossier("zeta", "Zeta")), encoding="utf-8")
-    (tmp_path / "alpha.yaml").write_text(dump_company_dossier(make_dossier("alpha", "Alpha")), encoding="utf-8")
+    (tmp_path / "companies").mkdir(exist_ok=True)
+    (tmp_path / "companies" / "zeta.yaml").write_text(dump_company_dossier(make_dossier("zeta", "Zeta")), encoding="utf-8")
+    (tmp_path / "companies" / "alpha.yaml").write_text(dump_company_dossier(make_dossier("alpha", "Alpha")), encoding="utf-8")
     bank = load_company_bank(tmp_path)
     assert tuple(bank.dossiers) == ("alpha", "zeta")
 
 
 def test_filename_id_mismatch(tmp_path):
-    (tmp_path / "wrong.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme")), encoding="utf-8")
+    (tmp_path / "companies").mkdir(exist_ok=True)
+    (tmp_path / "companies" / "wrong.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme")), encoding="utf-8")
     with pytest.raises(CompanyBankValidationError, match="filename"):
         load_company_bank(tmp_path)
 
 
 def test_duplicate_id(tmp_path):
-    (tmp_path / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme")), encoding="utf-8")
-    (tmp_path / "other.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme 2")), encoding="utf-8")
+    (tmp_path / "companies").mkdir(exist_ok=True)
+    (tmp_path / "companies" / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme")), encoding="utf-8")
+    (tmp_path / "companies" / "other.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme 2")), encoding="utf-8")
     with pytest.raises(CompanyBankValidationError, match="duplicate company id"):
         load_company_bank(tmp_path)
 
 
 def test_alias_collision(tmp_path):
-    (tmp_path / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme", aliases=("Acme, Inc.",))), encoding="utf-8")
-    (tmp_path / "other.yaml").write_text(dump_company_dossier(make_dossier("other", "Other", aliases=("ACME INC",))), encoding="utf-8")
+    (tmp_path / "companies").mkdir(exist_ok=True)
+    (tmp_path / "companies" / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme", aliases=("Acme, Inc.",))), encoding="utf-8")
+    (tmp_path / "companies" / "other.yaml").write_text(dump_company_dossier(make_dossier("other", "Other", aliases=("ACME INC",))), encoding="utf-8")
     with pytest.raises(CompanyBankValidationError, match="alias collision"):
         load_company_bank(tmp_path)
 
 
 def test_implicit_aliases(tmp_path):
-    (tmp_path / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme Corp")), encoding="utf-8")
+    (tmp_path / "companies").mkdir(exist_ok=True)
+    (tmp_path / "companies" / "acme.yaml").write_text(dump_company_dossier(make_dossier("acme", "Acme Corp")), encoding="utf-8")
     bank = load_company_bank(tmp_path)
     assert bank.alias_index["acme corp"] == "acme"
     assert bank.alias_index["acme"] == "acme"
@@ -71,7 +90,7 @@ def test_empty_missing_directory(tmp_path):
     assert not bank.dossiers
     assert not bank.alias_index
     
-    bank = load_company_bank(tmp_path / "missing")
+    bank = load_company_bank(tmp_path / "companies" / "missing")
     assert not bank.dossiers
     assert not bank.alias_index
 

@@ -179,9 +179,8 @@ def test_verified_dataset_product_fact(tmp_path):
 def test_duplicate_aliases_case_insensitive(tmp_path):
     bundle_dir = _copy_fixture(tmp_path)
     _rewrite(bundle_dir, lambda d: d.update(aliases=["Acme", "ACME"]))
-    bundle = parse_research_bundle(bundle_dir / "bundle.json")
-    with pytest.raises(CompanyBankValidationError, match="duplicate alias"):
-        validate_research_bundle(bundle, bundle_dir)
+    with pytest.raises(CompanyBankValidationError, match="duplicate item"):
+        parse_research_bundle(bundle_dir / "bundle.json")
 
 
 def test_duplicate_domains_case_insensitive(tmp_path):

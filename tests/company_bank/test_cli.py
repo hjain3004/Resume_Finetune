@@ -14,14 +14,15 @@ def test_cli_validate_bundle_success(tmp_path, capsys):
     shutil.copytree(ACME_FIXTURE, target)
     bundle_path = target / "bundle.json"
     
-    code = main(["validate-bundle", str(bundle_path), str(target)])
+    code = main(["validate-bundle", str(bundle_path)])
     assert code == 0
     out, err = capsys.readouterr()
-    assert "Valid bundle for acme" in out
+    assert out.startswith("OK:")
+    assert "acme" in out
 
 
 def test_cli_validate_bundle_unreadable(tmp_path, capsys):
-    code = main(["validate-bundle", str(tmp_path / "nonexistent.json"), str(tmp_path)])
+    code = main(["validate-bundle", str(tmp_path / "nonexistent.json")])
     assert code == 2
     out, err = capsys.readouterr()
     assert "UNREADABLE" in err
@@ -35,7 +36,7 @@ def test_cli_validate_bundle_invalid(tmp_path, capsys):
     text = bundle_path.read_text(encoding="utf-8")
     bundle_path.write_text(text.replace('"0.1.0"', '"9.9.9"'), encoding="utf-8")
     
-    code = main(["validate-bundle", str(bundle_path), str(target)])
+    code = main(["validate-bundle", str(bundle_path)])
     assert code == 1
     out, err = capsys.readouterr()
     assert "INVALID" in err
@@ -47,7 +48,7 @@ def test_cli_validate_bundle_exception(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr("scripts.company_bank.parse_research_bundle", mock_parse)
     
     (tmp_path / "foo.json").write_text("{}")
-    code = main(["validate-bundle", str(tmp_path / "foo.json"), str(tmp_path)])
+    code = main(["validate-bundle", str(tmp_path / "foo.json")])
     assert code == 2
 
 

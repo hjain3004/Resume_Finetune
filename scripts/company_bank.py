@@ -20,7 +20,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_bundle_parser = subparsers.add_parser("validate-bundle", help="Validate a research bundle")
     validate_bundle_parser.add_argument("bundle_path", type=Path)
-    validate_bundle_parser.add_argument("bundle_dir", type=Path)
 
     validate_corpus_parser = subparsers.add_parser("validate-corpus", help="Validate a corpus inbox")
     validate_corpus_parser.add_argument("--inbox", type=Path, required=True)
@@ -61,8 +60,8 @@ def _handle_validate_bundle(args: argparse.Namespace) -> int:
             return 2
         
         bundle = parse_research_bundle(args.bundle_path)
-        dossier = to_company_dossier(bundle, args.bundle_dir)
-        print(f"Valid bundle for {dossier.company_id}")
+        dossier = to_company_dossier(bundle, args.bundle_path.parent)
+        print(f"OK: Valid bundle for {dossier.company_id}")
         return 0
     except CompanyBankValidationError as exc:
         print(f"INVALID: {exc}", file=sys.stderr)
@@ -102,7 +101,7 @@ def _handle_import_corpus(args: argparse.Namespace) -> int:
 
 def _handle_lookup(args: argparse.Namespace) -> int:
     try:
-        bank = load_company_bank(args.bank_root / "companies")
+        bank = load_company_bank(args.bank_root)
     except CompanyBankValidationError as exc:
         print(f"INVALID: {exc}", file=sys.stderr)
         return 1

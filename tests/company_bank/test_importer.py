@@ -187,6 +187,20 @@ def test_import_refuse_modified(tmp_path):
     assert not any(p.name.startswith(".companies-stage-") for p in bank_root.iterdir())
 
 
+def test_import_refuse_extra_entry(tmp_path):
+    inbox, seeds, now = setup_inbox(tmp_path)
+    bank_root = tmp_path / "bank"
+    bank_root.mkdir()
+    
+    import_corpus(inbox, bank_root, seeds, now=now)
+    
+    extra_dir = bank_root / "companies" / "extra_dir"
+    extra_dir.mkdir()
+    
+    with pytest.raises(CompanyBankValidationError, match="overwrite"):
+        import_corpus(inbox, bank_root, seeds, now=now)
+
+
 def test_import_cleanup_on_exception(tmp_path, monkeypatch):
     inbox, seeds, now = setup_inbox(tmp_path)
     bank_root = tmp_path / "bank"

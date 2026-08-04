@@ -78,13 +78,15 @@ def validate_corpus(inbox_root: Path, seed_path: Path, *, now: datetime) -> tupl
 
 
 def _files_identical(a: Path, b: Path) -> bool:
-    a_files = {p.name: p for p in a.iterdir() if p.is_file()}
-    b_files = {p.name: p for p in b.iterdir() if p.is_file()}
-    if set(a_files) != set(b_files):
+    a_entries = {p.name: p for p in a.iterdir()}
+    b_entries = {p.name: p for p in b.iterdir()}
+    if set(a_entries) != set(b_entries):
         return False
     
-    for name, a_path in a_files.items():
-        if a_path.read_bytes() != b_files[name].read_bytes():
+    for name, a_path in a_entries.items():
+        if not a_path.is_file() or not b_entries[name].is_file():
+            return False
+        if a_path.read_bytes() != b_entries[name].read_bytes():
             return False
             
     return True

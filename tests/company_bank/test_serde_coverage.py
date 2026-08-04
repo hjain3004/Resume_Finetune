@@ -60,8 +60,8 @@ def test_parse_utc_timestamp_not_string():
         parse_utc_timestamp(123, "p")
 
 def test_parse_utc_timestamp_invalid():
-    with pytest.raises(CompanyBankValidationError, match="invalid ISO-8601"):
-        parse_utc_timestamp("fooZ", "p")
+    with pytest.raises(CompanyBankValidationError, match="expected exact"):
+        parse_utc_timestamp("not a timestampZ", "p")
 
 def test_parse_scope_not_dict():
     with pytest.raises(CompanyBankValidationError, match="expected dict"):
@@ -156,12 +156,38 @@ def test_check_string_array_not_list():
         _check_string_array({}, "p")
         
 def test_check_string_array_duplicate():
-    with pytest.raises(CompanyBankValidationError, match="duplicate items"):
+    with pytest.raises(CompanyBankValidationError, match="duplicate item"):
         _check_string_array(["a", "a"], "p")
+
+def test_check_string_array_duplicate_alias():
+    from src.company_bank.serde import _normalize_alias
+    with pytest.raises(CompanyBankValidationError, match="duplicate item"):
+        _check_string_array(["Acme Corp", "acme-corp"], "p", normalize_fn=_normalize_alias)
 
 def test_check_string_array_not_string():
     with pytest.raises(CompanyBankValidationError, match="expected string"):
-        _check_string_array([1], "p")
+        _check_string_array([{}], "p")
+
+def test_parse_utc_timestamp_exact():
+    from src.company_bank.serde import parse_utc_timestamp
+    # Should fail for trailing fractional seconds
+    with pytest.raises(CompanyBankValidationError, match="expected exact"):
+        parse_utc_timestamp("2026-08-04T12:00:00.123Z", "p")
+    # Should fail without Z
+    with pytest.raises(CompanyBankValidationError, match="expected exact"):
+        parse_utc_timestamp("2026-08-04T12:00:00", "p")
+    # Should fail for offset
+    with pytest.raises(CompanyBankValidationError, match="expected exact"):
+        parse_utc_timestamp("2026-08-04T12:00:00+05:00Z", "p")
+    # Should fail for impossible dates (passed regex, failed strptime)
+    with pytest.raises(CompanyBankValidationError, match="invalid ISO-8601 date/time values"):
+        parse_utc_timestamp("2026-13-45T12:00:00Z", "p")
+
+def test_format_utc_timestamp_naive():
+    from src.company_bank.serde import format_utc_timestamp
+    from datetime import datetime
+    with pytest.raises(ValueError, match="Cannot format a naive datetime"):
+        format_utc_timestamp(datetime(2026, 8, 4, 12, 0, 0))
 
 def test_check_string_array_empty_string():
     with pytest.raises(CompanyBankValidationError, match="expected nonempty string"):
