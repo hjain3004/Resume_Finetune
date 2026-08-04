@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "acme",
+  "display_name": "Acme Corp",
+  "aliases": ["Acme"],
+  "official_domains": ["acme.example"],
+  "researched_at": "2026-08-04T00:00:00Z",
+  "sources": [
+    {
+      "id": "prod",
+      "url": "https://acme.example/product",
+      "title": "Acme Product",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Acme Corp"
+      },
+      "retrieved_at": "2026-08-04T00:00:00Z",
+      "snapshot_file": "sources/product.txt",
+      "content_sha256": "8335672632364b2129317573e27ab0f97e3d64a6f0d691b5f65ba4f49db479ae"
+    },
+    {
+      "id": "eng",
+      "url": "https://acme.example/engineering",
+      "title": "Acme Engineering",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Acme Corp"
+      },
+      "retrieved_at": "2026-08-04T00:00:00Z",
+      "snapshot_file": "sources/engineering.txt",
+      "content_sha256": "e84d332eaa55f2f83c8e266f13c6dc64e12e3a22ca55140df5634efc88e648c2"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_prod",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Acme Corp"
+      },
+      "claim": "Makes Anvils",
+      "quote": "Acme Anvil is the best product.",
+      "source_id": "prod"
+    },
+    {
+      "id": "f_eng",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Acme Corp"
+      },
+      "claim": "Uses Rust",
+      "quote": "We use rust for speed.",
+      "source_id": "eng"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig1",
+      "text": "Acme is great",
+      "basis_fact_ids": ["f_prod", "f_eng"],
+      "permitted_uses": ["s0", "s2_tiebreak"]
+    }
+  ]
+}
