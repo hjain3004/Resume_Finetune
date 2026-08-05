@@ -47,17 +47,21 @@ class SnapshotLintFinding:
     message: str
 
 
-def normalize_for_match(text: str) -> str:
-    """Collapse all whitespace runs to a single space and strip.
-    Does not case-fold, strip punctuation, or normalise Unicode quotes.
-    """
-    return " ".join(text.split())
+def normalize_for_match(text: str, fold_typography: bool = False) -> str:
+    """Normalize whitespace for quote matching. Optionally fold typography."""
+    t = " ".join(text.split())
+    if fold_typography:
+        t = t.replace("\u2018", "'").replace("\u2019", "'")
+        t = t.replace("\u201c", '"').replace("\u201d", '"')
+        t = t.replace("\u2013", "-").replace("\u2014", "-")
+    return t
 
 
 def classify_source(
     fetch_result: FetchResult,
     quotes: Sequence[str],
     min_text_chars: int = 500,
+    report_foldable: bool = False,
 ) -> tuple[SourceVerdict, str, int]:
     """Returns (verdict, reason, quotes_found)"""
     if fetch_result.status in (404, 410):
@@ -72,16 +76,30 @@ def classify_source(
         if len(norm_text) < min_text_chars:
             return SourceVerdict.INCONCLUSIVE, f"extraction too short ({len(norm_text)} chars) - likely JS-rendered or bot-walled", 0
             
-        quotes_found = 0
+        found = 0
+        typographic_found = 0
+        live_text = normalize_for_match(fetch_result.text)
+        
+        if report_foldable:
+            live_text_folded = normalize_for_match(fetch_result.text, fold_typography=True)
+            
         for q in quotes:
-            norm_q = normalize_for_match(q)
-            if norm_q in norm_text:
-                quotes_found += 1
+            q_norm = normalize_for_match(q)
+            if q_norm in live_text:
+                found += 1
+            elif report_foldable:
+                q_folded = normalize_for_match(q, fold_typography=True)
+                if q_folded in live_text_folded:
+                    typographic_found += 1
                 
-        if quotes_found == len(quotes):
-            return SourceVerdict.VERIFIED, "", quotes_found
-        else:
-            return SourceVerdict.FAILED, f"{len(quotes) - quotes_found} of {len(quotes)} quotes not found on live page", quotes_found
+        if found == len(quotes):
+            return SourceVerdict.VERIFIED, "", found
+            
+        reason = f"{len(quotes) - found} of {len(quotes)} quotes not found on live page"
+        if report_foldable and typographic_found > 0:
+            reason += " (would match under typographic folding)"
+            
+        return SourceVerdict.FAILED, reason, found
 
     return SourceVerdict.INCONCLUSIVE, f"unexpected HTTP status {fetch_result.status}", 0
 
@@ -90,6 +108,7 @@ def verify_bundle_sources(
     bundle: ResearchBundle,
     bundle_dir: Path,
     fetch: Callable[[str], FetchResult],
+    report_foldable: bool = False,
 ) -> BundleVerification:
     results = []
     
@@ -108,7 +127,9 @@ def verify_bundle_sources(
             continue
             
         fetch_result = fetch(s.source.url)
-        verdict, reason, quotes_found = classify_source(fetch_result, quotes)
+        verdict, reason, quotes_found = classify_source(
+            fetch_result, quotes, report_foldable=report_foldable
+        )
         
         results.append(SourceVerification(
             company_id=bundle.company_id,

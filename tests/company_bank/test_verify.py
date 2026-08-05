@@ -114,10 +114,10 @@ def test_cli(tmp_path):
         mock_instance = mock_fetcher_class.return_value
         mock_instance.fetch.return_value = FetchResult("https://test.com/a", 403, "", None)
         
-        args_verify = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=False, delay=2.0)
+        args_verify = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=False, delay=2.0, report_foldable=False)
         assert _handle_verify_sources(args_verify) == 0
         assert hash_dir(bundle_dir) == h_before
         
-        args_verify_strict = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=True, delay=2.0)
+        args_verify_strict = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=True, delay=2.0, report_foldable=False)
         assert _handle_verify_sources(args_verify_strict) == 2
         assert hash_dir(bundle_dir) == h_before

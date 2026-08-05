@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 import json
 from urllib.parse import urlparse
+import urllib.robotparser
 import requests
 import trafilatura
 
@@ -67,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_sources_parser.add_argument("--json-out", type=Path)
     verify_sources_parser.add_argument("--strict", action="store_true")
     verify_sources_parser.add_argument("--delay", type=float, default=2.0)
+    verify_sources_parser.add_argument("--report-foldable", action="store_true")
     return parser
 
 
@@ -157,12 +159,10 @@ class RateLimitedFetcher:
             r_resp = requests.get(robots_url, headers=headers, timeout=5)
             self.last_request[host] = time.time()
             if r_resp.status_code == 200:
-                path = urlparse(url).path or '/'
-                for line in r_resp.text.splitlines():
-                    if line.lower().startswith('disallow:'):
-                        dis_path = line.split(':', 1)[1].strip()
-                        if dis_path and path.startswith(dis_path):
-                            return FetchResult(url, None, "", "blocked by robots.txt")
+                rp = urllib.robotparser.RobotFileParser()
+                rp.parse(r_resp.text.splitlines())
+                if not rp.can_fetch(headers['User-Agent'], url):
+                    return FetchResult(url, None, "", "blocked by robots.txt")
         except Exception:
             pass # ignore robots fetch fail
 
@@ -242,7 +242,7 @@ def _handle_verify_sources(args: argparse.Namespace) -> int:
         def fetch_wrapper(url):
             return fetcher.fetch(url, bundle.official_domains)
             
-        res = verify_bundle_sources(bundle, bp.parent, fetch_wrapper)
+        res = verify_bundle_sources(bundle, bp.parent, fetch_wrapper, report_foldable=args.report_foldable)
         all_results.append(res)
         
     # Output table
