@@ -27,7 +27,8 @@
 - Use HTTPS. A source URL must be on the dossier's official domain or a true subdomain. Do not accept lookalikes (`fakeamazon.com` is not `amazon.com`).
 - Keep aliases conservative: canonical display name plus obvious punctuation/legal-name variants only. Do not add products, subsidiaries, parent companies, or employer brands such as TikTok as aliases; scoped facts can name them, and alias promotion requires later human approval.
 - Use UTC retrieval timestamps ending in `Z`. Use lowercase snake-case ids unique inside each company bundle.
-- Each five-company batch is a checkpoint. Validate all five, report sources/facts/signals/gaps, then stop. Do not silently move into the next batch in the same agent turn if validation needs remediation.
+- Each five-company batch is a checkpoint. Validate all five, run `lint-snapshots`, (optionally) run `verify-sources`, report sources/facts/signals/gaps, then stop. Do not silently move into the next batch in the same agent turn if validation needs remediation.
+- **NORMATIVE RULE:** The per-company figures in the evidence target are **targets, not floors**. A company with no publicly accessible guidance produces a smaller dossier and records the gap. Fabricating a source to satisfy a count is a hard stop, not a trade-off.
 
 ## Required bundle shape
 
@@ -170,9 +171,11 @@ Then validate with:
 
 ```bash
 .venv/bin/python -m scripts.company_bank validate-bundle data/company_research/inbox/{company_id}/bundle.json
+.venv/bin/python -m scripts.company_bank lint-snapshots data/company_research/inbox/{company_id}/bundle.json
 ```
 
-Expected: `OK` and the company id. Do not edit validator code to make a bundle pass.
+Expected: `OK` and the company id, with zero lint findings. Do not edit validator code to make a bundle pass.
+Running `verify-sources` per-batch is recommended.
 
 ---
 
@@ -186,7 +189,7 @@ Expected: `OK` and the company id. Do not edit validator code to make a bundle p
 - [ ] Research and validate Atos.
 - [ ] Research and validate ByteDance.
 - [ ] Research and validate Expedia Group.
-- [ ] Run each `validate-bundle` command again after the sixth company.
+- [ ] Run `validate-bundle` and `lint-snapshots` for all six companies. (Recommended: run `verify-sources` for the batch).
 - [ ] Report a six-row summary: company id, source count, fact count by kind, signal count, scopes, and evidence gaps. Stop for review if any company lacks an official product/domain/engineering fact.
 
 Special caution: do not map TikTok to ByteDance as an alias. TikTok may appear only as an explicitly sourced product/business-unit scope. The same rule applies to Expedia Group: the employer is `Expedia Group`, and consumer brands such as Expedia, Hotels.com, and Vrbo are products, not employer aliases.
@@ -202,7 +205,7 @@ Special caution: do not map TikTok to ByteDance as an alias. TikTok may appear o
 - [ ] Research and validate Google.
 - [ ] Research and validate Microsoft.
 - [ ] Research and validate Amazon.
-- [ ] Re-run validation for all five and report the same coverage table.
+- [ ] Re-run `validate-bundle` and `lint-snapshots` for all five (and optionally `verify-sources`), then report the same coverage table.
 
 Special caution: keep Alphabet, Azure, AWS, and Amazon.com distinctions scoped; do not silently turn parent companies, products, or business units into aliases.
 
@@ -217,7 +220,7 @@ Special caution: keep Alphabet, Azure, AWS, and Amazon.com distinctions scoped; 
 - [ ] Research and validate NVIDIA.
 - [ ] Research and validate Netflix.
 - [ ] Research and validate LinkedIn.
-- [ ] Re-run validation for all five and report the same coverage table.
+- [ ] Re-run `validate-bundle` and `lint-snapshots` for all five (and optionally `verify-sources`), then report the same coverage table.
 
 Special caution: do not scrape LinkedIn pages requiring login or member/job-search surfaces. Use official public corporate, engineering, careers, and candidate-guidance pages only.
 
@@ -232,7 +235,7 @@ Special caution: do not scrape LinkedIn pages requiring login or member/job-sear
 - [ ] Research and validate Stripe.
 - [ ] Research and validate Databricks.
 - [ ] Research and validate Snowflake.
-- [ ] Re-run validation for all five and report the same coverage table.
+- [ ] Re-run `validate-bundle` and `lint-snapshots` for all five (and optionally `verify-sources`), then report the same coverage table.
 
 Special caution: engineering-blog posts about one system support that system/theme, not a universal hiring preference. Scope narrowly when appropriate.
 
@@ -247,7 +250,7 @@ Special caution: engineering-blog posts about one system support that system/the
 - [ ] Research and validate Datadog.
 - [ ] Research and validate DoorDash.
 - [ ] Research and validate Roblox.
-- [ ] Re-run validation for all five and report the same coverage table.
+- [ ] Re-run `validate-bundle` and `lint-snapshots` for all five (and optionally `verify-sources`), then report the same coverage table.
 
 Special caution: distinguish MongoDB the company from MongoDB the product through scopes and claims; do not treat the product name as a separate employer alias.
 
@@ -262,7 +265,7 @@ Special caution: distinguish MongoDB the company from MongoDB the product throug
 - [ ] Research and validate Rippling.
 - [ ] Research and validate Plaid.
 - [ ] Research and validate Ramp.
-- [ ] Re-run validation for all five and report the same coverage table.
+- [ ] Re-run `validate-bundle` and `lint-snapshots` for all five (and optionally `verify-sources`), then report the same coverage table.
 
 Special caution: fintech product/domain facts do not imply quantitative-finance roles. Keep banking, payments, HR/payroll, and spend-management claims precise.
 

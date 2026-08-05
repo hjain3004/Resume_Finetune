@@ -98,6 +98,16 @@ Before creating `config/company_bank/companies/`, present the user a bounded rev
 
 Pause until the user explicitly approves promotion. If the user rejects a claim, alias, scope, source, or signal, return that company to Track B, re-run Task 1's full 31-company validation after correction, and present the corrected review packet. Do not import a corpus merely because it is structurally valid.
 
+- [ ] **Step 1b: Verify sources online**
+
+Run:
+
+```bash
+.venv/bin/python -m scripts.company_bank verify-sources --inbox data/company_research/inbox
+```
+
+Import must not proceed while any source is `failed`. Any `inconclusive` sources require explicit user adjudication.
+
 - [ ] **Step 2: Run the importer once after approval**
 
 Capture a fresh UTC clock value for this command:

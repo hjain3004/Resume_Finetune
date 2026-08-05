@@ -1974,3 +1974,13 @@ bullet variants -- M8 Part B-style work for a separate session, not M10.
   what was built and committed at `0396bd3` before this change. Retroactively editing a
   finished plan would falsify the historical record, so the correction is recorded here
   instead.
+
+## 2026-08-05: Source Verification and Targets-Not-Floors Rule
+
+**Context:** On 2026-08-04, three research bundles passed all validation checks while carrying fabricated evidence. The existing validation verified that quotes exactly matched snapshots and hashes were correct, but no check bound the snapshot to the cited URL. A contributing factor was an instruction pairing mandatory minimum count floors with an anti-padding rule, inadvertently forcing fabrication when real public guidance was absent.
+
+**Decision:** We are closing the provenance gap with a two-layer remedy:
+1. **Offline Snapshot Lint:** Flags snapshots that are mostly quote with little surrounding page context (coverage ratio >= 0.6).
+2. **Online Source Verification:** A read-only CLI (`verify-sources`) refetches URLs and asserts that every cited quote appears in the live text. 
+
+**Instruction Rule:** Research prompts must treat per-company figures as **targets, not floors**. A company with no publicly accessible guidance produces a smaller dossier and records the gap. Fabricating a source to satisfy a count is a hard stop.
