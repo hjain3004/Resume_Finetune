@@ -126,7 +126,7 @@ def test_import_corrupt_quote(tmp_path):
     # Corrupt quote
     bundle_path = inbox / "acme" / "bundle.json"
     data = json.loads(bundle_path.read_text())
-    data["facts"][0]["quote"] = "corrupted"
+    data["facts"][0]["quote"] = "this corrupted quote is absent"
     bundle_path.write_text(json.dumps(data))
 
     with pytest.raises(CompanyBankValidationError, match="quote not found"):

@@ -28,7 +28,7 @@ def make_dossier(company_id: str, display_name: str, aliases: tuple[str, ...] = 
     )
     fact = CompanyFact(
         id="f1", kind=FactKind.PRODUCT, scope=CompanyScope(ScopeKind.COMPANY, display_name),
-        claim="Claim", quote="Quote", source_id="s1"
+        claim="Claim", quote="Synthetic fixture quote text", source_id="s1"
     )
     signal = TailoringSignal("sig1", "text", ("f1",), (PermittedUse.S0,))
 
@@ -155,17 +155,17 @@ def _make_signal_dossier():
     fact_co = CompanyFact(
         id="f1", kind=FactKind.PRODUCT,
         scope=CompanyScope(ScopeKind.COMPANY, "Acme"),
-        claim="c1", quote="q1", source_id="s1"
+        claim="c1", quote="Synthetic fixture quote one", source_id="s1"
     )
     fact_bu = CompanyFact(
         id="f2", kind=FactKind.PRODUCT,
         scope=CompanyScope(ScopeKind.BUSINESS_UNIT, "Cloud"),
-        claim="c2", quote="q2", source_id="s1"
+        claim="c2", quote="Synthetic fixture quote two", source_id="s1"
     )
     fact_rf = CompanyFact(
         id="f3", kind=FactKind.PRODUCT,
         scope=CompanyScope(ScopeKind.ROLE_FAMILY, "Frontend"),
-        claim="c3", quote="q3", source_id="s1"
+        claim="c3", quote="Synthetic fixture quote three", source_id="s1"
     )
     
     # Signals

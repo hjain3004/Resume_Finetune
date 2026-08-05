@@ -209,6 +209,55 @@ def test_long_quote(tmp_path):
         validate_research_bundle(bundle, bundle_dir)
 
 
+def _reseat(bundle_dir, snapshot_text, quote):
+    """Put snapshot_text in the product snapshot, point fact[0] at `quote`, re-hash."""
+    import hashlib
+
+    (bundle_dir / "sources" / "product.txt").write_text(snapshot_text, encoding="utf-8")
+    h = hashlib.sha256(snapshot_text.encode("utf-8")).hexdigest()
+    _rewrite(bundle_dir, lambda d: d["facts"][0].update(quote=quote))
+    _rewrite(bundle_dir, lambda d: d["sources"][0].update(content_sha256=h))
+    return parse_research_bundle(bundle_dir / "bundle.json")
+
+
+def test_quote_below_minimum_words_is_rejected(tmp_path):
+    """A quote truncated until it trivially matches cannot support a claim."""
+    bundle_dir = _copy_fixture(tmp_path)
+    bundle = _reseat(bundle_dir, "Acme builds widgets for enterprises.\n", "widgets")
+    with pytest.raises(CompanyBankValidationError, match="at least"):
+        validate_research_bundle(bundle, bundle_dir)
+
+
+def test_quote_at_minimum_words_is_accepted(tmp_path):
+    bundle_dir = _copy_fixture(tmp_path)
+    bundle = _reseat(
+        bundle_dir, "Acme builds widgets for enterprises.\n", "Acme builds widgets for"
+    )
+    validate_research_bundle(bundle, bundle_dir)
+
+
+def test_quote_ending_mid_word_is_rejected(tmp_path):
+    """Slicing a span out of running text is an artifact, not an excerpt."""
+    bundle_dir = _copy_fixture(tmp_path)
+    bundle = _reseat(
+        bundle_dir,
+        "Careers Contributors Publishers Advertisers Partners\n",
+        "Careers Contributors Publishers Adver",
+    )
+    with pytest.raises(CompanyBankValidationError, match="mid-word"):
+        validate_research_bundle(bundle, bundle_dir)
+
+
+def test_quote_ending_at_word_boundary_is_accepted(tmp_path):
+    bundle_dir = _copy_fixture(tmp_path)
+    bundle = _reseat(
+        bundle_dir,
+        "Careers Contributors Publishers Advertisers Partners\n",
+        "Careers Contributors Publishers Advertisers",
+    )
+    validate_research_bundle(bundle, bundle_dir)
+
+
 def test_ip_literal_host(tmp_path):
     bundle_dir = _copy_fixture(tmp_path)
     _rewrite(bundle_dir, lambda d: d["sources"][0].update(url="https://127.0.0.1/product"))

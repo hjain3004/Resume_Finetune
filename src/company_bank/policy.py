@@ -18,6 +18,20 @@ from src.company_bank.serde import CompanyBankValidationError
 
 VERIFIED_DATASET_HOSTS = frozenset({"www.wikidata.org", "raw.githubusercontent.com"})
 
+# A quote must be long enough to actually support its claim. Truncating a quote
+# until it trivially matches is the cheapest way to defeat evidence anchoring:
+# a shorter quote both matches more easily on re-fetch and lowers the snapshot
+# lint's coverage ratio, so both gates get quieter as the evidence gets weaker.
+#
+# The floor is a blunt instrument, deliberately set low. Degenerate quotes seen
+# in practice ran 1-3 words ("IPsec", "whole self", "culture"); short but
+# legitimate taglines run 4-6 ("Inspire Creativity, Enrich Life"). Four clears
+# every observed degenerate case without rejecting real headline copy. It is a
+# floor against obvious slicing, not evidence that a quote supports its claim --
+# that judgement stays with human review.
+MIN_QUOTE_WORDS = 4
+MAX_QUOTE_WORDS = 25
+
 SOURCE_FACT_KINDS = {
     SourceKind.OFFICIAL_COMPANY: frozenset({
         FactKind.IDENTITY, FactKind.INDUSTRY, FactKind.PRODUCT,
@@ -192,8 +206,15 @@ def _validate_semantics(obj) -> None:
         words = f.quote.split()
         if not words:
             raise CompanyBankValidationError(f"Fact {f.id} quote is empty")
-        if len(words) > 25:
-            raise CompanyBankValidationError(f"Fact {f.id} quote exceeds 25 words")
+        if len(words) > MAX_QUOTE_WORDS:
+            raise CompanyBankValidationError(
+                f"Fact {f.id} quote exceeds {MAX_QUOTE_WORDS} words"
+            )
+        if len(words) < MIN_QUOTE_WORDS:
+            raise CompanyBankValidationError(
+                f"Fact {f.id} quote has {len(words)} word(s); at least "
+                f"{MIN_QUOTE_WORDS} are required to support a claim"
+            )
 
     # 5. Signal checks
     signal_ids = set()
@@ -248,6 +269,18 @@ def validate_research_bundle(bundle: ResearchBundle, bundle_dir: Path) -> None:
         snap_content = (bundle_dir / snap_file).read_text(encoding="utf-8")
         if f.quote not in snap_content:
             raise CompanyBankValidationError(f"Fact {f.id} quote not found in snapshot")
+
+        # A quote that ends mid-word is a slicing artifact, not an excerpt.
+        # Only the trailing edge is checked: text extraction routinely runs a
+        # heading into the body ("...assessmentFor certain roles..."), so a
+        # leading-edge check would reject legitimate quotes.
+        idx = snap_content.find(f.quote)
+        after_idx = idx + len(f.quote)
+        after = snap_content[after_idx] if after_idx < len(snap_content) else ""
+        if after.isalnum():
+            raise CompanyBankValidationError(
+                f"Fact {f.id} quote ends mid-word in its snapshot"
+            )
 
 def validate_company_dossier(dossier: CompanyDossier) -> None:
     if dossier.expires_at != dossier.researched_at + timedelta(days=90):
