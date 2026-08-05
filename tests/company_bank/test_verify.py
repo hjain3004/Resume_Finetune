@@ -114,10 +114,74 @@ def test_cli(tmp_path):
         mock_instance = mock_fetcher_class.return_value
         mock_instance.fetch.return_value = FetchResult("https://test.com/a", 403, "", None)
         
-        args_verify = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=False, delay=2.0, report_foldable=False)
+        args_verify = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=False, delay=2.0, report_foldable=False, render=False)
         assert _handle_verify_sources(args_verify) == 0
         assert hash_dir(bundle_dir) == h_before
         
-        args_verify_strict = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=True, delay=2.0, report_foldable=False)
+        args_verify_strict = argparse.Namespace(inbox=None, bundle_path=bundle_dir / "bundle.json", json_out=None, strict=True, delay=2.0, report_foldable=False, render=False)
         assert _handle_verify_sources(args_verify_strict) == 2
         assert hash_dir(bundle_dir) == h_before
+
+class FakeResponse:
+    def __init__(self, status, url="https://test.com/a"):
+        self.status = status
+        self.url = url
+
+class FakePage:
+    def __init__(self, should_fail=False, text="render succeeds, quote found"):
+        self.should_fail = should_fail
+        self.text = text
+        self.url = "https://test.com/a"
+        self.waits = 0
+        
+    def goto(self, url, wait_until, timeout):
+        if self.should_fail:
+            raise Exception("Timeout")
+        return FakeResponse(200, url)
+        
+    def wait_for_timeout(self, ms):
+        self.waits += 1
+        
+    def evaluate(self, script):
+        return self.text
+
+@patch("scripts.company_bank.requests.get")
+@patch("scripts.company_bank.time.sleep")
+def test_render_fetcher(mock_sleep, mock_get):
+    from scripts.company_bank import RateLimitedFetcher
+    from unittest.mock import MagicMock
+    
+    # render succeeds, quote found -> verified (tested downstream but here we just check it returns the text)
+    # mock get for robots and plain fetch
+    mock_get.return_value = MagicMock(status_code=200, text="", url="https://test.com/a") # fallback is 200 but empty text
+    
+    page = FakePage(text="this is rendered text containing Q")
+    fetcher = RateLimitedFetcher(2.0, page=page)
+    res = fetcher.fetch("https://test.com/a", ("test.com",))
+    assert res.status == 200
+    assert res.text == "this is rendered text containing Q"
+    assert res.error is None
+    
+    # render fails/times out -> falls back to plain-fetch verdict
+    page = FakePage(should_fail=True)
+    fetcher = RateLimitedFetcher(2.0, page=page)
+    res = fetcher.fetch("https://test.com/a", ("test.com",))
+    assert res.status == 200
+    assert res.text == ""
+    
+    # --render off -> plain fetch
+    fetcher = RateLimitedFetcher(2.0, page=None)
+    res = fetcher.fetch("https://test.com/a", ("test.com",))
+    assert res.status == 200
+    
+    # robots disallow -> no render attempted
+    def robots_get(*args, **kwargs):
+        if args[0].endswith("robots.txt"):
+            return MagicMock(status_code=200, text="User-agent: *\nDisallow: /")
+        return MagicMock(status_code=200, text="plain", url="https://test.com/a")
+    mock_get.side_effect = robots_get
+    
+    page = FakePage(text="Should not render")
+    fetcher = RateLimitedFetcher(2.0, page=page)
+    res = fetcher.fetch("https://test.com/a", ("test.com",))
+    assert res.error == "blocked by robots.txt"

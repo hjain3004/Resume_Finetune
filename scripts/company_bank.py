@@ -69,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_sources_parser.add_argument("--strict", action="store_true")
     verify_sources_parser.add_argument("--delay", type=float, default=2.0)
     verify_sources_parser.add_argument("--report-foldable", action="store_true")
+    verify_sources_parser.add_argument("--render", action="store_true", help="Use Playwright to render JS-heavy pages")
     return parser
 
 
@@ -126,10 +127,11 @@ def _handle_import_corpus(args: argparse.Namespace) -> int:
 
 
 class RateLimitedFetcher:
-    def __init__(self, delay_seconds: float):
+    def __init__(self, delay_seconds: float, page=None):
         if delay_seconds < 2.0:
             raise ValueError("Delay must be at least 2.0s")
         self.delay = delay_seconds
+        self.page = page
         self.last_request = {}
         
     def fetch(self, url: str, official_domains: tuple[str, ...]) -> FetchResult:
@@ -166,6 +168,8 @@ class RateLimitedFetcher:
         except Exception:
             pass # ignore robots fetch fail
 
+        # Rendering is moved to after plain fetch
+
         try:
             resp = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
             self.last_request[host] = time.time()
@@ -187,11 +191,32 @@ class RateLimitedFetcher:
         if resp.status_code != 200:
             return FetchResult(url, resp.status_code, "", None)
             
-        # extract
         text = trafilatura.extract(resp.text)
         if not text:
             text = resp.text # fallback
             
+        if self.page and len(text) < 500:
+            try:
+                try:
+                    pw_resp = self.page.goto(url, wait_until="networkidle", timeout=20000)
+                except Exception:
+                    raise
+                self.page.wait_for_timeout(2000)
+                self.last_request[host] = time.time()
+
+                final_url = self.page.url
+                final_host = urlparse(final_url).netloc
+                if not any(final_host == d or final_host.endswith('.' + d) for d in official_domains):
+                    return FetchResult(url, None, "", "off-domain redirect")
+
+                pw_status = pw_resp.status if pw_resp else 200
+                if pw_status == 200:
+                    pw_text = self.page.evaluate('document.body.innerText')
+                    if pw_text:
+                        return FetchResult(url, pw_status, pw_text, None)
+            except Exception:
+                pass # fall back to plain-fetch verdict
+
         return FetchResult(url, resp.status_code, text, None)
 
 
@@ -224,10 +249,26 @@ def _handle_lint_snapshots(args: argparse.Namespace) -> int:
     return 0
 
 def _handle_verify_sources(args: argparse.Namespace) -> int:
+    page = None
+    playwright = None
+    browser = None
+    
+    if args.render:
+        from playwright.sync_api import sync_playwright
+        playwright = sync_playwright().start()
+        browser = playwright.chromium.launch()
+        page = browser.new_page(
+            viewport={"width": 1280, "height": 720},
+            user_agent="job-pipeline-source-verifier/0.1 (personal job-search research; contact via repo owner)",
+            locale="en-US"
+        )
+        
     try:
-        fetcher = RateLimitedFetcher(args.delay)
+        fetcher = RateLimitedFetcher(args.delay, page=page)
     except ValueError as e:
         print(str(e), file=sys.stderr)
+        if browser: browser.close()
+        if playwright: playwright.stop()
         return 2
 
     bundles = _gather_bundles(args)
@@ -274,6 +315,9 @@ def _handle_verify_sources(args: argparse.Namespace) -> int:
     
     if args.json_out:
         args.json_out.write_text(json.dumps(json_out, indent=2))
+        
+    if browser: browser.close()
+    if playwright: playwright.stop()
         
     if counts[SourceVerdict.FAILED] > 0:
         return 1
