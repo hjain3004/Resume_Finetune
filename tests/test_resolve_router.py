@@ -95,12 +95,12 @@ def test_resolve_falls_back_to_browser_when_a_generic_hostname_blocks_the_plain_
         result = resolve.resolve(
             "https://careers.example.com/job/1",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=_BROWSER_CLIENT,
         )
 
     mock_browser.assert_called_once_with(
-        "https://careers.example.com/job/1", session, _BROWSER_CLIENT
+        "https://careers.example.com/job/1", session, _BROWSER_CLIENT, provider_name="crawl4ai"
     )
     assert result == "BROWSER_RESOLVED"
 
@@ -113,7 +113,7 @@ def test_resolve_does_not_try_browser_when_toggle_enabled_but_no_client_supplied
 
     with patch.object(browser, "resolve") as mock_browser:
         result = resolve.resolve(
-            "https://careers.example.com/job/1", session, browser_resolver=True, browser_client=None
+            "https://careers.example.com/job/1", session, browser_backend="crawl4ai", browser_client=None
         )
 
     mock_browser.assert_not_called()
@@ -130,7 +130,7 @@ def test_resolve_does_not_try_browser_on_initial_fetch_failure_for_a_known_ats_h
         result = resolve.resolve(
             "https://boards.greenhouse.io/acme/jobs/123",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=_BROWSER_CLIENT,
         )
 
@@ -147,7 +147,7 @@ def test_resolve_tries_wrapper_map_before_generic_on_a_wrapper_hostname():
 
     with (
         patch.object(wrapper, "resolve_wrapper_map", return_value="WRAPPED") as mock_map,
-        patch.object(generic, "resolve") as mock_generic,
+        patch.object(generic, "extract_from_html") as mock_generic,
     ):
         result = resolve.resolve("https://careers.roblox.com/jobs/7142298", session)
 
@@ -166,7 +166,7 @@ def test_resolve_tries_gh_jid_unwrap_when_wrapper_map_misses():
     with (
         patch.object(wrapper, "resolve_wrapper_map", return_value=None),
         patch.object(wrapper, "resolve_gh_jid", return_value="UNWRAPPED") as mock_gh_jid,
-        patch.object(generic, "resolve") as mock_generic,
+        patch.object(generic, "extract_from_html") as mock_generic,
     ):
         result = resolve.resolve("https://amperity.com/careers/8040043?gh_jid=8040043", session)
 
@@ -191,7 +191,7 @@ def test_resolve_dispatches_jobright_with_fetched_html():
         "https://jobright.ai/jobs/info/abc",
         "<html>jobright page</html>",
         session,
-        browser_resolver=False,
+        browser_backend="off",
         browser_client=None,
     )
     assert result == "JOBRIGHT_RESOLVED"
@@ -207,11 +207,11 @@ def test_resolve_falls_back_to_generic_when_no_wrapper_matches():
     with (
         patch.object(wrapper, "resolve_wrapper_map", return_value=None),
         patch.object(wrapper, "resolve_gh_jid", return_value=None),
-        patch.object(generic, "resolve", return_value="GENERIC") as mock_generic,
+        patch.object(generic, "extract_from_html", return_value="GENERIC") as mock_generic,
     ):
         result = resolve.resolve("https://example.com/careers/123", session)
 
-    mock_generic.assert_called_once_with("https://example.com/careers/123", session)
+    mock_generic.assert_called_once_with("<html>plain careers page</html>")
     assert result == "GENERIC"
 
 
@@ -228,7 +228,7 @@ def test_resolve_does_not_try_browser_when_toggle_disabled_by_default():
     with (
         patch.object(wrapper, "resolve_wrapper_map", return_value=None),
         patch.object(wrapper, "resolve_gh_jid", return_value=None),
-        patch.object(generic, "resolve", return_value=None),
+        patch.object(generic, "extract_from_html", return_value=None),
         patch.object(browser, "resolve") as mock_browser,
     ):
         result = resolve.resolve("https://example.com/careers/123", session)
@@ -247,18 +247,18 @@ def test_resolve_falls_back_to_browser_when_generic_fails_and_toggle_enabled():
     with (
         patch.object(wrapper, "resolve_wrapper_map", return_value=None),
         patch.object(wrapper, "resolve_gh_jid", return_value=None),
-        patch.object(generic, "resolve", return_value=None),
+        patch.object(generic, "extract_from_html", return_value=None),
         patch.object(browser, "resolve", return_value="BROWSER_RESOLVED") as mock_browser,
     ):
         result = resolve.resolve(
             "https://example.com/careers/123",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=_BROWSER_CLIENT,
         )
 
     mock_browser.assert_called_once_with(
-        "https://example.com/careers/123", session, _BROWSER_CLIENT
+        "https://example.com/careers/123", session, _BROWSER_CLIENT, provider_name="crawl4ai"
     )
     assert result == "BROWSER_RESOLVED"
 
@@ -276,7 +276,7 @@ def test_resolve_does_not_try_browser_when_a_specific_resolver_fails():
         result = resolve.resolve(
             "https://boards.greenhouse.io/acme/jobs/123",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=_BROWSER_CLIENT,
         )
 
@@ -295,7 +295,7 @@ def test_resolve_passes_browser_resolver_toggle_and_client_through_to_jobright()
         result = resolve.resolve(
             "https://jobright.ai/jobs/info/abc",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=_BROWSER_CLIENT,
         )
 
@@ -303,7 +303,7 @@ def test_resolve_passes_browser_resolver_toggle_and_client_through_to_jobright()
         "https://jobright.ai/jobs/info/abc",
         "<html>jobright page</html>",
         session,
-        browser_resolver=True,
+        browser_backend="crawl4ai",
         browser_client=_BROWSER_CLIENT,
     )
     assert result == "JOBRIGHT_RESOLVED"

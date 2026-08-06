@@ -120,7 +120,7 @@ def test_resolve_uses_next_data_without_touching_browser_even_when_enabled():
         "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd",
         _jobright_html(),
         session,
-        browser_resolver=True,
+        browser_backend="crawl4ai",
         browser_client=_RaisingBrowserClient(),
     )
 
@@ -157,7 +157,7 @@ def test_resolve_falls_back_to_rendered_dom_when_neither_static_path_succeeds():
             "https://jobright.ai/jobs/info/6a0f128480bf0430c76309fd",
             "<html>nothing here, no ats link and no NEXT_DATA</html>",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=browser_client,
         )
 
@@ -181,7 +181,7 @@ def test_resolve_returns_none_when_rendered_dom_also_has_no_link():
             "https://jobright.ai/jobs/info/x",
             "<html>nothing here, no ats link and no NEXT_DATA</html>",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=object(),
         )
 
@@ -189,7 +189,7 @@ def test_resolve_returns_none_when_rendered_dom_also_has_no_link():
 
 
 def test_resolve_does_not_attempt_browser_when_no_client_is_supplied():
-    # browser_resolver=True but browser_client=None (e.g. a caller that hasn't
+    # browser_backend="crawl4ai" but browser_client=None (e.g. a caller that hasn't
     # wired the run-scoped client) must not call browser.fetch_html at all.
     session = MagicMock()
     with patch("src.resolve.browser.fetch_html") as mock_fetch_html:
@@ -197,7 +197,7 @@ def test_resolve_does_not_attempt_browser_when_no_client_is_supplied():
             "https://jobright.ai/jobs/info/x",
             "<html>nothing here, no ats link and no NEXT_DATA</html>",
             session,
-            browser_resolver=True,
+            browser_backend="crawl4ai",
             browser_client=None,
         )
 

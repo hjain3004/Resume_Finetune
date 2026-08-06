@@ -39,17 +39,12 @@ def route(url: str):
 
 
 def resolve(
-    url: str, session, *, browser_resolver: bool = False, browser_client=None
+    url: str, session, *, browser_backend: str = "off", browser_client=None
 ) -> ResolvedJD | None:
     response = session.get(url)
     if response.status_code != 200:
-        # A plain `requests` GET can be bot-blocked (e.g. qualtrics.com returns
-        # 410) where a rendered headless browser still succeeds. Only worth a
-        # tier-2 retry for hosts with no tier-1 resolver — a blocked ATS host
-        # (Tesla-style Akamai block) stays tier-3 rather than masking a real
-        # break.
-        if browser_resolver and browser_client is not None and route(url) is generic:
-            return browser.resolve(url, session, browser_client)
+        if browser_backend != "off" and browser_client is not None and route(url) is generic:
+            return browser.resolve(url, session, browser_client, provider_name=browser_backend)
         return None
 
     final_url = response.url
@@ -61,18 +56,20 @@ def resolve(
         unwrapped = wrapper.resolve_gh_jid(final_url, response.text, session)
         if unwrapped is not None:
             return unwrapped
-        result = generic.resolve(final_url, session)
+        
+        result = generic.extract_from_html(response.text)
         if result is not None:
             return result
-        if browser_resolver and browser_client is not None:
-            return browser.resolve(final_url, session, browser_client)
+            
+        if browser_backend != "off" and browser_client is not None:
+            return browser.resolve(final_url, session, browser_client, provider_name=browser_backend)
         return None
     if module is jobright:
         return jobright.resolve(
             final_url,
             response.text,
             session,
-            browser_resolver=browser_resolver,
+            browser_backend=browser_backend,
             browser_client=browser_client,
         )
     return module.resolve(final_url, session)
@@ -82,7 +79,7 @@ def attempt(
     url: str,
     session,
     *,
-    browser_resolver: bool = False,
+    browser_backend: str = "off",
     browser_client=None,
 ) -> ResolutionOutcome:
     """M6.10: typed orchestration boundary. Individual resolver modules keep
@@ -94,13 +91,19 @@ def attempt(
         result = resolve(
             url,
             session,
-            browser_resolver=browser_resolver,
+            browser_backend=browser_backend,
             browser_client=browser_client,
         )
     except requests.exceptions.RequestException as exc:
         return ResolutionOutcome.transient("http_transport", exc)
     except BrowserUnavailableError as exc:
         return ResolutionOutcome.transient("browser_unavailable", exc)
+    except Exception as exc:
+        # Catch provider errors dynamically so we don't import firecrawl in __init__.py unless necessary
+        exc_name = type(exc).__name__
+        if exc_name in ("ProviderTransientError", "ProviderAuthError", "ConfigurationError", "BudgetExhaustedError"):
+            return ResolutionOutcome.transient("provider_transient", exc)
+        raise
     return (
         ResolutionOutcome.resolved(result)
         if result is not None

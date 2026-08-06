@@ -267,10 +267,10 @@ def test_run_resolution_passes_browser_resolver_toggle_through():
     session = MagicMock()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
-        run_ingest.run_resolution(conn, session, browser_resolver=True)
+        run_ingest.run_resolution(conn, session, browser_backend="crawl4ai")
 
     mock_resolve.assert_called_once_with(
-        "https://example.com/job/1", session, browser_resolver=True, browser_client=None
+        "https://example.com/job/1", session, browser_backend="crawl4ai", browser_client=None
     )
 
 
@@ -283,10 +283,10 @@ def test_run_resolution_passes_browser_client_through():
     browser_client = object()
 
     with patch.object(run_ingest.resolve, "resolve", return_value=None) as mock_resolve:
-        run_ingest.run_resolution(conn, session, browser_resolver=True, browser_client=browser_client)
+        run_ingest.run_resolution(conn, session, browser_backend="crawl4ai", browser_client=browser_client)
 
     mock_resolve.assert_called_once_with(
-        "https://example.com/job/1", session, browser_resolver=True, browser_client=browser_client
+        "https://example.com/job/1", session, browser_backend="crawl4ai", browser_client=browser_client
     )
 
 
@@ -363,7 +363,7 @@ def test_run_resolution_calls_resolve_normally_when_manual_domains_empty():
         run_ingest.run_resolution(conn, session)
 
     mock_resolve.assert_called_once_with(
-        "https://careers.example.com/job/1", session, browser_resolver=False, browser_client=None
+        "https://careers.example.com/job/1", session, browser_backend="off", browser_client=None
     )
 
 

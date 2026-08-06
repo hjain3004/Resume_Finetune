@@ -215,7 +215,7 @@ def test_finalize_run_logs_but_does_not_raise_if_browser_close_fails(caplog):
 def test_main_finalizes_run_as_aborted_when_resolution_is_interrupted(tmp_path):
     db_path = str(tmp_path / "jobs.db")
 
-    def _fake_run_resolution(conn, session, *, browser_resolver, resolve_limit, browser_client, summary):
+    def _fake_run_resolution(conn, session, *, browser_backend, resolve_limit, browser_client, summary):
         summary.record(
             {"id": 1, "url": "https://boards.greenhouse.io/acme/jobs/1", "source": "tracker_vansh"},
             ResolutionOutcome.resolved(ResolvedJD("jd", "greenhouse")),
@@ -296,7 +296,7 @@ def test_resolve_only_unknown_location_reaches_resolver(tmp_path):
 
     called = {"resolution": False}
 
-    def _fake_resolution(conn, session, *, browser_resolver, resolve_limit, browser_client, summary):
+    def _fake_resolution(conn, session, *, browser_backend, resolve_limit, browser_client, summary):
         called["resolution"] = True
         return summary
 

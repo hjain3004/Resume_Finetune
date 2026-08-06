@@ -14,6 +14,24 @@ REQUEST_TIMEOUT = 15
 MIN_HOST_INTERVAL = 2.0
 
 
+from dataclasses import dataclass
+from typing import Protocol
+
+@dataclass(frozen=True)
+class Tier2Page:
+    markdown: str
+    html: str | None
+    final_url: str
+    status_code: int | None
+    provider: str
+    credits_used: int
+
+class Tier2Client(Protocol):
+    def start(self) -> None: ...
+    def crawl(self, url: str) -> Tier2Page: ...
+    def close(self) -> None: ...
+
+
 class PoliteSession:
     """Wraps a requests.Session with a per-hostname rate limit, timeout,
     redirect-following, and an honest User-Agent. Never retries within a run."""

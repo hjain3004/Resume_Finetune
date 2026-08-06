@@ -10,18 +10,18 @@ from src.discover.inbox_manual import InboxResult
 from src.models import DiscoveredJob, ResolvedJD
 
 
-def test_load_browser_resolver_flag_reads_top_level_key(tmp_path):
+def test_load_browser_backend_reads_top_level_key(tmp_path):
     config_path = tmp_path / "sources.yaml"
     config_path.write_text("browser_resolver: true\nsources:\n  tracker_vansh:\n    enabled: true\n")
 
-    assert run_ingest.load_browser_resolver_flag(str(config_path)) is True
+    assert run_ingest.load_browser_backend(str(config_path)) == "crawl4ai"
 
 
-def test_load_browser_resolver_flag_defaults_to_false_when_absent(tmp_path):
+def test_load_browser_backend_defaults_to_false_when_absent(tmp_path):
     config_path = tmp_path / "sources.yaml"
     config_path.write_text("sources:\n  tracker_vansh:\n    enabled: true\n")
 
-    assert run_ingest.load_browser_resolver_flag(str(config_path)) is False
+    assert run_ingest.load_browser_backend(str(config_path)) == "off"
 
 
 def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_path):
@@ -39,7 +39,7 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
             return_value=DiscoveryResult(tuple(jobs), (), ("tracker_vansh",), ()),
         ),
         patch.object(run_ingest.inbox_manual, "ingest", return_value=InboxResult(0, 0)),
-        patch.object(run_ingest, "load_browser_resolver_flag", return_value=True),
+        patch.object(run_ingest, "load_browser_backend", return_value="crawl4ai"),
         patch.object(run_ingest, "Crawl4AIBrowserClient", return_value=MagicMock()),
         patch.object(run_ingest.resolve, "resolve", return_value=ResolvedJD("jd", "browser")) as mock_resolve,
     ):
@@ -52,7 +52,7 @@ def test_main_passes_browser_resolver_toggle_to_resolve_and_records_tiers(tmp_pa
     mock_resolve.assert_called_once_with(
         "https://boards.greenhouse.io/acme/jobs/1",
         mock_resolve.call_args.args[1],
-        browser_resolver=True,
+        browser_backend="crawl4ai",
         browser_client=mock_resolve.call_args.kwargs["browser_client"],
     )
     assert mock_resolve.call_args.kwargs["browser_client"] is not None

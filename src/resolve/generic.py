@@ -114,13 +114,14 @@ def passes_quality(text: str) -> bool:
     return len(text) >= MIN_LENGTH and bool(_KEYWORD_RE.search(text))
 
 
+def extract_from_html(html_text: str) -> ResolvedJD | None:
+    text = trafilatura.extract(html_text) or ""
+    if not passes_quality(text):
+        return None
+    return ResolvedJD(jd_text=text, resolver=RESOLVER_NAME)
+
 def resolve(url: str, session) -> ResolvedJD | None:
     response = session.get(url)
     if response.status_code != 200:
         return None
-
-    text = trafilatura.extract(response.text) or ""
-    if not passes_quality(text):
-        return None
-
-    return ResolvedJD(jd_text=text, resolver=RESOLVER_NAME)
+    return extract_from_html(response.text)

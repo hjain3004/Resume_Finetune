@@ -18,7 +18,7 @@ import re
 
 from src import db
 from src.resolve.base import PoliteSession
-from src.run_ingest import load_browser_resolver_flag, run_resolution
+from src.run_ingest import load_browser_backend, run_resolution
 
 _CHROME_PATTERNS = (
     re.compile(r"h1b sponsor(?:ship)? likely", re.IGNORECASE),
@@ -62,8 +62,8 @@ def main(argv: list[str] | None = None) -> int:
 
     db.reset_for_reresolution(conn, job_ids)
     session = PoliteSession()
-    browser_resolver = load_browser_resolver_flag()
-    summary = run_resolution(conn, session, browser_resolver=browser_resolver)
+    browser_backend = load_browser_backend()
+    summary = run_resolution(conn, session, browser_backend=browser_backend)
     print(f"Re-resolved {summary.resolved} job(s), {summary.content_failed} failed.")
     return 0
 

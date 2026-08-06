@@ -1,0 +1,21 @@
+schema_version: 1
+limits:
+  monthly_credits: 800
+  daily_credits: 25
+  per_run_credits: 10
+  monthly_by_purpose:
+    resolution: 500
+    discovery: 250
+    research: 50
+cooldowns:
+  failed_url_hours: 24
+scrape:
+  max_age_ms: 86400000
+  timeout_seconds: 60
+  only_main_content: true
+  remove_base64_images: true
+  proxy: basic
+  location:
+    country: US
+    languages:
+      - en-US

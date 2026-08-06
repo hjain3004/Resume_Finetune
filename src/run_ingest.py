@@ -22,8 +22,8 @@ from src.discover import tracker_common
 from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
 from src.eligibility import EligibilityConfigError, load_eligibility_config as _load_eligibility_config
-from src.resolve.base import PoliteSession
-from src.resolve.browser import BrowserClient, CircuitBreakingBrowserClient, Crawl4AIBrowserClient
+from src.resolve.base import PoliteSession, Tier2Client
+from src.resolve.browser import CircuitBreakingBrowserClient, Crawl4AIBrowserClient
 from src.resolve.outcomes import ResolutionOutcome, ResolutionOutcomeKind, ResolutionSummary
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -85,11 +85,21 @@ def load_eligibility_config():
     return _load_eligibility_config()
 
 
-def load_browser_resolver_flag(path: str = "config/sources.yaml") -> bool:
-    """M6.5: top-level `browser_resolver` toggle, sibling to `sources:`.
-    Defaults to False (pre-M6.5 behavior) when absent."""
+def load_browser_backend(path: str = "config/sources.yaml") -> str:
+    """M9F: explicit backend selector migrating from legacy browser_resolver."""
     with open(path) as f:
-        return bool(yaml.safe_load(f).get("browser_resolver", False))
+        cfg = yaml.safe_load(f) or {}
+        
+    if "browser_backend" in cfg:
+        backend = cfg["browser_backend"]
+        if backend not in ("crawl4ai", "firecrawl", "off"):
+            raise ValueError(f"Invalid browser_backend: {backend}")
+        return backend
+        
+    if "browser_resolver" in cfg:
+        return "crawl4ai" if cfg["browser_resolver"] else "off"
+        
+    return "off"
 
 
 def load_freshness_config(path: str = "config/freshness.yaml") -> dict:
@@ -205,7 +215,7 @@ def finalize_run(
     run_outcome: str,
     fatal_error: BaseException | None,
     discovery_issues: tuple[DiscoveryIssue, ...] | list[DiscoveryIssue],
-    browser_client: BrowserClient | None,
+    browser_client: Tier2Client | None,
     new_count: int,
     filtered_count: int,
     eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None = None,
@@ -282,7 +292,7 @@ def run_resolution(
     conn,
     session,
     *,
-    browser_resolver: bool = False,
+    browser_backend: str = "off",
     resolve_limit: int | None = None,
     browser_client=None,
     summary: ResolutionSummary | None = None,
@@ -316,7 +326,7 @@ def run_resolution(
 
         try:
             outcome = resolve.attempt(
-                row["url"], session, browser_resolver=browser_resolver, browser_client=browser_client
+                row["url"], session, browser_backend=browser_backend, browser_client=browser_client
             )
         except Exception as exc:
             logger.exception("unexpected resolve error for row %s (%s)", row["id"], row["url"])
@@ -357,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.error("invalid eligibility config: %s", exc)
         return 1
     freshness_cfg = load_freshness_config()
-    browser_resolver = load_browser_resolver_flag()
+    browser_backend = load_browser_backend()
 
     db_path = ":memory:" if args.dry_run else args.db
     conn = db.get_connection(db_path)
@@ -370,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
     eligibility_summary: dict[str, prefilter.EligibilityGateSummary] = {}
     resolution_summary = ResolutionSummary()
     audit_result = None
-    browser_client: BrowserClient | None = None
+    browser_client: Tier2Client | None = None
     session = None
     exit_code = 0
     run_outcome = "completed"
@@ -428,12 +438,26 @@ def main(argv: list[str] | None = None) -> int:
 
             if db.eligibility_rows(conn, Status.DISCOVERED):
                 session = PoliteSession()
-                if browser_resolver:
+                if browser_backend == "crawl4ai":
                     browser_client = CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
+                elif browser_backend == "firecrawl":
+                    from src.firecrawl.client import FirecrawlClient
+                    import yaml
+                    with open("config/firecrawl.yaml") as f:
+                        fc_cfg = yaml.safe_load(f)
+                    # For now, just raw client. The budget ledger wraps it.
+                    # We will implement a wrapper inside client.py if needed, 
+                    # but let's just instantiate FirecrawlClient for now.
+                    # To be fully compliant, we should use BudgetAwareTier2Client.
+                    from src.firecrawl.budget import BudgetManager
+                    from src.firecrawl.client import BudgetAwareTier2Client
+                    budget = BudgetManager(fc_cfg)
+                    browser_client = CircuitBreakingBrowserClient(BudgetAwareTier2Client(FirecrawlClient(fc_cfg), budget, "resolution", args.dry_run))
+                    
                 run_resolution(
                     conn,
                     session,
-                    browser_resolver=browser_resolver,
+                    browser_backend=browser_backend,
                     resolve_limit=args.resolve_limit,
                     browser_client=browser_client,
                     summary=resolution_summary,

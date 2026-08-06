@@ -129,7 +129,7 @@ def resolve(
     html_text: str,
     session,
     *,
-    browser_resolver: bool = False,
+    browser_backend: str = "off",
     browser_client=None,
 ) -> ResolvedJD | None:
     """M6.10: static-first ordering. A rendered-DOM browser fetch is spent
@@ -145,7 +145,7 @@ def resolve(
     if job is not None:
         return _resolved_from_jobright_payload(url, job)
 
-    if browser_resolver and browser_client is not None:
+    if browser_backend != "off" and browser_client is not None:
         from src.resolve import browser  # deferred: avoids circular import at load time
 
         rendered_html = browser.fetch_html(url, session, browser_client)

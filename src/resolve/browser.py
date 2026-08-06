@@ -21,10 +21,11 @@ from __future__ import annotations
 import asyncio
 from typing import Protocol
 
-from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig, CrawlResult
+from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
 
 from src.models import ResolvedJD
 from src.resolve import generic
+from src.resolve.base import Tier2Page, Tier2Client
 
 RESOLVER_NAME = "browser"
 
@@ -34,12 +35,6 @@ class BrowserUnavailableError(RuntimeError):
     orchestration's point of view -- never a content judgment about a page."""
 
 
-class BrowserClient(Protocol):
-    def start(self) -> None: ...
-
-    def crawl(self, url: str) -> CrawlResult: ...
-
-    def close(self) -> None: ...
 
 
 class Crawl4AIBrowserClient:
@@ -66,12 +61,20 @@ class Crawl4AIBrowserClient:
             self._unavailable_reason = f"{type(exc).__name__}: {exc}"
             raise BrowserUnavailableError(self._unavailable_reason) from exc
 
-    def crawl(self, url: str) -> CrawlResult:
+    def crawl(self, url: str) -> Tier2Page:
         self.start()
         assert self._crawler is not None
         try:
-            return self._loop.run_until_complete(
+            result = self._loop.run_until_complete(
                 self._crawler.arun(url=url, config=CrawlerRunConfig(cache_mode=CacheMode.BYPASS))
+            )
+            return Tier2Page(
+                markdown=result.markdown,
+                html=result.html,
+                final_url=url,
+                status_code=None,
+                provider="crawl4ai",
+                credits_used=0
             )
         except Exception as exc:
             self._unavailable_reason = f"{type(exc).__name__}: {exc}"
@@ -87,12 +90,12 @@ class Crawl4AIBrowserClient:
 
 
 class CircuitBreakingBrowserClient:
-    """Wraps a BrowserClient so the first BrowserUnavailableError permanently
+    """Wraps a Tier2Client so the first BrowserUnavailableError permanently
     trips the breaker for the rest of this run: later calls fail fast with
     the same error, without ever calling the underlying client's start()/
     crawl() again."""
 
-    def __init__(self, client: BrowserClient) -> None:
+    def __init__(self, client: Tier2Client) -> None:
         self._client = client
         self._tripped_reason: str | None = None
 
@@ -105,7 +108,7 @@ class CircuitBreakingBrowserClient:
             self._tripped_reason = str(exc)
             raise
 
-    def crawl(self, url: str) -> CrawlResult:
+    def crawl(self, url: str) -> Tier2Page:
         if self._tripped_reason is not None:
             raise BrowserUnavailableError(self._tripped_reason)
         try:
@@ -118,24 +121,24 @@ class CircuitBreakingBrowserClient:
         self._client.close()
 
 
-def fetch_markdown(url: str, session, browser_client: BrowserClient) -> str | None:
+def fetch_markdown(url: str, session, browser_client: Tier2Client) -> str | None:
     session.throttle(url)
     result = browser_client.crawl(url)
-    if not result.success:
+    if not result.markdown:
         return None
     return str(result.markdown)
 
 
-def fetch_html(url: str, session, browser_client: BrowserClient) -> str | None:
+def fetch_html(url: str, session, browser_client: Tier2Client) -> str | None:
     session.throttle(url)
     result = browser_client.crawl(url)
-    if not result.success:
+    if not result.html:
         return None
     return str(result.html)
 
 
-def resolve(url: str, session, browser_client: BrowserClient) -> ResolvedJD | None:
+def resolve(url: str, session, browser_client: Tier2Client, provider_name: str = RESOLVER_NAME) -> ResolvedJD | None:
     text = fetch_markdown(url, session, browser_client)
     if text is None or not generic.passes_quality(text):
         return None
-    return ResolvedJD(jd_text=text, resolver=RESOLVER_NAME, jd_quality="ats")
+    return ResolvedJD(jd_text=text, resolver=provider_name, jd_quality="ats")
