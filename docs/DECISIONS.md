@@ -2082,3 +2082,9 @@ and enhanced/auto proxies are prohibited in unattended ingestion.
 This decision changes target documentation only. No code, dependency, config, database,
 credential, scheduled job, or live ingestion behavior changed. Full design:
 `docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`.
+
+## 2026-08-06 — M9F-0 Candidate optimization: Firecrawl Batch Scrape
+
+Firecrawl batch scrape (`/v2/batch/scrape`) is out of scope for M9F-0. It saves no credits (still 1 credit per page) and conflicts with the requirement that `PoliteSession.throttle(url)` precede each fetch, since batching delegates per-host timing to Firecrawl.
+
+However, since the A2 demand measurement demonstrated meaningful tier-2 volume (194 hits in 8 weeks), batch scraping is recorded as a candidate optimization for a later milestone. Any future implementation must preserve per-host spacing and explicitly design an async reserve/reconcile budget flow.
