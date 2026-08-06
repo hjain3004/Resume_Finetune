@@ -1,7 +1,7 @@
 # Rendered Source Verification — Proposal
 
 **Date:** 2026-08-05
-**Status:** Proposed — awaiting user approval
+**Status:** Approved and implemented; 2026-08-06 hardening repair closed verifier defects
 **Extends:** `2026-08-05-m8-source-verification-design.md`
 
 ## 1. The ask

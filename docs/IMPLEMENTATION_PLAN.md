@@ -159,15 +159,21 @@ The approved Company Knowledge Bank supporting subsystem is split into three ord
 
 1. **Track A — Gemini foundation:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-foundation.md`
-   Acceptance criteria:
+   Status: complete. Acceptance criteria:
    - Complete implementation of Track A offline foundation, including model, policy, and validation.
    - 100% test coverage.
    - No integration with live DB or web research.
 2. **Track B — Claude Web research:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-web-research.md`
+   Status: local research in progress. The approved seed corpus is 31 companies; 21/31
+   ignored inbox bundles exist before Batches 5/6. These are staged research proposals,
+   not canonical imports.
 3. **Track C — Gemini seed-corpus adoption:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-adoption.md`
+   Status: incomplete.
 
-All three are approved plans, not implemented status. Track A and Track C are separate
-milestones/sessions. Track B writes ignored research proposals only. Live S0/S2/G3
-integration remains outside all three tracks and requires the broader live-tailoring plan.
+Source verification and rendered fallback are approved and implemented; the 2026-08-06
+hardening repair closes fail-closed, redirect, throttling, report-output, and staging
+boundary defects in that verifier. Track C canonical adoption, S0/S2/G3 integration, live
+tailoring, CLI integration, and DB integration remain incomplete and require their own
+scoped milestones/sessions. Track B writes ignored research proposals only.

@@ -109,9 +109,13 @@ M8 item 2 rewrites the loader to schema v0.3.0 and authors the deterministic sec
 The M8 phrasing rework is complete: both base variants cut to 13 bullets on a measured one-page budget; `src/profile_lint.py` added and wired into `scripts/validate_profile.py`; the emphasis pipeline (`src/render/emphasis.py`, `RenderBullet.emphasis`, `\textbf` in the LaTeX arm, markdown in the RenderCV arm) added.
 What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
 The Company Knowledge Bank design was approved on 2026-08-04 as a supporting M8 subsystem.
-Its foundation, separate 30-company web-research run, and corpus adoption are fully planned
-but not yet implemented; completing the bank will still not complete or integrate the live
-tailoring workflow.
+Track A foundation is complete. The approved seed corpus is 31 companies. Track B is local
+research-in-progress only: 21/31 ignored inbox bundles exist before Batches 5/6, and no raw
+research inbox artifact should be Git-tracked. Source verification and rendered fallback are
+approved and implemented; the 2026-08-06 hardening repair closes fail-closed, redirect,
+throttling, report-output, and staging-boundary defects in that verifier. Track C canonical
+adoption, S0/S2/G3 integration, live tailoring, CLI integration, and DB integration remain
+incomplete and require their own scoped milestone.
 
 
 ## Upgrades (M9–M12)
@@ -149,4 +153,4 @@ rejected; LinkedIn alert emails remain permitted.
   baseline captured read-only. M9D-1 through M9D-5 remain unimplemented.
 - 2026-08-04: M10 completed (LaTeX selected) and M8 phrasing rework completed. Statuses set from verified repo state. The previously circulated baseline of "785 tests passing" and "11 RenderCV violations" were stale; the verified baseline is now 883 passed / 1 deselected, and 14 RenderCV violations (due to later overlap and page-bleed checks).
 
-Company Bank foundation complete; research corpus, adoption, and S0/S2 integration pending.
+- 2026-08-06: Company Bank Track A foundation complete; approved seed corpus is 31 companies; Track B local ignored inbox research is in progress at 21/31 before Batches 5/6. Source verification and rendered fallback are approved and implemented, with hardening repairs closed. Track C/canonical adoption, S0/S2/G3 integration, live tailoring, CLI integration, and DB integration remain incomplete.

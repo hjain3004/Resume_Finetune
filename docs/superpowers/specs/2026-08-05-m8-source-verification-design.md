@@ -1,7 +1,7 @@
 # M8 Research Source Verification — Design
 
 **Date:** 2026-08-05
-**Status:** Proposed — awaiting user approval
+**Status:** Approved and implemented; 2026-08-06 hardening repair closed verifier defects
 **Phase:** 3 (M8 Tailoring), Company Knowledge Bank subsystem
 **Supersedes nothing.** Extends `2026-08-04-m8-company-knowledge-bank-design.md`.
 
