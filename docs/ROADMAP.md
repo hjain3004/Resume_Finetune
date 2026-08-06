@@ -124,13 +124,19 @@ unblocked now that M7 is complete; M9 item 3 (hot lane) is gated on Phase 2 exit
 M10 is complete: both arms built, L7 implemented including `check_page_count`, `check_no_overlap`, and `check_within_page`; LaTeX selected as the production renderer. M10's completion satisfies the renderer dependency for M8. M11–M12 by appetite/trigger.
 
 ## Hybrid Discovery v2 (M9D)
-**Status: M9D-0 COMPLETE; M9D-1..M9D-5 NOT IMPLEMENTED.**
+**Status: M9D-0 COMPLETE; M9D-1..M9D-5 and M9F-0..M9F-3 NOT IMPLEMENTED.**
 The current three-tracker discovery layer is not considered the final coverage architecture.
 M9D-0 added checkpoint/source-failure correctness and baseline reporting. Remaining M9D work
 adds multi-source provenance, direct ATS and authorized alert sources, a bounded crawler
 bake-off, and an agentic source scout operating in shadow mode behind a deterministic
 acceptance gateway. Detailed design:
 `docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+
+Firecrawl adoption was approved as a target on 2026-08-06. M9F-0/M9F-1 may add and evaluate
+a credit-bounded known-URL tier-2 REST backend before M9D-1; Firecrawl Map/Crawl/Search
+discovery remains staged and blocked on M9D-1. No Firecrawl runtime integration is currently
+implemented. Detailed design:
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`.
 
 M9D is a family of one-session sub-milestones, not one giant implementation session. Before
 starting M9D-1, create and approve a dedicated plan for M9D-1 only. M8 remains governed by
@@ -154,3 +160,6 @@ rejected; LinkedIn alert emails remain permitted.
 - 2026-08-04: M10 completed (LaTeX selected) and M8 phrasing rework completed. Statuses set from verified repo state. The previously circulated baseline of "785 tests passing" and "11 RenderCV violations" were stale; the verified baseline is now 883 passed / 1 deselected, and 14 RenderCV violations (due to later overlap and page-bleed checks).
 
 - 2026-08-06: Company Bank Track A foundation complete; approved seed corpus is 31 companies; Track B local ignored inbox research is in progress at 21/31 before Batches 5/6. Source verification and rendered fallback are approved and implemented, with hardening repairs closed. Track C/canonical adoption, S0/S2/G3 integration, live tailoring, CLI integration, and DB integration remain incomplete.
+- 2026-08-06: Firecrawl integration design approved as target-only M9F work. M9F-0/M9F-1
+  cover a credit-bounded known-URL REST backend and bake-off; Map/Crawl/Search discovery
+  remains blocked on M9D-1. No Firecrawl runtime integration is implemented yet.

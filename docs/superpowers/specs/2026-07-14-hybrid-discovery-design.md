@@ -6,6 +6,13 @@
 
 **Decision date:** 2026-07-14
 
+**Amendment (2026-08-06):** Firecrawl is now the preferred hosted candidate for tier-2
+known-URL rendering and post-M9D-1 bounded discovery. Exact budgets, prohibited features,
+REST boundary, bake-off gate, and M9F sequencing are authoritative in
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`. Where this
+older design names Crawl4AI deep crawl versus Crawlee as the next bake-off, the M9F amendment
+supersedes that order.
+
 ## 1. Context
 
 The implemented discovery layer has three automatic sources—Vansh, Simplify, and
@@ -25,8 +32,8 @@ without allowing nondeterministic output to mutate the production job ledger dir
 - Preserve deterministic validation, provenance, deduplication, etiquette, replayability,
   and database writes.
 - Measure the marginal value, freshness, precision, reliability, and cost of every source.
-- Allow Crawl4AI, Crawlee, and Apify to coexist only where their responsibilities do not
-  overlap.
+- Allow Crawl4AI, Firecrawl, Crawlee, and Apify to coexist only where their responsibilities
+  do not overlap and measured evidence justifies each one.
 - Introduce capability incrementally, with shadow-mode evidence before autonomous promotion.
 
 ## 3. Non-goals
@@ -95,14 +102,16 @@ The strategy router chooses one mechanism per fetch:
 |---|---|
 | Structured ATS/API | `requests` plus a typed adapter |
 | Static job page | existing HTTP/generic resolver |
-| JS-heavy individual page | existing Crawl4AI tier-2 resolver |
-| Small approved careers-site traversal | evaluate Crawl4AI deep crawl first |
-| Durable multi-page queues, routing, or crash recovery | Crawlee Python, only if bake-off wins |
+| JS-heavy individual page | one selected tier-2 backend: current Crawl4AI or Firecrawl Scrape after M9F bake-off |
+| Approved careers-site URL inventory | Firecrawl Map after M9D-1 |
+| Small approved careers-site traversal | bounded Firecrawl Crawl after M9D-1 |
+| Durable queues/routing/recovery not met by Firecrawl | Crawlee Python, only after a separate evidence gate |
 | Cloud execution | allowlisted, version-pinned Apify Actor |
 
-Crawlee and Crawl4AI must not fetch the same URL in the same stage. If Crawlee is adopted,
-its primary role is discovering leaf job URLs; the existing resolution router then processes
-those URLs and may use Crawl4AI as a leaf-page fallback.
+Production must not fetch the same URL through multiple browser/crawler backends in the same
+stage. The isolated M9F comparison sample is the only double-fetch exception. If Crawlee is
+eventually adopted, its primary role is durable discovery orchestration rather than leaf-page
+content extraction; the existing resolution router still owns leaf URLs.
 
 Every crawl has explicit `allowed_domains`, allowed path patterns, maximum depth, pages,
 elapsed time, response bytes, and cost. The existing per-host delay and no-evasion rules
@@ -117,7 +126,7 @@ The scout runs separately from `src.run_ingest`, initially on demand or daily/we
 - generate search queries from candidate preferences and coverage gaps;
 - propose RSS, sitemap, API, or crawler seeds;
 - investigate source drift and propose configuration changes;
-- use web search or allowlisted Apify tools within a run budget.
+- use Firecrawl Search or allowlisted Apify tools within a run budget.
 
 It may not approve its own source, edit production configuration, call `src.db`, or bypass
 the deterministic importer.
@@ -228,11 +237,15 @@ Each item is a separate milestone/session:
 2. **M9D-1 — Provenance foundation:** source registry, candidate staging, observations, and
    idempotent migration.
 3. **M9D-2 — Direct-source breadth:** ATS watchlists and authorized alert-email ingestion.
-4. **M9D-3 — Crawler bake-off:** bounded Crawl4AI deep crawl versus Crawlee Python on saved
-   fixtures and a small approved live sample; adopt at most one multi-page orchestrator.
-5. **M9D-4 — Agentic scout shadow:** proposal contract, budgets, injection isolation,
+4. **M9F-0/M9F-1 — Known-URL Firecrawl evaluation:** implement a disabled-by-default REST
+   backend and local credit ledger, then compare Firecrawl Scrape with Crawl4AI on a fixed,
+   user-approved sample; select one production tier-2 backend.
+5. **M9D-3/M9F-2 — Bounded discovery:** after M9D-1, use Firecrawl Map/Crawl on approved
+   domains with staged output; evaluate Crawlee only if material queue/recovery needs remain.
+6. **M9D-4/M9F-3 — Agentic scout shadow:** proposal contract, Firecrawl Search, budgets,
+   injection isolation,
    deterministic verifier, and no production promotion.
-6. **M9D-5 — Controlled external execution:** optional allowlisted Apify integration and
+7. **M9D-5 — Controlled external execution:** optional allowlisted Apify integration and
    user-approved source promotion, only if shadow metrics justify it.
 
 No M9D implementation starts from this design alone. A dedicated implementation-plan task
@@ -250,9 +263,10 @@ Lowest operational risk, but source discovery remains manual and coverage grows 
 Maximum flexibility, but unacceptable reproducibility, policy, idempotency, prompt-injection,
 and cost risk. Rejected.
 
-### Crawlee plus Crawl4AI on every source
+### Multiple browser/crawler backends on every source
 
-Feature-rich but duplicates browser, retry, concurrency, and queue ownership. Rejected.
+Feature-rich but duplicates browser, retry, concurrency, queue ownership, and paid fetches.
+Rejected. Production selects one mechanism per fetch.
 
 ### Selected design: agentic proposals plus deterministic acceptance
 

@@ -63,13 +63,23 @@ Sub-milestones, each requiring its own implementation plan and session:
 2. **M9D-1 provenance foundation:** source registry, staged candidates, source runs, and
    many-to-one job observations through an idempotent migration.
 3. **M9D-2 direct-source breadth:** approved ATS watchlists and authorized alert emails.
-4. **M9D-3 crawler bake-off:** test bounded Crawl4AI deep crawl against Crawlee Python on
-   fixtures and an approved live sample. Crawlee is added only if it materially wins on
-   queues/routing/recovery; the JavaScript Crawlee package is not the default.
-5. **M9D-4 agentic scout shadow:** versioned proposal contract, budgets, provenance,
+4. **M9F-0/M9F-1 Firecrawl resolution adoption:** add a disabled-by-default Firecrawl REST
+   tier-2 backend through existing `requests`, enforce 800/month, 25/day, and 10/run local
+   credit caps, remove the generic resolver's duplicate GET, then run a user-approved 20-URL
+   Firecrawl-vs-Crawl4AI bake-off. Select exactly one production tier-2 backend from evidence.
+5. **M9D-3 / M9F-2 crawler adoption (after M9D-1):** use Firecrawl Map and bounded Crawl on
+   approved careers domains with staged output only. Crawlee Python remains deferred unless
+   persistent queues/routing/recovery still show material unmet value after Firecrawl.
+6. **M9D-4 / M9F-3 agentic scout shadow:** versioned proposal contract, Firecrawl Search,
+   budgets, provenance,
    prompt-injection isolation, deterministic verifier, and zero canonical job writes.
-6. **M9D-5 controlled external execution:** optional allowlisted/version-pinned Apify Actor
+7. **M9D-5 controlled external execution:** optional allowlisted/version-pinned Apify Actor
    runs and explicit user source promotion, only when shadow metrics justify them.
+
+Firecrawl details and milestone boundaries are authoritative in
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`. M9F-0 and M9F-1
+may improve resolution before M9D-1 because they operate only on already-known job rows;
+Firecrawl discovery remains blocked on M9D-1.
 
 Cross-cutting acceptance: tests never touch the network; all candidate imports are
 reject-on-any-error; replay is idempotent; crawl policy is enforced for every transport;

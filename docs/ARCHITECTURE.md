@@ -8,7 +8,8 @@ Implementation notation: sections labeled **CURRENT** describe deployed code. Se
 labeled **TARGET — M9D** are approved architecture not yet implemented beyond the explicitly
 marked M9D-0 checkpoint-correctness baseline. A target section does not authorize skipping
 its implementation milestone, migration, tests, or user smoke gate. The detailed target design is
-`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`.
+`docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md`, amended for Firecrawl by
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`.
 
 ---
 
@@ -137,11 +138,16 @@ No ORM (raw `sqlite3` with helper functions). No async in the pipeline proper (d
 job; simplicity wins) — `resolve/browser.py` is the one exception, and it contains its
 async usage entirely behind a synchronous `asyncio.run()` wrapper.
 
-**TARGET — M9D dependency gate:** Crawlee Python and Apify are candidates, not approved
-dependencies. First evaluate Crawl4AI deep crawling against saved fixtures. Add Crawlee only
-if persistent queues, route handlers, or crash recovery show a material advantage. Apify MCP
-is an interactive scout integration; unattended runs require allowlisted, version-pinned
-Actors and deterministic local validation. No JavaScript sidecar is the default design.
+**TARGET — M9D/M9F dependency gate:** Firecrawl hosted REST integration is approved as a
+target through the existing `requests` dependency; it is not implemented and does not approve
+`firecrawl-py`. M9F first evaluates Firecrawl Scrape against the current Crawl4AI tier-2
+backend, then uses Map/Crawl/Search only behind the M9D provenance gateway. Crawlee Python and
+Apify remain candidates, not approved dependencies. Add Crawlee only if persistent queues,
+route handlers, or crash recovery show a material advantage after Firecrawl evaluation.
+Apify MCP remains an interactive scout integration; unattended runs require allowlisted,
+version-pinned Actors and deterministic local validation. No JavaScript sidecar is the
+default design. Detailed M9F design:
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`.
 
 ## 4. Data model
 
@@ -429,14 +435,18 @@ Transport selection is exclusive per fetch:
 |---|---|
 | structured ATS/API | `requests` + typed adapter |
 | static leaf job page | existing HTTP/generic resolver |
-| JS-heavy leaf page | Crawl4AI tier-2 resolver |
-| bounded small-site traversal | evaluate Crawl4AI deep crawl first |
-| durable multi-page queue/routing | Crawlee Python only if the M9D bake-off wins |
+| JS-heavy leaf page | one selected tier-2 backend: CURRENT Crawl4AI; TARGET Firecrawl Scrape after M9F bake-off |
+| approved-domain URL inventory | TARGET Firecrawl Map after M9D-1 |
+| bounded small-site traversal | TARGET Firecrawl Crawl after M9D-1 |
+| durable multi-page queue/routing not met by Firecrawl | Crawlee Python only after a separate evidence gate |
 | cloud execution | allowlisted, pinned Apify Actor -> staging only |
 
-Crawlee and Crawl4AI do not fetch the same URL in the same stage. All crawls have explicit
-domain/path allowlists and page/depth/time/byte/cost budgets. The ≥2-second same-host delay,
-honest User-Agent, no-login, and no-evasion rules apply regardless of library or platform.
+Production does not fetch the same URL through multiple browser/crawler backends in the same
+stage. M9F's one-time fixed-sample bake-off is the only comparison exception. All crawls have
+explicit domain/path allowlists and page/depth/time/byte/cost budgets. The ≥2-second same-host
+delay, honest User-Agent, no-login, and no-evasion rules apply regardless of library or
+platform. Firecrawl uses basic fetching only; Agent, Interact, JSON/LLM extraction, actions,
+profiles, and enhanced/auto proxies are not approved for unattended ingestion.
 
 The deterministic acceptance gateway validates schemas and URLs, applies policy, checks
 content quality, canonicalizes, deduplicates, and atomically writes observations/jobs.

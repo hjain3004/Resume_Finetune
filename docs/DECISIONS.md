@@ -2055,3 +2055,30 @@ wording of any one instruction.
   - Stripe's engineering blog returned inconclusive due to an off-domain redirect during verification rendering.
 - **Action:** Instead of fabricating sources or bypassing the bot walls via unapproved dependencies, we built valid, albeit smaller, bundles for these companies based only on the pages we could fetch reliably (e.g., Uber About/Offerings, Airbnb About/Careers, Stripe About/Jobs). This follows the "honest dossier" policy to strictly use what is available rather than degrade evidence.
 
+## 2026-08-06 — Firecrawl approved as a credit-bounded tier-2 and staged-discovery target
+
+The Firecrawl CLI, skills, and MCP connection were installed and verified with a live scrape.
+Product integration will not shell out to the CLI or depend on interactive MCP credentials;
+it will use hosted Firecrawl REST through the existing `requests` dependency and a runtime
+`FIRECRAWL_API_KEY`. No SDK dependency is approved.
+
+**Known-URL decision:** keep structured ATS/API and plain-HTTP resolution first. M9F-0 may add
+a disabled-by-default Firecrawl Scrape backend behind a project-owned tier-2 protocol and an
+atomic local credit ledger. M9F-1 must compare it against Crawl4AI on one user-approved 20-URL
+sample before Firecrawl can become the default. Production selects one backend and never runs
+a permanent Crawl4AI-then-Firecrawl chain.
+
+**Discovery decision:** direct ATS watchlists remain preferred. Firecrawl Map and bounded
+Crawl may feed staged candidates only after M9D-1 exists; Firecrawl Search may create
+on-demand source proposals. No Firecrawl discovery output writes canonical jobs or approves
+its own source.
+
+**Budget:** automatic use is capped locally at 800 credits/month, 25/day, and 10/run, with
+monthly purpose allocations of 500 resolution, 250 discovery, and 50 research. Budget,
+cooldown, auth, and provider failures do not consume job content-failure attempts. Basic
+markdown scraping only is approved; Agent, Interact, JSON/LLM extraction, actions, profiles,
+and enhanced/auto proxies are prohibited in unattended ingestion.
+
+This decision changes target documentation only. No code, dependency, config, database,
+credential, scheduled job, or live ingestion behavior changed. Full design:
+`docs/superpowers/specs/2026-08-06-firecrawl-ingestion-integration-design.md`.
