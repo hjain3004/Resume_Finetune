@@ -2044,3 +2044,14 @@ by producing it. Prompt wording has been tightened twice and the failure mode re
 each time in a different mechanical form. The rule change above targets the mechanism
 (no automated deletion/rewriting on a verification result, anywhere) rather than the
 wording of any one instruction.
+
+### M8 Company Bank Web Research - Track B, Batch 4
+
+- **Date:** 2026-08-06
+- **Decision:** Assembled honest dossiers for Uber, Airbnb, Stripe, Databricks, and Snowflake, skipping hard-to-fetch sources.
+- **Context:** Automated bot walls blocked several URLs:
+  - Uber's engineering blog and careers page returned HTTP 406.
+  - Airbnb's engineering blog (airbnb.io) is hosted off-domain (medium.com), which is strictly unapproved.
+  - Stripe's engineering blog returned inconclusive due to an off-domain redirect during verification rendering.
+- **Action:** Instead of fabricating sources or bypassing the bot walls via unapproved dependencies, we built valid, albeit smaller, bundles for these companies based only on the pages we could fetch reliably (e.g., Uber About/Offerings, Airbnb About/Careers, Stripe About/Jobs). This follows the "honest dossier" policy to strictly use what is available rather than degrade evidence.
+

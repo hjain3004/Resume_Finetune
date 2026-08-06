@@ -1,0 +1,142 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "quantcast",
+  "display_name": "Quantcast",
+  "aliases": [],
+  "official_domains": [
+    "quantcast.com"
+  ],
+  "researched_at": "2026-08-05T00:30:00Z",
+  "sources": [
+    {
+      "id": "s_home",
+      "url": "https://www.quantcast.com/",
+      "title": "Quantcast Home",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "fdebb5e6c8410069a0b4f32bbec31fd29e6f34cf480b1ee60e46b1978da64184",
+      "snapshot_file": "sources/s_home.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://www.quantcast.com/careers/",
+      "title": "Quantcast Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "1f86582b29b553dfcc41fa846ac3562b0cecd0591676c283402be0b06e22d77a",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_platform",
+      "url": "https://www.quantcast.com/platform/",
+      "title": "Quantcast Platform",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "103edd25e48ab77fe8359dd6b635f19da9c734f39cf9fbc1f730de24568d22d8",
+      "snapshot_file": "sources/s_platform.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_2",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "claim": "Quantcast helps advertisers activate campaigns and measure performance.",
+      "quote": "Reach more customers across every device and channel with autonomous AI that helps your campaigns perform better, activate faster, and measure what matters",
+      "source_id": "s_home"
+    },
+    {
+      "id": "f_3",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "claim": "Quantcast is powered by a proprietary Audience Graph.",
+      "quote": "Quantcast is powered by the Audience Graph\u2014our proprietary AI built on two decades of intelligence.",
+      "source_id": "s_home"
+    },
+    {
+      "id": "f_5",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "claim": "Quantcast values integrity and inclusion.",
+      "quote": "We take responsibility, act with integrity and build a culture of inclusion",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_6",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "claim": "Quantcast prioritizes partnering with customers.",
+      "quote": "We partner with our customers (internal and external) to imagine their future",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_8",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Quantcast"
+      },
+      "claim": "Quantcast Platform uses a rich bank of first-party data.",
+      "quote": "With a rich bank of first-party data",
+      "source_id": "s_platform"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "When JD coverage is equal, emphasize experience building AI-powered marketing or audience graph platforms.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Frame supported candidate evidence around real-time insights and customer campaign activation.",
+      "basis_fact_ids": [
+        "f_2"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Frame supported candidate evidence around building an inclusive culture and partnering with customers.",
+      "basis_fact_ids": [
+        "f_5",
+        "f_6"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

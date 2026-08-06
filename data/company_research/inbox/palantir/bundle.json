@@ -1,0 +1,236 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "palantir",
+  "display_name": "Palantir",
+  "aliases": [
+    "Palantir Technologies"
+  ],
+  "official_domains": [
+    "palantir.com"
+  ],
+  "researched_at": "2026-08-04T10:56:21Z",
+  "sources": [
+    {
+      "id": "offerings",
+      "url": "https://www.palantir.com/offerings/",
+      "title": "Palantir Offerings",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "retrieved_at": "2026-08-04T10:56:21Z",
+      "snapshot_file": "sources/offerings.txt",
+      "content_sha256": "dba6999c62ab54d0790b8e58ddd50e6ae09b95fccabcfc34a0916cf4a9051a3a"
+    },
+    {
+      "id": "careers_getting_hired",
+      "url": "https://www.palantir.com/careers/getting-hired/",
+      "title": "Palantir Careers | Getting Hired",
+      "source_kind": "official_hiring_guide",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "retrieved_at": "2026-08-04T10:56:21Z",
+      "snapshot_file": "sources/careers_getting_hired.txt",
+      "content_sha256": "a6fd4eee1159d5c0b0a203e9c95936e3e9ca82970561c99dbcc404105eae04cb"
+    },
+    {
+      "id": "blog_dev_delta",
+      "url": "https://blog.palantir.com/dev-versus-delta-demystifying-engineering-roles-at-palantir-ad44c2a6e87",
+      "title": "Dev versus Delta: Demystifying engineering roles at Palantir",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "retrieved_at": "2026-08-04T10:56:21Z",
+      "snapshot_file": "sources/blog_dev_delta.txt",
+      "content_sha256": "4daf4b95293d9cddc2dac5d9eae91f7382f8593413726281f115e3c1c8327a27"
+    },
+    {
+      "id": "platform_foundry",
+      "url": "https://www.palantir.com/platforms/foundry/",
+      "title": "Palantir Foundry",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Foundry"
+      },
+      "retrieved_at": "2026-08-04T10:56:21Z",
+      "snapshot_file": "sources/platform_foundry.txt",
+      "content_sha256": "3f796d47a95ad9c680b8ef39a37dabc5c6bd9ff49ba7dd83a465473d5bbb2b33"
+    }
+  ],
+  "facts": [
+    {
+      "id": "platforms_overview",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "claim": "Palantir positions its platforms as serving organizations across public, private, and non-profit sectors.",
+      "quote": "Our platforms are used throughout the public, private, and non-profit sectors to help organizations quickly implement solutions to the hardest problems they face.",
+      "source_id": "offerings"
+    },
+    {
+      "id": "ai_ml_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Artificial Intelligence & Machine Learning"
+      },
+      "claim": "Palantir markets an Artificial Intelligence & Machine Learning offering for enterprises.",
+      "quote": "Consequential AI for the modern enterprise.",
+      "source_id": "offerings"
+    },
+    {
+      "id": "defense_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Defense"
+      },
+      "claim": "Palantir markets a Defense offering spanning land, air, sea, and space operations.",
+      "quote": "A tactical edge — by land, air, sea, and space.",
+      "source_id": "offerings"
+    },
+    {
+      "id": "interview_approach",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "claim": "Palantir's official careers guidance says candidates should narrate their approach and ask clarifying questions during technical interviews.",
+      "quote": "When presented with analytical and technical problems, talk through how you plan to approach the problem and ask questions if necessary.",
+      "source_id": "careers_getting_hired"
+    },
+    {
+      "id": "dev_role_desc",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "claim": "Palantir's Software Engineers (\"Devs\") build the Foundry and Gotham platforms.",
+      "quote": "Devs (Software Engineers) develop and engineer our software platforms, Palantir Foundry and Palantir Gotham.",
+      "source_id": "blog_dev_delta"
+    },
+    {
+      "id": "delta_role_desc",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "claim": "Palantir's Forward Deployed Software Engineers (\"Deltas\") deploy the platforms directly to customers.",
+      "quote": "Deltas (Forward Deployed Software Engineers) deploy our software platforms to customers.",
+      "source_id": "blog_dev_delta"
+    },
+    {
+      "id": "foundry_ontology",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Foundry"
+      },
+      "claim": "Palantir describes the Ontology as the core of the Foundry platform.",
+      "quote": "The Foundry Ontology is the heart of Palantir Foundry.",
+      "source_id": "platform_foundry"
+    },
+    {
+      "id": "interview_attire",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Palantir"
+      },
+      "claim": "Palantir's official careers guidance says interview attire is casual and not evaluated.",
+      "quote": "we're a laid-back company, so wear whatever you feel most comfortable in",
+      "source_id": "careers_getting_hired"
+    },
+    {
+      "id": "foundry_product",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Foundry"
+      },
+      "claim": "Palantir describes Foundry as an ontology-powered operating system for the modern enterprise.",
+      "quote": "The Ontology-Powered Operating System for the Modern Enterprise",
+      "source_id": "platform_foundry"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_enterprise_scale_ai",
+      "text": "Frame JD-relevant enterprise AI/ML or cross-sector operational platform experience around Palantir's stated focus on public, private, and non-profit sector platforms and enterprise AI, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "platforms_overview",
+        "ai_ml_domain"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_defense_domain",
+      "text": "When JD coverage and claim safety are equal for a Defense-scoped role, prefer the supported bullet demonstrating operationally reliable or mission-critical systems work.",
+      "basis_fact_ids": [
+        "defense_domain"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_interview_technical_talkthrough",
+      "text": "Note in G3 advisory that Palantir's own interview guidance recommends narrating your approach and asking clarifying questions during technical interview rounds.",
+      "basis_fact_ids": [
+        "interview_approach"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "position_platform_engineering_role",
+      "text": "Frame end-to-end platform component ownership (e.g., data infrastructure or semantic-layer work) around Palantir's description of Devs owning platform components end-to-end, when supported by the candidate's own evidence.",
+      "basis_fact_ids": [
+        "dev_role_desc"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_foundry_ontology_experience",
+      "text": "When JD coverage and claim safety are equal for a Foundry-scoped role, prefer the supported bullet demonstrating semantic or ontology-driven data system design.",
+      "basis_fact_ids": [
+        "foundry_product",
+        "foundry_ontology"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_interview_attire",
+      "text": "Note in G3 advisory that Palantir's official careers guidance states interview attire is casual and not evaluated; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "interview_attire"
+      ],
+      "permitted_uses": [
+        "g3_advisory"
+      ]
+    }
+  ]
+}

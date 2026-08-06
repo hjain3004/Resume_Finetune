@@ -1,0 +1,154 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "amazon",
+  "display_name": "Amazon",
+  "aliases": [],
+  "official_domains": [
+    "amazon.com",
+    "aboutamazon.com",
+    "amazon.jobs"
+  ],
+  "researched_at": "2026-08-05T00:30:00Z",
+  "sources": [
+    {
+      "id": "s_aws",
+      "url": "https://aws.amazon.com/",
+      "title": "Amazon Web Services",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "c5c373fef906f3ffca9a333d5ca4fba61d79ae9e8d867db8f3688d07b7dc02ef",
+      "snapshot_file": "sources/s_aws.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://www.amazon.jobs/en/",
+      "title": "Amazon Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "581ba7f7d6285af44b601152367537b014adcdeed9ad66ae101b1794e0c367cf",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_how_we_hire",
+      "url": "https://www.amazon.jobs/content/en/how-we-hire",
+      "title": "Amazon How We Hire",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "65db2353615fbddc42fcc4d65c7a76f97537689354c0aae7ad0d22eb877682cc",
+      "snapshot_file": "sources/s_how_we_hire.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_3",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "claim": "Amazon values customer obsession and ownership.",
+      "quote": "United by our peculiar culture of curiosity, bold ownership and fearless initiative, we channel our customer obsession into making everyday impact—big and small.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_4",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "claim": "Amazonians share a drive to impact the future.",
+      "quote": "Every Amazonian, from warehouse floor to corporate HQ, shares a drive to impact the future, today.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_5",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "claim": "Application and interview processes vary by role.",
+      "quote": "Our application and interview process differs from role to role.",
+      "source_id": "s_how_we_hire"
+    },
+    {
+      "id": "f_6",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Amazon"
+      },
+      "claim": "Candidates can review common technical topics before software interviews.",
+      "quote": "Learn about the most common technical topics covered in our software development interviews.",
+      "source_id": "s_how_we_hire"
+    },
+    {
+      "id": "aws_cloud_product",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "AWS"
+      },
+      "claim": "Amazon describes AWS as the world's most comprehensive cloud platform.",
+      "quote": "AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently",
+      "source_id": "s_aws"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_2",
+      "text": "Frame supported candidate evidence around demonstrating customer obsession and ownership.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Frame supported candidate evidence around delivering impact at scale.",
+      "basis_fact_ids": [
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_4",
+      "text": "Prioritize evidence tied to the role and business unit over generic company values.",
+      "basis_fact_ids": [
+        "f_5"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "position_aws_cloud",
+      "text": "When JD coverage and claim safety are equal for AWS-scoped roles, prefer the supported bullet demonstrating cloud infrastructure work aligned with Amazon's stated AWS positioning.",
+      "basis_fact_ids": [
+        "aws_cloud_product"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

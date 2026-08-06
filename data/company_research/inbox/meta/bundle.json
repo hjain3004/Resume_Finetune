@@ -1,0 +1,112 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "meta",
+  "display_name": "Meta",
+  "aliases": [
+    "Facebook"
+  ],
+  "official_domains": [
+    "meta.com",
+    "metacareers.com",
+    "fb.com"
+  ],
+  "researched_at": "2026-08-06T07:00:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://about.meta.com/",
+      "title": "About Meta",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "retrieved_at": "2026-08-06T07:00:00Z",
+      "content_sha256": "16b57e634b461377369b3f0df6f2cf709e66273cc0a9f77ea2857d73fe9fec9e",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_eng",
+      "url": "https://engineering.fb.com/",
+      "title": "Engineering at Meta",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "retrieved_at": "2026-08-06T07:00:00Z",
+      "content_sha256": "868b8b545a97af945a6fe4f843959f8da54d276ec7ef57a19dc2c20064cfa15d",
+      "snapshot_file": "sources/s_eng.txt"
+    },
+    {
+      "id": "s_ai",
+      "url": "https://ai.meta.com/blog/",
+      "title": "Meta AI Blog",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "retrieved_at": "2026-08-06T07:00:00Z",
+      "content_sha256": "afba3e284c7d676582d7728531d16df4f6fb3e3c6b1f0fb04c3308d9ce081950",
+      "snapshot_file": "sources/s_ai.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "claim": "Meta's leaders are guiding the company through the evolution of mixed reality and AI.",
+      "quote": "Meta's leaders are guiding our company as mixed reality and AI evolve, helping to create the next evolution of digital connection.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "claim": "Meta builds community through open source technology.",
+      "quote": "Meta believes in building community through open source technology.",
+      "source_id": "s_eng"
+    },
+    {
+      "id": "f_3",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Meta"
+      },
+      "claim": "Reliability, security, and user protections are central to Meta's AI development.",
+      "quote": "As we build more capable, personalized AI, reliability, security, and user protections are more important than ever.",
+      "source_id": "s_ai"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Emphasize experience with open source and community-driven technology.",
+      "basis_fact_ids": [
+        "f_2"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "For roles in AI, highlight prioritization of security and user protection.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

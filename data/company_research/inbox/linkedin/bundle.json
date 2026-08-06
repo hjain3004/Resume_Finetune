@@ -1,0 +1,101 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "linkedin",
+  "display_name": "LinkedIn",
+  "aliases": [],
+  "official_domains": [
+    "careers.linkedin.com",
+    "about.linkedin.com",
+    "engineering.linkedin.com"
+  ],
+  "researched_at": "2026-08-06T08:00:00Z",
+  "sources": [
+    {
+      "id": "s_careers",
+      "url": "https://careers.linkedin.com/",
+      "title": "LinkedIn Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "24475904b37629ecb11afd477f9c74d1844dd52a554ffc578d43a606669a5207",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_about",
+      "url": "https://about.linkedin.com/",
+      "title": "About LinkedIn",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "201e8d3845b1231b2c5cb77deaca48c0c306102df244b2c22aff3a764ae6c674",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_engineering",
+      "url": "https://engineering.linkedin.com/",
+      "title": "LinkedIn Engineering",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "75ecc32046349f5b0d01d4eda2b9d0b73a194e65f1e40e7b782447a7e9f5dd6d",
+      "snapshot_file": "sources/s_engineering.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "claim": "LinkedIn connects members to opportunities using responsible AI.",
+      "quote": "Join the team that’s redefining possibility, using responsible AI and the world’s most dynamic talent network to connect our members to opportunity.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_2",
+      "kind": "industry",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "claim": "LinkedIn has a diversified business with revenues from membership subscriptions, advertising, and recruitment solutions.",
+      "quote": "LinkedIn leads a diversified business with revenues from membership subscriptions, advertising sales and recruitment solutions",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "LinkedIn"
+      },
+      "claim": "LinkedIn Engineering builds infrastructure to connect professionals to economic opportunity.",
+      "quote": "we're building what's needed to connect the world's professionals to economic opportunity.",
+      "source_id": "s_engineering"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_3",
+      "text": "Emphasize infrastructure scaling to drive economic opportunity.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "google",
+  "display_name": "Google",
+  "aliases": [],
+  "official_domains": [
+    "google.com",
+    "about.google",
+    "research.google"
+  ],
+  "researched_at": "2026-08-05T00:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://about.google/",
+      "title": "About Google",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "c45e82b51ab39f3dff0908f80ace4f7e549ad739ae98b7e82398a33786613b78",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_research",
+      "url": "https://research.google/",
+      "title": "Google Research",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Google Research"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "876270effa63518b4800e4817f8cdab3ccf3523aa518dbdb78d04e531316caf2",
+      "snapshot_file": "sources/s_research.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://careers.google.com/",
+      "title": "Google Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "fa4d45009ab4879b8c83c31bd87d48517a218c80cda2267a1665e921459eb453",
+      "snapshot_file": "sources/s_careers.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "claim": "Google offers Search and Google Workspace among other products.",
+      "quote": "Explore our products and features across Search, Google Workspace and more",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "claim": "Google develops leading AI models.",
+      "quote": "Learn all about our leading AI models — and discover their capabilities",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Google Research"
+      },
+      "claim": "Google researchers conduct fundamental and applied computer science research.",
+      "quote": "Our researchers drive advancements in computer science through both fundamental and applied research.",
+      "source_id": "s_research"
+    },
+    {
+      "id": "f_4",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Google Research"
+      },
+      "claim": "Google teams tackle challenging AI problems collaboratively.",
+      "quote": "Collaborative groups tackling the world's most challenging AI problems.",
+      "source_id": "s_research"
+    },
+    {
+      "id": "f_5",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "claim": "Google is committed to building a representative workforce.",
+      "quote": "We are committed to building a workforce that is representative of the users we serve",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_6",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Google"
+      },
+      "claim": "Google prioritizes a culture of belonging.",
+      "quote": "creating a culture of belonging, and providing an equal employment opportunity",
+      "source_id": "s_careers"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "When JD coverage is equal, emphasize experience with foundational machine learning research.",
+      "basis_fact_ids": [
+        "f_3",
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Frame supported candidate evidence around developing or scaling AI models.",
+      "basis_fact_ids": [
+        "f_2",
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Frame supported candidate evidence around building inclusive teams.",
+      "basis_fact_ids": [
+        "f_5",
+        "f_6"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

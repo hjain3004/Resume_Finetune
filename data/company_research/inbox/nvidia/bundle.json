@@ -1,0 +1,109 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "nvidia",
+  "display_name": "NVIDIA",
+  "aliases": [],
+  "official_domains": [
+    "nvidia.com"
+  ],
+  "researched_at": "2026-08-06T08:00:00Z",
+  "sources": [
+    {
+      "id": "s_careers",
+      "url": "https://www.nvidia.com/en-us/about-nvidia/careers/",
+      "title": "NVIDIA Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "8340f307bde52852358ef93a5b5b49a7915628ac3fc0de4001ed54e39c6e5808",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_timeline",
+      "url": "https://www.nvidia.com/en-us/about-nvidia/corporate-timeline/",
+      "title": "NVIDIA Corporate Timeline",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "2fa88a09b3c3aa761bfdd0b81516abc85cea631acb76d7be4de28684e321c294",
+      "snapshot_file": "sources/s_timeline.txt"
+    },
+    {
+      "id": "s_research",
+      "url": "https://www.nvidia.com/en-us/research/",
+      "title": "NVIDIA Research",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "5d2001e5d11bf8a6fdc8b79ab63fe7891027a249546af2413f921714f533a94c",
+      "snapshot_file": "sources/s_research.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "claim": "NVIDIA values seamless collaboration, inclusivity, and shared success.",
+      "quote": "We thrive on seamless collaboration and shared success while embracing inclusivity and individuality.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_2",
+      "kind": "industry",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "claim": "NVIDIA technology has driven accelerated computing for over 30 years.",
+      "quote": "For more than 30 years, scientists, researchers, developers, and creators have been using NVIDIA technology to do amazing things.",
+      "source_id": "s_timeline"
+    },
+    {
+      "id": "f_3",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "NVIDIA"
+      },
+      "claim": "NVIDIA Research focuses on technological breakthroughs that drive positive global change.",
+      "quote": "NVIDIA Research is passionate about developing the technology and finding the breakthroughs that bring positive change to the world.",
+      "source_id": "s_research"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Highlight collaborative projects and inclusive teamwork.",
+      "basis_fact_ids": [
+        "f_1"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Emphasize research and development that brings positive real-world impact.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

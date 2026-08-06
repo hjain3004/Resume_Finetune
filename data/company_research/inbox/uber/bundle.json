@@ -1,0 +1,131 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "uber",
+  "display_name": "Uber",
+  "aliases": [
+    "Uber Technologies, Inc."
+  ],
+  "official_domains": [
+    "uber.com"
+  ],
+  "researched_at": "2026-08-06T11:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://www.uber.com/us/en/about/",
+      "title": "About Us",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "1a923be514df17c9d15c7a0c3f4c715a893eaf58987d822a06aa3f5fcd1e88df",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_offerings",
+      "url": "https://www.uber.com/us/en/about/uber-offerings/",
+      "title": "Uber Offerings",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "8ee6da9279410bf197a6617ff56910781ea6f2f75d83a6507b8dc88b7750a9b6",
+      "snapshot_file": "sources/s_offerings.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "claim": "Uber's mission is to reimagine movement for the better.",
+      "quote": "We reimagine the way the world moves for the better",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "claim": "Uber aims to be a fully electric, zero-emission platform by 2040.",
+      "quote": "Uber is committing to becoming a fully electric, zero-emission platform by 2040",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Uber Eats"
+      },
+      "claim": "Uber Eats allows users to order from restaurants and grocery stores.",
+      "quote": "Order from your favorite restaurants and grocery stores, online or with the Uber app.",
+      "source_id": "s_offerings"
+    },
+    {
+      "id": "f_4",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Uber Freight"
+      },
+      "claim": "Uber Freight matches carriers with shippers via a free app.",
+      "quote": "Uber Freight is a free app that matches carriers with shippers.",
+      "source_id": "s_offerings"
+    },
+    {
+      "id": "f_5",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "claim": "Uber operates in over 70 countries globally.",
+      "quote": "Our technology helps people connect and move in over 70 countries and 15,000+ cities around the world.",
+      "source_id": "s_offerings"
+    },
+    {
+      "id": "f_6",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Uber"
+      },
+      "claim": "Uber emphasizes doing the right thing for riders, drivers, and employees.",
+      "quote": "We\u2019re building a culture within Uber that emphasizes doing the right thing, period, for riders, drivers, and employees.",
+      "source_id": "s_about"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Emphasize global scale and large-scale platform systems.",
+      "basis_fact_ids": [
+        "f_5"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Highlight commitment to sustainability and zero-emission goals.",
+      "basis_fact_ids": [
+        "f_2"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

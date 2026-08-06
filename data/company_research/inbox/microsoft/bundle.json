@@ -1,0 +1,176 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "microsoft",
+  "display_name": "Microsoft",
+  "aliases": [],
+  "official_domains": [
+    "microsoft.com"
+  ],
+  "researched_at": "2026-08-05T00:30:00Z",
+  "sources": [
+    {
+      "id": "s_dev",
+      "url": "https://developer.microsoft.com/en-us/",
+      "title": "Microsoft Developer",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "b2a70cd56900a1cf8464ac1a7d8f6814863a4de0a8578c152f487a4193f7f2c1",
+      "snapshot_file": "sources/s_dev.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://careers.microsoft.com/",
+      "title": "Microsoft Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "a3f7d2412e0cda014c5d1eba3b883f42dc1c08fcb4e67167b5611011bdb0702b",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_how_we_hire",
+      "url": "https://careers.microsoft.com/v2/global/en/hiring-tips.html",
+      "title": "Microsoft Hiring Tips",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "cbd9fa3097c28a07d20355b1bf5d4d0062f7f227001cbf1be2c2769d796a044d",
+      "snapshot_file": "sources/s_how_we_hire.txt"
+    },
+    {
+      "id": "s_devblogs",
+      "url": "https://devblogs.microsoft.com/",
+      "title": "Microsoft Dev Blogs",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "5cb365b9180b86987cbdabc89a45b87e40243aee5e48a14f4525c147f2fba4cc",
+      "snapshot_file": "sources/s_devblogs.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_3",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "claim": "Microsoft applies a growth mindset to its culture.",
+      "quote": "We will only achieve our mission if we live our culture, which starts with applying a growth mindset.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_4",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "claim": "Microsoft celebrates diversity and inclusion.",
+      "quote": "We are committed to celebrating the diversity around us and its power to drive us forward together.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "ms_cloud_product",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "claim": "Microsoft's developer site positions its cloud services as a way to turn ideas into solutions.",
+      "quote": "Turn your ideas into solutions with Microsoft cloud services.",
+      "source_id": "s_dev"
+    },
+    {
+      "id": "hiring_transparency_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Microsoft"
+      },
+      "claim": "Microsoft's official hiring-tips page states its hiring process aims to be open and transparent.",
+      "quote": "The way we hire reflects who we are, and that means creating an open and transparent hiring experience.",
+      "source_id": "s_how_we_hire"
+    },
+    {
+      "id": "devops_commit_search_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Azure DevOps"
+      },
+      "claim": "Microsoft's developer blog describes a commit-search feature shipped for Azure DevOps.",
+      "quote": "Find any commit in seconds: Commit Search comes to Azure DevOps",
+      "source_id": "s_devblogs"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_2",
+      "text": "Frame supported candidate evidence around demonstrating a growth mindset.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Frame supported candidate evidence around empowering others and celebrating diversity.",
+      "basis_fact_ids": [
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "position_ms_cloud",
+      "text": "Frame JD-relevant cloud-platform experience around Microsoft's stated positioning of turning ideas into solutions with its cloud services, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "ms_cloud_product"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_open_hiring_process",
+      "text": "Note in G3 advisory that Microsoft's official hiring-tips page states its process aims to be open and transparent; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "hiring_transparency_guidance"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "position_devops_tooling",
+      "text": "When JD coverage and claim safety are equal for Azure DevOps-scoped roles, prefer the supported bullet demonstrating developer-tooling or code-search feature work.",
+      "basis_fact_ids": [
+        "devops_commit_search_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

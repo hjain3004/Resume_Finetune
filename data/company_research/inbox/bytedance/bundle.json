@@ -1,0 +1,247 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "bytedance",
+  "display_name": "ByteDance",
+  "aliases": [
+    "ByteDance Ltd."
+  ],
+  "official_domains": [
+    "bytedance.com",
+    "joinbytedance.com"
+  ],
+  "researched_at": "2026-08-04T12:59:40Z",
+  "sources": [
+    {
+      "id": "about_us",
+      "url": "https://www.bytedance.com/en/",
+      "title": "ByteDance - Inspire Creativity, Enrich Life",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "retrieved_at": "2026-08-04T12:59:40Z",
+      "snapshot_file": "sources/about_us.txt",
+      "content_sha256": "6048f06af95c611974211242c9d508a32e05443835989f40b5bb39a806cbfd07"
+    },
+    {
+      "id": "how_we_hire",
+      "url": "https://joinbytedance.com/apply",
+      "title": "How We Hire",
+      "source_kind": "official_hiring_guide",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "retrieved_at": "2026-08-04T12:59:40Z",
+      "snapshot_file": "sources/how_we_hire.txt",
+      "content_sha256": "f71516099f037f369865d7e63fe33bd8edb0b36fb779d945dcf2aabb2a82d4e6"
+    },
+    {
+      "id": "blog_ml_team",
+      "url": "https://joinbytedance.com/blog/detail/6970532448318277896",
+      "title": "How Our Machine Learning Team Builds Tomorrow's Tech",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "retrieved_at": "2026-08-04T12:59:40Z",
+      "snapshot_file": "sources/blog_ml_team.txt",
+      "content_sha256": "21bc1a01bb774c57d09835b2946847ec133cf309457e2ee2032eb80ae6070728"
+    },
+    {
+      "id": "interview_tips",
+      "url": "https://joinbytedance.com/interview",
+      "title": "Interview Tips",
+      "source_kind": "official_hiring_guide",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "retrieved_at": "2026-08-04T12:59:40Z",
+      "snapshot_file": "sources/interview_tips.txt",
+      "content_sha256": "6357d753258a880f8d5fc600f1cd3e1884fd17ce90578eda87dde7f20465d9f8"
+    }
+  ],
+  "facts": [
+    {
+      "id": "bytedance_founded_identity",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance states it was founded in 2012 by Yiming Zhang and Rubo Liang.",
+      "quote": "ByteDance was founded in 2012 by a team led by Yiming Zhang and Rubo Liang",
+      "source_id": "about_us"
+    },
+    {
+      "id": "bytedance_scale_identity",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance states it has over 150,000 employees across nearly 120 cities globally.",
+      "quote": "ByteDance has over 150,000 employees based out of nearly 120 cities globally",
+      "source_id": "about_us"
+    },
+    {
+      "id": "product_portfolio_domain",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance describes a product portfolio of over a dozen products and services, including TikTok, CapCut, TikTok Shop, Lark, Pico, and Mobile Legends: Bang Bang.",
+      "quote": "a suite of more than a dozen products and services such as TikTok, CapCut, TikTok Shop, Lark, Pico and Mobile Legends: Bang Bang",
+      "source_id": "about_us"
+    },
+    {
+      "id": "tiktok_scope_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "business_unit",
+        "name": "TikTok"
+      },
+      "claim": "ByteDance describes the TikTok platform as the leading destination for short-form mobile video worldwide.",
+      "quote": "Today, the TikTok platform, which is available outside of China, has become the leading destination for short-form mobile videos worldwide.",
+      "source_id": "about_us"
+    },
+    {
+      "id": "apply_interview_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance's official hiring guide advises candidates to talk to their recruiter before the interview to confirm team-specific requirements.",
+      "quote": "talk to your recruiter before your interview so that you know what is required by the ByteDance team that you would like to join",
+      "source_id": "how_we_hire"
+    },
+    {
+      "id": "ml_team_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance's careers blog describes its global Machine Learning Team as bringing together engineers with a wide range of skills.",
+      "quote": "Our global Machine Learning Team brings together talented engineers from around the world who have a wide range of skills and experiences",
+      "source_id": "blog_ml_team"
+    },
+    {
+      "id": "tiktok_recsys_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "TikTok"
+      },
+      "claim": "ByteDance's careers blog describes an engineer working with the TikTok data team on the app's recommendation system.",
+      "quote": "Pujitha works with the TikTok data team on developing the app's recommendation system.",
+      "source_id": "blog_ml_team"
+    },
+    {
+      "id": "interview_prep_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance's official interview-tips page advises candidates to know the job description and be ready to explain why they want to join.",
+      "quote": "Familiarize yourself with the job description. Learn about ByteDance and be ready to tell us why you want to join.",
+      "source_id": "interview_tips"
+    },
+    {
+      "id": "interview_research_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance's official interview-tips page advises candidates to research the company's news, trends, competitors, and sector.",
+      "quote": "Research the news, trends, competitors, history, and opportunities of the organization and its job sector.",
+      "source_id": "interview_tips"
+    },
+    {
+      "id": "always_day1_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "ByteDance"
+      },
+      "claim": "ByteDance's stated 'Always Day 1' value emphasizes an entrepreneurial, pioneering mindset.",
+      "quote": "Always maintain an entrepreneurial mindset. Keep pioneering and innovating instead of relying on resources or past achievements.",
+      "source_id": "about_us"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_product_portfolio",
+      "text": "Frame JD-relevant experience building or scaling consumer-facing product portfolios around ByteDance's stated suite of products and services, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "product_portfolio_domain"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_tiktok_shortform",
+      "text": "When JD coverage and claim safety are equal for TikTok-scoped roles, prefer the supported bullet demonstrating short-form video, recommendation-system, or content-platform engineering work.",
+      "basis_fact_ids": [
+        "tiktok_scope_domain",
+        "tiktok_recsys_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_recruiter_prep",
+      "text": "Note in G3 advisory that ByteDance's official hiring guide recommends talking to your recruiter before the interview to confirm what the specific team requires; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "apply_interview_guidance"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "position_ml_team_breadth",
+      "text": "Frame applied machine learning engineering experience around ByteDance's description of its global Machine Learning Team bringing together engineers with diverse skills, when supported by the candidate's own evidence.",
+      "basis_fact_ids": [
+        "ml_team_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_interview_prep",
+      "text": "Note in G3 advisory that ByteDance's official interview-tips page recommends knowing the job description well and researching the company's news, trends, and competitors before interviewing; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "interview_prep_guidance",
+        "interview_research_guidance"
+      ],
+      "permitted_uses": [
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "soft_always_day1",
+      "text": "Use ByteDance's stated 'Always Day 1' entrepreneurial value only as soft S0 framing language; never treat it as a technical requirement or keyword to insert.",
+      "basis_fact_ids": [
+        "always_day1_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

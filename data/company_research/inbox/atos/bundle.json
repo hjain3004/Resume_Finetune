@@ -1,0 +1,190 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "atos",
+  "display_name": "Atos",
+  "aliases": [
+    "Atos SE"
+  ],
+  "official_domains": [
+    "atos.net"
+  ],
+  "researched_at": "2026-08-04T12:55:45Z",
+  "sources": [
+    {
+      "id": "homepage",
+      "url": "https://atos.net/en",
+      "title": "Homepage - Atos",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "retrieved_at": "2026-08-04T12:55:45Z",
+      "snapshot_file": "sources/homepage.txt",
+      "content_sha256": "41eb4211a4ed8420da869d9f0948b481625e301f1238cd2de5a9ff47183abae7"
+    },
+    {
+      "id": "join_us_how_to_apply",
+      "url": "https://atos.net/en/join-us/how-to-join-us",
+      "title": "How to join us - Atos",
+      "source_kind": "official_hiring_guide",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "retrieved_at": "2026-08-04T12:55:45Z",
+      "snapshot_file": "sources/join_us_how_to_apply.txt",
+      "content_sha256": "e3914d7360037f2566a2b84b600d7a6720423bac5d7df0d6d4f313ec88f0c96d"
+    },
+    {
+      "id": "blog_ai_placement",
+      "url": "https://atos.net/en/blog/ai-placement-an-engineering-decision-you-can-no-longer-ignore",
+      "title": "AI placement: An engineering decision you can no longer ignore",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "retrieved_at": "2026-08-04T12:55:45Z",
+      "snapshot_file": "sources/blog_ai_placement.txt",
+      "content_sha256": "98e2b909f9f3bba39975e5a581759c13354f8554a22e8f62cbded0064f1d7cdc"
+    },
+    {
+      "id": "careers_join_us",
+      "url": "https://atos.net/en/join-us",
+      "title": "Join us - Atos",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "retrieved_at": "2026-08-04T12:55:45Z",
+      "snapshot_file": "sources/careers_join_us.txt",
+      "content_sha256": "5f779649b00247e435743419882c7bbf94930123540bcb1832701b5efaa4bf36"
+    }
+  ],
+  "facts": [
+    {
+      "id": "accelerate_intelligence_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos positions itself as accelerating intelligence toward a secure, AI-powered digital future.",
+      "quote": "At Atos, we accelerate intelligence to help shape a responsible, secure and AI-powered digital future.",
+      "source_id": "homepage"
+    },
+    {
+      "id": "services_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos describes its offerings as spanning mission-critical environments, sovereign cloud, cybersecurity, and AI-driven services.",
+      "quote": "From mission-critical environments to sovereign cloud, cybersecurity and AI-driven services, we meet clients where they are and take them where they need to go.",
+      "source_id": "homepage"
+    },
+    {
+      "id": "apply_step_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos's official hiring guide advises candidates to search the Atos career page using filters and keywords.",
+      "quote": "Visit our Career page and explore current openings. Use filters and keywords to help you find your ideal job.",
+      "source_id": "join_us_how_to_apply"
+    },
+    {
+      "id": "interview_goal_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos's official hiring guide states interviews assess technical expertise, problem-solving approach, and values alignment.",
+      "quote": "getting to know you better, including your technical expertise, your approach to problem-solving and how well you align with our values.",
+      "source_id": "join_us_how_to_apply"
+    },
+    {
+      "id": "ai_placement_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos's engineering blog frames AI placement in a workflow as a deliberate engineering decision affecting risk and governance.",
+      "quote": "Placement refers to the point or points in a workflow where AI is inserted, and the authority it has at each point.",
+      "source_id": "blog_ai_placement"
+    },
+    {
+      "id": "team_culture_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Atos"
+      },
+      "claim": "Atos's careers messaging frames its culture around a diverse, collaborative team of digital experts.",
+      "quote": "you’ll be part of a dedicated, passionate team of digital experts from diverse backgrounds and cultures, all working together to make a positive difference.",
+      "source_id": "careers_join_us"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_ai_digital_future",
+      "text": "Frame JD-relevant AI-powered digital transformation, sovereign-cloud, or cybersecurity work around Atos's stated focus on accelerating intelligence for a secure AI-powered future, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "accelerate_intelligence_domain",
+        "services_domain"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "advise_apply_process",
+      "text": "Note in G3 advisory that Atos's official hiring guide recommends searching the Atos career page directly with filters and keywords when preparing an application.",
+      "basis_fact_ids": [
+        "apply_step_guidance"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "advise_interview_focus",
+      "text": "Note in G3 advisory that Atos's official hiring guide states interviews assess technical expertise, problem-solving approach, and values alignment; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "interview_goal_guidance"
+      ],
+      "permitted_uses": [
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "position_ai_placement_engineering",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating deliberate engineering judgment about where and how AI is embedded in a workflow, aligned with Atos's engineering blog.",
+      "basis_fact_ids": [
+        "ai_placement_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "soft_team_culture",
+      "text": "Use Atos's stated team-culture value only as soft S0 framing language; never treat it as a technical requirement or keyword to insert.",
+      "basis_fact_ids": [
+        "team_culture_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

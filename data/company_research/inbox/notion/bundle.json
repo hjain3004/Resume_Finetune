@@ -1,0 +1,235 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "notion",
+  "display_name": "Notion",
+  "aliases": [
+    "Notion Labs"
+  ],
+  "official_domains": [
+    "notion.com"
+  ],
+  "researched_at": "2026-08-04T11:03:55Z",
+  "sources": [
+    {
+      "id": "about",
+      "url": "https://www.notion.com/about",
+      "title": "Why we built Notion – About",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "retrieved_at": "2026-08-04T11:03:55Z",
+      "snapshot_file": "sources/about.txt",
+      "content_sha256": "9b709c2220cc4a97066bde53bb13fef732a5972b6e69ff89710741403c9e1c6f"
+    },
+    {
+      "id": "careers",
+      "url": "https://www.notion.com/careers",
+      "title": "Careers at Notion | We're Hiring!",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "retrieved_at": "2026-08-04T11:03:55Z",
+      "snapshot_file": "sources/careers.txt",
+      "content_sha256": "c97b6e7aee783789ba4a402bbef074d9ca27e42fa5342d8dc2ce48d53137a990"
+    },
+    {
+      "id": "blog_multi_region",
+      "url": "https://www.notion.com/blog/enabling-multi-region-data-systems-at-notion",
+      "title": "Enabling Multi-Region Data Systems at Notion",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "retrieved_at": "2026-08-04T11:03:55Z",
+      "snapshot_file": "sources/blog_multi_region.txt",
+      "content_sha256": "d2a821caa0c0227bb4cca44470be0cbefde1645b0e0912f5bc53819125454f21"
+    },
+    {
+      "id": "blog_dlq_explorer",
+      "url": "https://www.notion.com/blog/building-observability-into-notions-dead-letter-queue",
+      "title": "Building observability into Notion's dead-letter queue",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "retrieved_at": "2026-08-04T11:03:55Z",
+      "snapshot_file": "sources/blog_dlq_explorer.txt",
+      "content_sha256": "e07c651b1f2e413cc9f60f02e4036e550e983a4156eaa8e0af598fb562d5cfb3"
+    }
+  ],
+  "facts": [
+    {
+      "id": "workspace_blend",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion positions its product as blending workflow tools into a single all-in-one workspace.",
+      "quote": "As a first step, we are blending much of your workflow into an all-in-one workspace.",
+      "source_id": "about"
+    },
+    {
+      "id": "customizable_blocks",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion describes its workspace as customizable from reusable building blocks.",
+      "quote": "You can even customize your own workspace from dozens of building blocks.",
+      "source_id": "about"
+    },
+    {
+      "id": "sf_identity",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion states it is headquartered in San Francisco with offices worldwide.",
+      "quote": "Notion is based in beautiful downtown San Francisco, with offices around the world.",
+      "source_id": "about"
+    },
+    {
+      "id": "office_presence_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion states it is an in-person company that gathers three days a week.",
+      "quote": "Notion is an in-person company. We come together three days a week: Monday, Tuesday, and Thursday",
+      "source_id": "careers"
+    },
+    {
+      "id": "data_residency_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion's engineering blog describes the core principle of its data-residency architecture.",
+      "quote": "The key principle of data residency is straightforward: Data is processed and stored in the region where it was generated.",
+      "source_id": "blog_multi_region"
+    },
+    {
+      "id": "data_systems_features",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion's engineering blog describes its data systems as powering multiple product features including search, audit logs, analytics, and AI.",
+      "quote": "Notion's data systems also power product features that people use every day—like Search, Enterprise Audit Logs, Workspace and Page Analytics, scheduled events, and Notion AI.",
+      "source_id": "blog_multi_region"
+    },
+    {
+      "id": "job_queue_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion's engineering blog describes an asynchronous job queue backing most user-facing actions, including notifications, search indexing, and AI embeddings.",
+      "quote": "There’s a background task behind almost every action in Notion.",
+      "source_id": "blog_dlq_explorer"
+    },
+    {
+      "id": "reliability_tooling_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion's engineering blog ties failed-task inspection and replay tooling directly to product reliability.",
+      "quote": "being able to inspect and replay these tasks quickly is directly tied to the reliability of the product.",
+      "source_id": "blog_dlq_explorer"
+    },
+    {
+      "id": "customer_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Notion"
+      },
+      "claim": "Notion's stated value is centering customers as the core of its mission.",
+      "quote": "This value is at the heart of our mission: we are a tool company, and we exist to help our customers do their life's work.",
+      "source_id": "careers"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_allinone_workspace",
+      "text": "Frame JD-relevant work unifying disparate tools or workflows into one coherent product experience around Notion's stated all-in-one, customizable workspace positioning, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "workspace_blend",
+        "customizable_blocks"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "soft_inperson_culture",
+      "text": "Use Notion's stated in-person, three-day office culture only as soft S0 context; never assert or infer the candidate's location or eligibility from it.",
+      "basis_fact_ids": [
+        "office_presence_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "position_data_residency",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating region-aware or compliance-driven data infrastructure work, aligned with Notion's documented data-residency engineering.",
+      "basis_fact_ids": [
+        "data_residency_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_data_platform_breadth",
+      "text": "Frame experience building shared data-platform capabilities (search, analytics, audit logging) around Notion's description of data systems powering multiple product surfaces, when supported by the candidate's own evidence.",
+      "basis_fact_ids": [
+        "data_systems_features"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_async_reliability",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating asynchronous job-queue, retry, or failure-recovery tooling, aligned with Notion's documented DLQ and reliability engineering.",
+      "basis_fact_ids": [
+        "job_queue_theme",
+        "reliability_tooling_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "soft_customer_obsession",
+      "text": "Use Notion's stated 'customer in every room' value only as soft S0 framing language; never treat it as a technical requirement or keyword to insert.",
+      "basis_fact_ids": [
+        "customer_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

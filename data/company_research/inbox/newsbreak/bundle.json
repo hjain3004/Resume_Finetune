@@ -1,0 +1,179 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "newsbreak",
+  "display_name": "NewsBreak",
+  "aliases": [
+    "News Break"
+  ],
+  "official_domains": [
+    "newsbreak.com"
+  ],
+  "researched_at": "2026-08-05T00:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://www.newsbreak.com/about",
+      "title": "About NewsBreak",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "ed2e9ac448ccd5d072af289b098f02becdb28c6bd92b32804631a94c8c28d5ce",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://careers.newsbreak.com/",
+      "title": "NewsBreak Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "a5659b0ce06e9c5dadb54ab1f3e5717523006f45048a67a2147e04c0e3b729ec",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_creators",
+      "url": "https://creators.newsbreak.com/",
+      "title": "NewsBreak Creators",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "retrieved_at": "2026-08-05T00:30:00Z",
+      "content_sha256": "454887f9d12a88730786f61530ec4a4ad73ad183c2f45cd223da1debde010f18",
+      "snapshot_file": "sources/s_creators.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak uses personalization technology to tailor local news.",
+      "quote": "NewsBreak’s cutting-edge personalization technology responds to your choices and reading habits in the app and tailors itself to suit your tastes.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak focuses on community building through local stories.",
+      "quote": "NewsBreak focuses on local news that brings communities together around the important stories they share in common.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak aims to empower local communities and businesses.",
+      "quote": "Connect and empower local users, local content creators, and local businesses at scale",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_4",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak delivers breaking news directly to users.",
+      "quote": "All your local and breaking news, right at your fingertips.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_5",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak uses timely push notifications for neighborhood events.",
+      "quote": "Timely alerts and push notifications keep you on top of what’s happening in your neighborhood and around the country.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_6",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak is a mobile application delivering localized notifications.",
+      "quote": "Timely alerts and push notifications keep you on top of what’s happening in your neighborhood and around the country.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "creator_program_product",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "NewsBreak"
+      },
+      "claim": "NewsBreak runs a creator program inviting writers and video creators to share local content.",
+      "quote": "Become a NewsBreak creator! Your stories. Your spotlight.",
+      "source_id": "s_creators"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "When JD coverage is equal, emphasize experience building personalized content platforms.",
+      "basis_fact_ids": [
+        "f_1"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Frame supported candidate evidence around empowering local communities and creators.",
+      "basis_fact_ids": [
+        "f_2",
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "When JD coverage is equal, prefer the supported bullet that demonstrates building push notification systems.",
+      "basis_fact_ids": [
+        "f_5",
+        "f_6"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_creator_program",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating content-creator platform or creator-tooling work, aligned with NewsBreak's creator program.",
+      "basis_fact_ids": [
+        "creator_program_product"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

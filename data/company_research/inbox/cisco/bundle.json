@@ -1,0 +1,225 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "cisco",
+  "display_name": "Cisco",
+  "aliases": [
+    "Cisco Systems"
+  ],
+  "official_domains": [
+    "cisco.com"
+  ],
+  "researched_at": "2026-08-04T10:59:59Z",
+  "sources": [
+    {
+      "id": "about",
+      "url": "https://www.cisco.com/site/us/en/about/index.html",
+      "title": "About Us - Cisco",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "retrieved_at": "2026-08-04T10:59:59Z",
+      "snapshot_file": "sources/about.txt",
+      "content_sha256": "28517ed978c1f0a2b0fd1fae668635c2d18d007650a27c06a63d33e4297c1a59"
+    },
+    {
+      "id": "careers",
+      "url": "https://careers.cisco.com/",
+      "title": "Careers at Cisco",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "retrieved_at": "2026-08-04T10:59:59Z",
+      "snapshot_file": "sources/careers.txt",
+      "content_sha256": "b49d674340212d1f46aa62a4e312475e364d8eb83277aad6fa77cd382830bf21"
+    },
+    {
+      "id": "careers_ai_teams",
+      "url": "https://careers.cisco.com/",
+      "title": "Careers at Cisco - AI Teams",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "retrieved_at": "2026-08-04T10:59:59Z",
+      "snapshot_file": "sources/careers_ai_teams.txt",
+      "content_sha256": "707113ad25b8eb289507517f827c52bdfff4542799588073d16e376280578f70"
+    },
+    {
+      "id": "blog_developer_welcome",
+      "url": "https://blogs.cisco.com/developer/welcome-to-the-developer-blog-at-cisco",
+      "title": "Welcome to the Developer Blog at Cisco",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "retrieved_at": "2026-08-04T10:59:59Z",
+      "snapshot_file": "sources/blog_developer_welcome.txt",
+      "content_sha256": "9c290cd0844a07a942b88b9d0ca3edd857f63d8ffa83393505f66e87104721e9"
+    },
+    {
+      "id": "blog_post_quantum_ipsec",
+      "url": "https://blogs.cisco.com/developer/is-your-vpn-ready-for-the-quantum-era-quantum-series-part-1",
+      "title": "Is Your VPN Ready for the Quantum Era? – IPsec Series, Part 1",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "retrieved_at": "2026-08-04T10:59:59Z",
+      "snapshot_file": "sources/blog_post_quantum_ipsec.txt",
+      "content_sha256": "f8c4d130bc2a67ed2372eaeb25d27a0a7021eac7abb1df1eb320b2601c981877"
+    }
+  ],
+  "facts": [
+    {
+      "id": "company_identity_infra",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "claim": "Cisco positions itself as delivering critical infrastructure for organizations in the AI era.",
+      "quote": "Cisco delivers the critical infrastructure to help organizations thrive in the AI era.",
+      "source_id": "about"
+    },
+    {
+      "id": "platform_approach",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "claim": "Cisco describes its product strategy as a platform approach unifying products into integrated systems.",
+      "quote": "Cisco's platform approach unifies products into powerful systems that deliver greater value with less effort for your IT team",
+      "source_id": "about"
+    },
+    {
+      "id": "inclusive_future_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "claim": "Cisco's careers messaging frames hiring around innovators building AI-era infrastructure.",
+      "quote": "We are looking for innovators to build the critical infrastructure for the AI era and beyond.",
+      "source_id": "careers"
+    },
+    {
+      "id": "foundation_ai_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Cisco Foundation AI"
+      },
+      "claim": "Cisco Foundation AI is described as a dedicated team building AI innovation for enterprise security.",
+      "quote": "Cisco Foundation AI is our team of engineers, researchers, and deep experts dedicated to open, bleeding-edge AI innovation for enterprise security.",
+      "source_id": "careers_ai_teams"
+    },
+    {
+      "id": "webex_ai_theme",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Webex"
+      },
+      "claim": "Cisco's Webex AI team is described as building audio AI models for speech enhancement and noise removal.",
+      "quote": "Cisco’s Webex AI team is creating audio AI models that have never existed before to enhance speech and remove noise for millions of users",
+      "source_id": "careers_ai_teams"
+    },
+    {
+      "id": "software_company_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "claim": "Cisco's developer blog describes Cisco as a software company central to digital transformation, not just networking hardware.",
+      "quote": "Cisco is a software company, playing a major role in this era of digital transformation.",
+      "source_id": "blog_developer_welcome"
+    },
+    {
+      "id": "post_quantum_crypto_theme",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Cisco"
+      },
+      "claim": "Cisco's developer blog analyses how quantum computers threaten the key exchange behind IKEv2/IPsec VPN tunnels.",
+      "quote": "When two machines set up a secure channel (say, an IKEv2/IPsec VPN tunnel), that handshake rests on two distinct pillars",
+      "source_id": "blog_post_quantum_ipsec"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_ai_infrastructure",
+      "text": "Frame JD-relevant AI-era networking, security, or observability infrastructure experience around Cisco's stated focus on critical infrastructure for the AI era, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "company_identity_infra"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_platform_integration",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating unifying disparate systems into an integrated platform, aligned with Cisco's platform-approach product description.",
+      "basis_fact_ids": [
+        "platform_approach"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_foundation_ai",
+      "text": "Frame applied AI/ML security research experience around Cisco Foundation AI's stated focus on enterprise-security AI innovation, when supported by the candidate's own evidence.",
+      "basis_fact_ids": [
+        "foundation_ai_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_webex_ai",
+      "text": "When JD coverage and claim safety are equal for Webex-scoped roles, prefer the supported bullet demonstrating audio or speech ML system work.",
+      "basis_fact_ids": [
+        "webex_ai_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "soft_position_innovator_culture",
+      "text": "Use Cisco's stated interest in innovators building critical infrastructure only as soft S0 framing language; never treat it as a technical requirement or keyword to insert.",
+      "basis_fact_ids": [
+        "inclusive_future_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "position_network_security_protocols",
+      "text": "When JD coverage and claim safety are equal, prefer the supported bullet demonstrating protocol-level networking, cryptography, or packet-level security work, aligned with Cisco's documented post-quantum IPsec engineering.",
+      "basis_fact_ids": [
+        "post_quantum_crypto_theme"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}

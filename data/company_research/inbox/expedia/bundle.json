@@ -1,0 +1,189 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "expedia",
+  "display_name": "Expedia Group",
+  "aliases": [
+    "Expedia Group, Inc."
+  ],
+  "official_domains": [
+    "expediagroup.com"
+  ],
+  "researched_at": "2026-08-04T13:32:45Z",
+  "sources": [
+    {
+      "id": "about",
+      "url": "https://www.expediagroup.com/",
+      "title": "Expedia Group | Powering Global Travel with Trusted Brands",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "retrieved_at": "2026-08-04T13:32:45Z",
+      "snapshot_file": "sources/about.txt",
+      "content_sha256": "99cfd7e73247dbc23c4e21c46094310a339573d78c20648d36b7f224b9c16c27"
+    },
+    {
+      "id": "careers",
+      "url": "https://careers.expediagroup.com/",
+      "title": "Home - Expedia Group | Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "retrieved_at": "2026-08-04T13:32:45Z",
+      "snapshot_file": "sources/careers.txt",
+      "content_sha256": "6fa0bb45fa461c2472eb2fa5095da70faee2916cbfb86f693ef6d431179061f6"
+    },
+    {
+      "id": "interview_guide",
+      "url": "https://careers.expediagroup.com/interview-guide/",
+      "title": "Interview Guide - Expedia Group | Careers",
+      "source_kind": "official_hiring_guide",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "retrieved_at": "2026-08-04T13:32:45Z",
+      "snapshot_file": "sources/interview_guide.txt",
+      "content_sha256": "a2eccf3c4b4ea91b7c09986e31e937b2761f30da4f8f9e4cae6b6a74fafe0997"
+    }
+  ],
+  "facts": [
+    {
+      "id": "travel_marketplace_domain",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group describes a travel marketplace as the core of its business.",
+      "quote": "At the heart of Expedia Group is a marketplace built for travelers.",
+      "source_id": "about"
+    },
+    {
+      "id": "brand_portfolio_product",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group describes a multi-brand portfolio covering hotels, vacation rentals, packages, and flights.",
+      "quote": "From hotels and vacation rentals to packages, flights, and more, our brands give travelers more ways to plan, book, and experience travel their way.",
+      "source_id": "about"
+    },
+    {
+      "id": "b2b_tech_product",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group markets B2B travel technology and advertising solutions to partners.",
+      "quote": "Partners trust our travel tech solutions to create exceptional traveler experiences.",
+      "source_id": "about"
+    },
+    {
+      "id": "collaborative_teams_value",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group's careers messaging frames its environment as collaborative and globally distributed.",
+      "quote": "You’ll work alongside passionate global teams in a collaborative and supportive environment where people can build meaningful connections.",
+      "source_id": "careers"
+    },
+    {
+      "id": "skills_assessment_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group's official interview guide states some roles include a skills assessment, business case, or work sample.",
+      "quote": "For certain roles, we’ll conduct a Skills Assessment and/or request a business case or work sample.",
+      "source_id": "interview_guide"
+    },
+    {
+      "id": "behavioral_star_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group's official interview guide states interviews include behavioral questions rooted in prior experience, structured with the STAR technique.",
+      "quote": "Behavioral questions rooted in prior experiences are a great way for us to understand how you behave and think.",
+      "source_id": "interview_guide"
+    },
+    {
+      "id": "behaviors_assessment_guidance",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Expedia Group"
+      },
+      "claim": "Expedia Group's official interview guide states candidates are assessed against its stated Behaviors.",
+      "quote": "Understanding your work style against our Expedia Group Behaviors helps us understand:",
+      "source_id": "interview_guide"
+    }
+  ],
+  "signals": [
+    {
+      "id": "position_travel_marketplace",
+      "text": "Frame JD-relevant marketplace, booking, or multi-brand consumer platform experience around Expedia Group's stated travel-marketplace positioning, when the candidate's own evidence supports it.",
+      "basis_fact_ids": [
+        "travel_marketplace_domain",
+        "brand_portfolio_product"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "position_b2b_travel_tech",
+      "text": "When JD coverage and claim safety are equal for partner-facing or B2B-scoped roles, prefer the supported bullet demonstrating platform or API work serving external business partners.",
+      "basis_fact_ids": [
+        "b2b_tech_product"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "soft_collaborative_culture",
+      "text": "Use Expedia Group's stated collaborative, globally distributed team culture only as soft S0 framing language; never treat it as a technical requirement or keyword to insert.",
+      "basis_fact_ids": [
+        "collaborative_teams_value"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "advise_star_behavioral_prep",
+      "text": "Note in G3 advisory that Expedia Group's official interview guide states interviews include behavioral questions structured around the STAR technique, and that candidates are assessed against its stated Behaviors; this never changes the renderer or L7 rules.",
+      "basis_fact_ids": [
+        "behavioral_star_guidance",
+        "behaviors_assessment_guidance"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    },
+    {
+      "id": "advise_skills_assessment",
+      "text": "Note in G3 advisory that Expedia Group's official interview guide states some roles add a skills assessment, business case, or work sample to the process.",
+      "basis_fact_ids": [
+        "skills_assessment_guidance"
+      ],
+      "permitted_uses": [
+        "g3_advisory"
+      ]
+    }
+  ]
+}

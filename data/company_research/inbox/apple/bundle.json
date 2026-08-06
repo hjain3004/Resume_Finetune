@@ -1,0 +1,120 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "apple",
+  "display_name": "Apple",
+  "aliases": [],
+  "official_domains": [
+    "apple.com",
+    "jobs.apple.com"
+  ],
+  "researched_at": "2026-08-06T08:00:00Z",
+  "sources": [
+    {
+      "id": "s_careers",
+      "url": "https://www.apple.com/careers/us/",
+      "title": "Apple Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "1b4fef90fea6dae7d69f7cb0097f7ee21c3a4b413b4ec0c4314a37921af3994e",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_ml",
+      "url": "https://machinelearning.apple.com/",
+      "title": "Apple Machine Learning Research",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "6dda093ef1b9cd21a17097caf45e899fbacb6d48fd9111802494cfcad972f1f6",
+      "snapshot_file": "sources/s_ml.txt"
+    },
+    {
+      "id": "s_env",
+      "url": "https://www.apple.com/environment/",
+      "title": "Apple Environment",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "00c21f9f564afb0e6226ee21454faf62404f9e0bc625ea924bb366db2ae04dd2",
+      "snapshot_file": "sources/s_env.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "claim": "Apple employees commit to values that lead to great work.",
+      "quote": "This is where individual imaginations gather together, committing to the values that lead to great work.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_2",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "claim": "Apple Intelligence is powered by a bold new architecture with privacy at its core.",
+      "quote": "powered by a bold new architecture with privacy at its core.",
+      "source_id": "s_ml"
+    },
+    {
+      "id": "f_3",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Apple"
+      },
+      "claim": "Apple aims to become completely carbon neutral across its global footprint by 2030.",
+      "quote": "Our ambitious, science-based goal to become carbon neutral across our global footprint.",
+      "source_id": "s_env"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Highlight shared values and collaborative imagination when discussing team environments.",
+      "basis_fact_ids": [
+        "f_1"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "For ML roles, emphasize privacy-preserving architectures and OS integration.",
+      "basis_fact_ids": [
+        "f_2"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Highlight sustainability and environmental impact awareness when discussing operations.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    }
+  ]
+}

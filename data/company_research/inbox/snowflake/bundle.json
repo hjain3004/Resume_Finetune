@@ -1,0 +1,171 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "snowflake",
+  "display_name": "Snowflake",
+  "aliases": [
+    "Snowflake Inc."
+  ],
+  "official_domains": [
+    "snowflake.com"
+  ],
+  "researched_at": "2026-08-06T11:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://www.snowflake.com/about/",
+      "title": "About Us",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "4a46e13ca9d156b821d631fc387c0b47e48f11a5fe8da8592b83971e560091d7",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_blog",
+      "url": "https://www.snowflake.com/blog/",
+      "title": "Blog",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "93091e98e5a14147e2b0ebcf204c7ff756e4b9c521e36c8ffdb09084a1ba62d3",
+      "snapshot_file": "sources/s_blog.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://careers.snowflake.com/",
+      "title": "Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "65e4c9bd8538256c1c8d1f2d1c2d4aaa75f8631506873beb590037c8a8f4ce7e",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_data_cloud",
+      "url": "https://www.snowflake.com/en/data-cloud/",
+      "title": "Data Cloud",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "436793eb18b935ecce78f659c0562055d9af5bc1b56615bf21de1fb67bf93480",
+      "snapshot_file": "sources/s_data_cloud.txt"
+    },
+    {
+      "id": "s_engineering",
+      "url": "https://www.snowflake.com/en/blog/engineering/",
+      "title": "Engineering",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "7b109301b9eaf33d9627eee288ec18ae22068503370068fbe316c26dddbc397f",
+      "snapshot_file": "sources/s_engineering.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "claim": "Snowflake puts customers first.",
+      "quote": "We only succeed when our customers succeed. Work every day to earn our customers\u2019 business and trust.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Cortex"
+      },
+      "claim": "Snowflake provides Cortex AI Gateway and Advanced AI Security.",
+      "quote": "Snowflake Launches Cortex AI Gateway and Advanced AI Security at Black Hat 2026",
+      "source_id": "s_blog"
+    },
+    {
+      "id": "f_3",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "claim": "Snowflake wants individuals driven to innovate in data and AI.",
+      "quote": "Our culture is fueled by a relentless drive to innovate, empowering every individual to unleash their creativity",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_4",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "claim": "Snowflake provides a fully managed, serverless platform.",
+      "quote": "Yes, the Snowflake platform is a fully managed service with many serverless capabilities.",
+      "source_id": "s_data_cloud"
+    },
+    {
+      "id": "f_5",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Snowflake"
+      },
+      "claim": "Snowflake supports multi-cloud operations.",
+      "quote": "Snowflake supports multi-cloud and cross-region operations. It\u2019s available on major cloud providers",
+      "source_id": "s_data_cloud"
+    },
+    {
+      "id": "f_6",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Snowpark"
+      },
+      "claim": "Snowpark UDFs utilize dynamic data redistribution.",
+      "quote": "Accelerating Snowpark UDFs with Dynamic Data Redistribution",
+      "source_id": "s_engineering"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Emphasize experience building serverless data and AI infrastructure.",
+      "basis_fact_ids": [
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Highlight relentless drive to innovate and unleash creativity.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    }
+  ]
+}

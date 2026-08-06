@@ -1,0 +1,166 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "stripe",
+  "display_name": "Stripe",
+  "aliases": [
+    "Stripe, Inc."
+  ],
+  "official_domains": [
+    "stripe.com"
+  ],
+  "researched_at": "2026-08-06T11:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://stripe.com/about",
+      "title": "About Stripe",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "cfc5173a12e6440b512d2ef5686b9979a7021cd744abaf4d49be0845d2bd0f23",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_jobs",
+      "url": "https://stripe.com/jobs",
+      "title": "Stripe Jobs",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "69dca8230f131d981213151b8c4043cfc0265ed394e55642854e36455d0c3b4e",
+      "snapshot_file": "sources/s_jobs.txt"
+    },
+    {
+      "id": "s_eng_blog",
+      "url": "https://stripe.com/blog/engineering",
+      "title": "Stripe Engineering",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "7607f48b6be662125697776e69ba0f9cd1e7372bbcee68af1688c1762012bde4",
+      "snapshot_file": "sources/s_eng_blog.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe is financial infrastructure designed to grow revenue.",
+      "quote": "Financial infrastructure to grow your revenue. Accept payments, offer financial services, and implement custom revenue models",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe processed $1.9T in payment volume in 2025.",
+      "quote": "in payments volume processed in 2025",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Terminal"
+      },
+      "claim": "Stripe offers an enterprise-grade infrastructure for modern payments.",
+      "quote": "Stripe offers an enterprise-grade infrastructure that puts our customers on the cutting edge of modern payments technology.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_4",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe balances speed and craftsmanship.",
+      "quote": "Our goal is to get faster as Stripe grows. We also revere craftsmanship and obsess over every detail.",
+      "source_id": "s_jobs"
+    },
+    {
+      "id": "f_5",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe is building infrastructure for AI and software autonomy.",
+      "quote": "Stripe is building infrastructure to make it possible, including real-time agent micropayments, protocols that let software transact autonomously",
+      "source_id": "s_jobs"
+    },
+    {
+      "id": "f_6",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe looks for people who like hard problems and urgency.",
+      "quote": "we are looking for people who move with urgency, who like hard problems, and who want their work to matter",
+      "source_id": "s_jobs"
+    },
+    {
+      "id": "f_7",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Stripe"
+      },
+      "claim": "Stripe's Global Payments and Treasury Network optimizes global money movement.",
+      "quote": "a programmable infrastructure for global money movement that batches transfers to reduce cost, nets opposing flows to minimize actual cash moved",
+      "source_id": "s_eng_blog"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Emphasize experience building reliable infrastructure that processes large-scale global transactions.",
+      "basis_fact_ids": [
+        "f_7"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Show ability to balance speed with high craftsmanship.",
+      "basis_fact_ids": [
+        "f_4"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "Highlight ability to tackle hard problems with urgency.",
+      "basis_fact_ids": [
+        "f_6"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "airbnb",
+  "display_name": "Airbnb",
+  "aliases": [
+    "Airbnb, Inc."
+  ],
+  "official_domains": [
+    "airbnb.com"
+  ],
+  "researched_at": "2026-08-06T11:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://news.airbnb.com/about-us/",
+      "title": "About Us",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "df6785aa13440802550f47a477082b04844d453240abee009e1bdef6e52eedc0",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://careers.airbnb.com/",
+      "title": "Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "a1f5e862294d3046969bcb25b1bdfad24d3843a9ec7a1dfecca0cba952730575",
+      "snapshot_file": "sources/s_careers.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb was founded in 2007 in San Francisco.",
+      "quote": "Airbnb was born in 2007 when two hosts welcomed three guests to their San Francisco home",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb has welcomed over 2.5 billion guest arrivals.",
+      "quote": "has since grown to over 5.5 million hosts who have welcomed over 2.5 billion guest arrivals",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb launched a bespoke payments platform in 2008.",
+      "quote": "Airbnb launches Payments, our bespoke payments platform which in 2019 processed about $70 billion",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_4",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb allows employees to live and work anywhere.",
+      "quote": "we give our employees the flexibility to live and work anywhere in the world where regulations allow",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_5",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb is committed to diversity and an inclusive workplace.",
+      "quote": "We\u2019re committed to ensuring Airbnb is a place where people of all backgrounds, identities, and experiences can thrive.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_6",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Airbnb"
+      },
+      "claim": "Airbnb looks for individuals who want to drive innovation.",
+      "quote": "Join our global creative community, where passion and collaboration drive innovation to make products that impact the world.",
+      "source_id": "s_careers"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Highlight ability to design global payment systems processing billions in transactions.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Emphasize collaboration and innovation in a global, creative work environment.",
+      "basis_fact_ids": [
+        "f_6"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    }
+  ]
+}

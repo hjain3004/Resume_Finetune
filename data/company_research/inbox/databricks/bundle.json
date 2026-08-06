@@ -1,0 +1,170 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "databricks",
+  "display_name": "Databricks",
+  "aliases": [
+    "Databricks, Inc."
+  ],
+  "official_domains": [
+    "databricks.com"
+  ],
+  "researched_at": "2026-08-06T11:30:00Z",
+  "sources": [
+    {
+      "id": "s_about",
+      "url": "https://www.databricks.com/company/about-us",
+      "title": "About Us",
+      "source_kind": "official_company",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "3d7efcffcf74570a16e90ac9ac274aa909e3cebc62be5134676ebd68e91c2131",
+      "snapshot_file": "sources/s_about.txt"
+    },
+    {
+      "id": "s_blog",
+      "url": "https://www.databricks.com/blog",
+      "title": "Blog",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "90ac741b9bf7782c8e03aa49d89073ef46f01f3487ec5a88f15482cf851d987f",
+      "snapshot_file": "sources/s_blog.txt"
+    },
+    {
+      "id": "s_careers",
+      "url": "https://www.databricks.com/careers",
+      "title": "Careers",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "215be77b879033f8d21a27b5ebc80095d3d95676424c8e30ffcec7688b582282",
+      "snapshot_file": "sources/s_careers.txt"
+    },
+    {
+      "id": "s_lakehouse",
+      "url": "https://www.databricks.com/product/data-lakehouse",
+      "title": "Lakehouse",
+      "source_kind": "official_product",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "retrieved_at": "2026-08-06T11:30:00Z",
+      "content_sha256": "754b18573f55a54fec29789d04fd4f5b08b06f37d883fe154f6d3e9efa23eca1",
+      "snapshot_file": "sources/s_lakehouse.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "identity",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "Databricks provides the Data Intelligence Platform.",
+      "quote": "rely on the Databricks Data Intelligence Platform to take control of their data and put it to work with AI.",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_2",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "Databricks was founded by the creators of major open-source data projects.",
+      "quote": "founded in 2013 by the original creators of the lakehouse architecture and open source projects Apache Spark\u2122, Delta Lake",
+      "source_id": "s_about"
+    },
+    {
+      "id": "f_3",
+      "kind": "product",
+      "scope": {
+        "kind": "business_unit",
+        "name": "Unity Catalog"
+      },
+      "claim": "Unity AI Gateway provides unified AI governance and cost control.",
+      "quote": "Move from tokenmaxxing to valuemaxxing with unified AI governance and cost control",
+      "source_id": "s_blog"
+    },
+    {
+      "id": "f_4",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "Databricks values diversity and different perspectives.",
+      "quote": "We believe different backgrounds, perspectives and skills fuel our success.",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_5",
+      "kind": "hiring_guidance",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "Databricks looks for innovators, builders, and truthseekers.",
+      "quote": "At Databricks, we\u2019re innovators, builders and truthseekers. We have a proven track record as category creators",
+      "source_id": "s_careers"
+    },
+    {
+      "id": "f_6",
+      "kind": "product",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "The Lakehouse architecture combines data lakes and data warehouses.",
+      "quote": "lakehouse architecture, which combines the best elements of data lakes and data warehouses to help you reduce costs",
+      "source_id": "s_lakehouse"
+    },
+    {
+      "id": "f_7",
+      "kind": "domain",
+      "scope": {
+        "kind": "company",
+        "name": "Databricks"
+      },
+      "claim": "Databricks uses open architectures free from proprietary formats.",
+      "quote": "With Databricks, your data is always under your control, free from proprietary formats and closed ecosystems.",
+      "source_id": "s_lakehouse"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Emphasize experience building scalable open-source data solutions.",
+      "basis_fact_ids": [
+        "f_2",
+        "f_7"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    },
+    {
+      "id": "sig_2",
+      "text": "Highlight truthseeking, building, and category creation.",
+      "basis_fact_ids": [
+        "f_5"
+      ],
+      "permitted_uses": [
+        "s0",
+        "g3_advisory"
+      ]
+    }
+  ]
+}

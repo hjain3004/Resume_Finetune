@@ -1,0 +1,112 @@
+{
+  "schema_version": "0.1.0",
+  "company_id": "netflix",
+  "display_name": "Netflix",
+  "aliases": [],
+  "official_domains": [
+    "netflix.com",
+    "jobs.netflix.com",
+    "research.netflix.com"
+  ],
+  "researched_at": "2026-08-06T08:00:00Z",
+  "sources": [
+    {
+      "id": "s_jobs",
+      "url": "https://jobs.netflix.com/",
+      "title": "Netflix Jobs",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "e2f44886fc3c918760380d313fb6d4b3a9669dc8b5e6df7c535526fcd8e6f93e",
+      "snapshot_file": "sources/s_jobs.txt"
+    },
+    {
+      "id": "s_culture",
+      "url": "https://jobs.netflix.com/culture",
+      "title": "Netflix Culture",
+      "source_kind": "official_careers",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "76fe69fd174967f2b741ebde6700bd5e4fa8588905d991212269c49e49522e44",
+      "snapshot_file": "sources/s_culture.txt"
+    },
+    {
+      "id": "s_research",
+      "url": "https://research.netflix.com/",
+      "title": "Netflix Research",
+      "source_kind": "official_engineering",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "retrieved_at": "2026-08-06T08:00:00Z",
+      "content_sha256": "6332f319fcf1a96389ceced4a980a643aaefcbdba2af5c8bc824bd720cc34958",
+      "snapshot_file": "sources/s_research.txt"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_1",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "claim": "Inclusion is a core Netflix value during the hiring process.",
+      "quote": "Inclusion is a Netflix value and we strive to host a meaningful interview experience for all candidates.",
+      "source_id": "s_jobs"
+    },
+    {
+      "id": "f_2",
+      "kind": "value",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "claim": "Netflix's company culture focuses on excellence.",
+      "quote": "we\u2019ve developed an unusual company culture focused on excellence, and creating an environment where talented people can thrive",
+      "source_id": "s_culture"
+    },
+    {
+      "id": "f_3",
+      "kind": "engineering_theme",
+      "scope": {
+        "kind": "company",
+        "name": "Netflix"
+      },
+      "claim": "Netflix uses Large Language Models for personalization.",
+      "quote": "Large language models (LLMs) have demonstrated success in various applications of user recommendation",
+      "source_id": "s_research"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_1",
+      "text": "Highlight inclusive behavior and focus on excellence.",
+      "basis_fact_ids": [
+        "f_1",
+        "f_2"
+      ],
+      "permitted_uses": [
+        "s0"
+      ]
+    },
+    {
+      "id": "sig_3",
+      "text": "For ML roles, emphasize applied LLMs in personalization and recommendation.",
+      "basis_fact_ids": [
+        "f_3"
+      ],
+      "permitted_uses": [
+        "s0",
+        "s2_tiebreak"
+      ]
+    }
+  ]
+}
