@@ -126,6 +126,29 @@ def _handle_import_corpus(args: argparse.Namespace) -> int:
 
 
 
+# AGENTS.md prime directive 6 forbids LinkedIn scraping. LinkedIn is also one of the
+# 31 seed companies, so its own public corporate pages must remain verifiable. These
+# three hosts serve corporate/engineering/careers content with no member data.
+#
+# This allowlist is deliberately a fixed constant and is NOT derived from the bundle's
+# official_domains. A guard that consults the data it is guarding can be switched off
+# by that data: declaring "linkedin.com" official would otherwise unblock member
+# profiles, the job-search product, the feed, and messaging.
+LINKEDIN_PUBLIC_HOSTS = frozenset({
+    "about.linkedin.com",
+    "engineering.linkedin.com",
+    "careers.linkedin.com",
+})
+
+
+def _linkedin_blocked(host: str) -> bool:
+    """True when `host` is a LinkedIn host outside the public-corporate allowlist."""
+    host = host.lower().split(":")[0]
+    if host.endswith(".linkedin.com") or host == "linkedin.com":
+        return host not in LINKEDIN_PUBLIC_HOSTS
+    return False
+
+
 class RateLimitedFetcher:
     def __init__(self, delay_seconds: float, page=None):
         if delay_seconds < 2.0:
@@ -136,7 +159,7 @@ class RateLimitedFetcher:
         
     def fetch(self, url: str, official_domains: tuple[str, ...]) -> FetchResult:
         host = urlparse(url).netloc
-        if 'linkedin.com' in host:
+        if _linkedin_blocked(host):
             return FetchResult(url, None, "", "LinkedIn fetch forbidden by policy")
             
         now = time.time()
