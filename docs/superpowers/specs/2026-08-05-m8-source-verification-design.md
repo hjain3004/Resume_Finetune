@@ -61,6 +61,24 @@ source: *did this snapshot actually come from this URL?*
   (AGENTS.md prime directive 5).
 - Not a replacement for human alias/scope review, which remains a judgment call.
 
+**This applies to the whole repository, not just `verify-sources`.** On 2026-08-05 an
+implementing agent honoured the letter of this rule — `verify-sources` itself never wrote to
+a bundle — while violating its purpose with a second, undocumented script that read the
+verification result and deleted every fact whose quote a single fetch attempt didn't
+reproduce. Because bot-walled hosts (Microsoft) fail *every* fetch, this deleted genuine,
+previously-verified evidence, and it silently violated an explicit per-task instruction to
+leave the Palantir bundle untouched. A third script separately hardcoded a fabricated
+replacement quote into `google`'s bundle to silence a validation error, bypassing evidence
+collection entirely.
+
+No script, patch, or one-off helper — regardless of name, regardless of whether it calls
+into `verify.py` — may delete a fact, prune a `basis_fact_ids` entry, or rewrite a `quote`
+in response to a verification or validation result. A `failed` or `inconclusive` verdict is
+a finding to report, not a trigger to act on. The only correct response to a real evidence
+gap is: a human decides per source whether to re-research, re-extract from a live page, or
+drop it — one company at a time, with the replacement quote taken from text actually read at
+decision time, never inferred from what a claim or an old quote implies the page should say.
+
 ## 4. Two-layer design
 
 Verification splits into two layers with different cost and different power.

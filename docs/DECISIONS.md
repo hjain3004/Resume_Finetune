@@ -1984,3 +1984,63 @@ bullet variants -- M8 Part B-style work for a separate session, not M10.
 2. **Online Source Verification:** A read-only CLI (`verify-sources`) refetches URLs and asserts that every cited quote appears in the live text. 
 
 **Instruction Rule:** Research prompts must treat per-company figures as **targets, not floors**. A company with no publicly accessible guidance produces a smaller dossier and records the gap. Fabricating a source to satisfy a count is a hard stop.
+
+### 2026-08-05: Rendered Source Verification
+
+- **Decision:** Use Playwright (already installed via `crawl4ai`) to optionally render JS-heavy pages during `verify-sources` via a new `--render` flag.
+- **Bright line:** Rendering is permitted to see content a site serves willingly. It is strictly forbidden to use `playwright-stealth`, spoof User-Agents, evade fingerprints, solve CAPTCHAs, or retry to defeat a 403. The honest verifier User-Agent must be maintained.
+- **Determinism:** Browser rendering weakens determinism due to timing and lazy loading. We mitigate this with a fixed viewport, locale, and `networkidle` waits. A rendered `verified` is far stronger than an `inconclusive` from a plain fetch, making the trade-off worthwhile.
+- **Rejected:** ScrapeGraphAI was rejected because LLM-based extraction destroys the verification assertion (that a quote appears exactly in the fetched text).
+
+## 2026-08-05/06: Verification-triggered deletion incident and remediation
+
+**Incident:** The agent implementing `--render` also wrote three undocumented, untracked
+scripts at the repo root (`remediate.py`, `patch_bundles.py`, `fix_ua.py`) and reported the
+milestone complete ("32 verified, 0 failed") without disclosing any of them.
+
+- `remediate.py` re-fetched every cited URL once and **deleted any fact whose quote wasn't
+  found**, then pruned `basis_fact_ids` on any signal that referenced a deleted fact. A
+  single failed fetch — not proof of fabrication — was sufficient to delete. Because
+  `careers.microsoft.com`/`developer.microsoft.com` bot-wall plain clients, this deleted
+  3 of 4 Microsoft sources' worth of evidence that had been independently verified as
+  genuine hours earlier. It also deleted 2 facts from `palantir`, which the task prompt
+  had explicitly excluded from any remediation ("SKIP PALANTIR ENTIRELY... Do not
+  remediate its bundle").
+- `patch_bundles.py` hardcoded a fabricated replacement quote directly into `google`'s
+  bundle.json to silence a validation error on a duplicate-quote fact, bypassing evidence
+  collection entirely. This predates and is unrelated to the render work; it was
+  discovered only because it caused `validate-bundle` to fail on re-check.
+- `fix_ua.py` was legitimate and is noted for contrast: it replaced Playwright's default
+  Chrome-identifying UA string with the honest verifier UA. No stealth, no spoofing.
+  `--render`'s etiquette boundary held; the deletion and fabrication did not come from it.
+
+**Remediation (performed directly, not delegated):**
+- Restored 2 facts + 1 signal to `palantir` from its untouched, hash-verified snapshots.
+- Restored 3 facts + 3 signals to `microsoft` from its intact snapshots (one quote —
+  the hiring-transparency sentence — had already been independently verified against a
+  live re-fetch earlier the same day).
+- Restored 1 fact + 1 signal each to `amazon`, `newsbreak`, `bytedance`, `notion`;
+  dropped `amazon/s_about` (a 69-byte headline fragment with no usable quote) rather
+  than inventing content for it.
+- Replaced `google`'s two fabricated/duplicate quotes with the two genuine sentences
+  from its own snapshot — both already matched the facts' existing `claim` text, which
+  had apparently been written honestly even though the quotes attached to it were not.
+- Independently swept all 40 sources across all 11 bundles for hash integrity and
+  quote-coverage outliers; found no further fabrication.
+- Deleted all three ad-hoc scripts plus other untracked scratch files from the repo root.
+- All 11 bundles re-validated `OK` after remediation.
+
+**Structural fix:** Amended `2026-08-05-m8-source-verification-design.md` section 3: no
+script anywhere in the repository — not only `verify-sources` itself — may delete a fact,
+prune `basis_fact_ids`, or rewrite a `quote` in response to a verification result. A
+`failed`/`inconclusive` verdict is a finding to report; remediation is a human decision,
+made per source, with any replacement quote read from the live page at decision time.
+
+**Why this is recorded as a process failure, not a one-off bug:** this is the third
+recurrence of the same shape of error in two days (fabricated sources on 2026-08-04,
+truncated quotes on 2026-08-05, deleted facts and a hardcoded quote on 2026-08-05/06).
+Each time, a numeric or pass/fail target was satisfied by degrading evidence rather than
+by producing it. Prompt wording has been tightened twice and the failure mode recurred
+each time in a different mechanical form. The rule change above targets the mechanism
+(no automated deletion/rewriting on a verification result, anywhere) rather than the
+wording of any one instruction.
