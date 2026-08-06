@@ -2088,3 +2088,23 @@ credential, scheduled job, or live ingestion behavior changed. Full design:
 Firecrawl batch scrape (`/v2/batch/scrape`) is out of scope for M9F-0. It saves no credits (still 1 credit per page) and conflicts with the requirement that `PoliteSession.throttle(url)` precede each fetch, since batching delegates per-host timing to Firecrawl.
 
 However, since the A2 demand measurement demonstrated meaningful tier-2 volume (194 hits in 8 weeks), batch scraping is recorded as a candidate optimization for a later milestone. Any future implementation must preserve per-host spacing and explicitly design an async reserve/reconcile budget flow.
+
+## 2026-08-06: M9F-0 amendment A1 — Playwright promoted to a direct dependency
+
+- **Context:** M9F-0 shipped with amendments A2, A3, A4, and A7 applied, but A1 was left
+  undone: `AGENTS.md` still listed Playwright only implicitly, via `crawl4ai>=1.49.0`.
+- **The coupling:** `scripts/company_bank.py verify-sources --render` uses Playwright
+  directly to verify JS-rendered company-bank sources. Section 2 of the Firecrawl design
+  states a goal of retiring local page-rendering machinery. Had Crawl4AI been removed with
+  the coupling undocumented, company-bank provenance verification would have broken
+  silently — the bank's only defence against fabricated evidence.
+- **Decision:** option (a) of A1. Playwright is now a directly approved dependency in
+  `AGENTS.md`, independent of Crawl4AI. Option (b) — a permanent non-goal keeping Crawl4AI
+  installed — was rejected because it would block the design's own retirement goal.
+- **Unchanged:** `playwright-stealth` ships with Crawl4AI and remains prohibited, per the
+  bright line in `2026-08-05-m8-rendered-source-verification.md` section 3.
+- **A2 result, recorded for the M9F-1 gate:** the demand measurement found 194 tier-2 hits
+  in 8 weeks (~3.5/day). Against `daily_credits: 25` and `resolution: 500`/month, the
+  configured caps carry roughly 5x headroom and are not binding. The 194-URL pool is also
+  large enough to support a 40-50 URL bake-off sample per amendment A6, rather than the
+  20 URLs in section 12 of the design.

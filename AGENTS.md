@@ -17,9 +17,17 @@ the current/target boundary is fixed in `docs/ARCHITECTURE.md`, the phase status
 3. **Idempotency is sacred.** Any change that could make a second identical run mutate the DB
    is a bug, full stop.
 4. **No unapproved dependencies.** The currently approved list is: requests, trafilatura,
-   PyYAML, pytest, crawl4ai (M6.5 tier-2 resolver; M9D may evaluate bounded deep crawling).
+   PyYAML, pytest, crawl4ai (M6.5 tier-2 resolver; M9D may evaluate bounded deep crawling),
+   playwright (company-bank `verify-sources --render`; see below).
    Crawlee Python and Apify integrations are design candidates, not approved runtime
    dependencies. Ask before adding either or anything else, including BeautifulSoup.
+
+   **Playwright is a direct dependency, not a Crawl4AI transitive one.** It entered the tree
+   only because `crawl4ai>=1.49.0` requires it, but `scripts/company_bank.py`
+   `verify-sources --render` now depends on it directly to verify JS-rendered company-bank
+   sources. Promoted on 2026-08-06 (M9F-0 amendment A1) so that retiring Crawl4AI — an
+   explicit goal of the Firecrawl design — cannot silently break company-bank provenance
+   verification. `playwright-stealth` also ships with Crawl4AI and must remain unused.
 5. **Tests never touch the network.** Fixtures live in `tests/fixtures/`, recorded via
    `scripts/record_fixture.py`. Live checks are manual "smoke" steps run with the user.
 6. **Etiquette is non-negotiable:** no LinkedIn scraping, no auth/CAPTCHA bypass, ≥2 s
