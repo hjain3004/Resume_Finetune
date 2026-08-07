@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available and execute one five-company batch at a time. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Use Claude Web to create evidence-anchored, importer-ready research bundles and short source snapshots for the approved 31 companies, without editing production code or canonical dossiers.
+**Goal:** Use Claude Web to create evidence-anchored, importer-ready research bundles and short source snapshots for the approved 21 companies, without editing production code or canonical dossiers.
 
 **Architecture:** Web research is an untrusted proposal stage. Claude Web gathers primary-source facts, saves only the minimum exact source excerpts needed for verification, and emits one strict `bundle.json` per company under the ignored research inbox. The completed artifacts cross into the repository only through Gemini's offline deterministic importer in the separate adoption milestone.
 
@@ -226,7 +226,7 @@ Special caution: do not scrape LinkedIn pages requiring login or member/job-sear
 
 ---
 
-### Task 5: Batch 4 — data, infrastructure, and marketplace targets
+### Task 5: Batch 4 — data, infrastructure, and marketplace targets (COMPLETE)
 
 **Companies:** `uber`, `airbnb`, `stripe`, `databricks`, `snowflake`
 
@@ -241,7 +241,8 @@ Special caution: engineering-blog posts about one system support that system/the
 
 ---
 
-### Task 6: Batch 5 — developer infrastructure and consumer platforms
+### Task 6: Batch 5 — developer infrastructure and consumer platforms (DESCOPED)
+See `docs/DECISIONS.md` entry for 2026-08-07 scope reduction.
 
 **Companies:** `cloudflare`, `mongodb`, `datadog`, `doordash`, `roblox`
 
@@ -256,7 +257,8 @@ Special caution: distinguish MongoDB the company from MongoDB the product throug
 
 ---
 
-### Task 7: Batch 6 — enterprise and fintech targets
+### Task 7: Batch 6 — enterprise and fintech targets (DESCOPED)
+See `docs/DECISIONS.md` entry for 2026-08-07 scope reduction.
 
 **Companies:** `capital_one`, `salesforce`, `rippling`, `plaid`, `ramp`
 
@@ -274,7 +276,7 @@ Special caution: fintech product/domain facts do not imply quantitative-finance 
 ### Task 8: Complete-corpus research handoff
 
 **Files:**
-- Read only: all 31 bundle directories
+- Read only: all 21 bundle directories
 - Create only: `data/company_research/inbox/research_summary.json`
 
 - [ ] **Step 1: Validate the entire seed corpus offline**
@@ -287,18 +289,17 @@ Run:
   --seeds config/company_bank/seed_companies.yaml
 ```
 
-Expected: `OK`, exactly 31 companies, zero missing ids, zero unexpected ids, zero invalid bundles. If it fails, fix research artifacts only and rerun.
+Expected: `OK`, exactly 21 companies, zero missing ids, zero unexpected ids, zero invalid bundles. If it fails, fix research artifacts only and rerun.
 
 - [ ] **Step 2: Write the ignored research summary**
 
 Create `research_summary.json` with `schema_version` equal to `0.1.0`, `company_count` equal
-to integer `31`, and `company_ids` equal to this exact seed-file order:
+to integer `21`, and `company_ids` equal to this exact seed-file order:
 
 ```text
 palantir, cisco, notion, atos, bytedance, newsbreak, quantcast, google,
 microsoft, amazon, meta, apple, nvidia, netflix, linkedin, uber, airbnb,
-stripe, databricks, snowflake, cloudflare, mongodb, datadog, doordash,
-roblox, capital_one, salesforce, rippling, plaid, ramp, expedia
+stripe, databricks, snowflake, expedia
 ```
 
 Set `validated_at` to the actual UTC time of the successful corpus-validation command,
@@ -310,7 +311,7 @@ limitations remain. This summary is an operator handoff, not importer input.
 
 Report:
 
-- exact 31/31 validation result;
+- exact 21/21 validation result;
 - total source, fact, and signal counts;
 - per-company coverage table;
 - every remaining evidence gap;

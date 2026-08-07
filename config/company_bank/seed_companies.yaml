@@ -20,14 +20,4 @@ companies:
   stripe: Stripe
   databricks: Databricks
   snowflake: Snowflake
-  cloudflare: Cloudflare
-  mongodb: MongoDB
-  datadog: Datadog
-  doordash: DoorDash
-  roblox: Roblox
-  capital_one: Capital One
-  salesforce: Salesforce
-  rippling: Rippling
-  plaid: Plaid
-  ramp: Ramp
   expedia: Expedia Group

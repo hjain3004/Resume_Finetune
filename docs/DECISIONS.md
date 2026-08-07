@@ -2108,3 +2108,9 @@ However, since the A2 demand measurement demonstrated meaningful tier-2 volume (
   configured caps carry roughly 5x headroom and are not binding. The 194-URL pool is also
   large enough to support a 40-50 URL bake-off sample per amendment A6, rather than the
   20 URLs in section 12 of the design.
+
+## 2026-08-07: M8 Company Bank scope reduction (31 -> 21 companies)
+
+**Decision:** The M8 Company Knowledge Bank seed corpus is closed at 21 companies, rather than the originally planned 31.
+**Reason:** The 31-company corpus was an upfront speculative investment. The 21 canonical dossiers provide sufficient coverage for S0 positioning polish on near-term applications, while the downstream S1-S3/G1-G3 tailoring pipeline is still being implemented. Speculative upfront research is displaced by the lazy post-0.1.0 path defined in Section 3 of the design: unseen target companies (including the 10 dropped ones) will be added on demand via the same research/import contract when a real application arises with a real JD in hand.
+**Impact:** Batches 5 and 6 of the Claude Web research run are DESCOPED (not failed). All count assertions in `test_model.py` and across design documentation are updated from 31 to 21. No company inbox directories were deleted, as none of the dropped 10 companies had artifacts.
