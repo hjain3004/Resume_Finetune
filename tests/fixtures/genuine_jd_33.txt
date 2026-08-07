@@ -1,0 +1,29 @@
+The California Energy Commission is seeking a self-motivated Student Assistant for Applications Development. The role involves performing application development support duties, including testing, developing automated test scripts, and documenting test results for systems used by the California State Legislature.
+
+Responsibilities:
+- Under close supervision of the development team lead, and in a learner capacity, the student assistant will perform the following duties:
+- Design, develop, and maintain automation test scripts using JavaScript and Playwright to verify functional and non-functional requirements
+- Perform manual smoke and regression testing on new software builds to ensure stability before deployment
+- Log, track, and categorize defects using internal tracking systems
+
+Qualifications:
+Must have:
+- Must be a college student attending classes during the regular term (Fall, Spring and Winter, if applicable), at one of the accredited colleges or universities on our affiliation list
+- Students must be enrolled in at least: six-semester units or nine quarter units for undergraduate students; four-semester units or six quarter units for graduate students
+- Students declared major must match the major(s) listed in the job posting
+- Must complete each term with minimum unit requirements for Undergraduate and Graduate student classifications
+- Proof will be collected at the end of each Spring and Fall term
+- Student(s) must have 60 or more completed units
+- Self-motivated, able to work independently and effectively research solutions
+- Review and triage software defects and enhancements
+- Communicate effectively both orally and in writing
+- Quick learner and able to collaborate and work closely with project team members
+- Proficiency with HTML, CSS, and Web Browser-based development
+- Proficiency with JavaScript, TypeScript, and working in Node.js development environments
+- Proficiency with front end test automation tools (e.g. Playwright, Cypress, Selenium)
+- Proficiency with Git version control
+- Familiarity with the software development lifecycle and software business analysis concepts
+- Familiarity with React.JS framework and working with RESTful APIs
+- Familiarity with Java, and Python languages
+Preferred:
+- Individuals who are, or have been, a dependent child in foster care, a homeless youth or a formerly incarcerated youth as defined by Government Code section 18220 are encouraged to apply and will be given priority. Please note that prior to appointment, individuals claiming preference under one of these categories will be required to furnish documentation establishing their eligibility

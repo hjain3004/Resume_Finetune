@@ -1,0 +1,22 @@
+SpaceX is actively developing technologies to enable human life on Mars. The Software Engineer for Collision Avoidance will work in the GNC organization to build mission-critical systems for low-earth orbit safety, focusing on payload management, collision avoidance, and orbital prediction tools.
+
+Responsibilities:
+- Develop highly reliable and available software systems for managing thousands of satellites in low-earth orbit
+- Develop prototypes to prove out key design concepts and quantify technical constraints
+- Collaborate with other engineers to plan and organize the development of our products
+- See your software through from start to finish: from figuring out the core needs to prototyping, developing, and testing; to rollout and beyond
+
+Qualifications:
+Must have:
+- Bachelor's degree in computer science, engineering, math, or science discipline; or 3+ years of professional experience in software development in lieu of a degree
+- +1 years of professional experience in software development
+Preferred:
+- Experience with Python, C++, or a similar object-oriented programming language
+- Experience with distributed systems or large-scale consumer internet systems
+- Production experience with containerization technologies (e.g. Docker, Kubernetes)
+- Understanding of version control, testing, continuous integration, build, deployment, and monitoring
+- Experience with profiling and improving application performance
+- Experience with relational databases (PostgreSQL, CockroachDB, or similar)
+- Ability to work independently and in a team, take initiative, and communicate effectively
+- Previous experience with satellites or spacecraft systems is a plus
+- Strong background in math and physics

@@ -1,0 +1,17 @@
+Silvus Technologies, a subsidiary of Motorola Solutions, specializes in advanced MANET and MIMO communications systems for mission-critical applications. The Web Interface Software Engineer will be responsible for developing and maintaining the web interface and network management software for Silvus StreamCaster radios, contributing to the enhancement of tactical communications technologies.
+
+Responsibilities:
+- Develop, maintain, improve and test Silvus StreamCaster radio’s web interface and network management software
+- Develop applications running on the Silvus StreamCaster radios
+- Travel requirement - rare local travel, as required
+
+Qualifications:
+Must have:
+- Bachelor's degree in Electrical Engineering, Computer Science, or Computer Engineering
+- Minimum 1 year demonstrated experience in JavaScript, HTML, and Python backend development
+- Experience in mobile friendly web interface development
+- Must be a U.S. Person (U.S. Citizen, or U.S. Permanent Resident) due to clients under U.S. federal contracts
+- Employment is contingent upon the successful clearance of a background check and drug test
+Preferred:
+- Experience in UI test automation
+- Experience with C programming

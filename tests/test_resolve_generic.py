@@ -57,7 +57,11 @@ def test_resolve_returns_none_on_short_text_even_with_keyword():
 
 
 def test_passes_quality_accepts_long_text_with_jd_keyword():
-    assert generic.passes_quality("Responsibilities: " + "x" * 400) is True
+    # The new passes_quality requires a prose run (a line with > 60 chars and > 5 spaces).
+    # The old test just concatenated 400 'x's, which creates a single 400-char word (no spaces).
+    # We update the mock text to resemble real prose by breaking the x's into words.
+    mock_prose = " ".join(["xxxxx"] * 80)
+    assert generic.passes_quality("Responsibilities: \n" + mock_prose) is True
 
 
 def test_passes_quality_rejects_short_text():

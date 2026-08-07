@@ -111,7 +111,41 @@ def passes_quality(text: str) -> bool:
     job-adjacent keywords to otherwise pass (M6.13 dead-posting fix)."""
     if is_dead_posting_text(text):
         return False
-    return len(text) >= MIN_LENGTH and bool(_KEYWORD_RE.search(text))
+        
+    if len(text) < MIN_LENGTH:
+        return False
+
+    # 1. Menu-pattern detection (specifically targeting Oracle Cloud / ATS boilerplate)
+    # Note: "Skip to main content" is skipped because it causes 46 regressions in jobs.db
+    boilerplate = ["View More Jobs", "Are You Still With Us?"]
+    for bp in boilerplate:
+        if bp in text:
+            return False
+
+    # 2. Extract text without markdown links to evaluate prose and keywords
+    text_without_links = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    
+    # 3. Require keyword hit in actual prose (not just inside a link label)
+    if not _KEYWORD_RE.search(text_without_links):
+        return False
+        
+    # 4. Require at least one sentence-length prose run (> 60 chars, has spaces)
+    has_prose = False
+    for line in text_without_links.splitlines():
+        if len(line.strip()) > 60 and line.count(' ') > 5:
+            has_prose = True
+            break
+            
+    if not has_prose:
+        return False
+        
+    # 5. Link density check (if > 50% of the text is link labels, it's a nav shell)
+    link_text_re = re.compile(r'\[([^\]]+)\]\([^\)]+\)')
+    link_chars = sum(len(m.group(1)) for m in link_text_re.finditer(text))
+    if len(text) > 0 and (link_chars / len(text)) > 0.5:
+        return False
+        
+    return True
 
 
 def extract_from_html(html_text: str) -> ResolvedJD | None:

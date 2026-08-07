@@ -1,0 +1,31 @@
+SpaceX is actively developing technologies to enable human life on Mars. As a Software Engineer on the Design Software team, you will build and maintain software to aid in the creation, analysis, and distribution of design data, focusing on applications like mesh processing and 3D graphics rendering.
+
+Responsibilities:
+- Develop highly reliable software solutions that are used across SpaceX
+- Create new applications that improve how SpaceX operates
+- Build prototypes to prove out key design concepts and quantify technical constraints
+- Own all aspects of software engineering and product development
+- Deep dive into your users’ problems to find and create efficient solutions
+- Bring your voice to the table in team collaborations on architecture, design, and code reviews
+- Integrate electronics design software to manufacturing equipment
+
+Qualifications:
+Must have:
+- Bachelor's degree in computer science, engineering, math, or scientific discipline; OR 2+ years of professional experience building software in lieu of a degree
+- 1+ years of experience in full stack development
+- Must be willing to work extended hours/weekends as needed dependent on launch cadence
+Preferred:
+- Programming experience in Python, C#.NET, Go, Scala, Java, or similar object-oriented language
+- 1+ years of rigorous experience building single page web applications
+- Experience with version control, continuous integration, and continuous delivery concepts
+- Expertise in designing software systems
+- Deep understanding of testing, continuous integration, build, deployment & monitoring
+- Expertise in profiling and improving application performance
+- Experience with build systems (Make, Bazel/Pants/Buck, Gradle) and package management tools (pip, npm)
+- Experience working with in-stream data processing using Apache Kafka, RabbitMQ, ActiveMQ, or similar technologies
+- Production experience with Docker and Kubernetes
+- Front-end experience in Angular, React, or similar JavaScript framework
+- Database experience with PostgreSQL, SQL Server, or similar database technologies
+- Graph experience with Neo4j or similar technologies
+- 3D Graphics experience with three.js, OpenGL, Vulkan, Unreal Engine, or other similar frameworks
+- Experience integrating third-party CAD Software (NX, Altium, Xpedition, etc.)

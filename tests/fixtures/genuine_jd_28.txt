@@ -1,0 +1,32 @@
+Innovative Defense Technologies (IDT) is a leading defense software company seeking an Associate Linux Systems & Datacenter Infrastructure Engineer to support their Fall River, Massachusetts office. The role involves assisting with datacenter operations, systems deployment, and daily sysadmin tasks while learning from senior engineers to develop skills in enterprise-scale cloud infrastructure.
+
+Responsibilities:
+- Assist with building, racking, stacking, and bringing new enterprise physical server systems online
+- Handle daily operational sysadmin tasks, including account provisioning, access controls, permissions management, and infrastructure triage
+- Learn to troubleshoot and resolve physical hardware component failures (drives, memory, power supplies) across enterprise server stacks
+- Troubleshoot localized physical and logical connection issues (checking links, verifying IP assignments, basic ping/traceroute diagnostics)
+- Identify repetitive manual tasks and build out automated solutions using shell scripting (Bash) or Python to streamline routine administrative workflows
+- Assist with system hardening, vulnerability remediation, and applying security patches to maintain strict system integrity
+- Actively shadow senior engineering staff to master the Linux boot process, custom image generation, enterprise virtualization (VMware), and central storage architectures
+- Contribute to a vibrant team atmosphere built on camaraderie, mutual support, and a shared commitment to excellence, balancing hard work with community and fun
+
+Qualifications:
+Must have:
+- Bachelor's degree in computer science, information technology, information systems, computer engineering, or related field of engineering, or equivalent hands-on technical background
+- 0–2 years of experience (relevant internships, dedicated university lab work, or complex personal technical projects will be heavily considered)
+- Ability to travel up to 10% of the time as needed
+- Physical capability and willingness to work hands-on in a physical datacenter environment (racking equipment, lifting servers, running cable runs)
+- Demonstrated ability to shift from one project to another in an agile work environment
+- Ability to communicate technical approaches and details within small project teams
+- Ability to capture technical approaches, designs, block diagrams, and implementations in written and graphical form
+- All applicants must currently possess an active Secret U.S. Security Clearance
+- This is an on-site position. Requiring at least 5 days in office, based out of our Fall River, MA location
+Preferred:
+- High Motivation & Curiosity: A strong internal drive to learn advanced infrastructure concepts and apply them practically
+- Personal Technical Projects: Experience building home labs, setting up personal servers, exploring open-source tools, or tinkering with Linux environments outside of classwork
+- Ownership & Urgency: A clear sense of responsibility for system availability and operational execution
+- Analytical Troubleshooting: Solid analytical abilities, coupled with the ability to methodically deconstruct a complex problem down to its root cause
+- Exposure to virtualization hypervisors (VMware ESXi, Proxmox, KVM) via academic labs or home projects
+- Familiarity with configuration management tools like Ansible or version control like Git
+- Basic classroom understanding of enterprise storage concepts (iSCSI, NFS) or networking concepts (VLANs, firewalls)
+- Security+ or equivalent level I or II IAT/IAM certification (DoD Directives 8140/8570), VMware, or Red Hat certifications highly encouraged
