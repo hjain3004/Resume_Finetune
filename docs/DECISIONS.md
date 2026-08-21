@@ -2194,3 +2194,66 @@ configured or printed (`FIRECRAWL_API_KEY` was absent from the environment throu
 
 **Still gated:** M9F-0 is **not COMPLETE**. Its single user-supervised live REST smoke remains
 outstanding and requires separate explicit approval. M9F-1 is not started.
+
+## 2026-08-21: M9F-0 live REST smoke closed — M9F-0 COMPLETE
+
+**Authorization:** the user explicitly approved one user-supervised live smoke, limited to a
+single Firecrawl `/v2/scrape` request and at most one credit. No second request of any kind
+was made, and no alternative URL was attempted.
+
+**Bounded target:** job 1351 — Profound, "New Grad: Software Engineer", a public generic-host
+careers URL taken read-only from `data/jobs.db`. Verified before the call as HTTPS, routed to
+`generic` (not a structured ATS), absent from `config/manual_domains.txt`, and neither
+LinkedIn nor Indeed.
+
+**Path exercised (the real project-owned code, not a fake):** `config/firecrawl.yaml` ->
+`FirecrawlClient` -> `BudgetManager` (run_ref `m9f0-live-smoke-20260821T151433Z`) ->
+`BudgetAwareTier2Client` -> `PoliteSession.throttle()` -> `browser.resolve(...,
+provider_name="firecrawl")` -> `page_rejection()` -> reconcile, against the real ignored
+ledger. A one-shot guard made a second paid request physically impossible in-process.
+
+**Result — one request, one credit, content rejected:**
+
+- scrape requests issued: 1
+- classification: content-rejected, `PageRejection.BAD_STATUS`
+- run stats: attempted 1, accepted 0, content_failed 1, deferred 0, provider_failed 0,
+  credits_reserved 1, credits_finalized 1
+- client started and credentials validated *before* any reservation; client closed cleanly
+
+**Why the rejection is correct, not a defect:** the posting is dead. A free plain HTTP GET
+(no Firecrawl, no credit) independently returned **HTTP 404** for the same URL. The page
+nevertheless serves ~55 KB of HTML, so it is a soft-404 shell — precisely the false-accept
+class the 2026-08-21 acceptance repair targeted. The status gate rejected it before content
+was ever considered.
+
+**Ledger before/after:** 12 -> 13 records (delta exactly 1). States went
+`{reconciled: 11, charged: 1}` -> `{reconciled: 12, charged: 1}`. The new record is
+`reconciled`, outcome `content_failed:bad_status`, reserved 1 / actual 1, `completed_at` set,
+24h cooldown applied. Remaining resolution allowance moved by exactly one credit on every
+cap: monthly 788 -> 787, daily 25 -> 24, run 10 -> 9, purpose_resolution 499 -> 498. A
+timestamped pre-smoke ledger backup was taken under ignored `data/firecrawl/` as evidence
+only; nothing was rolled back.
+
+**Verification:** `data/jobs.db` SHA-256 unchanged, byte-identical before and after
+(`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`). No ingest CLI was run
+and job 1351 was not mutated (read-only `mode=ro` connection). `pytest -q` after the smoke:
+1151 passed, 1 deselected. `git diff --check` clean. No API key, `Authorization` header, or
+`Bearer` token appears in the smoke output or the ledger; `.env` is gitignored and untracked
+and was never printed.
+
+**Decision: M9F-0 is COMPLETE.** All ten completion criteria held: exactly one authorized
+request; auth and REST transport worked; no secret leaked; the ledger recorded the outcome
+accurately; budget enforcement stayed intact; deterministic classification completed; the
+client closed cleanly; the production DB was byte-identical; the default backend stayed
+Crawl4AI; and the full offline suite passed afterwards.
+
+**Known limitation, recorded deliberately:** the *accepted*-JD branch (real Firecrawl markdown
+clearing `passes_quality()` into `ResolvedJD(resolver="firecrawl", jd_quality="ats")`) was not
+exercised live, because the sampled posting was dead. That branch is covered by offline tests,
+and whether Firecrawl markdown clears the quality gate at an acceptable rate is exactly what
+the M9F-1 bake-off exists to measure. M9F-0 claims transport, budget, and acceptance-plumbing
+correctness only — not extraction quality.
+
+**Unchanged:** `browser_backend` remains `crawl4ai`; Firecrawl stays disabled by default and
+cannot become the production backend without the M9F-1 bake-off and a recorded user decision.
+M9F-1, M9F-2, M9F-3, and M9D-1 remain unimplemented. No code was modified in this session.

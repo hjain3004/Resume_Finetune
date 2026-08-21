@@ -114,7 +114,7 @@ Test router behavior, double-fetch removal, and error classifications with mocks
 Run `pytest -q` to ensure 100% green and zero network calls.
 - [x] **Step 2: Secret Redaction Verification**
 Confirm tests explicitly check that API keys never leak into logs or exceptions.
-- [ ] **Step 3: Submit for Smoke Test Approval**
+- [x] **Step 3: Submit for Smoke Test Approval**
 Stop and ask for explicit go-ahead for a user-supervised live scrape smoke. Do not proceed until approved.
 
 ## Status — 2026-08-21
@@ -125,9 +125,21 @@ validation; cleared reservations still counted; content reconciled before the qu
 dry-run fabricating a failed page; missing integrated coverage; duplicate tier-2 contracts;
 observability below the approved design.
 
-Offline verification is complete (`pytest -q`: 1151 passed, 1 deselected). **The
-user-supervised live REST smoke has NOT run, so M9F-0 is not COMPLETE.** No Firecrawl request
-was made and no credit was spent during the repair. `browser_backend` remains `crawl4ai`.
+Offline verification is complete (`pytest -q`: 1151 passed, 1 deselected). No Firecrawl
+request was made and no credit was spent during the repair itself.
+
+**2026-08-21 — live REST smoke executed; M9F-0 is COMPLETE.** One authorized `/v2/scrape`
+against job 1351 (Profound, "New Grad: Software Engineer"), one credit charged. Auth and
+transport succeeded; the ledger went 12 -> 13 records with the new record `reconciled` as
+`content_failed:bad_status`, actual 1 credit, 24h cooldown applied; allowance decremented by
+exactly one across monthly (788->787), daily (25->24), run (10->9), and resolution purpose
+(499->498). The page was correctly rejected because the posting is dead (upstream HTTP 404,
+independently corroborated by a free plain GET). `data/jobs.db` byte-identical; `pytest -q`
+green afterwards; `browser_backend` remains `crawl4ai`.
+
+**Known limitation:** the accepted-JD branch was not exercised live, since the sampled URL
+was a dead posting. It is covered offline, and live extraction quality is M9F-1's measurement,
+not M9F-0's claim.
 
 ## Definition of Done
 - Plan written and approved.
@@ -137,5 +149,5 @@ was made and no credit was spent during the repair. `browser_backend` remains `c
 - All code delivered per design sections and amendments.
 - `pytest -q` is fully green with no network calls.
 - `browser_backend` remains `crawl4ai` in default configuration.
-- Single user-supervised smoke run complete. **(OUTSTANDING — blocks M9F-0 completion.)**
+- [x] Single user-supervised smoke run complete (2026-08-21; one request, one credit).
 - No M9F-1/2/3/M9D-1 tasks started.

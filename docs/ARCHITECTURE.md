@@ -138,13 +138,20 @@ No ORM (raw `sqlite3` with helper functions). No async in the pipeline proper (d
 job; simplicity wins) — `resolve/browser.py` is the one exception, and it contains its
 async usage entirely behind a synchronous `asyncio.run()` wrapper.
 
-**CURRENT — Firecrawl REST foundation (M9F-0, disabled by default).** The hosted Firecrawl
-`/v2/scrape` transport, credit ledger, and budget-aware tier-2 wrapper are implemented on the
-existing `requests` dependency and covered by offline tests. They are **inert in production**:
+**CURRENT — Firecrawl REST foundation (M9F-0 COMPLETE, disabled by default).** The hosted
+Firecrawl `/v2/scrape` transport, credit ledger, and budget-aware tier-2 wrapper are
+implemented on the existing `requests` dependency, covered by offline tests, and closed by a
+single user-supervised live REST smoke on 2026-08-21. They are **inert in production**:
 `config/sources.yaml` sets `browser_backend: crawl4ai`, so no scheduled run constructs the
-Firecrawl client or spends a credit. M9F-0 is not COMPLETE — its user-supervised live REST
-smoke has not been run. `firecrawl-py`, the Firecrawl CLI, and MCP remain unapproved for
-production; the key is read from `FIRECRAWL_API_KEY` in the environment only.
+Firecrawl client or spends a credit. `firecrawl-py`, the Firecrawl CLI, and MCP remain
+unapproved for production; the key is read from `FIRECRAWL_API_KEY` in the environment only.
+
+The smoke exercised auth, transport, the narrow markdown/basic-proxy payload, reserve →
+scrape → reconcile ordering, cooldown, one-credit budget decrement, deterministic acceptance,
+and clean client shutdown. It did **not** exercise the accepted-JD branch live, because the
+sampled posting was dead (upstream HTTP 404, correctly rejected `bad_status`). Whether
+Firecrawl markdown clears the quality gate at an acceptable rate is exactly what the M9F-1
+bake-off measures; M9F-0 claims transport and budget correctness only.
 
 **CURRENT — production tier-2 backend is Crawl4AI.** Exactly one tier-2 backend is selected
 per run (`crawl4ai | firecrawl | off`). There is no fallback from one backend to the other
