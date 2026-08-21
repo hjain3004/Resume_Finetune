@@ -11,6 +11,7 @@ from src.models import ResolvedJD
 from src.resolve import amazon_jobs, ashby, browser, generic, greenhouse, jobright, lever, workday, wrapper
 from src.resolve.browser import BrowserUnavailableError
 from src.resolve.outcomes import ResolutionOutcome
+from src.resolve.tier2 import Tier2ContentRejected, Tier2Deferred
 
 # I9 (docs/SELF_HEALING.md §1): bump whenever resolver/cleaner behavior
 # changes so active rows resolved under an older version get flagged for
@@ -98,11 +99,24 @@ def attempt(
         return ResolutionOutcome.transient("http_transport", exc)
     except BrowserUnavailableError as exc:
         return ResolutionOutcome.transient("browser_unavailable", exc)
+    except Tier2ContentRejected as exc:
+        # M9F-0: the page was fetched and judged unacceptable. The request is
+        # already charged and in cooldown, so this consumes the row's attempt
+        # budget exactly like any other content failure.
+        return ResolutionOutcome.content_failure(f"tier2_{exc.rejection.value}", str(exc))
+    except Tier2Deferred as exc:
+        # Budget exhaustion, URL cooldown, or --dry-run: no fetch happened and
+        # no content judgment was made, so no attempt is consumed.
+        return ResolutionOutcome.transient(f"tier2_{exc.reason_code}", exc)
     except Exception as exc:
         # Catch provider errors dynamically so we don't import firecrawl in __init__.py unless necessary
         exc_name = type(exc).__name__
         if exc_name in ("ProviderTransientError", "ProviderAuthError", "ConfigurationError", "BudgetExhaustedError"):
             return ResolutionOutcome.transient("provider_transient", exc)
+        if exc_name == "ProviderContractError":
+            # The provider answered but delivered no page. Not a content
+            # judgment, so the row keeps its attempt budget.
+            return ResolutionOutcome.internal("provider_contract", exc)
         raise
     return (
         ResolutionOutcome.resolved(result)

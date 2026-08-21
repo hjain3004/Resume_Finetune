@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.resolve import browser
+from src.resolve.tier2 import Tier2Page
 
 
 def _fake_result(success=True, markdown="", html=""):
@@ -34,7 +35,18 @@ class FakeBrowserClient:
         self.crawl_calls.append(url)
         if self._raise_on_crawl is not None:
             raise self._raise_on_crawl
-        return self._result
+        # The real Crawl4AIBrowserClient returns a Tier2Page; adapt so this
+        # double matches the production contract (M9F-0 defect 7).
+        if isinstance(self._result, Tier2Page):
+            return self._result
+        return Tier2Page(
+            markdown=self._result.markdown or "",
+            html=self._result.html or None,
+            final_url=url,
+            status_code=None,
+            provider="crawl4ai",
+            credits_used=0,
+        )
 
     def close(self) -> None:
         self.close_calls += 1

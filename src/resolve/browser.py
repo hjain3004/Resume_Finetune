@@ -25,7 +25,7 @@ from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
 
 from src.models import ResolvedJD
 from src.resolve import generic
-from src.resolve.base import Tier2Page, Tier2Client
+from src.resolve.tier2 import Tier2Client, Tier2Page, page_rejection
 
 RESOLVER_NAME = "browser"
 
@@ -138,7 +138,18 @@ def fetch_html(url: str, session, browser_client: Tier2Client) -> str | None:
 
 
 def resolve(url: str, session, browser_client: Tier2Client, provider_name: str = RESOLVER_NAME) -> ResolvedJD | None:
-    text = fetch_markdown(url, session, browser_client)
-    if text is None or not generic.passes_quality(text):
+    """Tier-2 resolution for whichever backend is selected.
+
+    M9F-0: acceptance is delegated to the one shared `page_rejection()` so
+    Crawl4AI and Firecrawl content is judged identically, including the final
+    URL and (where the backend reports one) the fetched page's HTTP status.
+
+    `Tier2ContentRejected` and `Tier2Deferred` are deliberately *not* caught
+    here: the budget-aware wrapper raises them after it has already reconciled
+    the ledger, and `resolve.attempt()` classifies them so a charged content
+    failure consumes an attempt while a deferral does not."""
+    session.throttle(url)
+    page = browser_client.crawl(url)
+    if page_rejection(page) is not None:
         return None
-    return ResolvedJD(jd_text=text, resolver=provider_name, jd_quality="ats")
+    return ResolvedJD(jd_text=page.markdown, resolver=provider_name, jd_quality="ats")

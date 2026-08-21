@@ -2114,3 +2114,83 @@ However, since the A2 demand measurement demonstrated meaningful tier-2 volume (
 **Decision:** The M8 Company Knowledge Bank seed corpus is closed at 20 companies, rather than the originally planned 31.
 **Reason:** The 31-company corpus was an upfront speculative investment. The 20 canonical dossiers provide sufficient coverage for S0 positioning polish on near-term applications, while the downstream S1-S3/G1-G3 tailoring pipeline is still being implemented. Speculative upfront research is displaced by the lazy post-0.1.0 path defined in Section 3 of the design: unseen target companies (including the 11 dropped ones) will be added on demand via the same research/import contract when a real application arises with a real JD in hand.
 **Impact:** Palantir is removed from active v0.1.0 seed scope, and Batches 5 and 6 of the Claude Web research run are DESCOPED (not failed). All count assertions in `test_model.py` and across design documentation are updated from 31 to 20. Palantir's ignored inbox directory is already absent before this closeout; none of the other 10 dropped companies had artifacts.
+
+## 2026-08-21: M9F-0 acceptance-contract repair (budget and tier-2 acceptance)
+
+**Context:** An audit of the M9F-0 implementation (`28b9632`, `8e7a334`) found eight defects
+in the credit-budget and tier-2 acceptance contracts. None affected production, because
+`browser_backend` remained `crawl4ai` and the Firecrawl path is never constructed.
+
+**Defects found and repaired (all reproduced by failing tests first):**
+
+1. **Per-run credits were not enforced.** `config/firecrawl.yaml` declares
+   `per_run_credits: 10`, but `_check_limits()` checked only monthly/daily/purpose. Every
+   reservation now carries a stable `run_ref` (the ingest run id in production) and the cap
+   is enforced. Per-run accounting is independent of the UTC calendar window, so a run
+   straddling midnight keeps one allowance.
+2. **Missing credentials could reserve and charge usage.** The wrapper reserved before the
+   client discovered `FIRECRAWL_API_KEY` was absent. The client is now started *before* any
+   reservation; a missing key makes zero network calls, writes no ledger, surfaces a
+   configuration issue, leaves `resolve_attempts` untouched, and disables Firecrawl for the
+   rest of the run without aborting tier-1 rows.
+3. **Cleared stale reservations still counted against limits.** Ledger states are now defined
+   centrally (`reserved`, `charged`, `reconciled`, `cleared`); `cleared` is retained for audit
+   history but releases its allowance, and an unknown state fails closed.
+   `scripts/clear_stale_reservations.py` no longer touches `BudgetManager` privates — it uses
+   the public `list_stale_reservations()` / `clear_reservations()` API, still requires an
+   explicit `y`, and preserves `reserved_at` and all other recorded fields.
+4. **Content quality was reconciled too early.** Any nonempty markdown was recorded as
+   success, so a navigation shell could be accepted and escape cooldown. Acceptance is now one
+   shared pure function, `src.resolve.tier2.page_rejection()`, requiring a valid HTTP(S) final
+   URL, an acceptable status when supplied, nonempty markdown, no dead-posting evidence, and
+   `generic.passes_quality()`. The budget is reconciled only after that decision. An
+   unacceptable fetched page is charged, cooled down 24h, and consumes an attempt.
+5. **Dry-run fabricated a failed page.** It now raises a typed `Tier2Deferred` instead:
+   no Firecrawl call, no ledger, no reservation, no manufactured cooldown, no attempt spent.
+6. **Missing integrated coverage.** Added offline tests over the whole path: run_ingest →
+   backend selection → router → throttle → budget → fake transport → acceptance →
+   reconciliation → `ResolutionOutcome` → attempt accounting → run summary.
+7. **Duplicate/dead tier-2 contracts.** `Tier2Page`/`Tier2Client` existed in three modules and
+   `src/resolve/tier2.py` held a placeholder `PoliteSession`. One canonical definition now
+   lives in `src/resolve/tier2.py`; the duplicates and the placeholder are gone.
+8. **Observability below the approved design.** Run notes now always record `tier2_backend`,
+   and Firecrawl runs add attempted/deferred/accepted/content-failed/provider-failed counts,
+   credits reserved/finalized, and remaining monthly/daily/run/purpose allowance. The digest
+   renders the same block. No secrets, no headers, no external page content.
+
+**Additional defect found during the repair (not in the audit list):** `reconcile()` silently
+ignored an unknown request id and silently rewrote an existing final result. It now raises
+`KeyError` for an unknown id, is idempotent when a repeat agrees with the recorded result, and
+raises `ValueError` on a conflicting reconciliation rather than rewriting billing history.
+
+**`success: false` classification (previously ambiguous).** The old code returned a fabricated
+empty `Tier2Page` with an unused `error_message`. A provider response that delivers no page —
+`success: false` or a malformed success payload — is now a `ProviderContractError`: an
+internal/provider-contract failure per design section 11. It does not consume
+`resolve_attempts` (no page was judged) and deliberately does **not** trip the run-local
+breaker, since one unscrapable URL is not evidence of a provider-wide outage. Provider
+401/403, 429, 5xx, timeout, and connection failures continue to trip the breaker.
+
+**Legacy ledger records.** `run_ref` postdates the first schema-v1 records (the live ledger
+holds 12 of them). A record without `run_ref` is attributed to no run: it still counts toward
+daily/monthly/purpose totals but can never consume a current run's allowance. This is
+explicit and tested, not a silent miscount.
+
+**Test evidence:** `pytest -q` — 1151 passed, 1 deselected (baseline 1064). New offline
+suites: `test_firecrawl_budget_repair.py`, `test_firecrawl_cleanup.py`,
+`test_firecrawl_acceptance.py`, `test_firecrawl_contract.py`, `test_firecrawl_routing.py`,
+`test_firecrawl_observability.py`, `test_tier2_contract.py`. `tests/test_firecrawl_client.py`
+`test_crawl_success_false` was corrected because it asserted defect 4's fabricated-empty-page
+behavior verbatim.
+
+**Unchanged by this decision:** the approved budget (800 monthly / 25 daily / 10 per-run;
+500 resolution / 250 discovery / 50 research) and the backend decision. **`browser_backend`
+remains `crawl4ai`.**
+
+**No live activity:** no Firecrawl request was made, no credit was spent, no API key was
+configured or printed (`FIRECRAWL_API_KEY` was absent from the environment throughout), and
+`data/jobs.db` was not modified (SHA-256 unchanged at
+`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`).
+
+**Still gated:** M9F-0 is **not COMPLETE**. Its single user-supervised live REST smoke remains
+outstanding and requires separate explicit approval. M9F-1 is not started.

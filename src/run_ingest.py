@@ -22,7 +22,9 @@ from src.discover import tracker_common
 from src.discover.base import DiscoveryIssue, DiscoveryResult
 from src.models import Status
 from src.eligibility import EligibilityConfigError, load_eligibility_config as _load_eligibility_config
-from src.resolve.base import PoliteSession, Tier2Client
+from src.resolve.base import PoliteSession
+from src.firecrawl.client import FirecrawlRunStats
+from src.resolve.tier2 import Tier2Client
 from src.resolve.browser import CircuitBreakingBrowserClient, Crawl4AIBrowserClient
 from src.resolve.outcomes import ResolutionOutcome, ResolutionOutcomeKind, ResolutionSummary
 
@@ -100,6 +102,48 @@ def load_browser_backend(path: str = "config/sources.yaml") -> str:
         return "crawl4ai" if cfg["browser_resolver"] else "off"
         
     return "off"
+
+
+FIRECRAWL_CONFIG_PATH = "config/firecrawl.yaml"
+
+
+def load_firecrawl_config(path: str = FIRECRAWL_CONFIG_PATH) -> dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def _build_tier2_client(
+    backend: str,
+    *,
+    dry_run: bool,
+    run_ref: str,
+    stats=None,
+):
+    """Construct the one selected tier-2 backend for this run, or None.
+
+    M9F-0: exactly one backend is built per run -- there is no Crawl4AI
+    fallback after a Firecrawl failure and no double-fetch chain (design
+    section 5). Firecrawl is wrapped so credentials are validated before any
+    reservation and the budget is reconciled only after deterministic
+    acceptance."""
+    if backend == "crawl4ai":
+        return CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
+
+    if backend == "firecrawl":
+        from src.firecrawl.budget import BudgetManager
+        from src.firecrawl.client import BudgetAwareTier2Client, FirecrawlClient
+
+        fc_cfg = load_firecrawl_config()
+        budget = BudgetManager(fc_cfg, run_ref=run_ref)
+        return BudgetAwareTier2Client(
+            FirecrawlClient(fc_cfg),
+            budget,
+            "resolution",
+            dry_run,
+            stats=stats,
+        )
+
+    return None
 
 
 def load_freshness_config(path: str = "config/freshness.yaml") -> dict:
@@ -184,6 +228,18 @@ def _eligibility_summary_payload(
     }
 
 
+def _firecrawl_remaining() -> dict | None:
+    """Remaining local allowance for run notes. Never fatal: observability must
+    not be able to fail a run that already did its work."""
+    try:
+        from src.firecrawl.budget import BudgetManager
+
+        return BudgetManager(load_firecrawl_config()).remaining_allowances("resolution")
+    except Exception:
+        logger.debug("could not compute remaining firecrawl allowance", exc_info=True)
+        return None
+
+
 def _run_notes(
     *,
     run_outcome: str,
@@ -191,12 +247,23 @@ def _run_notes(
     discovery_issues: tuple[DiscoveryIssue, ...] | list[DiscoveryIssue],
     fatal_error: BaseException | None,
     eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None = None,
+    browser_backend: str = "off",
+    firecrawl_stats: "FirecrawlRunStats | None" = None,
 ) -> str:
     payload = {
         "run_outcome": run_outcome,
         "resolution_summary": _resolution_summary_payload(summary),
         "eligibility_summary": _eligibility_summary_payload(eligibility_summary),
+        "tier2_backend": browser_backend,
     }
+    # M9F-0 observability (design section 14). Only emitted when Firecrawl was
+    # actually selected, so crawl4ai/off run notes stay byte-compatible apart
+    # from the new `tier2_backend` key.
+    if browser_backend == "firecrawl" and firecrawl_stats is not None:
+        payload["firecrawl"] = firecrawl_stats.as_payload(
+            backend=browser_backend,
+            remaining=_firecrawl_remaining(),
+        )
     if discovery_issues:
         payload["discovery_issues"] = [asdict(issue) for issue in discovery_issues]
     if fatal_error is not None:
@@ -219,6 +286,8 @@ def finalize_run(
     new_count: int,
     filtered_count: int,
     eligibility_summary: dict[str, prefilter.EligibilityGateSummary] | None = None,
+    browser_backend: str = "off",
+    firecrawl_stats: "FirecrawlRunStats | None" = None,
 ) -> None:
     if browser_client is not None:
         try:
@@ -251,6 +320,8 @@ def finalize_run(
             discovery_issues=discovery_issues,
             fatal_error=fatal_error,
             eligibility_summary=eligibility_summary,
+            browser_backend=browser_backend,
+            firecrawl_stats=firecrawl_stats,
         ),
     )
 
@@ -379,6 +450,7 @@ def main(argv: list[str] | None = None) -> int:
     filtered_count = 0
     eligibility_summary: dict[str, prefilter.EligibilityGateSummary] = {}
     resolution_summary = ResolutionSummary()
+    firecrawl_stats = FirecrawlRunStats()
     audit_result = None
     browser_client: Tier2Client | None = None
     session = None
@@ -438,22 +510,13 @@ def main(argv: list[str] | None = None) -> int:
 
             if db.eligibility_rows(conn, Status.DISCOVERED):
                 session = PoliteSession()
-                if browser_backend == "crawl4ai":
-                    browser_client = CircuitBreakingBrowserClient(Crawl4AIBrowserClient())
-                elif browser_backend == "firecrawl":
-                    from src.firecrawl.client import FirecrawlClient
-                    import yaml
-                    with open("config/firecrawl.yaml") as f:
-                        fc_cfg = yaml.safe_load(f)
-                    # For now, just raw client. The budget ledger wraps it.
-                    # We will implement a wrapper inside client.py if needed, 
-                    # but let's just instantiate FirecrawlClient for now.
-                    # To be fully compliant, we should use BudgetAwareTier2Client.
-                    from src.firecrawl.budget import BudgetManager
-                    from src.firecrawl.client import BudgetAwareTier2Client
-                    budget = BudgetManager(fc_cfg)
-                    browser_client = CircuitBreakingBrowserClient(BudgetAwareTier2Client(FirecrawlClient(fc_cfg), budget, "resolution", args.dry_run))
-                    
+                browser_client = _build_tier2_client(
+                    browser_backend,
+                    dry_run=args.dry_run,
+                    run_ref=str(run_id),
+                    stats=firecrawl_stats,
+                )
+
                 run_resolution(
                     conn,
                     session,
@@ -510,6 +573,8 @@ def main(argv: list[str] | None = None) -> int:
             new_count=new_count,
             filtered_count=filtered_count,
             eligibility_summary=eligibility_summary,
+            browser_backend=browser_backend,
+            firecrawl_stats=firecrawl_stats,
         )
 
     if write_digest:

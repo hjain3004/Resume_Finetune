@@ -196,6 +196,41 @@ def _run_warnings(run_row: sqlite3.Row) -> str:
     return "\n".join(lines)
 
 
+def _firecrawl_section(notes: str | None) -> str:
+    """M9F-0 (design section 14): one deterministic block per Firecrawl run.
+
+    Empty for crawl4ai/off runs, so the default digest is unchanged. Renders
+    only counters and credit allowances -- never a URL, page text, or
+    credential."""
+    if not notes:
+        return ""
+    try:
+        payload = json.loads(notes)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    block = payload.get("firecrawl")
+    if not isinstance(block, dict):
+        return ""
+
+    lines = [
+        "### Firecrawl (tier 2)",
+        f"- Requests — attempted: {block.get('attempted', 0)}, "
+        f"accepted: {block.get('accepted', 0)}, "
+        f"content-failed: {block.get('content_failed', 0)}, "
+        f"deferred: {block.get('deferred', 0)}, "
+        f"provider-failed: {block.get('provider_failed', 0)}",
+        f"- Credits — reserved: {block.get('credits_reserved', 0)}, "
+        f"finalized: {block.get('credits_finalized', 0)}",
+    ]
+    remaining = block.get("remaining")
+    if isinstance(remaining, dict):
+        rendered = ", ".join(f"{k}: {v}" for k, v in sorted(remaining.items()))
+        lines.append(f"- Remaining allowance — {rendered}")
+    return "\n".join(lines)
+
+
 def _audit_section(audit_result) -> str:
     if audit_result is None:
         return ""
@@ -234,6 +269,8 @@ def build_digest(
     new_and_resolved_body = _FAIL_BANNER if audit_failed else _new_and_resolved_table(conn)
     run_warnings = _run_warnings(run_row)
     warning_section = f"\n{run_warnings}\n" if run_warnings else "\n"
+    firecrawl_block = _firecrawl_section(run_row["notes"])
+    firecrawl_section = f"{firecrawl_block}\n\n" if firecrawl_block else ""
 
     return (
         f"# Job Digest — {date_str}\n"
@@ -246,6 +283,7 @@ def build_digest(
         f"- Resolution tiers — t1: {run_row['tier1_resolved']}, t2: {run_row['tier2_resolved']}, "
         f"manual: {run_row['manual_failed']}\n"
         f"{warning_section}"
+        f"{firecrawl_section}"
         "### Per-source\n"
         f"{_per_source_table(conn, run_row['id'])}\n"
         "\n"

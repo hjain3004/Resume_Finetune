@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import patch, MagicMock
-from src.firecrawl.client import FirecrawlClient, ConfigurationError, ProviderAuthError, ProviderTransientError, Tier2Page
+from src.firecrawl.client import FirecrawlClient, ConfigurationError, ProviderAuthError, ProviderContractError, ProviderTransientError, Tier2Page
 import requests
 
 @pytest.fixture
@@ -110,11 +110,13 @@ def test_crawl_success_false(config):
             "error": "Failed to scrape"
         }
         
+        # M9F-0 defect 4: this previously returned a fabricated empty Tier2Page,
+        # which downstream code judged as a content failure -- charging the row
+        # an attempt and a 24h cooldown for a page the provider never delivered.
+        # `success: false` is now an explicit provider-contract failure.
         with patch.object(client.session, "post", return_value=mock_response):
-            page = client.crawl("https://example.com/job")
-            assert page.markdown == ""
-            assert page.final_url == "https://example.com/job"
-            assert page.status_code is None
+            with pytest.raises(ProviderContractError, match="Failed to scrape"):
+                client.crawl("https://example.com/job")
 
 def test_secret_redaction(config):
     test_key = "secret_api_key_12345"

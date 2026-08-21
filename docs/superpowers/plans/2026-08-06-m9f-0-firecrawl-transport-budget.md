@@ -34,9 +34,9 @@
 **Files:** 
 - Create: `scripts/measure_tier2_demand.py`
 
-- [ ] **Step 1: Write a read-only query script**
+- [x] **Step 1: Write a read-only query script**
 Write a script to query `jobs.db` reporting how many distinct job URLs reached the tier-2 generic route in the last 8 weeks, and how many failed to produce acceptable content.
-- [ ] **Step 2: Run the script and report numbers**
+- [x] **Step 2: Run the script and report numbers**
 Run the script locally, read the report, and state whether the proposed 500 resolution credits/month cap in `config/firecrawl.yaml` is realistic. Do not change the cap yourself.
 
 ---
@@ -47,11 +47,11 @@ Run the script locally, read the report, and state whether the proposed 500 reso
 - Modify: `config/sources.yaml` (ensure legacy behaviors)
 - Create: `config/firecrawl.yaml`
 
-- [ ] **Step 1: Introduce `browser_backend` in sources loader**
+- [x] **Step 1: Introduce `browser_backend` in sources loader**
 Update config loading logic to handle `browser_backend: crawl4ai | firecrawl | off`. Implement backward compatibility (if `browser_backend` missing, map `browser_resolver: true` to `crawl4ai` and `false` or missing to `off`). Fail fast on invalid values.
-- [ ] **Step 2: Create `config/firecrawl.yaml`**
+- [x] **Step 2: Create `config/firecrawl.yaml`**
 Create the config file exactly as spec section 7, adding `scrape.location` with `{"country": "US", "languages": ["en-US"]}` as per A3.
-- [ ] **Step 3: Test configuration**
+- [x] **Step 3: Test configuration**
 Ensure tests check fail-fast behavior and backward compatibility.
 
 ---
@@ -63,13 +63,13 @@ Ensure tests check fail-fast behavior and backward compatibility.
 - Create: `scripts/clear_stale_reservations.py` (Amendment A4)
 - Create: `tests/test_firecrawl_budget.py`
 
-- [ ] **Step 1: Implement Budget Ledger**
+- [x] **Step 1: Implement Budget Ledger**
 Implement atomic JSON replacement using `os.replace` and a lockfile for `data/firecrawl/usage-v1.json`. Enforce monthly, daily, per-run, and purpose limits based on `config/firecrawl.yaml`.
-- [ ] **Step 2: Dry-run and Error Handling**
+- [x] **Step 2: Dry-run and Error Handling**
 Ensure `--dry-run` does not reserve usage. Treat unsupported/corrupt ledgers as fail-closed.
-- [ ] **Step 3: Stale Reservation Command (A4)**
+- [x] **Step 3: Stale Reservation Command (A4)**
 Add a script `scripts/clear_stale_reservations.py` that lists non-final reservations older than a threshold (e.g., 2 hours) and prompts to clear them. Never clear them automatically.
-- [ ] **Step 4: Verify Tests**
+- [x] **Step 4: Verify Tests**
 Write extensive boundary tests for ledger logic without network access.
 
 ---
@@ -80,13 +80,13 @@ Write extensive boundary tests for ledger logic without network access.
 - Create: `src/firecrawl/client.py`
 - Create: `tests/test_firecrawl_client.py`
 
-- [ ] **Step 1: Implement `Tier2Client` protocol and `FirecrawlScrapeResult` / `Tier2Page`**
+- [x] **Step 1: Implement `Tier2Client` protocol and `FirecrawlScrapeResult` / `Tier2Page`**
 Define strictly the request shape (Section 6) with `proxy: basic` and location sourced from config.
-- [ ] **Step 2: Environment and Safety**
+- [x] **Step 2: Environment and Safety**
 Read `FIRECRAWL_API_KEY` exclusively from env. Redact keys from all logs and exceptions.
-- [ ] **Step 3: Circuit Breaking and Etiquette**
+- [x] **Step 3: Circuit Breaking and Etiquette**
 Implement `PoliteSession.throttle(url)` integration. Handle 401/403 (trip breaker), 429/timeout/5xx (transient trip).
-- [ ] **Step 4: Verify Tests**
+- [x] **Step 4: Verify Tests**
 Write offline tests using saved request/response fixtures to verify payload exactness and key redaction.
 
 ---
@@ -97,25 +97,37 @@ Write offline tests using saved request/response fixtures to verify payload exac
 - Modify: `src/resolve/generic.py`, `src/run_ingest.py`
 - Modify: `src/resolve/browser.py` (or similar entry point)
 
-- [ ] **Step 1: Remove generic double-fetch**
+- [x] **Step 1: Remove generic double-fetch**
 Remove the initial `session.get()` duplication by creating a pure extraction function over the already-fetched body in `generic.resolve()`.
-- [ ] **Step 2: Wire up Tier-2 Router**
+- [x] **Step 2: Wire up Tier-2 Router**
 Integrate `browser_backend` selection. If `firecrawl` is chosen, invoke the client through the budget ledger. Ensure failures do not silently retry on another backend.
-- [ ] **Step 3: Error Classification**
+- [x] **Step 3: Error Classification**
 Budget exhaustion, cooldown deferral, and provider failures must not consume `resolve_attempts`. Unacceptable fetched content does.
-- [ ] **Step 4: Verify Tests**
+- [x] **Step 4: Verify Tests**
 Test router behavior, double-fetch removal, and error classifications with mocks.
 
 ---
 
 ### Task 6: Testing and Completion
 
-- [ ] **Step 1: Full offline suite**
+- [x] **Step 1: Full offline suite**
 Run `pytest -q` to ensure 100% green and zero network calls.
-- [ ] **Step 2: Secret Redaction Verification**
+- [x] **Step 2: Secret Redaction Verification**
 Confirm tests explicitly check that API keys never leak into logs or exceptions.
 - [ ] **Step 3: Submit for Smoke Test Approval**
 Stop and ask for explicit go-ahead for a user-supervised live scrape smoke. Do not proceed until approved.
+
+## Status — 2026-08-21
+
+The acceptance-contract repair (`fix(m9f-0): repair budget and tier-2 acceptance contracts`)
+closed eight defects found by audit: per-run credits unenforced; credentials reserved before
+validation; cleared reservations still counted; content reconciled before the quality gate;
+dry-run fabricating a failed page; missing integrated coverage; duplicate tier-2 contracts;
+observability below the approved design.
+
+Offline verification is complete (`pytest -q`: 1151 passed, 1 deselected). **The
+user-supervised live REST smoke has NOT run, so M9F-0 is not COMPLETE.** No Firecrawl request
+was made and no credit was spent during the repair. `browser_backend` remains `crawl4ai`.
 
 ## Definition of Done
 - Plan written and approved.
@@ -125,5 +137,5 @@ Stop and ask for explicit go-ahead for a user-supervised live scrape smoke. Do n
 - All code delivered per design sections and amendments.
 - `pytest -q` is fully green with no network calls.
 - `browser_backend` remains `crawl4ai` in default configuration.
-- Single user-supervised smoke run complete.
+- Single user-supervised smoke run complete. **(OUTSTANDING — blocks M9F-0 completion.)**
 - No M9F-1/2/3/M9D-1 tasks started.

@@ -138,10 +138,26 @@ No ORM (raw `sqlite3` with helper functions). No async in the pipeline proper (d
 job; simplicity wins) — `resolve/browser.py` is the one exception, and it contains its
 async usage entirely behind a synchronous `asyncio.run()` wrapper.
 
-**TARGET — M9D/M9F dependency gate:** Firecrawl hosted REST integration is approved as a
-target through the existing `requests` dependency; it is not implemented and does not approve
-`firecrawl-py`. M9F first evaluates Firecrawl Scrape against the current Crawl4AI tier-2
-backend, then uses Map/Crawl/Search only behind the M9D provenance gateway. Crawlee Python and
+**CURRENT — Firecrawl REST foundation (M9F-0, disabled by default).** The hosted Firecrawl
+`/v2/scrape` transport, credit ledger, and budget-aware tier-2 wrapper are implemented on the
+existing `requests` dependency and covered by offline tests. They are **inert in production**:
+`config/sources.yaml` sets `browser_backend: crawl4ai`, so no scheduled run constructs the
+Firecrawl client or spends a credit. M9F-0 is not COMPLETE — its user-supervised live REST
+smoke has not been run. `firecrawl-py`, the Firecrawl CLI, and MCP remain unapproved for
+production; the key is read from `FIRECRAWL_API_KEY` in the environment only.
+
+**CURRENT — production tier-2 backend is Crawl4AI.** Exactly one tier-2 backend is selected
+per run (`crawl4ai | firecrawl | off`). There is no fallback from one backend to the other
+within a run and no double-fetch chain.
+
+**TARGET — M9F-1 activation decision.** A bounded bake-off compares Firecrawl Scrape against
+Crawl4AI on a fixed sample. Firecrawl may become the default only if it passes the section 12
+gate criteria *and* the user records the decision in `docs/DECISIONS.md`.
+
+**TARGET — post-M9D-1 discovery.** Map, bounded Crawl, and Search stay blocked on the M9D-1
+provenance foundation and may only write staged candidates/proposals, never canonical jobs.
+
+**TARGET — M9D/M9F dependency gate:** Crawlee Python and
 Apify remain candidates, not approved dependencies. Add Crawlee only if persistent queues,
 route handlers, or crash recovery show a material advantage after Firecrawl evaluation.
 Apify MCP remains an interactive scout integration; unattended runs require allowlisted,
