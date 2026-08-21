@@ -22,13 +22,13 @@ def test_enum_values_are_the_file_contract():
     assert TTL_DAYS == 90
 
 
-def test_seed_file_contains_exactly_21_unique_ids():
+def test_seed_file_contains_exactly_20_unique_ids():
     seeds = load_seed_companies("config/company_bank/seed_companies.yaml")
-    assert len(seeds) == 21
-    assert seeds["palantir"] == "Palantir"
+    assert len(seeds) == 20
     assert seeds["snowflake"] == "Snowflake"
     assert seeds["databricks"] == "Databricks"
     assert seeds["airbnb"] == "Airbnb"
     assert seeds["expedia"] == "Expedia Group"
+    assert "palantir" not in seeds
     assert "citadel" not in seeds
     assert "bloomberg" not in seeds

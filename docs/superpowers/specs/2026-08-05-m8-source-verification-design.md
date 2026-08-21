@@ -210,7 +210,7 @@ Track C  validate-corpus -> verify-sources (ALL bundles) -> user review -> impor
 - `verify-sources` is the mandatory gate immediately before `import-corpus` in Track C.
   Import must not proceed while any source is `failed`.
 - Per-batch `verify-sources` during Track B is recommended, because it localises a problem
-  to five companies instead of twenty-one.
+  to five companies instead of twenty.
 
 Existing completed bundles are **not** exempt. The first run of this tool covers all
 bundles produced to date, including Batch 1. Work already accepted has no verified
@@ -256,7 +256,7 @@ Stated plainly so the residual risk is understood:
 
 ## 13. Accepted trade-offs
 
-- Re-fetching 21 bundles with a 2-second per-host delay takes minutes, not seconds. This is
+- Re-fetching 20 bundles with a 2-second per-host delay takes minutes, not seconds. This is
   a pre-import gate run rarely, so the cost is acceptable.
 - Substring matching on extracted text is weaker than hash equality but is the only
   assertion that survives contact with real web pages.

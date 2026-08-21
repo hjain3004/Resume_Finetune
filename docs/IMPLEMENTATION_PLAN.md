@@ -165,7 +165,7 @@ The approved Company Knowledge Bank supporting subsystem is split into three ord
    - No integration with live DB or web research.
 2. **Track B — Claude Web research:**
    `docs/superpowers/plans/2026-08-04-m8-company-bank-web-research.md`
-   Status: local research in progress. The approved seed corpus is 21 companies; 21/21
+   Status: local research in progress. The approved seed corpus is 20 companies; 20/20
    ignored inbox bundles exist before Batches 5/6. These are staged research proposals,
    not canonical imports.
 3. **Track C — Gemini seed-corpus adoption:**

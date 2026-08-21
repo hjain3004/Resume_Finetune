@@ -1,6 +1,5 @@
 schema_version: "0.1.0"
 companies:
-  palantir: Palantir
   cisco: Cisco
   notion: Notion
   atos: Atos
