@@ -153,7 +153,9 @@ M8 item 1 (profile loader) and M8 item 2 (schema update and deterministic sectio
 The M8 phrasing rework is complete: base variants cut to 13 bullets on a measured one-page budget, phrasing lint wired in, and emphasis pipeline added.
 M10 (renderer bake-off + L7 parseability gate) is complete: both arms were built, L7 parseability rules implemented, and LaTeX selected as the production renderer.
 
-What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
+M8P-1 (2026-08-21) is complete: the validated S1 requirement-extraction contract, strict/semantic parser, protected S1 prompt, safe tool-disabled invocation wrapper, I11 tracing, read-only job-preparation DB boundary, and a narrow `prepare`/`invoke` CLI (`scripts/tailor_s1.py`). The legacy unsafe `src/tailor/wrapper.py` single-shot path is permanently disabled. See `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`.
+
+What genuinely remains in M8: S0 positioning, S2 selection, S3 alignment, G1 completion (L1 structure, L4 bullet shape), G2 critic, G3 human review packet, the CLI beyond S1, and DB integration (see `docs/TAILORING_METHODOLOGY.md` §3-4). Next scoped increment: M8P-2 (S0 + S2, one-job-at-a-time, JD-only).
 
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 

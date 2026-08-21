@@ -97,113 +97,34 @@ def derive_change_list(base_variant_name: str, tailor_json: dict, master_profile
 
     return changes
 
-import json
-import subprocess
-from typing import Tuple, Dict, Any, List
-from src.tailor.lint import (
-    check_wording_budget, check_skills_do_not_claim, check_selection_budget,
-    check_experience_immutable, check_flagship_ordering, check_blocked_claims,
-    check_keyword_frequency, check_dual_placement
+# M8P-1 (2026-08-21): the three functions below are permanently disabled, not
+# just unused. The prior implementation dumped the entire master profile
+# (including evidence/defense/interview_risk and contact details) into a
+# one-line prompt, called `claude -p` with no tool/session restrictions,
+# silently returned {} on malformed JSON, and combined S1/S2/S3/G2 without
+# validated boundaries or I11 tracing -- see
+# docs/superpowers/specs/2026-08-04-m8-live-tailoring-decisions.md. There is
+# no production path that may call them; they raise unconditionally. The
+# validated replacement for S1 is scripts/tailor_s1.py (src.tailor.s1 /
+# src.tailor.s1_pipeline / src.tailor.invoke). S0/S2/S3/G2 remain
+# unimplemented pending their own scoped milestones.
+
+_LEGACY_DISABLED = (
+    "{name}() is permanently disabled (M8P-1): it bypassed privacy-minimised "
+    "profile projections, called `claude -p` with no tool/session "
+    "restrictions, silently swallowed malformed JSON, and combined tailoring "
+    "stages without validated boundaries or I11 tracing. See "
+    "docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md."
 )
-from src import audit_schema
 
-# Note: this will need tailoring projection data, but we can abstract it here.
-def _extract_json_from_output(raw_output: str) -> dict:
-    # A simple parser for JSON wrapped in markdown fences
-    try:
-        import re
-        match = re.search(r'```json\s*(.*?)\s*```', raw_output, re.DOTALL)
-        if match:
-            return json.loads(match.group(1))
-        return json.loads(raw_output)
-    except json.JSONDecodeError:
-        return {}
 
-def run_tailor(jd_text: str, master_profile: dict, tailored_schema: dict) -> Tuple[list[str], dict, str, list[dict]]:
-    """Runs the S1->S3 tailor orchestration and linting."""
-    
-    # Mocking prompt for now
-    prompt = f"JD: {jd_text}\nMaster Profile: {json.dumps(master_profile)}\nGenerate tailored resume matching tailored_schema.json."
-    
-    result = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True)
-    raw_output = result.stdout
-    
-    tailor_json = _extract_json_from_output(raw_output)
-    
-    errors = audit_schema.validate(tailor_json, tailored_schema)
-    if errors:
-        return errors, tailor_json, "", []
-        
-    base_variant = master_profile.get("base_variants", {}).get(tailor_json["base_variant"], {})
-    
-    # Run Gate 1 Lints
-    lint_errors = []
-    
-    # Wording & DNC
-    base_skills = master_profile.get("skills", {})
-    base_skills_text = " ".join(item for items in base_skills.values() for item in items)
-    tailored_skills_text = " ".join(item for items in tailor_json.get("skills", {}).values() for item in items)
-    
-    if check_wording_budget(base_skills_text, tailored_skills_text) > 0.15:
-        lint_errors.append("Wording budget exceeded 15% on skills")
-        
-    lint_errors.extend(check_skills_do_not_claim(tailor_json.get("skills", {}), master_profile.get("do_not_claim", [])))
-    
-    # Selection & Structural
-    lint_errors.extend(check_selection_budget(base_variant.get("projects", []), [p["project_id"] for p in tailor_json.get("projects", [])]))
-    
-    base_exp_ids = [e["id"] for e in master_profile.get("experience", [])]
-    tailored_exp_ids = [e["experience_id"] for e in tailor_json.get("experience", [])]
-    lint_errors.extend(check_experience_immutable(base_exp_ids, tailored_exp_ids))
-    
-    # Extract bullets
-    tailored_bullets = []
-    for p in tailor_json.get("projects", []) + tailor_json.get("experience", []):
-        tailored_bullets.extend(b["bullet_id"] for b in p.get("bullets", []))
-        
-    # priorities & claim types would need lookup from master profile. Mocked for logic:
-    priorities = {}
-    claim_types = {}
-    for proj in master_profile.get("projects", []) + master_profile.get("experience", []):
-        for b in proj.get("bullets", []):
-            priorities[b["id"]] = b.get("priority", 4)
-            claim_types[b["id"]] = b.get("claim_type", "verified")
-            
-    lint_errors.extend(check_flagship_ordering(tailored_bullets, priorities))
-    lint_errors.extend(check_blocked_claims(tailored_bullets, claim_types))
-    
-    # Hydration
-    hydrated = hydrate_tailor_draft(tailor_json, master_profile)
-    
-    # Countable JD rules
-    # In a real impl, we'd extract keywords from JD.
-    # lint_errors.extend(check_keyword_frequency(hydrated, jd_keywords))
-    # lint_errors.extend(check_dual_placement(must_have_keywords, tailor_json.get("skills", {}), hydrated_bullets_text))
+def run_tailor(*args, **kwargs):
+    raise NotImplementedError(_LEGACY_DISABLED.format(name="run_tailor"))
 
-    change_list = derive_change_list(tailor_json["base_variant"], tailor_json, master_profile)
-    
-    return lint_errors, tailor_json, hydrated, change_list
 
-def run_critic(hydrated_text: str, jd_text: str, banned_words: str, taste: str) -> dict:
-    """Runs the Gate 2 Critic Pass."""
-    prompt = f"JD: {jd_text}\nBanned: {banned_words}\nTaste: {taste}\nResume:\n{hydrated_text}\nCritique against R1, R2, R6."
-    
-    result = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True)
-    return _extract_json_from_output(result.stdout)
+def run_critic(*args, **kwargs):
+    raise NotImplementedError(_LEGACY_DISABLED.format(name="run_critic"))
 
-def tailor_loop(jd_text: str, master_profile: dict, tailored_schema: dict, banned_words: str, taste: str):
-    """Orchestrates max 2 revision rounds between the Tailor and Critic."""
-    max_rounds = 2
-    for round_num in range(max_rounds):
-        lint_errors, tailor_json, hydrated, change_list = run_tailor(jd_text, master_profile, tailored_schema)
-        if lint_errors:
-            # Re-prompt with lint errors in a real system. Here we break or return.
-            return {"status": "lint_failed", "errors": lint_errors}
-            
-        critic_res = run_critic(hydrated, jd_text, banned_words, taste)
-        if critic_res.get("verdict") == "pass":
-            return {"status": "success", "draft": hydrated, "changes": change_list}
-            
-        # Re-prompt tailor with critic issues (omitted for brevity)
-        
-    return {"status": "escalated_to_user", "draft": hydrated, "critic_res": critic_res}
+
+def tailor_loop(*args, **kwargs):
+    raise NotImplementedError(_LEGACY_DISABLED.format(name="tailor_loop"))

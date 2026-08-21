@@ -107,7 +107,7 @@ item 1 already existed was incorrect — verified 2026-07-14: no master-profile 
 M8 item 1 adds only the pure, schema-validating `config/master_profile.yaml` loader.
 M8 item 2 rewrites the loader to schema v0.3.0 and authors the deterministic sections of `config/master_profile.yaml`.
 The M8 phrasing rework is complete: both base variants cut to 13 bullets on a measured one-page budget; `src/profile_lint.py` added and wired into `scripts/validate_profile.py`; the emphasis pipeline (`src/render/emphasis.py`, `RenderBullet.emphasis`, `\textbf` in the LaTeX arm, markdown in the RenderCV arm) added.
-What genuinely remains in M8: live tailoring (the S1 → S0 → S2 → S3 → G1 → G2 → G3 workflow in `docs/TAILORING_METHODOLOGY.md`), the CLI, and DB integration.
+M8P-1 (2026-08-21) is COMPLETE: the validated S1 requirement-extraction contract, strict/semantic parser, protected S1 prompt (`docs/prompts/tailoring_s1.md`), safe tool-disabled invocation wrapper, I11 tracing, read-only job-preparation DB boundary, and a narrow `prepare`/`invoke` CLI (`scripts/tailor_s1.py`). The legacy unsafe single-shot `src/tailor/wrapper.py` path (`run_tailor`/`run_critic`/`tailor_loop`) is permanently disabled. No live S1 invocation occurred; no resume has been generated. What genuinely remains in M8: S0, S2, S3, G1 completion (L1/L4), G2, G3, PDF rendering, DB integration, and the archival layout — see `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`.
 The Company Knowledge Bank design was approved on 2026-08-04 as a supporting M8 subsystem.
 Track A foundation is complete. The approved seed corpus is 20 companies. Track B is local
 research-in-progress only: 20/20 ignored inbox bundles exist before Batches 5/6, and no raw
@@ -179,3 +179,15 @@ rejected; LinkedIn alert emails remain permitted.
   verified live; the page was correctly rejected `bad_status` (upstream HTTP 404,
   independently corroborated). Production DB byte-identical. Default backend remains
   `crawl4ai`; M9F-1..M9F-3 and M9D-1 remain unimplemented.
+- 2026-08-21: **M8P-1 is COMPLETE.** O1 (manual vs. wrapper-invoked S1 model call) resolved
+  as wrapper-invoked pure text-in/text-out (see
+  `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`). Built and offline-verified
+  the S1 requirement-extraction contract/trace foundation only: typed dataclasses, a strict
+  parser with JD-anchored semantic validation, the protected `docs/prompts/tailoring_s1.md`
+  prompt, a safe tool-disabled invocation wrapper, I11 tracing, a read-only job-preparation DB
+  boundary (jobs 229/279 prohibited), and a narrow `prepare`/`invoke` CLI. The legacy unsafe
+  `src/tailor/wrapper.py` single-shot path is permanently disabled. Company Bank remains
+  optional and unavailable to this stage. S0/S2/S3/G1(L1,L4)/G2/G3, PDF generation, taste
+  capture, DB mutation, and batch mode remain unimplemented. No resume has been generated and
+  no live S1 invocation occurred; the three planned pilot jobs (119 Cisco, 225 Notion, 211
+  Citadel) were not touched. Next: M8P-2 (S0 + S2, one-job-at-a-time, JD-only).

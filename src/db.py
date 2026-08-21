@@ -11,8 +11,22 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, clean_title, dedup_key
+from src.tailor.s1 import S1Request
 
 RESOLVE_FAILURE_LIMIT = 3
+
+# M8P-1: jobs excluded from live tailoring by the Phase 2 closure (docs/ROADMAP.md
+# 2026-07-25) -- job 229 carries an ITAR U.S.-person requirement, job 279 carries
+# work authorization without employer sponsorship. Both require a separate
+# eligibility-correction milestone before tailoring may touch them.
+PROHIBITED_TAILORING_JOB_IDS = frozenset({229, 279})
+
+#: base_variant values eligible for S1 tailoring preparation (M8P-1).
+ELIGIBLE_TAILORING_BASE_VARIANTS = frozenset({"backend", "ml"})
+
+
+class TailoringPrepError(ValueError):
+    """A job row failed S1 tailoring-preparation eligibility."""
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -798,6 +812,48 @@ def orphaned_run_sources(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 def jd_text_by_id(conn: sqlite3.Connection, job_id: int) -> str | None:
     row = conn.execute("SELECT jd_text FROM jobs WHERE id = ?", (job_id,)).fetchone()
     return row["jd_text"] if row else None
+
+
+def prepare_tailoring_request(conn: sqlite3.Connection, job_id: int) -> S1Request:
+    """Read-only S1 job-preparation boundary (M8P-1).
+
+    Requires: row exists; status SHORTLISTED; jd_quality == 'ats'; nonempty
+    jd_text; base_variant in ELIGIBLE_TAILORING_BASE_VARIANTS; job_id not in
+    PROHIBITED_TAILORING_JOB_IDS. Never mutates the row -- read-only by
+    design, intended for use with get_readonly_connection().
+    """
+    if job_id in PROHIBITED_TAILORING_JOB_IDS:
+        raise TailoringPrepError(
+            f"job {job_id}: prohibited from live tailoring (Phase 2 closure, docs/ROADMAP.md)"
+        )
+
+    row = conn.execute(
+        "SELECT id, company, title, status, jd_quality, jd_text, base_variant FROM jobs WHERE id = ?",
+        (job_id,),
+    ).fetchone()
+    if row is None:
+        raise TailoringPrepError(f"job {job_id}: no such row")
+    if row["status"] != Status.SHORTLISTED:
+        raise TailoringPrepError(
+            f"job {job_id}: status is {row['status']!r}, expected {Status.SHORTLISTED.value!r}"
+        )
+    if row["jd_quality"] != "ats":
+        raise TailoringPrepError(f"job {job_id}: jd_quality is {row['jd_quality']!r}, expected 'ats'")
+    if not (row["jd_text"] or "").strip():
+        raise TailoringPrepError(f"job {job_id}: jd_text is empty")
+    if row["base_variant"] not in ELIGIBLE_TAILORING_BASE_VARIANTS:
+        raise TailoringPrepError(
+            f"job {job_id}: base_variant is {row['base_variant']!r}, "
+            f"expected one of {sorted(ELIGIBLE_TAILORING_BASE_VARIANTS)}"
+        )
+
+    return S1Request(
+        job_id=row["id"],
+        company=row["company"],
+        title=row["title"],
+        jd_text=row["jd_text"],
+        jd_quality=row["jd_quality"],
+    )
 
 
 def calibration_jobs_by_ids(

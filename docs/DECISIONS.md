@@ -2257,3 +2257,40 @@ correctness only — not extraction quality.
 **Unchanged:** `browser_backend` remains `crawl4ai`; Firecrawl stays disabled by default and
 cannot become the production backend without the M9F-1 bake-off and a recorded user decision.
 M9F-1, M9F-2, M9F-3, and M9D-1 remain unimplemented. No code was modified in this session.
+
+## 2026-08-21 — M8P-1: O1 resolved, S1 prompt approved, legacy tailor path disabled
+
+**O1 resolved (superseding the "unresolved" note in
+`docs/superpowers/specs/2026-08-04-m8-live-tailoring-decisions.md`):** the S1 model
+invocation is wrapper-invoked, pure text-in/text-out — option (a) of the two readings
+recorded there. The wrapper builds one self-contained prompt, invokes `claude -p` with
+`--tools ""` and `--no-session-persistence`, reads stdout only, and owns every filesystem
+write. The model never receives a filesystem path, tools, the master profile, contact
+details, Company Bank data, or previous application data. Full rationale in
+`docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`.
+
+**S1 prompt approved:** `docs/prompts/tailoring_s1.md` is the first accepted version of the
+S1-only prompt (job-description requirement extraction). Per `docs/SELF_HEALING.md` §4 it
+becomes PROTECTED after the first accepted live pilot run.
+
+**Legacy tailor/critic path permanently disabled:** `src/tailor/wrapper.py`'s `run_tailor`,
+`run_critic`, and `tailor_loop` — which dumped the entire master profile (including
+`evidence`/`defense`/`interview_risk` and contact details) into a one-line prompt, called
+`claude -p` with no tool/session restrictions, and silently returned `{}` on malformed JSON —
+now raise `NotImplementedError` unconditionally. No production path can invoke them. The
+pure helpers `hydrate_tailor_draft`/`derive_change_list` remain, unchanged, for future S3
+work; `_extract_json_from_output` (the silent-`{}`-on-malformed-JSON parser) was removed
+entirely rather than kept as a trap for a future caller.
+
+**M8P-1 scope, offline-verified:** S1 typed contracts (`src/tailor/s1.py`), a strict parser
+with JD-anchored semantic validation, a safe tool-disabled invocation wrapper
+(`src/tailor/invoke.py`), an orchestration layer that classifies every attempt into one of
+`INVOCATION_FAILURE`/`PARSE_FAILURE`/`SEMANTIC_FAILURE`/`INJECTION_BLOCKED`/`VALID`
+(`src/tailor/s1_pipeline.py`), I11 tracing via the existing `src.llm_trace.write_trace()`
+(no extension needed), a read-only job-preparation DB boundary
+(`src.db.prepare_tailoring_request`, jobs 229/279 prohibited), and a narrow `prepare`/`invoke`
+CLI (`scripts/tailor_s1.py`, `invoke --dry-run` never calls the model). 89 new tests added; full
+suite 1240 passed, 1 deselected (baseline was 1151 passed, 1 deselected). No live model call,
+no network access, no Company Bank access, no DB mutation, no new dependency, and no resume
+generation occurred in this session. Jobs 119 (Cisco), 225 (Notion), and 211 (Citadel) — the
+three planned human-pilot jobs — were not invoked against. Next: M8P-2 (S0 + S2).

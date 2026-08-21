@@ -92,12 +92,15 @@ requirement extraction and external company context.
 
 ## Open questions — must be resolved before the design document is written
 
-- **O1. Manual vs wrapper-invoked.** D2 chose "file contracts," but two readings
-  exist: (a) the wrapper builds one self-contained prompt, invokes Claude with tools
-  disabled, captures raw stdout, and owns every artifact write — the model never
-  touches repo files; or (b) the user runs the prompt by hand and saves the output.
-  Both satisfy "the model only ever sees one self-contained prompt," but (a) makes
-  I11 raw-output capture trivial while (b) makes it a manual step. **Unresolved.**
+- **O1 RESOLVED 2026-08-21 (M8P-1) as option (a), wrapper-invoked.** D2 chose "file
+  contracts," but two readings existed: (a) the wrapper builds one self-contained prompt,
+  invokes Claude with tools disabled, captures raw stdout, and owns every artifact write —
+  the model never touches repo files; or (b) the user runs the prompt by hand and saves the
+  output. (a) was selected because it makes I11 raw-output capture trivial and matches the
+  existing scoring trust boundary (`scripts/score_batch.py`). Implemented in
+  `src/tailor/invoke.py` / `src/tailor/s1_pipeline.py` / `scripts/tailor_s1.py`. See
+  `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md` and the 2026-08-21 entry in
+  `docs/DECISIONS.md`.
 - **O2 RESOLVED by the Company Knowledge Bank design.** Claude Web produces untrusted
   research bundles plus plain-text source snapshots in `data/company_research/inbox/`.
   Gemini's offline importer validates them; tests use fixtures and never touch the network.

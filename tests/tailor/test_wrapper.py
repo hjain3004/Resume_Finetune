@@ -71,45 +71,21 @@ def test_derive_change_list():
     assert "proj_1" in proj_change["before"]
     assert "proj_2" in proj_change["after"]
 
-from unittest.mock import patch
-from src.tailor.wrapper import run_tailor, run_critic
+import pytest
 
-@patch('src.tailor.wrapper.subprocess.run')
-def test_run_tailor_valid(mock_run):
-    mock_run.return_value.stdout = '''```json
-{
-  "base_variant": "backend",
-  "reasoning": "Fits well.",
-  "skills": {"languages": ["Python", "Go"]},
-  "projects": [],
-  "experience": []
-}
-```'''
-    
-    schema = {
-      "type": "object",
-      "required": ["base_variant", "reasoning", "skills", "projects", "experience"],
-      "properties": {
-          "base_variant": {"type": "string"},
-          "reasoning": {"type": "string"},
-          "skills": {"type": "object"},
-          "projects": {"type": "array"},
-          "experience": {"type": "array"}
-      }
-    }
-    
-    master_profile = {
-        "base_variants": {"backend": {"projects": [], "bullet_order": []}},
-        "projects": [],
-        "experience": []
-    }
-    
-    errors, tailor_json, hydrated, change_list = run_tailor("test jd", master_profile, schema)
-    assert not errors
-    assert tailor_json["base_variant"] == "backend"
+from src.tailor.wrapper import run_critic, run_tailor, tailor_loop
 
-@patch('src.tailor.wrapper.subprocess.run')
-def test_run_critic(mock_run):
-    mock_run.return_value.stdout = '{"verdict": "pass"}'
-    res = run_critic("hydrated text", "jd text", "banned", "taste")
-    assert res.get("verdict") == "pass"
+
+def test_run_tailor_is_permanently_disabled():
+    with pytest.raises(NotImplementedError, match="permanently disabled"):
+        run_tailor("test jd", {}, {})
+
+
+def test_run_critic_is_permanently_disabled():
+    with pytest.raises(NotImplementedError, match="permanently disabled"):
+        run_critic("hydrated text", "jd text", "banned", "taste")
+
+
+def test_tailor_loop_is_permanently_disabled():
+    with pytest.raises(NotImplementedError, match="permanently disabled"):
+        tailor_loop("test jd", {}, {}, "banned", "taste")

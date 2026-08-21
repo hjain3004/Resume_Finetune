@@ -1,86 +1,19 @@
-import json
-from unittest.mock import patch
-from src.tailor.wrapper import run_tailor, run_critic
+"""The single-shot S1/S2/S3/G2 tailor/critic wrapper this file used to
+exercise was disabled in M8P-1 (see src/tailor/wrapper.py) -- it dumped the
+full master profile into an unrestricted `claude -p` call. This file now
+proves that no production path can invoke it. The validated S1 replacement
+is covered end to end by tests/tailor/test_s1_pipeline.py and
+tests/test_tailor_s1_cli.py."""
 
-@patch('src.tailor.wrapper.subprocess.run')
-def test_integration_tailor_success(mock_run):
-    # Setup mocks
-    mock_run.return_value.stdout = '''```json
-{
-  "base_variant": "backend",
-  "reasoning": "Fits well.",
-  "skills": {"languages": ["Python", "Go"]},
-  "projects": [],
-  "experience": []
-}
-```'''
-    
-    schema = {
-      "type": "object",
-      "required": ["base_variant", "reasoning", "skills", "projects", "experience"],
-      "properties": {
-          "base_variant": {"type": "string"},
-          "reasoning": {"type": "string"},
-          "skills": {"type": "object"},
-          "projects": {"type": "array"},
-          "experience": {"type": "array"}
-      }
-    }
-    
-    master_profile = {
-        "base_variants": {"backend": {"projects": [], "bullet_order": []}},
-        "projects": [],
-        "experience": []
-    }
-    
-    # Run Tailor
-    lint_errors, tailor_json, hydrated, change_list = run_tailor("test jd", master_profile, schema)
-    
-    assert not lint_errors
-    assert tailor_json["base_variant"] == "backend"
-    
-    # Run Critic
-    mock_run.return_value.stdout = '{"verdict": "pass"}'
-    critic_res = run_critic(hydrated, "test jd", "banned", "taste")
-    
-    assert critic_res.get("verdict") == "pass"
+import pytest
 
-@patch('src.tailor.wrapper.subprocess.run')
-def test_integration_lint_failure(mock_run):
-    mock_run.return_value.stdout = '''```json
-{
-  "base_variant": "backend",
-  "reasoning": "Fits well.",
-  "skills": {"languages": ["Python", "Go"]},
-  "projects": [
-      {"project_id": "swap1", "bullets": []},
-      {"project_id": "swap2", "bullets": []}
-  ],
-  "experience": []
-}
-```'''
-    
-    schema = {
-      "type": "object",
-      "required": ["base_variant", "reasoning", "skills", "projects", "experience"],
-      "properties": {
-          "base_variant": {"type": "string"},
-          "reasoning": {"type": "string"},
-          "skills": {"type": "object"},
-          "projects": {"type": "array"},
-          "experience": {"type": "array"}
-      }
-    }
-    
-    master_profile = {
-        "base_variants": {"backend": {"projects": [], "bullet_order": []}},
-        "projects": [],
-        "experience": []
-    }
-    
-    # Run Tailor
-    lint_errors, tailor_json, hydrated, change_list = run_tailor("test jd", master_profile, schema)
-    
-    # Swapping 2 projects exceeds selection budget
-    assert len(lint_errors) >= 1
-    assert any("selection budget" in err for err in lint_errors)
+from src.tailor.wrapper import run_critic, run_tailor, tailor_loop
+
+
+def test_legacy_tailor_critic_path_is_unavailable():
+    with pytest.raises(NotImplementedError):
+        run_tailor("test jd", {}, {})
+    with pytest.raises(NotImplementedError):
+        run_critic("hydrated", "test jd", "banned", "taste")
+    with pytest.raises(NotImplementedError):
+        tailor_loop("test jd", {}, {}, "banned", "taste")
