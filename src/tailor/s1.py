@@ -381,6 +381,15 @@ def parse_s1_request(raw: dict) -> S1Request:
     )
 
 
+def parse_s1_response_dict(raw: dict, jd_text: str) -> S1Response:
+    """Strictly validate a persisted S1 dictionary against its original JD."""
+    try:
+        serialized = json.dumps(raw, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        raise S1ParseError(f"$: response is not JSON-serializable: {exc}") from exc
+    return parse_s1_response(serialized, jd_text)
+
+
 def s1_response_to_dict(response: S1Response) -> dict:
     """Serialize a validated S1Response for atomic publication as s1.json."""
 
