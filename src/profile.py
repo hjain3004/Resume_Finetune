@@ -707,6 +707,14 @@ class MasterProfile:
             ),
         )
 
+    def for_positioning(self):
+        from src.tailor.profile_views import positioning_from_profile
+        return positioning_from_profile(self)
+
+    def for_selection(self, recommended_base_variant: str):
+        from src.tailor.profile_views import selection_from_profile
+        return selection_from_profile(self, recommended_base_variant)
+
 
 
 def _normalize_term(value: str) -> str:
@@ -810,4 +818,3 @@ def load_profile(path: str | Path) -> MasterProfile:
         base_variants=base_variants,
         do_not_claim=do_not_claim,
     )
-
