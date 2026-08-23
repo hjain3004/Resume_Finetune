@@ -22,13 +22,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 from src import db
 from src.tailor.invoke import DEFAULT_TIMEOUT_SECONDS
+from src.tailor.artifacts import write_json_atomic
 from src.tailor.s1 import S1ParseError, build_s1_prompt, parse_s1_request, s1_request_to_dict, s1_response_to_dict
 from src.tailor.s1_pipeline import S1OutcomeKind, run_s1_invocation
 
@@ -36,23 +35,6 @@ PROMPT_TEMPLATE_PATH = Path("docs/prompts/tailoring_s1.md")
 TRACE_DIR = Path("data/traces")
 REQUEST_FILENAME = "s1_request.json"
 ARTIFACT_FILENAME = "s1.json"
-
-
-def _write_json_atomic(path: Path, data: object) -> None:
-    parent = path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-        os.replace(tmp_name, path)
-    except Exception:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-        raise
 
 
 def cmd_prepare(args: argparse.Namespace) -> int:
@@ -70,7 +52,7 @@ def cmd_prepare(args: argparse.Namespace) -> int:
         conn.close()
 
     request_path = Path(args.output) / REQUEST_FILENAME
-    _write_json_atomic(request_path, s1_request_to_dict(request))
+    write_json_atomic(request_path, s1_request_to_dict(request))
     print(f"Wrote {request_path} for job {request.job_id} ({request.company} — {request.title})")
     return 0
 
@@ -120,7 +102,7 @@ def cmd_invoke(args: argparse.Namespace) -> int:
         return 1
 
     artifact_path = Path(args.output) / ARTIFACT_FILENAME
-    _write_json_atomic(artifact_path, s1_response_to_dict(outcome.response))
+    write_json_atomic(artifact_path, s1_response_to_dict(outcome.response))
     print(f"Wrote {artifact_path} for job {request.job_id}")
     return 0
 

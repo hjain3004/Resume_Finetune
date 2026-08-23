@@ -21,7 +21,8 @@ from dataclasses import dataclass
 # `--tools` is variadic and greedily consumes following non-flag argv, so
 # `--tools ""` must never be last; the trailing "--" keeps the prompt
 # positional even if it starts with a dash.
-DEFAULT_S1_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+DEFAULT_S1_CLAUDE_CMD = DEFAULT_CLAUDE_CMD
 DEFAULT_TIMEOUT_SECONDS = 300
 _DIAGNOSTIC_MAX_CHARS = 1000
 
@@ -54,10 +55,10 @@ def _bounded_stream(name: str, text: str, limit: int = _DIAGNOSTIC_MAX_CHARS) ->
     return f"{name}: {stripped[:limit]}...<truncated {omitted} chars>"
 
 
-def invoke_s1_model(
+def invoke_text_model(
     prompt: str,
     *,
-    claude_cmd: tuple[str, ...] = DEFAULT_S1_CLAUDE_CMD,
+    claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> InvocationResult:
     """Run exactly one S1 model invocation. No shell, no retries.
@@ -70,19 +71,29 @@ def invoke_s1_model(
             [*claude_cmd, prompt], capture_output=True, text=True, timeout=timeout
         )
     except subprocess.TimeoutExpired as exc:
-        raise InvocationError(f"S1 invocation timed out after {timeout}s", raw_stdout="", model=model) from exc
+        raise InvocationError(f"model invocation timed out after {timeout}s", raw_stdout="", model=model) from exc
 
     bounded_stderr = _bounded_stream("stderr", result.stderr)
     if result.returncode != 0:
         raise InvocationError(
-            f"S1 invocation exited {result.returncode}; "
+            f"model invocation exited {result.returncode}; "
             f"{_bounded_stream('stdout', result.stdout)}; {bounded_stderr}",
             raw_stdout=result.stdout,
             model=model,
         )
     if not result.stdout.strip():
         raise InvocationError(
-            f"S1 invocation returned empty stdout ({bounded_stderr})", raw_stdout="", model=model
+            f"model invocation returned empty stdout ({bounded_stderr})", raw_stdout="", model=model
         )
 
     return InvocationResult(raw_stdout=result.stdout, bounded_stderr=bounded_stderr, model=model)
+
+
+def invoke_s1_model(
+    prompt: str,
+    *,
+    claude_cmd: tuple[str, ...] = DEFAULT_S1_CLAUDE_CMD,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+) -> InvocationResult:
+    """Compatibility wrapper retaining the M8P-1 public API."""
+    return invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
