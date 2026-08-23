@@ -856,6 +856,15 @@ def prepare_tailoring_request(conn: sqlite3.Connection, job_id: int) -> S1Reques
     )
 
 
+def tailoring_base_variant(conn: sqlite3.Connection, job_id: int) -> str:
+    """Return the scorer recommendation after applying the same read-only gate."""
+    prepare_tailoring_request(conn, job_id)
+    row = conn.execute("SELECT base_variant FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if row is None:
+        raise TailoringPrepError(f"job {job_id}: no such row")
+    return row["base_variant"]
+
+
 def calibration_jobs_by_ids(
     conn: sqlite3.Connection, job_ids: tuple[int, ...]
 ) -> list[sqlite3.Row]:
