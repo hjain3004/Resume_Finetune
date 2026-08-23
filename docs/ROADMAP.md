@@ -107,7 +107,7 @@ item 1 already existed was incorrect — verified 2026-07-14: no master-profile 
 M8 item 1 adds only the pure, schema-validating `config/master_profile.yaml` loader.
 M8 item 2 rewrites the loader to schema v0.3.0 and authors the deterministic sections of `config/master_profile.yaml`.
 The M8 phrasing rework is complete: both base variants cut to 13 bullets on a measured one-page budget; `src/profile_lint.py` added and wired into `scripts/validate_profile.py`; the emphasis pipeline (`src/render/emphasis.py`, `RenderBullet.emphasis`, `\textbf` in the LaTeX arm, markdown in the RenderCV arm) added.
-M8P-1 (2026-08-21) is COMPLETE: the validated S1 requirement-extraction contract, strict/semantic parser, protected S1 prompt (`docs/prompts/tailoring_s1.md`), safe tool-disabled invocation wrapper, I11 tracing, read-only job-preparation DB boundary, and a narrow `prepare`/`invoke` CLI (`scripts/tailor_s1.py`). The legacy unsafe single-shot `src/tailor/wrapper.py` path (`run_tailor`/`run_critic`/`tailor_loop`) is permanently disabled. No live S1 invocation occurred; no resume has been generated. What genuinely remains in M8: S0, S2, S3, G1 completion (L1/L4), G2, G3, PDF rendering, DB integration, and the archival layout — see `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`.
+M8P-1 (2026-08-21) is COMPLETE: the validated S1 requirement-extraction contract, strict/semantic parser, protected S1 prompt (`docs/prompts/tailoring_s1.md`), safe tool-disabled invocation wrapper, I11 tracing, read-only job-preparation DB boundary, and a narrow `prepare`/`invoke` CLI (`scripts/tailor_s1.py`). M8P-2 (2026-08-23) is COMPLETE offline: JD-only S0 positioning, privacy-minimised S0/S2 projections, deterministic S2 selection validation, traced safe invocations, and one-job CLI preparation/invocation are implemented and tested. No live model invocation, Company Bank use, database mutation, resume generation, or PDF generation occurred. Jobs 119/225/211 passed eligibility and profile-projection preflight only. What genuinely remains in M8: S3, G1 completion (L1/L4), G2, G3, PDF rendering, DB integration, and the archival layout. Next: M8P-3.
 The Company Knowledge Bank design was approved on 2026-08-04 as a supporting M8 subsystem.
 Track A foundation is complete. The approved seed corpus is 20 companies. Track B is local
 research-in-progress only: 20/20 ignored inbox bundles exist before Batches 5/6, and no raw
@@ -146,6 +146,13 @@ unimplemented. Detailed design:
 M9D is a family of one-session sub-milestones, not one giant implementation session. Before
 starting M9D-1, create and approve a dedicated plan for M9D-1 only. M8 remains governed by
 its Phase 2 gate; discovery work does not silently unlock or implement M8.
+
+- 2026-08-23: **M8P-2 is COMPLETE offline.** Added JD-only S0 and structural S2 contracts,
+  privacy-minimised profile projections, deterministic selection validation, safe traced
+  one-job CLI commands, and shared atomic publication. The full suite passes 1244 tests with
+  1 deselected. No live model/network/Company Bank use, DB mutation, resume, or PDF occurred.
+  Jobs 119/225/211 passed M8P-1 eligibility and projection preflight only. Next is M8P-3;
+  Phase 3, M8, and both human pilots remain incomplete.
 
 ## Not yet specified (future, not gated — just not designed)
 Notion sync; Claude-in-Chrome JD capture; automated gap→project pipeline. Alert-email

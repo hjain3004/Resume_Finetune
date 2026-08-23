@@ -155,7 +155,14 @@ M10 (renderer bake-off + L7 parseability gate) is complete: both arms were built
 
 M8P-1 (2026-08-21) is complete: the validated S1 requirement-extraction contract, strict/semantic parser, protected S1 prompt, safe tool-disabled invocation wrapper, I11 tracing, read-only job-preparation DB boundary, and a narrow `prepare`/`invoke` CLI (`scripts/tailor_s1.py`). The legacy unsafe `src/tailor/wrapper.py` single-shot path is permanently disabled. See `docs/superpowers/specs/2026-08-21-m8-human-pilot-s1-design.md`.
 
-What genuinely remains in M8: S0 positioning, S2 selection, S3 alignment, G1 completion (L1 structure, L4 bullet shape), G2 critic, G3 human review packet, the CLI beyond S1, and DB integration (see `docs/TAILORING_METHODOLOGY.md` §3-4). Next scoped increment: M8P-2 (S0 + S2, one-job-at-a-time, JD-only).
+M8P-2 (2026-08-23) is complete offline. It adds JD-only S0 positioning, privacy-minimised
+profile projections, strict S0/S2 contracts, deterministic S2 selection validation, safe
+traced invocations, shared atomic artifacts, and the one-job `prepare`, `invoke-s0`,
+`prepare-s2`, and `invoke-s2` CLI. The full suite is 1244 passed / 1 deselected. No live
+model call, network, Company Bank data, database mutation, resume, or PDF was used or
+produced. Jobs 119/225/211 passed eligibility and projection preflight only; they have no
+accepted S1 artifacts and were not invoked. Next scoped increment: M8P-3 (S3 plus G1 L1/L4).
+Phase 3, M8, and both human pilots remain incomplete.
 
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 

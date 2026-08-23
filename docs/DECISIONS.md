@@ -2,6 +2,18 @@
 
 One dated entry per decision/finding. Newest last.
 
+## 2026-08-23 — M8P-2 completed offline
+
+M8P-2 uses explicit `jd_only` context. S0 receives validated S1 plus the positioning
+projection; S2 receives validated S1/S0 plus the structural selection catalog. Neither
+model-facing projection contains identity/contact data, education, rendered phrasing,
+profile evidence, defenses, metrics, known gaps, ownership-boundary prose, or raw JD text.
+Both calls use the M8P-1 tool-disabled, no-session, one-attempt boundary and I11 traces;
+accepted artifacts publish atomically and failed reruns preserve prior artifacts. No live
+model call, network access, Company Bank data, database mutation, resume/PDF generation, or
+pilot invocation occurred. Jobs 119/225/211 passed read-only eligibility and projection
+preflight only. Verification: 1244 passed, 1 deselected; DB checksum unchanged.
+
 ## 2026-07-04 — vanshb03/New-Grad-2027 verification (M1)
 
 - Default branch is `dev`, not `main`. Hardcoded in `discover/tracker_vansh.py`.
