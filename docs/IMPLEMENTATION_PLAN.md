@@ -175,6 +175,27 @@ bundle preserves S2 structure and ownership, constrained bullet edits, numeric t
 skills, deterministic change log/diff, and `render_line_check="pending"`. G2, G3, final
 rendering, rendered line checking, human pilots, and M8P-4 remain out of scope.
 
+**M8P-3's closeout above was premature and was repaired as M8P-3R (2026-08-24); M8P-3
+counts as complete only as of the repair.** The 34/1330-passing suite did not catch: an
+unserializable bundle (`s3_bundle_to_dict()` used dataclass `.__dict__`, so no valid
+response could ever publish); `run_static_g1()` checking only the bullet-id sequence, so a
+fabricated bullet owner or an undeclared mutation to an unedited bullet's text/plain_text/
+emphasis both passed `static_pass`; `run_s3_invocation()` catching bare `Exception` around
+response parsing and mislabeling unrelated errors as `parse_failure`; and the plan's
+required strict authoritative bundle parser never being built. Test coverage matched the
+gaps: a one-test CLI file, a two-test integration file, and no G1 adversarial matrix.
+Repair commits `e587c94` (bundle serialization, G1 owner/mutation binding, narrowed
+exception handling, `parse_s3_bundle`), `a0d90f1` (CLI prepare failure matrix and
+invoke/publish coverage), `a1864fa` (19-case G1 adversarial matrix), `c01f9ab` (expanded
+integration coverage), and `e67aca1` (`HYDRATION_FAILURE` and no-retry pipeline coverage)
+close every gap. Focused verification (`test_alignment_view.py`, `test_s3.py`, `test_g1.py`,
+`test_s3_pipeline.py`, `test_tailor_s3_cli.py`, `test_m8p3_integration.py`) passed 85 tests;
+full verification passed 1381 tests with 1 deselected. `data/jobs.db` checksum unchanged; no
+live model call, network access, Company Bank use, database mutation, resume, or PDF
+occurred in the repair session. `render_line_check` remains `"pending"`. G2, G3, final
+rendering, PDF generation, Company Bank integration, human pilots, and M8P-4 remain
+unstarted.
+
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 
 1. **Track A — Gemini foundation:**

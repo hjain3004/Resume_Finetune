@@ -2327,3 +2327,90 @@ SHA-256 remained `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843a
 No live model, network, Company Bank, database mutation, resume, PDF, pilot, or M8P-4
 activity occurred. `render_line_check` is deliberately `pending`; rendered line checking,
 G2, G3, final rendering, and human pilots remain incomplete.
+
+## 2026-08-24 — M8P-3R: repair of a premature M8P-3 closeout
+
+**Root cause.** The M8P-3 closeout above declared completion on a green suite (34 focused /
+1330 full) that a subsequent independent review found insufficient. Four confirmed defects:
+
+1. `src/tailor/s3_pipeline.py::s3_bundle_to_dict()` serialized `bundle.draft.__dict__`,
+   `entry.__dict__`, etc. directly. A `TailoredDraft`/`DraftBullet`/`ChangeEntry`/`EditBudget`
+   is a dataclass, not a JSON-native structure, so `json.dump()` raised `TypeError: Object of
+   type DraftBullet is not JSON serializable` on every otherwise-valid response — no accepted
+   `s3_bundle.json` could ever be published by `scripts.tailor_s3 invoke`.
+2. `src/tailor/g1.py::run_static_g1()` compared only the tuple of bullet ids
+   (`tuple(item.bullet_id for item in draft.bullets) != expected_bullet_ids`) and never
+   compared each draft bullet's `owner_id`/`owner_kind` against the canonical alignment entry
+   with the same id. A bullet retaining its id but re-owned to a fabricated project/experience
+   received `static_pass`.
+3. The same function's L4 loop iterated only `{edit.bullet_id for edit in response.bullet_edits}`
+   — bullets the model *declared* as edited. An unedited bullet's `text`/`plain_text`/
+   `emphasis` could be silently mutated (bypassing `hydrate_s3()` entirely, e.g. via a
+   hand-tampered persisted bundle) and G1 never inspected it. G1 also never proved that a
+   bullet's `text` reparses to its own stored `plain_text`/`emphasis`, that unedited bullets
+   equal their canonical `source_text` exactly, that edited bullets equal the exact accepted
+   `BulletEdit.after`, that skill *contents* (not just category names) equal canonical skills
+   plus accepted additions, or that the draft's `job_id`/`company`/`title` match the request.
+4. `src/tailor/s3_pipeline.py::run_s3_invocation()` wrapped `parse_s3_response()` in
+   `except Exception`, mapping any exception that was not `S3ParseError`/`S3SemanticError` to
+   `PARSE_FAILURE` — an unrelated programmer bug (e.g. an `AttributeError` from a future
+   refactor) would silently present as a model parsing problem instead of propagating.
+
+A fifth gap: the M8P-3 plan required a strict authoritative parser for a persisted
+`s3_bundle.json`; only an incomplete serializer existed, and nothing re-validated a bundle
+already on disk against its authoritative `S3Request`.
+
+**Test coverage matched the code gaps.** `tests/test_tailor_s3_cli.py` had one shallow
+`callable(...)` contract test; `tests/test_m8p3_integration.py` had two tests; there was no
+mocked CLI invocation that published and reparsed a bundle, no full `prepare` failure matrix,
+no failed-rerun preservation test, and no G0/L1/L4 adversarial mutation matrix.
+
+**Repair.** TDD throughout: every defect was reproduced with a focused failing test before
+any production change.
+
+- `e587c94` — explicit recursive serializers (`draft_bullet_to_dict`, `tailored_draft_to_dict`,
+  `change_entry_to_dict`, `edit_budget_to_dict`, `g1_violation_to_dict`, `g1_report_to_dict`)
+  replacing every `.__dict__` use; `run_static_g1()` hardened with G0 canonical-binding checks
+  applied to *every* draft bullet (owner_id/owner_kind match, text equals canonical-or-accepted-
+  edit, plain_text/emphasis reparse consistency) plus skill-content and job/company/title
+  identity checks; `run_s3_invocation()` narrowed to catch only `S3ParseError`/
+  `S3SemanticError`; new `parse_s3_bundle()` (with `S3BundleError`) strictly parses a persisted
+  bundle's structure and then deterministically recomputes the response validation, hydrated
+  draft, change log, diff, edit budget, and G1 report from the authoritative request, requiring
+  every persisted derived field to match exactly.
+- `a0d90f1` — full CLI coverage: prepare failure matrix (prohibited job, ineligible status,
+  DB/S1 mismatch, injection-blocked S1, S0/S2 request and response drift, stale persisted
+  catalog, changed DB-recommended variant, current profile drift, request preservation on
+  failure); dry-run makes no call/trace/bundle; a mocked valid invoke that publishes and
+  reparses via `parse_s3_bundle`; parse/semantic/invocation/G1 failures all exit nonzero and
+  preserve any existing accepted bundle with no leftover temp file; two persisted-artifact
+  regressions (tampered `owner_id`, undeclared text mutation) proven against `parse_s3_bundle`
+  directly.
+- `a1864fa` — a 19-case G1 adversarial matrix (job identity, base variant, project order,
+  experience order, bullet membership, bullet order, owner_id, owner_kind, unedited bullet
+  text, edited-bullet-text-vs-accepted-edit mismatch, stored plain_text, stored emphasis,
+  skill removal, skill reorder, undeclared skill addition, alignment fingerprint, a metric, the
+  first action verb, a banned term, a do_not_claim term) plus a dedicated edit-budget-over-15%
+  boundary test, each asserting `FAIL` with the specific rule code.
+- `c01f9ab` — expanded `test_m8p3_integration.py` from two tests to include a numeric-token-
+  preservation assertion, a full prepare-invoke-publish-reparse narrative through the real CLI,
+  and a persisted change-log tamper case.
+- `e67aca1` — `HYDRATION_FAILURE` outcome coverage (a directly-constructed alignment with
+  invalid canonical emphasis) and explicit exactly-once/no-retry invocation tests.
+
+**Verification.** Fresh sequential run:
+`.venv/bin/python -m pytest tests/tailor/test_alignment_view.py tests/tailor/test_s3.py
+tests/tailor/test_g1.py tests/tailor/test_s3_pipeline.py tests/test_tailor_s3_cli.py
+tests/test_m8p3_integration.py -q` → 85 passed. `.venv/bin/python -m pytest -q` → 1381
+passed, 1 deselected (up from the 1330/1 baseline; net +51 tests across the repair).
+`git diff --check` clean. `data/jobs.db` SHA-256 unchanged:
+`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+
+**Confirmed:** no live model call, no network access, no PDF/renderer touched, no database
+mutation, no Company Bank access, no new dependency, no push, no pilot job invoked. Raw SQL
+remains confined to `src/db.py`. All tests ran offline against synthetic/tmp-path fixtures or
+the real, read-only `config/master_profile.yaml`. `render_line_check` remains `"pending"` in
+every code path and every doc reference. **M8P-3 counts as complete only as of this M8P-3R
+entry; the 2026-08-24 closeout above was accurate about scope but not about verification
+sufficiency.** M8P-4 (G2 anchored critic), G3, final rendering, PDF generation, Company Bank
+integration, and both human pilots remain unstarted.

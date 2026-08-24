@@ -171,6 +171,42 @@ deselected. No live model, network, Company Bank, database mutation, resume, PDF
 pilot activity occurred. `render_line_check` remains `pending`; rendered line checking,
 G2, G3, final rendering, and human pilots remain incomplete. M8P-4 is not started.
 
+**M8P-3's initial closeout above was premature and was repaired as M8P-3R
+(2026-08-24).** An independent review found the 34/1330-passing suite insufficient:
+`s3_bundle_to_dict()` used dataclass `.__dict__`, so no otherwise-valid response could
+ever publish (`TypeError: DraftBullet is not JSON serializable`); `run_static_g1()`
+checked only the bullet-id sequence, so a bullet keeping its id but carrying a
+fabricated `owner_id`/`owner_kind`, or an undeclared mutation to an unedited bullet's
+text/plain_text/emphasis, both passed `static_pass`; `run_s3_invocation()` caught bare
+`Exception` around response parsing and mislabeled any unrelated programmer error as
+`parse_failure`; and the plan's required strict authoritative bundle parser did not
+exist. Test coverage matched: the CLI test file had one shallow contract test, the
+integration file had two tests, and the required G1 adversarial mutation matrix,
+prepare failure matrix, and mocked valid-publish-and-reparse test were all absent.
+Repair commits `e587c94`, `a0d90f1`, `a1864fa`, `c01f9ab`, and `e67aca1` add explicit
+recursive serializers for every persisted contract type; a strict authoritative bundle
+parser (`parse_s3_bundle`) that structurally validates a persisted `s3_bundle.json` and
+then deterministically recomputes the response, draft, change log, diff, edit budget,
+and G1 report from the authoritative request, rejecting any persisted field that
+disagrees; G0 canonical-binding checks applied to every draft bullet (not just declared
+edits) for owner identity, exact text-vs-canonical-or-accepted-edit equality, and
+plain_text/emphasis reparse consistency; narrowed exception handling so only
+`S3ParseError`/`S3SemanticError` become modeled outcomes; a 19-case G1 adversarial
+mutation matrix; a full CLI prepare failure matrix (prohibited job, ineligible status,
+DB/S1 mismatch, injection-blocked S1, S0/S2 request/response drift, stale persisted
+catalog, changed DB-recommended variant, current profile drift, request preservation on
+failure); mocked valid publication that reparses via the new strict parser; failure
+preservation across parse/semantic/invocation/G1 failures; and pipeline-outcome coverage
+including `HYDRATION_FAILURE` and exactly-once/no-retry invocation. Focused verification
+(`test_alignment_view.py`, `test_s3.py`, `test_g1.py`, `test_s3_pipeline.py`,
+`test_tailor_s3_cli.py`, `test_m8p3_integration.py`) passed 85 tests; the full suite
+passed 1381 with 1 deselected. No live model, network, Company Bank access, database
+mutation, resume, or PDF occurred in the repair session; `data/jobs.db` was never
+opened for write and its checksum is unchanged. `render_line_check` remains `pending`.
+**Only after M8P-3R does M8P-3 count as complete.** M8P-4 (G2 anchored critic), G3,
+final rendering, PDF generation, Company Bank integration, and both human pilots remain
+unstarted.
+
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from
@@ -210,3 +246,15 @@ G2, G3, final rendering, and human pilots remain incomplete. M8P-4 is not starte
   capture, DB mutation, and batch mode remain unimplemented. No resume has been generated and
   no live S1 invocation occurred; the three planned pilot jobs (119 Cisco, 225 Notion, 211
   Citadel) were not touched. Next: M8P-2 (S0 + S2, one-job-at-a-time, JD-only).
+- 2026-08-24: **M8P-3R repair complete.** M8P-3's 2026-08-24 closeout (commits `07dce7f`
+  through `9a1fd9c`) claimed completion on a suite that was insufficient: an unserializable
+  bundle blocked every valid publish, static G1 skipped bullet-owner binding and undeclared
+  mutations, `run_s3_invocation()` mislabeled unrelated exceptions as parse failures, and the
+  plan's required authoritative bundle parser was never built. Repair commits `e587c94`,
+  `a0d90f1`, `a1864fa`, `c01f9ab`, and `e67aca1` fix all four defects, add `parse_s3_bundle`,
+  and close the test-coverage gap (G1 adversarial matrix, CLI prepare failure matrix, mocked
+  valid-publish-and-reparse, failure preservation, pipeline outcomes). Full suite: 1381 passed,
+  1 deselected. `data/jobs.db` checksum unchanged; no live model/network/Company Bank/DB
+  mutation/resume/PDF activity occurred. M8P-3 counts as complete only as of this entry.
+  M8P-4, G2, G3, rendering, PDF generation, Company Bank integration, and both human pilots
+  remain unstarted.
