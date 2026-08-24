@@ -32,12 +32,29 @@ def test_s2_valid_shape_round_trips():
     assert parse_s2_response(json.dumps(raw), request).bullet_order == tuple(raw["bullet_order"])
 
 
+def test_s2_accepts_distinct_s0_point_indexes_in_supplied_order():
+    request = _request()
+    raw = _valid(request)
+    raw["projects"][0]["s0_point_indexes"] = [0, 1]
+    response = parse_s2_response(json.dumps(raw), request)
+    assert response.projects[0].s0_point_indexes == (0, 1)
+
+
+def test_s2_rejects_duplicate_s0_point_indexes_within_project_choice():
+    request = _request()
+    raw = _valid(request)
+    raw["projects"][0]["s0_point_indexes"] = [0, 0]
+    with pytest.raises(S2ParseError, match=r"projects\[0\]\.s0_point_indexes: duplicate values"):
+        parse_s2_response(json.dumps(raw), request)
+
+
 @pytest.mark.parametrize("change", [
     lambda x: x.__setitem__("base_variant", "unknown"),
     lambda x: x["projects"].append(copy.deepcopy(x["projects"][0])),
     lambda x: x.__setitem__("projects", x["projects"][:-1]),
     lambda x: x["projects"].extend([{"project_id": "campus_marketplace", "reason": "x", "s0_point_indexes": [0]}]),
     lambda x: x["projects"][0].__setitem__("s0_point_indexes", [99]),
+    lambda x: x["projects"][0].__setitem__("s0_point_indexes", [-1]),
     lambda x: x["bullet_order"].pop(),
     lambda x: x["bullet_order"].__setitem__(0, "fabricated"),
     lambda x: x["coverage"].__setitem__(0, {"term": "Python", "status": "covered", "bullet_ids": ["missing"]}),
@@ -45,6 +62,15 @@ def test_s2_valid_shape_round_trips():
 def test_s2_rejects_invalid_selection_constraints(change):
     request = _request(); raw = _valid(request); change(raw)
     with pytest.raises((S2ParseError, S2ValidationError)):
+        parse_s2_response(json.dumps(raw), request)
+
+
+@pytest.mark.parametrize("indexes", [[], [True], ["0"]])
+def test_s2_rejects_empty_boolean_and_non_integer_s0_indexes(indexes):
+    request = _request()
+    raw = _valid(request)
+    raw["projects"][0]["s0_point_indexes"] = indexes
+    with pytest.raises(S2ParseError):
         parse_s2_response(json.dumps(raw), request)
 
 

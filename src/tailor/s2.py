@@ -88,6 +88,8 @@ def parse_s2_response(raw_output: str, request: S2Request) -> S2Response:
         indexes = x["s0_point_indexes"]
         if not isinstance(indexes, list) or not indexes: raise S2ParseError("invalid S0 indexes")
         if any(isinstance(n, bool) or not isinstance(n, int) for n in indexes): raise S2ParseError("invalid S0 index type")
+        if len(set(indexes)) != len(indexes):
+            raise S2ParseError(f"projects[{i}].s0_point_indexes: duplicate values")
         choices.append(ProjectChoice(_str(x["project_id"], "project_id"), _str(x["reason"], "reason"), tuple(indexes)))
     order = _strs(o["bullet_order"], "bullet_order", True)
     coverage = []
