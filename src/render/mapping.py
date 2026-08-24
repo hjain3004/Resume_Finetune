@@ -42,6 +42,11 @@ def _resolve_text(bullet: Bullet, requested: str | None) -> str:
     return bullet.phrasings.short
 
 
+def default_phrasing_text(bullet: Bullet) -> str:
+    """Return the canonical medium-then-short source text for a bullet."""
+    return _resolve_text(bullet, None)
+
+
 def _to_render_bullet(bullet: Bullet, requested: str | None) -> RenderBullet:
     plain, spans = parse_emphasis(_resolve_text(bullet, requested))
     return RenderBullet(bullet_id=bullet.id, text=plain, emphasis=spans)
