@@ -1,0 +1,376 @@
+"""Strict constrained S3 alignment contract and deterministic edit validation."""
+from __future__ import annotations
+
+import json
+import re
+from collections import Counter
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+from src.render.emphasis import EmphasisError, parse_emphasis
+from src.tailor.alignment_view import AlignmentView, alignment_to_dict, parse_alignment
+from src.tailor.profile_views import (
+    PositioningEntry,
+    PositioningView,
+    SelectionBullet,
+    SelectionCatalog,
+    SelectionEntry,
+    SelectionVariant,
+)
+from src.tailor.s0 import (
+    S0Request,
+    S0Response,
+    parse_s0_response,
+    s0_response_to_dict,
+)
+from src.tailor.s1 import (
+    S1Response,
+    parse_s1_response_dict,
+    s1_response_to_dict,
+)
+from src.tailor.s2 import (
+    S2Request,
+    S2Response,
+    build_s2_request,
+    parse_s2_response,
+    s2_response_to_dict,
+)
+
+
+_MAX_DIAGNOSTIC = 200
+_NUMBER_RE = re.compile(r"(?<!\w)[~+-]?(?:\d[\d,]*(?:\.\d+)?)(?:%|x|\+)?(?!\w)")
+_WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+#.\-/]*")
+_FUNCTION_WORDS = frozenset(
+    "a an and as at by for from in into of on or the to via with within across"
+    " can does do is are was were be been being that this these those than then"
+    " using used use into their its our your more less new one two three"
+    .split()
+)
+
+
+class S3ParseError(ValueError):
+    """Strict JSON/schema failure."""
+
+
+class S3SemanticError(ValueError):
+    """Validated shape that violates the constrained S3 contract."""
+
+
+class S3HydrationError(ValueError):
+    """Reserved for deterministic hydration failures in Task 3."""
+
+
+class S3EditRule(str, Enum):
+    TERMINOLOGY_MIRRORING = "terminology_mirroring"
+    XYZ_TIGHTENING = "xyz_tightening"
+
+
+@dataclass(frozen=True)
+class BulletEdit:
+    bullet_id: str
+    after: str
+    motivating_terms: tuple[str, ...]
+    rule: S3EditRule
+
+
+@dataclass(frozen=True)
+class SkillAddition:
+    category: str
+    term: str
+    motivating_term: str
+
+
+@dataclass(frozen=True)
+class S3Request:
+    job_id: int
+    company: str
+    title: str
+    context_mode: str
+    s1: S1Response
+    s0: S0Response
+    s2: S2Response
+    alignment: AlignmentView
+
+
+@dataclass(frozen=True)
+class S3Response:
+    bullet_edits: tuple[BulletEdit, ...]
+    skill_additions: tuple[SkillAddition, ...]
+
+
+def _bounded(value: object) -> str:
+    text = repr(value)
+    return text if len(text) <= _MAX_DIAGNOSTIC else text[:_MAX_DIAGNOSTIC] + "..."
+
+
+def _normalize(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _object(value: object, fields: set[str], path: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise S3ParseError(f"{path}: expected object")
+    if set(value) != fields:
+        raise S3ParseError(f"{path}: unexpected or missing fields")
+    return value
+
+
+def _string(value: object, path: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise S3ParseError(f"{path}: expected nonempty string")
+    return value
+
+
+def _string_array(value: object, path: str, *, empty: bool = False) -> tuple[str, ...]:
+    if not isinstance(value, list) or (not empty and not value):
+        raise S3ParseError(f"{path}: expected {'empty or ' if empty else ''}string array")
+    result = tuple(_string(item, f"{path}[]") for item in value)
+    if len({_normalize(item) for item in result}) != len(result):
+        raise S3ParseError(f"{path}: duplicate values")
+    return result
+
+
+def build_s3_request(
+    job_id: int,
+    company: str,
+    title: str,
+    s1: S1Response,
+    s0: S0Response,
+    s2: S2Response,
+    alignment: AlignmentView,
+) -> S3Request:
+    return S3Request(job_id, company, title, "jd_only", s1, s0, s2, alignment)
+
+
+def s3_request_to_dict(request: S3Request) -> dict[str, object]:
+    return {
+        "job_id": request.job_id,
+        "company": request.company,
+        "title": request.title,
+        "context_mode": request.context_mode,
+        "s1": s1_response_to_dict(request.s1),
+        "s0": s0_response_to_dict(request.s0),
+        "s2": s2_response_to_dict(request.s2),
+        "alignment": alignment_to_dict(request.alignment),
+    }
+
+
+def _s1_from_dict(raw: object) -> S1Response:
+    if not isinstance(raw, dict):
+        raise S3ParseError("$.s1: expected object")
+    quotes: list[str] = []
+    for key in ("must_have", "nice_to_have", "responsibilities_summary"):
+        items = raw.get(key, [])
+        if isinstance(items, list):
+            quotes.extend(item["quote"] for item in items if isinstance(item, dict) and isinstance(item.get("quote"), str))
+    for key in ("seniority_signals", "disqualifiers"):
+        items = raw.get(key, [])
+        if isinstance(items, list):
+            quotes.extend(item for item in items if isinstance(item, str))
+    context = raw.get("company_context")
+    if isinstance(context, dict):
+        quotes.extend(item["quote"] for item in context.values() if isinstance(item, dict) and isinstance(item.get("quote"), str))
+    try:
+        return parse_s1_response_dict(raw, " ".join(quotes))
+    except Exception as exc:
+        raise S3ParseError(f"$.s1: invalid response: {_bounded(exc)}") from exc
+
+
+def _synthetic_s2_request(
+    job_id: int,
+    company: str,
+    title: str,
+    s1: S1Response,
+    s0: S0Response,
+    s2_raw: dict[str, Any],
+    alignment: AlignmentView,
+) -> S2Request:
+    projects = tuple(SelectionEntry(item, "project", item, (), ()) for item in alignment.project_ids)
+    experiences = tuple(SelectionEntry(item, "experience", item, (), ()) for item in alignment.experience_ids)
+    bullets = tuple(
+        SelectionBullet(item.bullet_id, item.owner_id, item.owner_kind, 1, item.claim_type, item.keywords_hit)
+        for item in alignment.bullets
+    )
+    exp_order: list[str] = []
+    counts: list[tuple[str, int]] = []
+    for item in alignment.bullets:
+        if item.owner_kind != "experience":
+            continue
+        if not exp_order or exp_order[-1] != item.owner_id:
+            exp_order.append(item.owner_id)
+            counts.append((item.owner_id, 0))
+        counts[-1] = (item.owner_id, counts[-1][1] + 1)
+    variant = SelectionVariant(alignment.base_variant, alignment.project_ids, tuple(item.bullet_id for item in alignment.bullets), tuple(exp_order), tuple(counts))
+    catalog = SelectionCatalog(alignment.base_variant, (variant,), projects, experiences, bullets, alignment.do_not_claim)
+    try:
+        return build_s2_request(job_id, company, title, s1, s0, catalog)
+    except Exception as exc:
+        raise S3ParseError(f"$.s2: cannot build nested validation context: {_bounded(exc)}") from exc
+
+
+def parse_s3_request(raw: object) -> S3Request:
+    obj = _object(raw, {"job_id", "company", "title", "context_mode", "s1", "s0", "s2", "alignment"}, "$")
+    if isinstance(obj["job_id"], bool) or not isinstance(obj["job_id"], int):
+        raise S3ParseError("$.job_id: expected integer")
+    company = _string(obj["company"], "$.company")
+    title = _string(obj["title"], "$.title")
+    if obj["context_mode"] != "jd_only":
+        raise S3SemanticError("$.context_mode: must be jd_only")
+    s1 = _s1_from_dict(obj["s1"])
+    alignment = parse_alignment(obj["alignment"])
+    raw_point_ids = {
+        item
+        for point in obj["s0"].get("points", [])
+        if isinstance(point, dict)
+        for item in point.get("profile_ids", [])
+        if isinstance(item, str)
+    }
+    all_profile_ids = tuple(dict.fromkeys((*alignment.project_ids, *alignment.experience_ids, *raw_point_ids)))
+    positioning = PositioningView(
+        tuple(PositioningEntry(item, "project", item, item, (), ()) for item in all_profile_ids),
+        (),
+    )
+    s0_request = S0Request(obj["job_id"], company, title, s1, positioning)
+    try:
+        s0 = parse_s0_response(json.dumps(obj["s0"], separators=(",", ":")), s0_request)
+    except Exception as exc:
+        raise S3ParseError(f"$.s0: invalid response: {_bounded(exc)}") from exc
+    if not isinstance(obj["s2"], dict):
+        raise S3ParseError("$.s2: expected object")
+    s2_request = _synthetic_s2_request(obj["job_id"], company, title, s1, s0, obj["s2"], alignment)
+    try:
+        s2 = parse_s2_response(json.dumps(obj["s2"], separators=(",", ":")), s2_request)
+    except Exception as exc:
+        raise S3ParseError(f"$.s2: invalid response: {_bounded(exc)}") from exc
+    return S3Request(obj["job_id"], company, title, "jd_only", s1, s0, s2, alignment)
+
+
+def _numeric_tokens(text: str) -> Counter[str]:
+    return Counter(match.group(0) for match in _NUMBER_RE.finditer(text))
+
+
+def _words(text: str) -> list[str]:
+    return [item.casefold() for item in _WORD_RE.findall(text)]
+
+
+def _first_word(text: str) -> str:
+    words = _words(text)
+    return words[0] if words else ""
+
+
+def _covered_mapping(request: S3Request) -> dict[str, tuple[str, ...]]:
+    return {entry.term: entry.bullet_ids for entry in request.s2.coverage if entry.status == "covered"}
+
+
+def _validate_bullet_edit(edit: BulletEdit, request: S3Request) -> None:
+    by_id = {bullet.bullet_id: bullet for bullet in request.alignment.bullets}
+    if edit.bullet_id not in by_id:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: bullet is not selected")
+    if not edit.motivating_terms:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: motivating_terms is empty")
+    must_have = {item.term for item in request.s1.must_have}
+    covered = _covered_mapping(request)
+    for term in edit.motivating_terms:
+        if term not in must_have:
+            raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: term is not an exact must-have: {_bounded(term)}")
+        if term not in covered or edit.bullet_id not in covered[term]:
+            raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: term is not covered by this bullet")
+    source = by_id[edit.bullet_id]
+    try:
+        plain_after, _ = parse_emphasis(edit.after)
+    except (EmphasisError, TypeError) as exc:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: invalid emphasis: {_bounded(exc)}") from exc
+    if not plain_after.strip() or "\n" in edit.after or "\r" in edit.after:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: after must be one nonempty line")
+    if _first_word(source.plain_text) != _first_word(plain_after):
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: leading action verb changed")
+    if _numeric_tokens(source.plain_text) != _numeric_tokens(plain_after):
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: numeric-token multiset changed")
+    if len(plain_after) > len(source.plain_text):
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: plain-text length grew")
+    before_counts = Counter(_words(source.plain_text))
+    after_counts = Counter(_words(plain_after))
+    motivating_words = set(_words(" ".join(edit.motivating_terms)))
+    additions = after_counts - before_counts
+    uncited = {word for word, count in additions.items() if word not in motivating_words and word not in _FUNCTION_WORDS and not word.isdigit()}
+    if uncited:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: uncited vocabulary: {_bounded(sorted(uncited))}")
+
+
+def _validate_skill_additions(response: S3Response, request: S3Request) -> None:
+    categories = {category: items for category, items in request.alignment.skills}
+    existing = {_normalize(item) for items in categories.values() for item in items}
+    dnc = {_normalize(item) for item in request.alignment.do_not_claim}
+    must_have = {item.term for item in request.s1.must_have}
+    covered = _covered_mapping(request)
+    seen: set[tuple[str, str]] = set()
+    for addition in response.skill_additions:
+        if addition.category not in categories:
+            raise S3SemanticError(f"skill_additions.{addition.category}: unknown category")
+        if addition.term != addition.motivating_term:
+            raise S3SemanticError(f"skill_additions.{addition.category}: term and motivating_term must match")
+        if addition.term not in must_have or addition.term not in covered:
+            raise S3SemanticError(f"skill_additions.{addition.category}: term is not an exact covered must-have")
+        normalized = (_normalize(addition.category), _normalize(addition.term))
+        if normalized in seen:
+            raise S3SemanticError(f"skill_additions.{addition.category}: duplicate normalized addition")
+        seen.add(normalized)
+        if _normalize(addition.term) in existing:
+            raise S3SemanticError(f"skill_additions.{addition.category}: term already exists")
+        if _normalize(addition.term) in dnc:
+            raise S3SemanticError(f"skill_additions.{addition.category}: do_not_claim collision")
+        existing.add(_normalize(addition.term))
+
+
+def parse_s3_response(raw_output: str, request: S3Request) -> S3Response:
+    try:
+        value = json.loads(raw_output)
+    except json.JSONDecodeError as exc:
+        raise S3ParseError(f"$: invalid JSON: {_bounded(exc)}") from exc
+    obj = _object(value, {"bullet_edits", "skill_additions"}, "$")
+    raw_edits = obj["bullet_edits"]
+    raw_additions = obj["skill_additions"]
+    if not isinstance(raw_edits, list) or not isinstance(raw_additions, list):
+        raise S3ParseError("bullet_edits and skill_additions must be arrays")
+    if len(raw_edits) > 8:
+        raise S3ParseError("bullet_edits: at most 8 edits")
+    edits: list[BulletEdit] = []
+    seen_ids: set[str] = set()
+    for index, item in enumerate(raw_edits):
+        edit = _object(item, {"bullet_id", "after", "motivating_terms", "rule"}, f"$.bullet_edits[{index}]")
+        bullet_id = _string(edit["bullet_id"], f"$.bullet_edits[{index}].bullet_id")
+        if bullet_id in seen_ids:
+            raise S3ParseError(f"$.bullet_edits[{index}].bullet_id: duplicate id")
+        seen_ids.add(bullet_id)
+        after = _string(edit["after"], f"$.bullet_edits[{index}].after")
+        terms = _string_array(edit["motivating_terms"], f"$.bullet_edits[{index}].motivating_terms")
+        if edit["rule"] not in {rule.value for rule in S3EditRule}:
+            raise S3ParseError(f"$.bullet_edits[{index}].rule: invalid rule")
+        parsed = BulletEdit(bullet_id, after, terms, S3EditRule(edit["rule"]))
+        canonical = next((item for item in request.alignment.bullets if item.bullet_id == bullet_id), None)
+        if canonical is not None and after == canonical.source_text:
+            raise S3ParseError(f"$.bullet_edits[{index}].after: unchanged canonical source")
+        edits.append(parsed)
+    additions: list[SkillAddition] = []
+    for index, item in enumerate(raw_additions):
+        addition = _object(item, {"category", "term", "motivating_term"}, f"$.skill_additions[{index}]")
+        additions.append(SkillAddition(_string(addition["category"], f"$.skill_additions[{index}].category"), _string(addition["term"], f"$.skill_additions[{index}].term"), _string(addition["motivating_term"], f"$.skill_additions[{index}].motivating_term")))
+    response = S3Response(tuple(edits), tuple(additions))
+    for edit in response.bullet_edits:
+        _validate_bullet_edit(edit, request)
+    _validate_skill_additions(response, request)
+    return response
+
+
+def s3_response_to_dict(response: S3Response) -> dict[str, object]:
+    return {
+        "bullet_edits": [
+            {"bullet_id": edit.bullet_id, "after": edit.after, "motivating_terms": list(edit.motivating_terms), "rule": edit.rule.value}
+            for edit in response.bullet_edits
+        ],
+        "skill_additions": [
+            {"category": addition.category, "term": addition.term, "motivating_term": addition.motivating_term}
+            for addition in response.skill_additions
+        ],
+    }
