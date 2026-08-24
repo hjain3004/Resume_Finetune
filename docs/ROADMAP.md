@@ -147,12 +147,15 @@ M9D is a family of one-session sub-milestones, not one giant implementation sess
 starting M9D-1, create and approve a dedicated plan for M9D-1 only. M8 remains governed by
 its Phase 2 gate; discovery work does not silently unlock or implement M8.
 
-- 2026-08-23: **M8P-2 is COMPLETE offline.** Added JD-only S0 and structural S2 contracts,
-  privacy-minimised profile projections, deterministic selection validation, safe traced
-  one-job CLI commands, and shared atomic publication. The full suite passes 1244 tests with
-  1 deselected. No live model/network/Company Bank use, DB mutation, resume, or PDF occurred.
-  Jobs 119/225/211 passed M8P-1 eligibility and projection preflight only. Next is M8P-3;
-  Phase 3, M8, and both human pilots remain incomplete.
+- 2026-08-23: **M8P-2 initial closeout was premature and was repaired as M8P-2R.** The
+  pre-repair implementation accepted fabricated catalog bullets and reordered experience
+  groups, omitted response shapes from both prompts, and had only four new contract tests.
+  Repair commits `ad19314`, `9c34823`, and `cd7c927` add canonical profile binding, observed
+  experience-order validation, complete prompt contracts, injection blocking, and focused
+  pipeline/CLI/integration coverage. Final verification passes 1290 tests with 1 deselected.
+  No live model/network/Company Bank use, DB mutation, resume, or PDF occurred. Jobs
+  119/225/211 passed M8P-1 eligibility and projection preflight only. Next is M8P-3; Phase 3,
+  M8, and both human pilots remain incomplete.
 
 ## Not yet specified (future, not gated — just not designed)
 Notion sync; Claude-in-Chrome JD capture; automated gap→project pipeline. Alert-email

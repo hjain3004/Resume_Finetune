@@ -2,18 +2,6 @@
 
 One dated entry per decision/finding. Newest last.
 
-## 2026-08-23 — M8P-2 completed offline
-
-M8P-2 uses explicit `jd_only` context. S0 receives validated S1 plus the positioning
-projection; S2 receives validated S1/S0 plus the structural selection catalog. Neither
-model-facing projection contains identity/contact data, education, rendered phrasing,
-profile evidence, defenses, metrics, known gaps, ownership-boundary prose, or raw JD text.
-Both calls use the M8P-1 tool-disabled, no-session, one-attempt boundary and I11 traces;
-accepted artifacts publish atomically and failed reruns preserve prior artifacts. No live
-model call, network access, Company Bank data, database mutation, resume/PDF generation, or
-pilot invocation occurred. Jobs 119/225/211 passed read-only eligibility and projection
-preflight only. Verification: 1244 passed, 1 deselected; DB checksum unchanged.
-
 ## 2026-07-04 — vanshb03/New-Grad-2027 verification (M1)
 
 - Default branch is `dev`, not `main`. Hardcoded in `discover/tracker_vansh.py`.
@@ -2306,3 +2294,18 @@ suite 1240 passed, 1 deselected (baseline was 1151 passed, 1 deselected). No liv
 no network access, no Company Bank access, no DB mutation, no new dependency, and no resume
 generation occurred in this session. Jobs 119 (Cisco), 225 (Notion), and 211 (Citadel) — the
 three planned human-pilot jobs — were not invoked against. Next: M8P-2 (S0 + S2).
+
+## 2026-08-23 — M8P-2R repaired premature closeout
+
+The initial M8P-2 closeout was premature. Before repair, focused RED reproductions showed
+that a self-declared catalog could admit a fabricated bullet and that S2 accepted Amdocs
+experience bullets moved ahead of the internship group. Review also confirmed that the S0/S2
+prompts omitted their exact response contracts and that only four new M8P-2 tests existed.
+The repair added strict catalog invariants, canonical read-only profile/DB binding at
+`prepare-s2`, observed experience-group ordering checks, injection-blocked S1 rejection,
+complete prompt shapes, atomic/pipeline/CLI/DB/integration tests, and readable dispatch.
+Repair commits: `ad19314`, `9c34823`, `cd7c927`. Verification: 1290 passed, 1 deselected;
+`git diff --check` clean; database SHA-256 unchanged at
+`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`. No live model call,
+network, Company Bank, database mutation, resume, PDF, or pilot occurred. M8P-2 is complete
+offline again; M8P-3 remains next, while Phase 3, M8, and both human pilots remain incomplete.
