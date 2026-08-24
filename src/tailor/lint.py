@@ -13,6 +13,19 @@ def _normalize_tokens(text: str) -> list[str]:
             normalized.append(t)
     return normalized
 
+def normalize_tokens(text: str) -> list[str]:
+    return _normalize_tokens(text)
+
+def normalize_phrase(text: str) -> str:
+    return " ".join(normalize_tokens(text))
+
+def contains_normalized_phrase(text: str, phrase: str) -> bool:
+    haystack = normalize_tokens(text)
+    needle = normalize_tokens(phrase)
+    if not needle or len(needle) > len(haystack):
+        return False
+    return any(haystack[index:index + len(needle)] == needle for index in range(len(haystack) - len(needle) + 1))
+
 def check_wording_budget(base_skills_text: str, tailored_skills_text: str) -> float:
     """Return the wording delta ratio. Must be <= 0.15."""
     base_tokens = _normalize_tokens(base_skills_text)
