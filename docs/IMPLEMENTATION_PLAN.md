@@ -167,6 +167,14 @@ produced. Jobs 119/225/211 passed eligibility and projection preflight only; the
 accepted S1 artifacts and were not invoked. Next scoped increment: M8P-3 (S3 plus G1 L1/L4).
 Phase 3, M8, and both human pilots remain incomplete.
 
+M8P-3 (2026-08-24) is complete only through offline S3 and static G1. The seven
+implementation/test commits are `07dce7f`, `9cf487a`, `7f94fa3`, `6fbf2ef`, `64fa048`,
+`f488dd4`, and `9a1fd9c`; Task 8 documentation is closed separately. Focused verification
+passed 34 tests and full verification passed 1330 tests with 1 deselected. The accepted
+bundle preserves S2 structure and ownership, constrained bullet edits, numeric tokens,
+skills, deterministic change log/diff, and `render_line_check="pending"`. G2, G3, final
+rendering, rendered line checking, human pilots, and M8P-4 remain out of scope.
+
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 
 1. **Track A — Gemini foundation:**

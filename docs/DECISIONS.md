@@ -2309,3 +2309,21 @@ Repair commits: `ad19314`, `9c34823`, `cd7c927`. Verification: 1290 passed, 1 de
 `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`. No live model call,
 network, Company Bank, database mutation, resume, PDF, or pilot occurred. M8P-2 is complete
 offline again; M8P-3 remains next, while Phase 3, M8, and both human pilots remain incomplete.
+
+## 2026-08-24 — M8P-3: offline constrained S3 and static G1 foundation
+
+M8P-3 is accepted as an offline foundation only. `alignment_view.py` projects the
+canonical profile and validated S2 selection; `s3.py` permits only bounded selected-bullet
+edits and exact covered skill additions; hydration, change logs, unified diffs, and the
+15% edit budget are deterministic; `g1.py` aggregates structure, banned-term, placement,
+emphasis/verb/metric/length, budget, and do-not-claim checks. The protected prompt and
+`s3_pipeline.py` reuse the safe invocation, I11 trace, and atomic-write helpers, while
+`scripts/tailor_s3.py` validates the complete chain fail-closed before publishing one
+authoritative bundle.
+
+Commits: `07dce7f`, `9cf487a`, `7f94fa3`, `6fbf2ef`, `64fa048`, `f488dd4`, `9a1fd9c`.
+Focused verification: 34 passed. Full verification: 1330 passed, 1 deselected. Database
+SHA-256 remained `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+No live model, network, Company Bank, database mutation, resume, PDF, pilot, or M8P-4
+activity occurred. `render_line_check` is deliberately `pending`; rendered line checking,
+G2, G3, final rendering, and human pilots remain incomplete.

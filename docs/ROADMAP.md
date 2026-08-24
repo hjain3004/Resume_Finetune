@@ -162,6 +162,15 @@ Notion sync; Claude-in-Chrome JD capture; automated gap→project pipeline. Aler
 ingestion and controlled Apify evaluation now belong to M9D. LinkedIn scraping remains
 rejected; LinkedIn alert emails remain permitted.
 
+M8P-3 (2026-08-24) is complete as an offline S3/static-G1 foundation. Commits
+`07dce7f`, `9cf487a`, `7f94fa3`, `6fbf2ef`, `64fa048`, `f488dd4`, and `9a1fd9c`
+implement canonical alignment, strict bounded edits, deterministic hydration/diffs,
+static G1, protected invocation/tracing, fail-closed CLI preparation, and integration
+coverage. Focused verification passed 34 tests; the full suite passed 1330 with 1
+deselected. No live model, network, Company Bank, database mutation, resume, PDF, or
+pilot activity occurred. `render_line_check` remains `pending`; rendered line checking,
+G2, G3, final rendering, and human pilots remain incomplete. M8P-4 is not started.
+
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from
