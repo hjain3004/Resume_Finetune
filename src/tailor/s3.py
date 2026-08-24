@@ -38,6 +38,8 @@ from src.tailor.s2 import (
     s2_response_to_dict,
 )
 
+S3_REQUEST_MARKER = "{{S3_REQUEST_JSON}}"
+
 
 _MAX_DIAGNOSTIC = 200
 _NUMBER_RE = re.compile(r"(?<!\w)[~+-]?(?:\d[\d,]*(?:\.\d+)?)(?:%|x|\+)?(?!\w)")
@@ -138,6 +140,12 @@ class EditBudget:
     changed_tokens: int
     base_tokens: int
     ratio: float
+
+
+def build_s3_prompt(template: str, request: S3Request) -> str:
+    if template.count(S3_REQUEST_MARKER) != 1:
+        raise ValueError(f"S3 prompt template must contain {S3_REQUEST_MARKER!r} exactly once")
+    return template.replace(S3_REQUEST_MARKER, json.dumps(s3_request_to_dict(request), sort_keys=True, indent=2))
 
 
 def _bounded(value: object) -> str:
