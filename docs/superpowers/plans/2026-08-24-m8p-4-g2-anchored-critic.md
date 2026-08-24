@@ -65,9 +65,10 @@ S3BundleError
 **1381 passed, 1 deselected**. Every "full suite green" step in this plan means at
 least that count.
 
-**Blocker B2:** decision D2 in the umbrella design (revision goes back through S3, not
-through G2) must be confirmed by the user before Task 4. If the user chooses the
-opposite, stop and re-plan Tasks 4–5; do not improvise.
+**Blocker B2: RESOLVED 2026-08-24.** The user confirmed D2 — revision goes back through
+S3, not through G2. Task 4 proceeds as written. Do not implement a G2-authored-edit
+path; the design's structural anti-fabrication argument depends on the critic having no
+response field that can carry resume text.
 
 ## Target files
 
@@ -971,7 +972,7 @@ shasum -a 256 data/jobs.db
 ## Stop conditions
 
 - (Resolved — M8P-3R merged at `560ad8d`.) If a rebase ever moves `main` behind that commit, stop: Tasks 1/4/5 all depend on the repaired bundle parser.
-- Decision D2 (revision routed through S3) is not confirmed → stop before Task 4 and ask.
+- (Resolved — D2 confirmed 2026-08-24 as "re-invoke S3".) If anyone proposes having G2 emit replacement text, stop: that is a design change, not an implementation detail.
 - Any pre-existing M8P-3R test fails after Task 4 → the change was not additive; revert and re-derive.
 - The DB checksum changes at any point → stop, restore, and report.
 - A task cannot be completed without editing an M8P-3R-owned test → stop and ask.
