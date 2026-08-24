@@ -76,6 +76,60 @@ def test_s3_pipeline_invocation_failure_traces_partial_stdout(monkeypatch, tmp_p
     assert outcome.trace_path is not None
 
 
+def test_s3_pipeline_hydration_failure_when_canonical_source_has_invalid_emphasis(monkeypatch, tmp_path):
+    """A directly-constructed alignment (bypassing alignment_from_profile's
+    own validation) whose canonical, unedited bullet carries invalid
+    emphasis markup causes hydrate_s3() to raise S3HydrationError, which the
+    pipeline must classify as HYDRATION_FAILURE, not any other kind."""
+    request, prompt, request_path = _fixture(tmp_path)
+    corrupted_alignment = replace(
+        request.alignment,
+        bullets=tuple(
+            replace(b, source_text="Unbalanced **marker") if i == 0 else b
+            for i, b in enumerate(request.alignment.bullets)
+        ),
+    )
+    corrupted_request = replace(request, alignment=corrupted_alignment)
+    monkeypatch.setattr(
+        "src.tailor.s3_pipeline.invoke_text_model",
+        lambda *a, **k: InvocationResult('{"bullet_edits": [], "skill_additions": []}', "stderr: <empty>", "fake"),
+    )
+    outcome = run_s3_invocation(
+        corrupted_request, prompt_template_path=prompt, request_path=request_path, banned_terms=(), trace_dir=tmp_path / "traces"
+    )
+    assert outcome.kind is S3OutcomeKind.HYDRATION_FAILURE
+    assert outcome.bundle is None
+    assert outcome.trace_path is not None
+
+
+def test_s3_pipeline_invokes_model_exactly_once_with_no_retry_on_failure(monkeypatch, tmp_path):
+    request, prompt, request_path = _fixture(tmp_path)
+    calls = []
+
+    def fake_invoke(*args, **kwargs):
+        calls.append(1)
+        raise InvocationError("failed", raw_stdout="", model="fake")
+
+    monkeypatch.setattr("src.tailor.s3_pipeline.invoke_text_model", fake_invoke)
+    outcome = run_s3_invocation(request, prompt_template_path=prompt, request_path=request_path, banned_terms=(), trace_dir=tmp_path / "traces")
+    assert outcome.kind is S3OutcomeKind.INVOCATION_FAILURE
+    assert len(calls) == 1
+
+
+def test_s3_pipeline_invokes_model_exactly_once_on_success(monkeypatch, tmp_path):
+    request, prompt, request_path = _fixture(tmp_path)
+    calls = []
+
+    def fake_invoke(*args, **kwargs):
+        calls.append(1)
+        return InvocationResult('{"bullet_edits": [], "skill_additions": []}', "stderr: <empty>", "fake")
+
+    monkeypatch.setattr("src.tailor.s3_pipeline.invoke_text_model", fake_invoke)
+    outcome = run_s3_invocation(request, prompt_template_path=prompt, request_path=request_path, banned_terms=(), trace_dir=tmp_path / "traces")
+    assert outcome.kind is S3OutcomeKind.VALID
+    assert len(calls) == 1
+
+
 def test_s3_pipeline_unexpected_exception_during_parse_propagates(monkeypatch, tmp_path):
     """Defect 4: only S3ParseError/S3SemanticError may become modeled outcomes;
     an unrelated programmer error (e.g. a bug in parse_s3_response) must propagate."""
