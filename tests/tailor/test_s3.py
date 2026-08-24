@@ -14,6 +14,10 @@ from src.tailor.s3 import (
     S3Response,
     S3SemanticError,
     build_s3_request,
+    calculate_edit_budget,
+    derive_change_log,
+    derive_unified_diff,
+    hydrate_s3,
     parse_s3_request,
     parse_s3_response,
     s3_request_to_dict,
@@ -123,3 +127,35 @@ def test_s3_accepts_exact_covered_skill_addition_and_rejects_duplicates():
     raw["skill_additions"].append(copy.deepcopy(raw["skill_additions"][0]))
     with pytest.raises(S3SemanticError, match="duplicate"):
         parse_s3_response(json.dumps(raw), request)
+
+
+def test_s3_hydration_preserves_structure_skills_and_derives_change_log():
+    request = _request_fixture()
+    source = next(item.source_text for item in request.alignment.bullets if item.bullet_id == "int_b1")
+    after = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    response = parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after)], "skill_additions": []}), request)
+    draft = hydrate_s3(request, response)
+    assert tuple(item.bullet_id for item in draft.bullets) == request.s2.bullet_order
+    assert draft.bullets[0].text == after
+    assert tuple(category for category, _ in draft.skills) == tuple(category for category, _ in request.alignment.skills)
+    changes = derive_change_log(request, response, draft)
+    assert changes[0].before == source
+    assert changes[0].motivating_jd_quotes == ("Python",)
+    assert "--- canonical" in derive_unified_diff(request, draft)
+
+
+def test_s3_edit_budget_exactly_exposes_tokens_and_ratio():
+    request = _request_fixture()
+    # This pure synthetic boundary checks the calculation independently of S2 ordering.
+    from src.tailor.alignment_view import AlignmentBullet, AlignmentView
+    from src.tailor.s3 import DraftBullet, TailoredDraft
+    base_text = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty"
+    alignment = AlignmentView("backend", (), (), (AlignmentBullet("b", "e", "experience", "", base_text, (), (), "verified"),), (), (), "0" * 64)
+    synthetic = replace(request, alignment=alignment)
+    for count, expected_ratio in ((17, 0.15), (16, 0.2)):
+        text = " ".join(base_text.split()[:count])
+        draft = TailoredDraft(1, "C", "T", "backend", (), (), (DraftBullet("b", "e", "experience", "", text, ()),), (), "0" * 64)
+        budget = calculate_edit_budget(synthetic, draft)
+        assert budget.changed_tokens == 20 - count
+        assert budget.base_tokens == 20
+        assert budget.ratio == expected_ratio

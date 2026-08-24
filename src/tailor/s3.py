@@ -5,6 +5,7 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
+import difflib
 from enum import Enum
 from typing import Any
 
@@ -97,6 +98,46 @@ class S3Request:
 class S3Response:
     bullet_edits: tuple[BulletEdit, ...]
     skill_additions: tuple[SkillAddition, ...]
+
+
+@dataclass(frozen=True)
+class DraftBullet:
+    bullet_id: str
+    owner_id: str
+    owner_kind: str
+    text: str
+    plain_text: str
+    emphasis: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class TailoredDraft:
+    job_id: int
+    company: str
+    title: str
+    base_variant: str
+    project_ids: tuple[str, ...]
+    experience_ids: tuple[str, ...]
+    bullets: tuple[DraftBullet, ...]
+    skills: tuple[tuple[str, tuple[str, ...]], ...]
+    alignment_fingerprint: str
+
+
+@dataclass(frozen=True)
+class ChangeEntry:
+    location: str
+    before: str
+    after: str
+    motivating_terms: tuple[str, ...]
+    motivating_jd_quotes: tuple[str, ...]
+    rule: str
+
+
+@dataclass(frozen=True)
+class EditBudget:
+    changed_tokens: int
+    base_tokens: int
+    ratio: float
 
 
 def _bounded(value: object) -> str:
@@ -374,3 +415,105 @@ def s3_response_to_dict(response: S3Response) -> dict[str, object]:
             for addition in response.skill_additions
         ],
     }
+
+
+def hydrate_s3(request: S3Request, response: S3Response) -> TailoredDraft:
+    """Apply only validated model edits to the canonical alignment projection."""
+    for edit in response.bullet_edits:
+        _validate_bullet_edit(edit, request)
+    _validate_skill_additions(response, request)
+    edits = {edit.bullet_id: edit for edit in response.bullet_edits}
+    bullets: list[DraftBullet] = []
+    for source in request.alignment.bullets:
+        text = edits[source.bullet_id].after if source.bullet_id in edits else source.source_text
+        try:
+            plain_text, emphasis = parse_emphasis(text)
+        except EmphasisError as exc:
+            raise S3HydrationError(f"bullet {source.bullet_id}: invalid emphasis: {_bounded(exc)}") from exc
+        bullets.append(DraftBullet(source.bullet_id, source.owner_id, source.owner_kind, text, plain_text, emphasis))
+    skill_map = {category: list(items) for category, items in request.alignment.skills}
+    for addition in response.skill_additions:
+        skill_map[addition.category].append(addition.term)
+    skills = tuple((category, tuple(items)) for category, items in skill_map.items())
+    return TailoredDraft(
+        job_id=request.job_id,
+        company=request.company,
+        title=request.title,
+        base_variant=request.s2.base_variant,
+        project_ids=tuple(choice.project_id for choice in request.s2.projects),
+        experience_ids=request.alignment.experience_ids,
+        bullets=tuple(bullets),
+        skills=skills,
+        alignment_fingerprint=request.alignment.fingerprint,
+    )
+
+
+def _requirement_quotes(request: S3Request, terms: tuple[str, ...]) -> tuple[str, ...]:
+    quotes = {item.term: item.quote for item in (*request.s1.must_have, *request.s1.nice_to_have)}
+    return tuple(quotes[term] for term in terms)
+
+
+def derive_change_log(
+    request: S3Request, response: S3Response, draft: TailoredDraft
+) -> tuple[ChangeEntry, ...]:
+    canonical = {item.bullet_id: item for item in request.alignment.bullets}
+    entries: list[ChangeEntry] = []
+    for edit in response.bullet_edits:
+        source = canonical[edit.bullet_id]
+        entries.append(ChangeEntry(
+            location=f"bullet:{edit.bullet_id}",
+            before=source.source_text,
+            after=edit.after,
+            motivating_terms=edit.motivating_terms,
+            motivating_jd_quotes=_requirement_quotes(request, edit.motivating_terms),
+            rule=edit.rule.value,
+        ))
+    for addition in response.skill_additions:
+        entries.append(ChangeEntry(
+            location=f"skills:{addition.category}",
+            before="",
+            after=addition.term,
+            motivating_terms=(addition.motivating_term,),
+            motivating_jd_quotes=_requirement_quotes(request, (addition.motivating_term,)),
+            rule="skill_addition",
+        ))
+    return tuple(entries)
+
+
+def _plain_projection(view: AlignmentView | TailoredDraft) -> list[str]:
+    lines = [f"base_variant: {view.base_variant}", "projects:"]
+    lines.extend(f"- {project_id}" for project_id in view.project_ids)
+    lines.append("experience:")
+    lines.extend(f"- {experience_id}" for experience_id in view.experience_ids)
+    lines.append("bullets:")
+    lines.extend(f"- {bullet.bullet_id}: {bullet.plain_text}" for bullet in view.bullets)
+    lines.append("skills:")
+    lines.extend(f"- {category}: {', '.join(items)}" for category, items in view.skills)
+    return lines
+
+
+def derive_unified_diff(request: S3Request, draft: TailoredDraft) -> str:
+    before = _plain_projection(request.alignment)
+    after = _plain_projection(draft)
+    return "\n".join(difflib.unified_diff(before, after, fromfile="canonical", tofile="tailored", lineterm="")) + "\n"
+
+
+def _edit_distance(base: list[str], tailored: list[str]) -> int:
+    matcher = difflib.SequenceMatcher(None, base, tailored, autojunk=False)
+    distance = 0
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "replace":
+            distance += max(i2 - i1, j2 - j1)
+        elif tag == "delete":
+            distance += i2 - i1
+        elif tag == "insert":
+            distance += j2 - j1
+    return distance
+
+
+def calculate_edit_budget(request: S3Request, draft: TailoredDraft) -> EditBudget:
+    base_tokens = _words(" ".join(item.plain_text for item in request.alignment.bullets) + " " + " ".join(item for _, values in request.alignment.skills for item in values))
+    tailored_tokens = _words(" ".join(item.plain_text for item in draft.bullets) + " " + " ".join(item for _, values in draft.skills for item in values))
+    changed = _edit_distance(base_tokens, tailored_tokens)
+    denominator = len(base_tokens)
+    return EditBudget(changed, denominator, changed / denominator if denominator else 0.0)
