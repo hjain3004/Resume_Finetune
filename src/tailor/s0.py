@@ -47,6 +47,10 @@ def _bounded(value: object) -> str:
     return text if len(text) <= _MAX else text[:_MAX] + "..."
 
 
+def _normalize(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
 def _str(value: object, path: str) -> str:
     if not isinstance(value, str) or not value.strip(): raise S0ParseError(f"{path}: expected nonempty string")
     return value
@@ -119,7 +123,7 @@ def parse_s0_response(raw_output: str, request: S0Request) -> S0Response:
         if key in sentences: raise S0ParseError("duplicate normalized sentence")
         sentences.add(key)
         profile_ids = tuple(_str(x, "profile_id") for x in _list(p["profile_ids"], "profile_ids")); req_terms = tuple(_str(x, "term") for x in _list(p["requirement_terms"], "requirement_terms")); jd_quotes = tuple(_str(x, "quote") for x in _list(p["jd_quotes"], "jd_quotes"))
-        if len(set(profile_ids)) != len(profile_ids) or len({_term for _term in req_terms}) != len(req_terms) or len(set(jd_quotes)) != len(jd_quotes): raise S0ParseError("duplicate point citation")
+        if len({_normalize(value) for value in profile_ids}) != len(profile_ids) or len({_normalize(value) for value in req_terms}) != len(req_terms) or len({_normalize(value) for value in jd_quotes}) != len(jd_quotes): raise S0ParseError("duplicate point citation")
         if any(x not in ids for x in profile_ids): raise S0SemanticError("unknown profile id")
         if any(x not in terms for x in req_terms): raise S0SemanticError("requirement term is not in S1")
         if any(x not in quotes for x in jd_quotes): raise S0SemanticError("quote is not in S1 evidence pool")
