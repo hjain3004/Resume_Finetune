@@ -6,22 +6,30 @@ from enum import Enum
 from pathlib import Path
 
 from src.llm_trace import write_trace
-from src.tailor.g1 import G1Report, run_static_g1
+from src.tailor.g1 import G1Report, G1Status, g1_report_to_dict, parse_g1_report, run_static_g1
 from src.tailor.invoke import DEFAULT_CLAUDE_CMD, DEFAULT_TIMEOUT_SECONDS, InvocationError, invoke_text_model
 from src.tailor.s3 import (
     ChangeEntry,
     EditBudget,
     S3HydrationError,
+    S3ParseError,
     S3Request,
     S3Response,
+    S3SemanticError,
     TailoredDraft,
     build_s3_prompt,
     calculate_edit_budget,
+    change_entry_to_dict,
     derive_change_log,
     derive_unified_diff,
+    edit_budget_to_dict,
     hydrate_s3,
+    parse_change_log,
+    parse_edit_budget,
     parse_s3_response,
+    parse_tailored_draft,
     s3_response_to_dict,
+    tailored_draft_to_dict,
 )
 
 TRACE_INVOCATION_TYPE = "tailoring_s3"
@@ -92,10 +100,10 @@ def run_s3_invocation(
     trace_path = _trace(Path(request_path), Path(prompt_template_path), result.raw_stdout, result.model, trace_dir)
     try:
         response = parse_s3_response(result.raw_stdout, request)
-    except Exception as exc:
-        from src.tailor.s3 import S3ParseError, S3SemanticError
-        kind = S3OutcomeKind.PARSE_FAILURE if isinstance(exc, S3ParseError) else S3OutcomeKind.SEMANTIC_FAILURE if isinstance(exc, S3SemanticError) else S3OutcomeKind.PARSE_FAILURE
-        return S3Outcome(kind, None, None, str(exc), trace_path)
+    except S3ParseError as exc:
+        return S3Outcome(S3OutcomeKind.PARSE_FAILURE, None, None, str(exc), trace_path)
+    except S3SemanticError as exc:
+        return S3Outcome(S3OutcomeKind.SEMANTIC_FAILURE, None, None, str(exc), trace_path)
     try:
         draft = hydrate_s3(request, response)
     except S3HydrationError as exc:
@@ -112,7 +120,22 @@ def run_s3_invocation(
     return S3Outcome(S3OutcomeKind.VALID, bundle, report, None, trace_path)
 
 
+_BUNDLE_KEYS = {
+    "schema_version", "job_id", "company", "title", "alignment_fingerprint",
+    "response", "draft", "change_log", "unified_diff", "edit_budget", "g1",
+}
+_BUNDLE_SCHEMA_VERSION = "m8p3.s3_bundle.v1"
+
+
+class S3BundleError(ValueError):
+    """A persisted s3_bundle.json failed strict structural parsing or
+    deterministic recompute-and-compare validation against the
+    authoritative S3Request."""
+
+
 def s3_bundle_to_dict(bundle: S3Bundle) -> dict[str, object]:
+    """Recursive, explicit serialization -- JSON primitives only, no
+    dataclass `.__dict__` anywhere (Defect 1)."""
     return {
         "schema_version": bundle.schema_version,
         "job_id": bundle.job_id,
@@ -120,14 +143,79 @@ def s3_bundle_to_dict(bundle: S3Bundle) -> dict[str, object]:
         "title": bundle.title,
         "alignment_fingerprint": bundle.alignment_fingerprint,
         "response": s3_response_to_dict(bundle.response),
-        "draft": bundle.draft.__dict__,
-        "change_log": [entry.__dict__ for entry in bundle.change_log],
+        "draft": tailored_draft_to_dict(bundle.draft),
+        "change_log": [change_entry_to_dict(entry) for entry in bundle.change_log],
         "unified_diff": bundle.unified_diff,
-        "edit_budget": bundle.edit_budget.__dict__,
-        "g1": {
-            "status": bundle.g1.status.value,
-            "violations": [item.__dict__ for item in bundle.g1.violations],
-            "edit_budget": bundle.g1.edit_budget.__dict__,
-            "render_line_check": bundle.g1.render_line_check,
-        },
+        "edit_budget": edit_budget_to_dict(bundle.edit_budget),
+        "g1": g1_report_to_dict(bundle.g1),
     }
+
+
+def parse_s3_bundle(raw: object, request: S3Request, banned_terms: tuple[str, ...]) -> S3Bundle:
+    """Strict, authoritative parser for a persisted `s3_bundle.json`.
+
+    First proves the JSON is well-typed (exact field sets, correct scalar/
+    container types, no bool-as-int, valid emphasis spans, no duplicate
+    bullet ids or skill categories, a known schema version and enum
+    values). Then, given the authoritative `request` and `banned_terms`,
+    deterministically recomputes the response validation, hydrated draft,
+    change log, unified diff, edit budget, and static G1 report, and
+    requires every persisted derived field to match the recomputation
+    exactly. A tampered derived field -- including a fabricated bullet
+    owner or an undeclared bullet mutation -- is rejected here even if it
+    would otherwise slip past a narrower check.
+    """
+    if not isinstance(raw, dict) or set(raw) != _BUNDLE_KEYS:
+        raise S3BundleError("$: unexpected or missing fields")
+    if raw["schema_version"] != _BUNDLE_SCHEMA_VERSION:
+        raise S3BundleError(f"$.schema_version: expected {_BUNDLE_SCHEMA_VERSION!r}")
+    job_id = raw["job_id"]
+    if isinstance(job_id, bool) or not isinstance(job_id, int):
+        raise S3BundleError("$.job_id: expected integer")
+    company = raw["company"]
+    title = raw["title"]
+    if not isinstance(company, str) or not company.strip():
+        raise S3BundleError("$.company: expected nonempty string")
+    if not isinstance(title, str) or not title.strip():
+        raise S3BundleError("$.title: expected nonempty string")
+    fingerprint = raw["alignment_fingerprint"]
+    if not isinstance(fingerprint, str) or len(fingerprint) != 64:
+        raise S3BundleError("$.alignment_fingerprint: invalid fingerprint")
+    if job_id != request.job_id or company != request.company or title != request.title:
+        raise S3BundleError("$: identity does not match the authoritative request")
+    if fingerprint != request.alignment.fingerprint:
+        raise S3BundleError("$.alignment_fingerprint: does not match the authoritative alignment")
+
+    try:
+        response = parse_s3_response(json.dumps(raw["response"], separators=(",", ":")), request)
+    except (S3ParseError, S3SemanticError) as exc:
+        raise S3BundleError(f"$.response: {exc}") from exc
+
+    draft = parse_tailored_draft(raw["draft"], "$.draft")
+    change_log = parse_change_log(raw["change_log"], "$.change_log")
+    unified_diff = raw["unified_diff"]
+    if not isinstance(unified_diff, str):
+        raise S3BundleError("$.unified_diff: expected string")
+    edit_budget = parse_edit_budget(raw["edit_budget"], "$.edit_budget")
+    g1 = parse_g1_report(raw["g1"], "$.g1")
+
+    try:
+        recomputed_draft = hydrate_s3(request, response)
+    except S3HydrationError as exc:
+        raise S3BundleError(f"$.draft: cannot be reproduced from the persisted response: {exc}") from exc
+    if draft != recomputed_draft:
+        raise S3BundleError("$.draft: does not match deterministic recomputation from the persisted response")
+    if change_log != derive_change_log(request, response, recomputed_draft):
+        raise S3BundleError("$.change_log: does not match deterministic recomputation")
+    if unified_diff != derive_unified_diff(request, recomputed_draft):
+        raise S3BundleError("$.unified_diff: does not match deterministic recomputation")
+    recomputed_budget = calculate_edit_budget(request, recomputed_draft)
+    if edit_budget != recomputed_budget:
+        raise S3BundleError("$.edit_budget: does not match deterministic recomputation")
+    recomputed_g1 = run_static_g1(request, response, recomputed_draft, banned_terms)
+    if g1 != recomputed_g1:
+        raise S3BundleError("$.g1: does not match deterministic recomputation")
+    if g1.status is not G1Status.STATIC_PASS:
+        raise S3BundleError("$.g1: persisted bundle does not pass static G1")
+
+    return S3Bundle(raw["schema_version"], job_id, company, title, fingerprint, response, recomputed_draft, change_log, unified_diff, edit_budget, g1)

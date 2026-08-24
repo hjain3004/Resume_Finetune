@@ -425,6 +425,183 @@ def s3_response_to_dict(response: S3Response) -> dict[str, object]:
     }
 
 
+def draft_bullet_to_dict(bullet: DraftBullet) -> dict[str, object]:
+    return {
+        "bullet_id": bullet.bullet_id,
+        "owner_id": bullet.owner_id,
+        "owner_kind": bullet.owner_kind,
+        "text": bullet.text,
+        "plain_text": bullet.plain_text,
+        "emphasis": [[start, end] for start, end in bullet.emphasis],
+    }
+
+
+def tailored_draft_to_dict(draft: TailoredDraft) -> dict[str, object]:
+    return {
+        "job_id": draft.job_id,
+        "company": draft.company,
+        "title": draft.title,
+        "base_variant": draft.base_variant,
+        "project_ids": list(draft.project_ids),
+        "experience_ids": list(draft.experience_ids),
+        "bullets": [draft_bullet_to_dict(bullet) for bullet in draft.bullets],
+        "skills": [[category, list(items)] for category, items in draft.skills],
+        "alignment_fingerprint": draft.alignment_fingerprint,
+    }
+
+
+def change_entry_to_dict(entry: ChangeEntry) -> dict[str, object]:
+    return {
+        "location": entry.location,
+        "before": entry.before,
+        "after": entry.after,
+        "motivating_terms": list(entry.motivating_terms),
+        "motivating_jd_quotes": list(entry.motivating_jd_quotes),
+        "rule": entry.rule,
+    }
+
+
+def edit_budget_to_dict(budget: EditBudget) -> dict[str, object]:
+    return {
+        "changed_tokens": budget.changed_tokens,
+        "base_tokens": budget.base_tokens,
+        "ratio": budget.ratio,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Strict structural parsers for the persisted bundle contract (m8p3.s3_bundle.v1).
+# These mirror the *_to_dict serializers above field-for-field. Semantic/
+# recompute validation against an authoritative S3Request lives in
+# src.tailor.s3_pipeline.parse_s3_bundle(); these functions only prove the
+# JSON is well-typed.
+# ---------------------------------------------------------------------------
+
+
+def _int(value: object, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise S3ParseError(f"{path}: expected integer")
+    return value
+
+
+def _float(value: object, path: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise S3ParseError(f"{path}: expected number")
+    return float(value)
+
+
+def _plain_string_array(value: object, path: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise S3ParseError(f"{path}: expected string array")
+    return tuple(value)
+
+
+def _emphasis_spans(value: object, path: str) -> tuple[tuple[int, int], ...]:
+    if not isinstance(value, list):
+        raise S3ParseError(f"{path}: expected array")
+    spans: list[tuple[int, int]] = []
+    for index, span in enumerate(value):
+        if (
+            not isinstance(span, list)
+            or len(span) != 2
+            or any(isinstance(bound, bool) or not isinstance(bound, int) for bound in span)
+        ):
+            raise S3ParseError(f"{path}[{index}]: invalid emphasis span")
+        spans.append((span[0], span[1]))
+    return tuple(spans)
+
+
+_DRAFT_BULLET_KEYS = {"bullet_id", "owner_id", "owner_kind", "text", "plain_text", "emphasis"}
+
+
+def parse_draft_bullet(raw: object, path: str) -> DraftBullet:
+    obj = _object(raw, _DRAFT_BULLET_KEYS, path)
+    bullet_id = _string(obj["bullet_id"], f"{path}.bullet_id")
+    owner_id = _string(obj["owner_id"], f"{path}.owner_id")
+    if obj["owner_kind"] not in ("project", "experience"):
+        raise S3ParseError(f"{path}.owner_kind: invalid kind")
+    text = _string(obj["text"], f"{path}.text")
+    plain_text = _string(obj["plain_text"], f"{path}.plain_text")
+    emphasis = _emphasis_spans(obj["emphasis"], f"{path}.emphasis")
+    return DraftBullet(bullet_id, owner_id, obj["owner_kind"], text, plain_text, emphasis)
+
+
+_TAILORED_DRAFT_KEYS = {
+    "job_id", "company", "title", "base_variant", "project_ids",
+    "experience_ids", "bullets", "skills", "alignment_fingerprint",
+}
+
+
+def parse_tailored_draft(raw: object, path: str = "$.draft") -> TailoredDraft:
+    obj = _object(raw, _TAILORED_DRAFT_KEYS, path)
+    job_id = _int(obj["job_id"], f"{path}.job_id")
+    company = _string(obj["company"], f"{path}.company")
+    title = _string(obj["title"], f"{path}.title")
+    base_variant = _string(obj["base_variant"], f"{path}.base_variant")
+    project_ids = _plain_string_array(obj["project_ids"], f"{path}.project_ids")
+    experience_ids = _plain_string_array(obj["experience_ids"], f"{path}.experience_ids")
+    if not isinstance(obj["bullets"], list):
+        raise S3ParseError(f"{path}.bullets: expected array")
+    bullets: list[DraftBullet] = []
+    seen_ids: set[str] = set()
+    for index, item in enumerate(obj["bullets"]):
+        bullet = parse_draft_bullet(item, f"{path}.bullets[{index}]")
+        if bullet.bullet_id in seen_ids:
+            raise S3ParseError(f"{path}.bullets[{index}].bullet_id: duplicate id")
+        seen_ids.add(bullet.bullet_id)
+        bullets.append(bullet)
+    if not isinstance(obj["skills"], list):
+        raise S3ParseError(f"{path}.skills: expected array")
+    skills: list[tuple[str, tuple[str, ...]]] = []
+    seen_categories: set[str] = set()
+    for index, item in enumerate(obj["skills"]):
+        if not isinstance(item, list) or len(item) != 2:
+            raise S3ParseError(f"{path}.skills[{index}]: expected [category, items] pair")
+        category = _string(item[0], f"{path}.skills[{index}][0]")
+        if category in seen_categories:
+            raise S3ParseError(f"{path}.skills[{index}]: duplicate category")
+        seen_categories.add(category)
+        items = _plain_string_array(item[1], f"{path}.skills[{index}][1]")
+        skills.append((category, items))
+    fingerprint = obj["alignment_fingerprint"]
+    if not isinstance(fingerprint, str) or len(fingerprint) != 64:
+        raise S3ParseError(f"{path}.alignment_fingerprint: invalid fingerprint")
+    return TailoredDraft(job_id, company, title, base_variant, project_ids, experience_ids, tuple(bullets), tuple(skills), fingerprint)
+
+
+_CHANGE_ENTRY_KEYS = {"location", "before", "after", "motivating_terms", "motivating_jd_quotes", "rule"}
+
+
+def parse_change_entry(raw: object, path: str) -> ChangeEntry:
+    obj = _object(raw, _CHANGE_ENTRY_KEYS, path)
+    location = _string(obj["location"], f"{path}.location")
+    if not isinstance(obj["before"], str):
+        raise S3ParseError(f"{path}.before: expected string")
+    if not isinstance(obj["after"], str):
+        raise S3ParseError(f"{path}.after: expected string")
+    motivating_terms = _plain_string_array(obj["motivating_terms"], f"{path}.motivating_terms")
+    motivating_jd_quotes = _plain_string_array(obj["motivating_jd_quotes"], f"{path}.motivating_jd_quotes")
+    rule = _string(obj["rule"], f"{path}.rule")
+    return ChangeEntry(location, obj["before"], obj["after"], motivating_terms, motivating_jd_quotes, rule)
+
+
+def parse_change_log(raw: object, path: str = "$.change_log") -> tuple[ChangeEntry, ...]:
+    if not isinstance(raw, list):
+        raise S3ParseError(f"{path}: expected array")
+    return tuple(parse_change_entry(item, f"{path}[{index}]") for index, item in enumerate(raw))
+
+
+_EDIT_BUDGET_KEYS = {"changed_tokens", "base_tokens", "ratio"}
+
+
+def parse_edit_budget(raw: object, path: str = "$.edit_budget") -> EditBudget:
+    obj = _object(raw, _EDIT_BUDGET_KEYS, path)
+    changed = _int(obj["changed_tokens"], f"{path}.changed_tokens")
+    base = _int(obj["base_tokens"], f"{path}.base_tokens")
+    ratio = _float(obj["ratio"], f"{path}.ratio")
+    return EditBudget(changed, base, ratio)
+
+
 def hydrate_s3(request: S3Request, response: S3Response) -> TailoredDraft:
     """Apply only validated model edits to the canonical alignment projection."""
     for edit in response.bullet_edits:
