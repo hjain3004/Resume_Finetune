@@ -125,6 +125,13 @@ def test_prepare_tailoring_request_ml_base_variant_accepted(conn):
     assert request.job_id == job_id
 
 
+def test_tailoring_base_variant_reuses_gate_without_mutation(conn):
+    job_id = _insert_job(conn, base_variant="ml")
+    before = conn.total_changes
+    assert db.tailoring_base_variant(conn, job_id) == "ml"
+    assert conn.total_changes == before
+
+
 @pytest.mark.parametrize("prohibited_id", [229, 279])
 def test_prepare_tailoring_request_prohibited_job_ids_rejected(conn, prohibited_id):
     conn.execute(

@@ -17,16 +17,24 @@ def _read(path: Path): return json.loads(path.read_text())
 def _fail(label: str, exc: Exception) -> int: print(f"tailor_s0_s2 {label}: {exc}", file=sys.stderr); return 1
 
 def cmd_prepare(a):
+    conn = None
     try:
-        conn = db.get_readonly_connection(a.db); request = db.prepare_tailoring_request(conn, a.job_id); variant = db.tailoring_base_variant(conn, a.job_id); conn.close()
+        conn = db.get_readonly_connection(a.db)
+        request = db.prepare_tailoring_request(conn, a.job_id)
+        variant = db.tailoring_base_variant(conn, a.job_id)
         persisted = parse_s1_request(_read(Path(a.s1_request)))
         if persisted != request: raise ValueError("persisted S1 request does not match eligible DB row")
         response = parse_s1_response_dict(_read(Path(a.s1)), request.jd_text)
+        if response.suspected_injection:
+            raise ValueError("S1 artifact is injection-blocked")
         profile = load_profile(a.profile); positioning = profile.for_positioning(); catalog = profile.for_selection(variant)
         s0request = build_s0_request(request.job_id, request.company, request.title, response, positioning)
         out = Path(a.output); write_json_atomic(out / "s0_request.json", s0_request_to_dict(s0request)); write_json_atomic(out / "s2_catalog.json", selection_to_dict(catalog))
         print(f"Wrote preparation artifacts for job {request.job_id} ({len(json.dumps(s0_request_to_dict(s0request)))} request chars)"); return 0
     except Exception as exc: return _fail("prepare", exc)
+    finally:
+        if conn is not None:
+            conn.close()
 
 def cmd_invoke_s0(a):
     try:
@@ -39,12 +47,31 @@ def cmd_invoke_s0(a):
 
 def cmd_prepare_s2(a):
     try:
-        s1req = parse_s1_request(_read(Path(a.s1_request))); raw_s0req = parse_s0_request(_read(Path(a.s0_request))); s1_raw = _read(Path(a.s1)); s1 = parse_s1_response_dict(s1_raw, s1req.jd_text); catalog = parse_selection(_read(Path(a.catalog)))
+        s1req = parse_s1_request(_read(Path(a.s1_request)))
+        raw_s0req = parse_s0_request(_read(Path(a.s0_request)))
+        s1_raw = _read(Path(a.s1))
+        s1 = parse_s1_response_dict(s1_raw, s1req.jd_text)
+        if s1.suspected_injection:
+            raise ValueError("S1 artifact is injection-blocked")
+        catalog = parse_selection(_read(Path(a.catalog)))
         if raw_s0req.job_id != s1req.job_id or raw_s0req.company != s1req.company or raw_s0req.title != s1req.title: raise ValueError("S0 request and S1 request identity mismatch")
         if s1_response_to_dict(raw_s0req.s1) != s1_response_to_dict(s1): raise ValueError("persisted S1 differs between S0 request and S1 artifact")
         validated_s0_request = build_s0_request(s1req.job_id, s1req.company, s1req.title, s1, raw_s0req.positioning)
         raw_s0 = parse_s0_response(json.dumps(_read(Path(a.s0))), validated_s0_request)
-        request = build_s2_request(s1req.job_id, s1req.company, s1req.title, s1, raw_s0, catalog); write_json_atomic(Path(a.output) / "s2_request.json", s2_request_to_dict(request)); print(f"Wrote {Path(a.output) / 's2_request.json'} for job {request.job_id}"); return 0
+        conn = None
+        try:
+            conn = db.get_readonly_connection(a.db)
+            variant = db.tailoring_base_variant(conn, s1req.job_id)
+        finally:
+            if conn is not None:
+                conn.close()
+        canonical = load_profile(a.profile).for_selection(variant)
+        if catalog != canonical:
+            raise ValueError("persisted selection catalog does not match the current master profile and DB recommendation")
+        request = build_s2_request(s1req.job_id, s1req.company, s1req.title, s1, raw_s0, catalog)
+        write_json_atomic(Path(a.output) / "s2_request.json", s2_request_to_dict(request))
+        print(f"Wrote {Path(a.output) / 's2_request.json'} for job {request.job_id}")
+        return 0
     except Exception as exc: return _fail("prepare-s2", exc)
 
 def cmd_invoke_s2(a):
@@ -60,9 +87,10 @@ def build_parser():
     p = argparse.ArgumentParser(prog="python -m scripts.tailor_s0_s2"); sub = p.add_subparsers(dest="command", required=True)
     x = sub.add_parser("prepare"); x.add_argument("--job-id", type=int, required=True); x.add_argument("--db", required=True); x.add_argument("--s1-request", required=True); x.add_argument("--s1", required=True); x.add_argument("--profile", required=True); x.add_argument("--output", required=True); x.set_defaults(func=cmd_prepare)
     x = sub.add_parser("invoke-s0"); x.add_argument("--request", required=True); x.add_argument("--output", required=True); x.add_argument("--prompt-template"); x.add_argument("--trace-dir"); x.add_argument("--timeout", type=float, default=300); x.add_argument("--dry-run", action="store_true"); x.set_defaults(func=cmd_invoke_s0)
-    x = sub.add_parser("prepare-s2"); x.add_argument("--s1-request", required=True); x.add_argument("--s1", required=True); x.add_argument("--s0", required=True); x.add_argument("--s0-request", required=True); x.add_argument("--catalog", required=True); x.add_argument("--output", required=True); x.set_defaults(func=cmd_prepare_s2)
+    x = sub.add_parser("prepare-s2"); x.add_argument("--s1-request", required=True); x.add_argument("--s1", required=True); x.add_argument("--s0", required=True); x.add_argument("--s0-request", required=True); x.add_argument("--catalog", required=True); x.add_argument("--db", required=True); x.add_argument("--profile", required=True); x.add_argument("--output", required=True); x.set_defaults(func=cmd_prepare_s2)
     x = sub.add_parser("invoke-s2"); x.add_argument("--request", required=True); x.add_argument("--output", required=True); x.add_argument("--prompt-template"); x.add_argument("--trace-dir"); x.add_argument("--timeout", type=float, default=300); x.add_argument("--dry-run", action="store_true"); x.set_defaults(func=cmd_invoke_s2)
     return p
 def main(argv=None):
-    return build_parser().parse_args(argv).func(build_parser().parse_args(argv)) if False else (lambda a: a.func(a))(build_parser().parse_args(argv))
+    args = build_parser().parse_args(argv)
+    return args.func(args)
 if __name__ == "__main__": raise SystemExit(main())
