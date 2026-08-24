@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 from src.tailor.profile_views import SelectionCatalog, SelectionBullet, selection_to_dict, parse_selection, PositioningView, PositioningEntry
-from src.tailor.s0 import S0Request, S0Response, S0SemanticError, s0_request_to_dict, s0_response_to_dict, parse_s0_response
+from src.tailor.s0 import S0Request, S0Response, S0SemanticError, s0_request_to_dict, s0_response_to_dict, parse_s0_request, parse_s0_response
 from src.tailor.s1 import S1Response, s1_response_to_dict, parse_s1_response_dict
 
 def _norm(v: str) -> str: return " ".join(v.casefold().split())
@@ -123,8 +123,26 @@ def validate_s2_selection(response: S2Response, request: S2Request) -> None:
         if b.owner_kind == "project" and b.owner_id not in selected: raise S2ValidationError("bullet owned by unselected project")
     for project in selected:
         if not any(bullets[bid].owner_id == project for bid in selected_set): raise S2ValidationError("selected project has no selected bullet")
-    actual_exp = [(owner, sum(1 for bid in response.bullet_order if bullets[bid].owner_id == owner)) for owner in base.experience_order]
-    if tuple(owner for owner, _ in actual_exp) != base.experience_order or tuple(actual_exp) != base.experience_bullet_counts: raise S2ValidationError("experience ordering or counts changed")
+    observed_order: list[str] = []
+    observed_counts: list[tuple[str, int]] = []
+    closed_experiences: set[str] = set()
+    active_owner: str | None = None
+    for bullet_id in response.bullet_order:
+        bullet = bullets[bullet_id]
+        if bullet.owner_kind != "experience":
+            continue
+        owner = bullet.owner_id
+        if owner != active_owner:
+            if owner in closed_experiences:
+                raise S2ValidationError("experience owner appears in disjoint groups")
+            if active_owner is not None:
+                closed_experiences.add(active_owner)
+            active_owner = owner
+            observed_order.append(owner)
+            observed_counts.append((owner, 0))
+        observed_counts[-1] = (owner, observed_counts[-1][1] + 1)
+    if tuple(observed_order) != base.experience_order or tuple(observed_counts) != base.experience_bullet_counts:
+        raise S2ValidationError("experience ordering or counts changed")
     last: dict[str, int] = {}
     for bid in response.bullet_order:
         b = bullets[bid]

@@ -1,9 +1,10 @@
 """Privacy-minimised, structural master-profile projections."""
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
+
+from src.profile import BLOCKED_CLAIM_TYPES, ClaimType
 
 from src.profile import MasterProfile
 
@@ -68,17 +69,6 @@ class SelectionCatalog:
     experiences: tuple[SelectionEntry, ...]
     bullets: tuple[SelectionBullet, ...]
     do_not_claim: tuple[str, ...]
-
-
-def _tags(exact: tuple[str, ...], topical: tuple[str, ...]) -> tuple[str, ...]:
-    seen: set[str] = set()
-    result = []
-    for tag in (*exact, *topical):
-        key = _norm(tag)
-        if key not in seen:
-            seen.add(key)
-            result.append(tag)
-    return tuple(result)
 
 
 def positioning_from_profile(profile: MasterProfile) -> PositioningView:
@@ -190,8 +180,14 @@ def parse_positioning(raw: dict[str, Any]) -> PositioningView:
 def parse_selection(raw: dict[str, Any]) -> SelectionCatalog:
     o = _obj(raw, {"recommended_base_variant", "variants", "projects", "experiences", "bullets", "do_not_claim"}, "$")
     recommended = _str(o["recommended_base_variant"], "$.recommended_base_variant")
-    projects = _parse_entries(o["projects"], "$.projects", False); experiences = _parse_entries(o["experiences"], "$.experiences", False)
-    by_owner = {e.id: e.kind for e in (*projects, *experiences)}
+    projects = _parse_entries(o["projects"], "$.projects", False)
+    experiences = _parse_entries(o["experiences"], "$.experiences", False)
+    all_entries = (*projects, *experiences)
+    if len({e.id for e in all_entries}) != len(all_entries):
+        raise ProfileViewError("project and experience ids must be globally unique")
+    if any(e.kind != "project" for e in projects) or any(e.kind != "experience" for e in experiences):
+        raise ProfileViewError("entry kind does not match its collection")
+    by_owner = {e.id: e.kind for e in all_entries}
     bullets = []
     seen = set()
     if not isinstance(o["bullets"], list): raise ProfileViewError("$.bullets: expected list")
@@ -203,19 +199,68 @@ def parse_selection(raw: dict[str, Any]) -> SelectionCatalog:
         if b["owner_id"] not in by_owner or b["owner_kind"] != by_owner[b["owner_id"]]: raise ProfileViewError("unknown bullet owner")
         if isinstance(b["priority"], bool) or not isinstance(b["priority"], int) or b["priority"] < 1: raise ProfileViewError("invalid bullet priority")
         claim = _str(b["claim_type"], "claim_type")
-        if claim in {"ownership_unresolved", "needs_input"}: raise ProfileViewError("blocked bullet present")
+        if claim not in {member.value for member in ClaimType}:
+            raise ProfileViewError("unknown claim type")
+        if claim in {member.value for member in BLOCKED_CLAIM_TYPES}:
+            raise ProfileViewError("blocked bullet present")
         bullets.append(SelectionBullet(ident, b["owner_id"], b["owner_kind"], b["priority"], claim, _strings(b["keywords_hit"], "keywords_hit")))
     if not isinstance(o["variants"], list): raise ProfileViewError("$.variants: expected list")
     variants = []
+    variant_names: set[str] = set()
+    bullet_by_id = {bullet.id: bullet for bullet in bullets}
+    project_ids = {entry.id for entry in projects}
+    experience_ids = {entry.id for entry in experiences}
     for i, value in enumerate(o["variants"]):
         v = _obj(value, {"name", "projects", "bullet_order", "experience_order", "experience_bullet_counts"}, f"$.variants[{i}]")
         counts_raw = v["experience_bullet_counts"]
         if not isinstance(counts_raw, list): raise ProfileViewError("invalid experience counts")
+        name = _str(v["name"], "variant.name")
+        if name in variant_names:
+            raise ProfileViewError("duplicate variant name")
+        variant_names.add(name)
+        projects_order = _strings(v["projects"], "projects")
+        if any(project not in project_ids for project in projects_order):
+            raise ProfileViewError("variant references unknown project")
+        bullet_order = _strings(v["bullet_order"], "bullet_order", nonempty=True)
+        if any(bullet_id not in bullet_by_id for bullet_id in bullet_order):
+            raise ProfileViewError("variant references unknown bullet")
         counts = []
         for pair in counts_raw:
             if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[1], int) or isinstance(pair[1], bool): raise ProfileViewError("invalid experience count")
-            counts.append((_str(pair[0], "experience id"), pair[1]))
-        variants.append(SelectionVariant(_str(v["name"], "variant.name"), _strings(v["projects"], "projects"), _strings(v["bullet_order"], "bullet_order", nonempty=True), _strings(v["experience_order"], "experience_order"), tuple(counts)))
+            owner = _str(pair[0], "experience id")
+            if owner not in experience_ids:
+                raise ProfileViewError("variant references unknown experience")
+            if any(existing == owner for existing, _ in counts):
+                raise ProfileViewError("duplicate experience-count owner")
+            if pair[1] <= 0:
+                raise ProfileViewError("experience count must be positive")
+            counts.append((owner, pair[1]))
+        derived_order: list[str] = []
+        derived_counts: list[tuple[str, int]] = []
+        active_owner: str | None = None
+        closed_experiences: set[str] = set()
+        for bullet_id in bullet_order:
+            bullet = bullet_by_id[bullet_id]
+            if bullet.owner_kind == "experience":
+                owner = bullet.owner_id
+                if owner != active_owner:
+                    if owner in closed_experiences:
+                        raise ProfileViewError("experience owner appears in disjoint groups")
+                    if active_owner is not None:
+                        closed_experiences.add(active_owner)
+                    active_owner = owner
+                    derived_order.append(owner)
+                    derived_counts.append((owner, 0))
+                derived_counts[-1] = (owner, derived_counts[-1][1] + 1)
+        stored_order = _strings(v["experience_order"], "experience_order")
+        if tuple(stored_order) != tuple(derived_order) or tuple(counts) != tuple(derived_counts):
+            raise ProfileViewError("stored experience order/counts disagree with bullet order")
+        selected_projects = set(projects_order)
+        for bullet_id in bullet_order:
+            bullet = bullet_by_id[bullet_id]
+            if bullet.owner_kind == "project" and bullet.owner_id not in selected_projects:
+                raise ProfileViewError("variant contains bullet from unselected project")
+        variants.append(SelectionVariant(name, projects_order, bullet_order, tuple(stored_order), tuple(counts)))
     if not any(v.name == recommended for v in variants): raise ProfileViewError("recommended variant is unknown")
     return SelectionCatalog(recommended, tuple(variants), projects, experiences, tuple(bullets), _strings(o["do_not_claim"], "do_not_claim"))
 
