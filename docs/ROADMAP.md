@@ -207,6 +207,8 @@ opened for write and its checksum is unchanged. `render_line_check` remains `pen
 
 M8P-4 (2026-08-25) is COMPLETE offline. G2 is an anchored critic operating over the diff and the change log; revisions are routed back through S3's existing bounded contract and re-evaluated under full static G1 and canonical edit budgets. G2 never authors resume text. Prepare revalidates the full upstream chain and accepted S3 bundle; invoke publishes a `g2_bundle.json` only on passing rounds or open flags. Rendering, L7, `render_line_check`, G3, Company Bank integration, and both human pilots remain incomplete. Neither M8, Phase 3, nor any pilot is marked complete.
 
+M8P-5 (2026-08-25) is COMPLETE offline. Tailored drafts now render deterministically through the selected LaTeX arm; rendered line counts and font geometries are measured from real PDF geometry post-render (`locate_text_lines`); `run_l7_tailored` runs all 11 base L7 checks plus 6 tailored checks. The S3 bundle's own G1 report correctly remains `render_line_check="pending"` because a pre-render gate cannot prove a rendered fact; the real verdict belongs only in `render_result.json`. Applications are published atomically to gitignored `applications/` with `render_result.json` written last as the commit marker. G3, the review packet, feedback capture, and both human pilots remain incomplete. Neither M8, Phase 3, nor any pilot is marked complete.
+
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from
@@ -268,3 +270,13 @@ M8P-4 (2026-08-25) is COMPLETE offline. G2 is an anchored critic operating over 
   pass or open_flags. Full test suite: 1433 passed, 1 deselected. `data/jobs.db` checksum
   unchanged; no live model, network, Company Bank, DB mutation, resume, or PDF activity
   occurred. Rendering, L7, `render_line_check`, G3, and both human pilots remain incomplete.
+- 2026-08-25: **M8P-5 is COMPLETE offline.** Implemented deterministic tailored rendering, PDF
+  line/char geometry extraction, tailored L7 gate (`run_l7_tailored`), atomic publication
+  (`render_and_publish`), and bundle-driven render CLI (`scripts/tailor_render.py`) across commits
+  `3b2ce9b`, `ecc2896`, `7317f42`, `531cafe`, and `5234626`. Rendered line counts are measured
+  from real PDF geometry (`locate_text_lines`), proving L4 2-line limits on modified bullets
+  post-render. S3 bundle G1 report correctly remains `render_line_check="pending"`; the real
+  verdict is stored in `render_result.json`. Applications are published atomically to gitignored
+  `applications/` (D4). Full test suite: 1477 passed, 1 deselected (+44 net tests over M8P-4).
+  `data/jobs.db` checksum unchanged; no live model, network, `pdflatex`, or DB mutation occurred.
+  G3, review packet, feedback capture, and both human pilots remain incomplete.

@@ -87,8 +87,15 @@ job-pipeline/
 ├── inbox/
 │   ├── urls.txt               # manual URL drop, one per line
 │   └── *.md                   # manual JD paste files
+├── applications/              # M8P-5: published tailored applications (gitignored)
 ├── src/
 │   ├── company_bank/          # M8: Offline knowledge foundation (Track A)
+│   ├── render/                # M10/M8P-5: LaTeX rendering, geometry, L7
+│   │   ├── tailored.py        # M8P-5: draft-to-RenderDoc projection and fingerprint binding
+│   │   ├── lines.py           # M8P-5: PDF line- and character-level geometry
+│   │   └── l7.py              # M10/M8P-5: structural and tailored L7 validation
+│   ├── tailor/                # M8: Tailoring stages, G1/G2 critic, and publication
+│   │   └── publish.py         # M8P-5: atomic per-application publication and commit marker
 │   ├── __init__.py
 │   ├── models.py              # dataclasses, enums, normalization helpers
 │   ├── db.py                  # schema, connection, upsert/query helpers
@@ -116,6 +123,7 @@ job-pipeline/
 │   ├── fixtures/              # saved HTML/JSON responses
 │   └── test_*.py
 ├── scripts/
+│   ├── tailor_render.py       # M8P-5: fail-closed bundle-driven render CLI
 │   └── record_fixture.py      # one-off: fetch a URL and save it as a test fixture
 ├── pyproject.toml
 └── .gitignore

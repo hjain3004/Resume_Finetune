@@ -2435,3 +2435,21 @@ Five decisions and clarifications are recorded with this closure:
 **Verification.** Full suite: 1433 passed, 1 deselected in 49s (baseline 1381 / 1; net +52 tests across 5 new test files). Focused suite: 52 passed in 8s. `git diff --check` clean. `data/jobs.db` SHA-256 unchanged: `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
 
 **Confirmed:** Zero live model calls, zero network access, zero SQLite writes, zero dependencies added, and zero push. M8P-4 is complete offline. Rendering, L7, `render_line_check`, G3, and human pilots remain incomplete.
+
+## 2026-08-25 — M8P-5 Deterministic tailored render and tailored L7 closure
+
+M8P-5 implements deterministic tailored rendering, PDF line and character geometry extraction, the tailored L7 gate extension, atomic per-application publication, and the bundle-driven render CLI (`docs/superpowers/specs/2026-08-24-m8p-5-render-l7-design.md` and `docs/superpowers/plans/2026-08-24-m8p-5-render-l7.md`). Feature branch commits `66fc58c`, `1da364b`, `c0d3a92`, `f59976b`, and `1515be3` (rebased onto `main` as `3b2ce9b`, `ecc2896`, `7317f42`, `531cafe`, and `5234626`).
+
+Five decisions and clarifications are recorded with this closure:
+
+1. **D4 resolved (gitignoring rendered applications):** `applications/` and every rendered artifact are gitignored. This is an approved deviation from `docs/TAILORING_METHODOLOGY.md` §3 ("resumes live as source in git") because compiled PDFs and generated `.tex` files both embed the user's real name, phone number, and email address, while `origin` is a public remote. The deviation is permanent; future tasks must not "restore" the methodology's literal wording by committing personal contact details.
+2. **0.20in template geometry retained:** The 0.20in margin template geometry in `profile/template.tex` was reviewed and deliberately left unchanged. `check_printable_margin` is advisory and default-off (silent unless `ats.layout.min_margin_in` is explicitly configured in `master_profile.yaml`), ensuring deterministic gates never silently override the user's accepted template geometry.
+3. **`render_line_check` verdict location:** `render_line_check` now carries a real verdict (`"pass"` or `"fail"`), and only in `render_result.json`. The S3 bundle's G1 report correctly retains `render_line_check="pending"`; a pre-render gate cannot prove a post-render geometric fact.
+4. **CLI `g1.status == "static_pass"` defense in depth:** `scripts/tailor_render.py` explicitly checks `bundle.g1.status.value == "static_pass"`. Although `parse_s3_bundle`'s recompute-and-compare architecture makes a G1-unsound bundle structurally impossible to persist or reparse (tampered or drifted banned terms cause reparse rejection rather than a failing report), this check remains in place as defense against structurally unreachable states. It must not be removed as dead code.
+5. **Two fixture-provenance verifications:**
+   - `tests/fixtures/render/tailored_bleed.pdf` bleeds past the **top** paper edge rather than the bottom (using negative `\vspace*` to shift content upward); `check_within_page_vertical` checks both directions and flags either, making them functionally equivalent.
+   - `tests/fixtures/render/publish_good.pdf` was recorded by running the real `render_doc_from_draft` + `render_latex` production path against a small synthetic profile (not from hand-edited LaTeX source), making the `VALID` publication outcome test an authentic end-to-end proof.
+
+**Verification.** Full suite: 1477 passed, 1 deselected in 52s (baseline 1433 / 1; net +44 tests across 5 new test files). `git diff --check` clean. `data/jobs.db` SHA-256 unchanged: `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+
+**Confirmed:** Zero live model calls, zero network access, zero SQLite writes, zero runtime dependencies added, zero `pdflatex` calls in automated test runs, and zero push. M8P-5 is complete offline. G3, review packets, feedback capture, and human pilots remain incomplete.

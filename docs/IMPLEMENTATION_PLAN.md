@@ -212,6 +212,8 @@ replacement resume text. `data/jobs.db` checksum unchanged. Deterministic tailor
 L7, `render_line_check`, G3, Company Bank integration, and both human pilots remain incomplete.
 Phase 3, M8, and human pilots remain uncompleted.
 
+M8P-5 (2026-08-25) is complete offline: deterministic tailored render, rendered line check, tailored L7 execution, and atomic publication. The five implementation and test commits on the feature branch (prior to rebase) were `66fc58c` (draft-to-RenderDoc mapping and fingerprint binding), `1da364b` (PDF line and font geometry extraction), `c0d3a92` (rendered line counts and tailored L7 risks), `f59976b` (atomic per-application publication), and `1515be3` (bundle-driven render CLI). Branch verification passed 1425 tests (44 new tests); post-rebase and post-merge verification on `main` passed 1477 tests with 1 deselected (1433 + 44). S3 bundle G1 report keeps `render_line_check="pending"`; real verdict is recorded in `render_result.json`. Published applications and `.tex` source live in gitignored `applications/` (D4). `data/jobs.db` checksum unchanged. G3 review packet, feedback capture, and both human pilots remain unstarted. Phase 3, M8, and human pilots remain incomplete.
+
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 
 1. **Track A — Gemini foundation:**
