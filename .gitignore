@@ -13,3 +13,6 @@ __pycache__/
 .superpowers/
 build/
 .coverage
+# M8P-5: rendered PDFs embed the user's real name, phone, and email, and
+# origin is a public remote (umbrella decision D4).
+applications/
