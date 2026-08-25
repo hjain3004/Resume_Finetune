@@ -221,3 +221,79 @@ def test_summary_is_read_only(tmp_path, record):
     before = sorted(p.name for p in tmp_path.iterdir())
     summarize_feedback(tmp_path)
     assert sorted(p.name for p in tmp_path.iterdir()) == before
+
+
+# ---------------------------------------------------------------------------
+# Task 3: taste-candidate derivation (pure, writes nothing)
+# ---------------------------------------------------------------------------
+
+from pathlib import Path as _Path  # noqa: E402 -- Task 3 addition, appended per plan
+
+from src.tailor.feedback import derive_taste_candidates  # noqa: E402
+
+
+@pytest.fixture
+def record_with_reword():
+    return parse_feedback_form(
+        form(bullet_feedback=[{"bullet_id": "b1", "verdict": "reword", "comment": "too generic, name the tool"}]),
+        **KW,
+    )
+
+
+@pytest.fixture
+def record_with_empty_reword_comment():
+    return parse_feedback_form(
+        form(bullet_feedback=[{"bullet_id": "b1", "verdict": "reword", "comment": ""}]),
+        **KW,
+    )
+
+
+@pytest.fixture
+def record_overemphasized():
+    return parse_feedback_form(form(overemphasized_skills=["Kubernetes"]), **KW)
+
+
+@pytest.fixture
+def record_unsupported():
+    claim = [{"bullet_id": "b1", "quoted_text": "sharding the write path", "why": "I only tuned it"}]
+    return parse_feedback_form(form(unsupported_claims=claim), **KW)
+
+
+def test_reword_with_comment_yields_a_candidate(record_with_reword):
+    candidates = derive_taste_candidates(record_with_reword)
+    assert any("reword" in c.evidence for c in candidates)
+    assert all(c.date == record_with_reword.reviewed_at for c in candidates)
+
+
+def test_reword_without_comment_yields_nothing(record_with_empty_reword_comment):
+    assert derive_taste_candidates(record_with_empty_reword_comment) == ()
+
+
+def test_overemphasized_skill_is_mechanically_enforceable(record_overemphasized):
+    candidate = next(c for c in derive_taste_candidates(record_overemphasized)
+                     if "overemphas" in c.evidence)
+    assert candidate.mechanically_enforceable is True
+
+
+def test_unsupported_claim_is_not_mechanically_enforceable(record_unsupported):
+    candidate = next(c for c in derive_taste_candidates(record_unsupported)
+                     if "unsupported" in c.evidence)
+    assert candidate.mechanically_enforceable is False
+
+
+def test_derivation_writes_nothing(record_with_reword):
+    taste_before = _Path("config/taste.md").read_bytes()
+    banned_before = _Path("config/banned_words.txt").read_bytes()
+    derive_taste_candidates(record_with_reword)
+    assert _Path("config/taste.md").read_bytes() == taste_before
+    assert _Path("config/banned_words.txt").read_bytes() == banned_before
+
+
+def test_derivation_is_deterministic(record_with_reword):
+    assert derive_taste_candidates(record_with_reword) == derive_taste_candidates(record_with_reword)
+
+
+def test_feedback_module_makes_no_model_call():
+    source = _Path("src/tailor/feedback.py").read_text(encoding="utf-8")
+    assert "src.tailor.invoke" not in source
+    assert "src.llm_trace" not in source

@@ -452,3 +452,48 @@ def summarize_feedback(feedback_dir: Path = DEFAULT_FEEDBACK_DIR, *, job_id: int
         mean_company_alignment=mean_company_alignment, mean_visual_quality=mean_visual_quality,
         distinct_jobs=distinct_jobs,
     )
+
+
+# ---------------------------------------------------------------------------
+# Taste-candidate derivation -- pure, writes nothing. M8P-6 derives
+# candidates; a human applies them to config/taste.md and
+# config/banned_words.txt in M8P-7 (both are PROTECTED prompt inputs).
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class TasteCandidate:
+    date: str
+    lesson: str
+    mechanically_enforceable: bool
+    evidence: str
+
+
+def derive_taste_candidates(record: FeedbackRecord) -> tuple[TasteCandidate, ...]:
+    candidates: list[TasteCandidate] = []
+
+    for item in record.bullet_feedback:
+        if item.verdict is BulletVerdict.REWORD and item.comment.strip():
+            candidates.append(TasteCandidate(
+                date=record.reviewed_at,
+                lesson=item.comment.strip(),
+                mechanically_enforceable=False,
+                evidence=f"reword verdict on bullet {item.bullet_id}",
+            ))
+
+    for term in record.overemphasized_skills:
+        candidates.append(TasteCandidate(
+            date=record.reviewed_at,
+            lesson=f"do not overemphasize {term}",
+            mechanically_enforceable=True,
+            evidence=f"overemphasized_skills: {term}",
+        ))
+
+    for claim in record.unsupported_claims:
+        candidates.append(TasteCandidate(
+            date=record.reviewed_at,
+            lesson=f"unsupported claim on bullet {claim.bullet_id}: {claim.why}",
+            mechanically_enforceable=False,
+            evidence=f"unsupported_claims: {claim.bullet_id}",
+        ))
+
+    return tuple(sorted(candidates, key=lambda candidate: (candidate.evidence, candidate.lesson)))
