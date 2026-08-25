@@ -202,3 +202,42 @@ def test_unresolved_findings_clears_when_target_missing(one_finding):
     from src.tailor.g2 import unresolved_findings
 
     assert unresolved_findings((one_finding,), {}) == ()
+
+
+# ---------------------------------------------------------------------------
+# Task 3: protected G2 prompt
+# ---------------------------------------------------------------------------
+
+from pathlib import Path as _Path
+
+from src.tailor.g2 import G2_REQUEST_MARKER, RULE_VOCABULARY, build_g2_prompt
+
+_PROMPT_PATH = _Path("docs/prompts/tailoring_g2.md")
+
+
+def test_prompt_has_exactly_one_marker():
+    assert _PROMPT_PATH.read_text(encoding="utf-8").count(G2_REQUEST_MARKER) == 1
+
+
+def test_prompt_documents_every_rule_id():
+    text = _PROMPT_PATH.read_text(encoding="utf-8")
+    for ids in RULE_VOCABULARY.values():
+        for rule_id in ids:
+            assert rule_id in text
+
+
+def test_prompt_forbids_replacement_text():
+    text = _PROMPT_PATH.read_text(encoding="utf-8").casefold()
+    assert "do not propose replacement text" in text
+
+
+def test_build_prompt_rejects_template_without_marker(g2_request_one_edit):
+    with pytest.raises(ValueError):
+        build_g2_prompt("no marker here", g2_request_one_edit)
+
+
+def test_build_prompt_embeds_request_json(g2_request_one_edit):
+    template = _PROMPT_PATH.read_text(encoding="utf-8")
+    prompt = build_g2_prompt(template, g2_request_one_edit)
+    assert G2_REQUEST_MARKER not in prompt
+    assert '"job_id": 1' in prompt
