@@ -702,3 +702,59 @@ def calculate_edit_budget(request: S3Request, draft: TailoredDraft) -> EditBudge
     changed = _edit_distance(base_tokens, tailored_tokens)
     denominator = len(base_tokens)
     return EditBudget(changed, denominator, changed / denominator if denominator else 0.0)
+
+
+# ---------------------------------------------------------------------------
+# M8P-4 addition (post-M8P-3R integration, purely additive): the bounded S3
+# revision path a G2 critic finding may trigger. No existing function above
+# this line is modified. `G2Finding` is only referenced as a forward-ref
+# type (this module already uses `from __future__ import annotations`) and
+# is imported lazily inside function bodies to avoid a circular import with
+# src.tailor.g2, which itself imports S3Request from this module.
+# ---------------------------------------------------------------------------
+
+S3_REVISION_MARKER = "{{S3_REVISION_JSON}}"
+
+
+@dataclass(frozen=True)
+class S3RevisionContext:
+    round_index: int
+    findings: tuple["G2Finding", ...]  # noqa: F821 -- forward ref, see module note above
+
+
+def build_s3_revision_prompt(template: str, request: S3Request, context: S3RevisionContext) -> str:
+    if template.count(S3_REQUEST_MARKER) != 1 or template.count(S3_REVISION_MARKER) != 1:
+        raise ValueError(
+            f"S3 revision prompt template must contain {S3_REQUEST_MARKER!r} and "
+            f"{S3_REVISION_MARKER!r} exactly once each"
+        )
+    revision_payload = {
+        "round_index": context.round_index,
+        "findings": [
+            {
+                "dimension": finding.dimension.value,
+                "rule_id": finding.rule_id,
+                "target_kind": finding.target_kind.value,
+                "target_id": finding.target_id,
+                "quoted_line": finding.quoted_line,
+                "explanation": finding.explanation,
+            }
+            for finding in context.findings
+        ],
+    }
+    text = template.replace(S3_REQUEST_MARKER, json.dumps(s3_request_to_dict(request), sort_keys=True, indent=2))
+    return text.replace(S3_REVISION_MARKER, json.dumps(revision_payload, sort_keys=True, indent=2))
+
+
+def validate_revision_scope(response: S3Response, previous: S3Response, context: S3RevisionContext) -> None:
+    """A revision may only touch bullet ids that already had an edit in
+    `previous`, or that a finding in `context` named. Raises S3SemanticError
+    for any edit outside that scope -- a revision may not open a new front
+    the critic never flagged (§7 rule 2 of the M8P-4 design)."""
+    from src.tailor.g2 import G2TargetKind  # local import: avoids circular import at module load
+
+    allowed = {edit.bullet_id for edit in previous.bullet_edits}
+    allowed |= {finding.target_id for finding in context.findings if finding.target_kind is G2TargetKind.BULLET}
+    for edit in response.bullet_edits:
+        if edit.bullet_id not in allowed:
+            raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: outside revision scope")

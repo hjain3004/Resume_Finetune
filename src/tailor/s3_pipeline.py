@@ -16,9 +16,11 @@ from src.tailor.s3 import (
     S3ParseError,
     S3Request,
     S3Response,
+    S3RevisionContext,
     S3SemanticError,
     TailoredDraft,
     build_s3_prompt,
+    build_s3_revision_prompt,
     calculate_edit_budget,
     change_entry_to_dict,
     derive_change_log,
@@ -31,6 +33,7 @@ from src.tailor.s3 import (
     parse_tailored_draft,
     s3_response_to_dict,
     tailored_draft_to_dict,
+    validate_revision_scope,
 )
 
 TRACE_INVOCATION_TYPE = "tailoring_s3"
@@ -103,6 +106,60 @@ def run_s3_invocation(
         response = parse_s3_response(result.raw_stdout, request)
     except S3ParseError as exc:
         return S3Outcome(S3OutcomeKind.PARSE_FAILURE, None, None, str(exc), trace_path)
+    except S3SemanticError as exc:
+        return S3Outcome(S3OutcomeKind.SEMANTIC_FAILURE, None, None, str(exc), trace_path)
+    try:
+        draft = hydrate_s3(request, response)
+    except S3HydrationError as exc:
+        return S3Outcome(S3OutcomeKind.HYDRATION_FAILURE, None, None, str(exc), trace_path)
+    report = run_static_g1(request, response, draft, banned_terms)
+    if report.status.value != "static_pass":
+        return S3Outcome(S3OutcomeKind.G1_FAILURE, None, report, "static G1 failed", trace_path)
+    bundle = S3Bundle(
+        "m8p3.s3_bundle.v1", request.job_id, request.company, request.title,
+        request.alignment.fingerprint, response, draft,
+        derive_change_log(request, response, draft), derive_unified_diff(request, draft),
+        calculate_edit_budget(request, draft), report,
+    )
+    return S3Outcome(S3OutcomeKind.VALID, bundle, report, None, trace_path)
+
+
+# ---------------------------------------------------------------------------
+# M8P-4 addition (post-M8P-3R integration, purely additive): the bounded S3
+# revision invocation a G2 critic finding may trigger. Mirrors
+# run_s3_invocation()'s trace/parse/hydrate/G1 sequence exactly, with one
+# extra step (validate_revision_scope) between parsing and hydration.
+# run_s3_invocation() itself is not modified.
+# ---------------------------------------------------------------------------
+
+
+def run_s3_revision(
+    request: S3Request,
+    previous: S3Response,
+    *,
+    context: S3RevisionContext,
+    prompt_template_path: Path,
+    request_path: Path,
+    banned_terms: tuple[str, ...],
+    claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    trace_dir: Path = Path("data/traces"),
+) -> S3Outcome:
+    template = Path(prompt_template_path).read_text(encoding="utf-8")
+    prompt = build_s3_revision_prompt(template, request, context)
+    try:
+        result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
+    except InvocationError as exc:
+        return S3Outcome(S3OutcomeKind.INVOCATION_FAILURE, None, None, str(exc), _trace(Path(request_path), Path(prompt_template_path), exc.raw_stdout, exc.model or (claude_cmd[0] if claude_cmd else ""), trace_dir))
+    trace_path = _trace(Path(request_path), Path(prompt_template_path), result.raw_stdout, result.model, trace_dir)
+    try:
+        response = parse_s3_response(result.raw_stdout, request)
+    except S3ParseError as exc:
+        return S3Outcome(S3OutcomeKind.PARSE_FAILURE, None, None, str(exc), trace_path)
+    except S3SemanticError as exc:
+        return S3Outcome(S3OutcomeKind.SEMANTIC_FAILURE, None, None, str(exc), trace_path)
+    try:
+        validate_revision_scope(response, previous, context)
     except S3SemanticError as exc:
         return S3Outcome(S3OutcomeKind.SEMANTIC_FAILURE, None, None, str(exc), trace_path)
     try:
