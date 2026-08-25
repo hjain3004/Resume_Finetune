@@ -203,9 +203,9 @@ including `HYDRATION_FAILURE` and exactly-once/no-retry invocation. Focused veri
 passed 1381 with 1 deselected. No live model, network, Company Bank access, database
 mutation, resume, or PDF occurred in the repair session; `data/jobs.db` was never
 opened for write and its checksum is unchanged. `render_line_check` remains `pending`.
-**Only after M8P-3R does M8P-3 count as complete.** M8P-4 (G2 anchored critic), G3,
-final rendering, PDF generation, Company Bank integration, and both human pilots remain
-unstarted.
+**Only after M8P-3R does M8P-3 count as complete.**
+
+M8P-4 (2026-08-25) is COMPLETE offline. G2 is an anchored critic operating over the diff and the change log; revisions are routed back through S3's existing bounded contract and re-evaluated under full static G1 and canonical edit budgets. G2 never authors resume text. Prepare revalidates the full upstream chain and accepted S3 bundle; invoke publishes a `g2_bundle.json` only on passing rounds or open flags. Rendering, L7, `render_line_check`, G3, Company Bank integration, and both human pilots remain incomplete. Neither M8, Phase 3, nor any pilot is marked complete.
 
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
@@ -258,3 +258,13 @@ unstarted.
   mutation/resume/PDF activity occurred. M8P-3 counts as complete only as of this entry.
   M8P-4, G2, G3, rendering, PDF generation, Company Bank integration, and both human pilots
   remain unstarted.
+- 2026-08-25: **M8P-4 is COMPLETE offline.** Implemented the anchored G2 critic and bounded
+  revision loop (commits `073ba9e`, `f69e7b1`, `85d9f2b`, `1fe4ab6`, `68feec1`, `5e8beb3`,
+  and `84c5554`). G2 operates over the diff and change log with strict privacy projection,
+  closed rule vocabularies, and exact quoted substrings. Revisions re-invoke S3 under its
+  existing bounded edit contract and must pass full static G1 with edit budgets recomputed
+  against the canonical alignment. G2 never emits replacement resume text. Prepare revalidates
+  the full upstream chain and accepted S3 bundle; invoke produces `g2_bundle.json` only on
+  pass or open_flags. Full test suite: 1433 passed, 1 deselected. `data/jobs.db` checksum
+  unchanged; no live model, network, Company Bank, DB mutation, resume, or PDF activity
+  occurred. Rendering, L7, `render_line_check`, G3, and both human pilots remain incomplete.

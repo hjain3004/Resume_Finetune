@@ -196,6 +196,22 @@ occurred in the repair session. `render_line_check` remains `"pending"`. G2, G3,
 rendering, PDF generation, Company Bank integration, human pilots, and M8P-4 remain
 unstarted.
 
+M8P-4 (2026-08-25) is complete offline: G2 anchored critic and bounded revision loop.
+The seven implementation and test commits are `073ba9e` (G2 request/response contract and
+structural parser), `f69e7b1` (verdict rule and finding resolution), `85d9f2b` (anchored G2
+critic prompt), `1fe4ab6` (additive S3 revision context and scope validation), `68feec1`
+(bounded G2 revision loop and bundle serialization), `5e8beb3` (fail-closed one-job G2 CLI),
+and `84c5554` (adversarial integration coverage). Focused verification passed 52 tests
+(`test_g2.py`, `test_g2_pipeline.py`, `test_s3_revision.py`, `test_tailor_g2_cli.py`,
+`test_m8p4_integration.py`); full verification passed 1433 tests with 1 deselected (+52 net
+tests over M8P-3R). The critic receives a diff-centred, privacy-minimised projection of the
+accepted S3 bundle and closed rule vocabularies, anchoring every finding to an exact quoted
+substring. Revisions re-invoke S3 under its existing bounded edit contract and re-run full
+static G1 with edit budgets recomputed against the canonical alignment; G2 never emits
+replacement resume text. `data/jobs.db` checksum unchanged. Deterministic tailored rendering,
+L7, `render_line_check`, G3, Company Bank integration, and both human pilots remain incomplete.
+Phase 3, M8, and human pilots remain uncompleted.
+
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 
 1. **Track A — Gemini foundation:**

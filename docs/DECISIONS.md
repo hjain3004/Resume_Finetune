@@ -2414,3 +2414,24 @@ every code path and every doc reference. **M8P-3 counts as complete only as of t
 entry; the 2026-08-24 closeout above was accurate about scope but not about verification
 sufficiency.** M8P-4 (G2 anchored critic), G3, final rendering, PDF generation, Company Bank
 integration, and both human pilots remain unstarted.
+
+## 2026-08-25 — M8P-4 G2 anchored critic and bounded revision loop closure
+
+M8P-4 implements the anchored G2 critic and bounded revision loop (`docs/superpowers/specs/2026-08-24-m8p-4-g2-anchored-critic-design.md` and `docs/superpowers/plans/2026-08-24-m8p-4-g2-anchored-critic.md`). Commits `073ba9e`, `f69e7b1`, `85d9f2b`, `1fe4ab6`, `68feec1`, `5e8beb3`, and `84c5554`.
+
+Five decisions and clarifications are recorded with this closure:
+
+1. **D2 resolved (the tailor revises, G2 never emits replacement text):** The bounded revision loop re-invokes S3 with structured critic findings; G2 never authors, suggests, or returns replacement resume text. `G2Finding` is restricted to `{dimension, rule_id, target_kind, target_id, quoted_line, explanation}`; `explanation` is bounded to 200 characters and is used purely as diagnostic prompt context for S3. Rationale: `docs/TAILORING_METHODOLOGY.md` §4 ("the tailor revises") and keeping every edit inside the single contract (`src/tailor/s3.py`) that is already proven fabrication-proof and strictly constrained against profile hallucination.
+2. **Supersession of 2026-07-30 design §5:** §5 of `docs/superpowers/specs/2026-07-30-m8-tailor-critic-design.md` is superseded by the M8P-4 design. Its `proposed_rewrite` field and phrasing-tier tailor do not exist in the implemented architecture. S3 emits bounded edits over canonical bullets, structure is deterministic, and phrasing-tier selection is not a model decision.
+3. **Protection schedule for G2 prompt:** `docs/prompts/tailoring_g2.md` becomes `PROTECTED` only after the first accepted live pilot run, matching the precedent set for `docs/prompts/tailoring_s1.md` on 2026-08-21 (per `docs/SELF_HEALING.md` §4).
+4. **Two plan corrections (empirical findings):** Both were errors in the plan's predicted outcome enums in Task 7 pseudocode, revealing that safety mechanisms fire one layer earlier (stronger defense in depth) than anticipated:
+   - *Metric drop rejection:* A revision that drops a numeric token (e.g. "2.0") is rejected by `parse_s3_response` (`src/tailor/s3.py:337`, `S3SemanticError: numeric-token multiset changed`) → `REVISION_SEMANTIC_FAILURE`. The plan predicted `REVISION_G1_FAILURE`. G1 carries the same check at `g1.py:182` as defence in depth, but is never reached because S3 semantic validation fails closed first.
+   - *Do-not-claim rejection:* A `do_not_claim` term can never be cited as a motivating term, because `src/tailor/s2.py:158` structurally refuses to mark such a term `covered` (`S2ValidationError: do_not_claim term covered`). The only reachable path is an uncited addition, rejected at parse time by S3's citation gate → `REVISION_SEMANTIC_FAILURE`. The plan assumed G1's L6 was the blocking layer.
+5. **CLI contract clarification (`scripts/tailor_g2.py`):** The M8P-4 plan specified `--request` for `invoke` without defining `g2_request.json` layout. The implementer resolved the CLI contract coherently:
+   - `scripts/tailor_g2.py prepare` revalidates the entire upstream chain (S1→S0→S2→alignment) and the accepted `s3_bundle.json` against the freshly rebuilt authoritative `S3Request`. It writes `s3_request.json` (authoritative S3 request) and `g2_request.json` (a validated pass-through of the accepted `s3_bundle.json`).
+   - `scripts/tailor_g2.py invoke` takes `--request` (path to `g2_request.json` / `s3_bundle.json`) and `--s3-request` (path to `s3_request.json`), re-validating both strictly before execution. `run_g2_loop` takes `S3Request` and `S3Bundle` and dynamically derives each round's diff-centred `G2Request` in memory. On a passing round or open flags, `invoke` atomically publishes `g2_bundle.json` (`m8p4.g2_bundle.v1`). On failure, it exits nonzero and leaves any existing bundle untouched.
+   This establishes an explicit, unambiguous artifact contract for M8P-6 (`g2_bundle.json` containing `schema_version`, `job_id`, `company`, `title`, `alignment_fingerprint`, `accepted_s3_bundle`, `rounds`, `verdict`, `open_findings`, `rounds_used`, `model_calls`).
+
+**Verification.** Full suite: 1433 passed, 1 deselected in 49s (baseline 1381 / 1; net +52 tests across 5 new test files). Focused suite: 52 passed in 8s. `git diff --check` clean. `data/jobs.db` SHA-256 unchanged: `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+
+**Confirmed:** Zero live model calls, zero network access, zero SQLite writes, zero dependencies added, and zero push. M8P-4 is complete offline. Rendering, L7, `render_line_check`, G3, and human pilots remain incomplete.
