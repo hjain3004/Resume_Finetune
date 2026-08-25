@@ -585,3 +585,40 @@ def g2_response_to_dict(response: G2Response) -> dict[str, object]:
         "scores": {dimension.value: score for dimension, score in response.scores},
         "findings": [_finding_to_dict(item) for item in response.findings],
     }
+
+
+# ---------------------------------------------------------------------------
+# Verdict rule (TAILORING_METHODOLOGY.md §4, verbatim):
+# PASS iff C1 == 3 and min(C2..C5) >= 2.
+# ---------------------------------------------------------------------------
+
+
+class G2Verdict(str, Enum):
+    PASS = "pass"
+    REVISE = "revise"
+    OPEN_FLAGS = "open_flags"
+
+
+def evaluate_verdict(response: G2Response, *, round_index: int, max_rounds: int = MAX_ROUNDS) -> G2Verdict:
+    scores = dict(response.scores)
+    passed = scores[G2Dimension.C1] == 3 and min(
+        scores[dimension] for dimension in (G2Dimension.C2, G2Dimension.C3, G2Dimension.C4, G2Dimension.C5)
+    ) >= 2
+    if passed:
+        return G2Verdict.PASS
+    return G2Verdict.OPEN_FLAGS if round_index >= max_rounds else G2Verdict.REVISE
+
+
+def unresolved_findings(
+    prior: tuple[G2Finding, ...], revised_text_by_target: dict[str, str]
+) -> tuple[G2Finding, ...]:
+    """Prior findings whose quoted_line is still present in the revised text
+    for their target. A target absent from `revised_text_by_target` (e.g. a
+    finding on a skill addition, or a target that no longer exists) counts
+    as resolved -- there is nothing left to quote."""
+    still: list[G2Finding] = []
+    for finding in prior:
+        text = revised_text_by_target.get(finding.target_id)
+        if text is not None and finding.quoted_line in text:
+            still.append(finding)
+    return tuple(still)

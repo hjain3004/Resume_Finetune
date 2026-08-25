@@ -119,3 +119,86 @@ def test_response_accepts_valid_finding_and_round_trips(g2_request_one_edit):
     from src.tailor.g2 import g2_response_to_dict
 
     assert json.loads(json.dumps(g2_response_to_dict(response)))["scores"]["C5"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Task 2: verdict rule and finding-resolution checks
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def make_response():
+    from src.tailor.g2 import RULE_VOCABULARY, G2Dimension, G2Finding, G2Response, G2TargetKind
+
+    def _make(**scores) -> G2Response:
+        full = valid_scores(**scores)
+        findings = []
+        for key, value in full.items():
+            dimension = G2Dimension(key)
+            if value < 3:
+                findings.append(G2Finding(
+                    dimension=dimension,
+                    rule_id=next(iter(RULE_VOCABULARY[dimension])),
+                    target_kind=G2TargetKind.BULLET,
+                    target_id="int_b1",
+                    quoted_line="four asynchronous Python microservices",
+                    explanation="synthetic",
+                ))
+        return G2Response(
+            scores=tuple((G2Dimension(key), value) for key, value in full.items()),
+            findings=tuple(findings),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def one_finding():
+    from src.tailor.g2 import G2Dimension, G2Finding, G2TargetKind
+
+    return G2Finding(
+        dimension=G2Dimension.C5,
+        rule_id="C5.template_phrasing",
+        target_kind=G2TargetKind.BULLET,
+        target_id="int_b1",
+        quoted_line="improved throughput by 40%",
+        explanation="reads as template output",
+    )
+
+
+def test_pass_requires_c1_exactly_three(make_response):
+    from src.tailor.g2 import G2Verdict, evaluate_verdict
+
+    assert evaluate_verdict(make_response(C1=3, C2=2, C3=2, C4=2, C5=2), round_index=1) is G2Verdict.PASS
+    assert evaluate_verdict(make_response(C1=2, C2=3, C3=3, C4=3, C5=3), round_index=1) is G2Verdict.REVISE
+
+
+def test_any_dimension_at_one_fails(make_response):
+    from src.tailor.g2 import G2Verdict, evaluate_verdict
+
+    assert evaluate_verdict(make_response(C1=3, C2=1, C3=3, C4=3, C5=3), round_index=1) is G2Verdict.REVISE
+
+
+def test_final_round_failure_becomes_open_flags(make_response):
+    from src.tailor.g2 import G2Verdict, evaluate_verdict
+
+    assert evaluate_verdict(make_response(C1=2, C2=3, C3=3, C4=3, C5=3), round_index=2) is G2Verdict.OPEN_FLAGS
+
+
+def test_unresolved_findings_detects_untouched_quote(one_finding):
+    from src.tailor.g2 import unresolved_findings
+
+    still = unresolved_findings((one_finding,), {"int_b1": "improved throughput by 40%"})
+    assert still == (one_finding,)
+
+
+def test_unresolved_findings_clears_when_quote_gone(one_finding):
+    from src.tailor.g2 import unresolved_findings
+
+    assert unresolved_findings((one_finding,), {"int_b1": "raised throughput 40%"}) == ()
+
+
+def test_unresolved_findings_clears_when_target_missing(one_finding):
+    from src.tailor.g2 import unresolved_findings
+
+    assert unresolved_findings((one_finding,), {}) == ()
