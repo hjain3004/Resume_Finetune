@@ -6,12 +6,17 @@ bullet plain-text mapping)."""
 from __future__ import annotations
 
 import datetime
+import json
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 import yaml
 
+from src.tailor.artifacts import write_json_atomic
+
 FEEDBACK_SCHEMA = "m8p6.feedback_record.v1"
+DEFAULT_FEEDBACK_DIR = Path("data/feedback")
 
 
 class FeedbackParseError(ValueError):
@@ -314,4 +319,136 @@ def parse_feedback_record(raw: object) -> FeedbackRecord:
         bullet_feedback=bullet_feedback, missing_skills=tuple(raw["missing_skills"]),
         overemphasized_skills=tuple(raw["overemphasized_skills"]),
         unsupported_claims=unsupported_claims, free_form=raw["free_form"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Immutable append-only storage and read-only summary
+# ---------------------------------------------------------------------------
+
+class FeedbackOutcomeKind(str, Enum):
+    PARSE_FAILURE = "parse_failure"
+    VALIDATION_FAILURE = "validation_failure"
+    ALREADY_RECORDED = "already_recorded"
+    RECORDED = "recorded"
+
+
+@dataclass(frozen=True)
+class FeedbackOutcome:
+    kind: FeedbackOutcomeKind
+    path: Path | None
+    revision: int | None
+    error: str | None
+
+
+@dataclass(frozen=True)
+class FeedbackSummary:
+    total: int
+    accepted: int
+    rejected: int
+    would_submit_yes: int
+    would_submit_no: int
+    would_submit_not_as_is: int
+    needs_revision: int
+    mean_company_alignment: float
+    mean_visual_quality: float
+    distinct_jobs: int
+
+
+def _record_key(job_id: int, alignment_fingerprint: str) -> str:
+    return f"{job_id}-{alignment_fingerprint[:12]}"
+
+
+def _existing_revisions(feedback_dir: Path, key: str) -> list[tuple[int, Path]]:
+    revisions = []
+    for path in feedback_dir.glob(f"{key}-r*.json"):
+        suffix = path.stem.rsplit("-r", 1)[-1]
+        if suffix.isdigit():
+            revisions.append((int(suffix), path))
+    revisions.sort()
+    return revisions
+
+
+def store_feedback(record: FeedbackRecord, *, feedback_dir: Path = DEFAULT_FEEDBACK_DIR) -> FeedbackOutcome:
+    """Append-only: a second, differing assessment of the same
+    (job_id, alignment_fingerprint) key becomes r2, r3, ... An identical
+    re-record of the latest revision is an idempotent no-op."""
+    feedback_dir = Path(feedback_dir)
+    key = _record_key(record.job_id, record.alignment_fingerprint)
+    new_dict = feedback_record_to_dict(record)
+
+    revisions = _existing_revisions(feedback_dir, key) if feedback_dir.exists() else []
+    if revisions:
+        latest_revision, latest_path = revisions[-1]
+        latest_dict = json.loads(latest_path.read_text(encoding="utf-8"))
+        if latest_dict == new_dict:
+            return FeedbackOutcome(FeedbackOutcomeKind.ALREADY_RECORDED, latest_path, latest_revision, None)
+        next_revision = latest_revision + 1
+    else:
+        next_revision = 1
+
+    path = feedback_dir / f"{key}-r{next_revision}.json"
+    write_json_atomic(path, new_dict)
+
+    index_line = {
+        "schema_version": record.schema_version,
+        "job_id": record.job_id,
+        "alignment_fingerprint": record.alignment_fingerprint,
+        "revision": next_revision,
+        "reviewed_at": record.reviewed_at,
+        "accept": record.accept.value,
+        "would_submit": record.would_submit.value,
+        "path": str(path),
+    }
+    with open(feedback_dir / "index.jsonl", "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(index_line, sort_keys=True))
+        handle.write("\n")
+
+    return FeedbackOutcome(FeedbackOutcomeKind.RECORDED, path, next_revision, None)
+
+
+def load_feedback_index(feedback_dir: Path = DEFAULT_FEEDBACK_DIR) -> tuple[dict[str, object], ...]:
+    index_path = Path(feedback_dir) / "index.jsonl"
+    if not index_path.exists():
+        return ()
+    lines = index_path.read_text(encoding="utf-8").splitlines()
+    return tuple(json.loads(line) for line in lines if line.strip())
+
+
+def summarize_feedback(feedback_dir: Path = DEFAULT_FEEDBACK_DIR, *, job_id: int | None = None) -> FeedbackSummary:
+    """Read-only: computes statistics over the LATEST revision per
+    (job_id, alignment_fingerprint) key -- a superseded revision is history,
+    not current signal. Opens each selected record file because
+    company_alignment/visual_quality/needs_another_revision are not carried
+    in the lightweight index line."""
+    entries = load_feedback_index(feedback_dir)
+    latest_by_key: dict[tuple[object, object], dict[str, object]] = {}
+    for entry in entries:
+        key = (entry["job_id"], entry["alignment_fingerprint"])
+        current = latest_by_key.get(key)
+        if current is None or entry["revision"] > current["revision"]:
+            latest_by_key[key] = entry
+
+    selected = list(latest_by_key.values())
+    if job_id is not None:
+        selected = [entry for entry in selected if entry["job_id"] == job_id]
+
+    records = [parse_feedback_record(json.loads(Path(entry["path"]).read_text(encoding="utf-8"))) for entry in selected]
+
+    total = len(records)
+    accepted = sum(1 for item in records if item.accept is Accept.ACCEPT)
+    would_submit_yes = sum(1 for item in records if item.would_submit is WouldSubmit.YES)
+    would_submit_no = sum(1 for item in records if item.would_submit is WouldSubmit.NO)
+    would_submit_not_as_is = sum(1 for item in records if item.would_submit is WouldSubmit.NOT_AS_IS)
+    needs_revision = sum(1 for item in records if item.needs_another_revision is YesNo.YES)
+    mean_company_alignment = (sum(item.company_alignment for item in records) / total) if total else 0.0
+    mean_visual_quality = (sum(item.visual_quality for item in records) / total) if total else 0.0
+    distinct_jobs = len({item.job_id for item in records})
+
+    return FeedbackSummary(
+        total=total, accepted=accepted, rejected=total - accepted,
+        would_submit_yes=would_submit_yes, would_submit_no=would_submit_no,
+        would_submit_not_as_is=would_submit_not_as_is, needs_revision=needs_revision,
+        mean_company_alignment=mean_company_alignment, mean_visual_quality=mean_visual_quality,
+        distinct_jobs=distinct_jobs,
     )
