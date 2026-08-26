@@ -209,6 +209,8 @@ M8P-4 (2026-08-25) is COMPLETE offline. G2 is an anchored critic operating over 
 
 M8P-5 (2026-08-25) is COMPLETE offline. Tailored drafts now render deterministically through the selected LaTeX arm; rendered line counts and font geometries are measured from real PDF geometry post-render (`locate_text_lines`); `run_l7_tailored` runs all 11 base L7 checks plus 6 tailored checks. The S3 bundle's own G1 report correctly remains `render_line_check="pending"` because a pre-render gate cannot prove a rendered fact; the real verdict belongs only in `render_result.json`. Applications are published atomically to gitignored `applications/` with `render_result.json` written last as the commit marker. G3, the review packet, feedback capture, and both human pilots remain incomplete. Neither M8, Phase 3, nor any pilot is marked complete.
 
+M8P-6 Tasks 1–3 (2026-08-26) have landed on `main`, establishing the validated feedback record contract, immutable append-only storage (`data/feedback/`), and pure taste-candidate derivation. The review packet builder and CLI (Tasks 4–6) remain unimplemented, and the full M8P-6 milestone entry is deferred to the Tasks 4–6 closeout.
+
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from
