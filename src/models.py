@@ -7,6 +7,11 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from enum import StrEnum
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit
+
+
+class ManualUrlError(ValueError):
+    """Raised when a manual job URL is invalid or contains sensitive credentials."""
 
 
 class Status(StrEnum):
@@ -49,6 +54,7 @@ class DiscoveredJob:
     url: str
     source: str
     date_posted: str | None  # ISO date or None
+    identity_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -147,3 +153,192 @@ def clean_title(raw: str | None) -> str | None:
         if stripped == title or not stripped:
             return title
         title = stripped
+
+
+_SENSITIVE_PARAM_KEYS = frozenset({
+    "token",
+    "access_token",
+    "auth",
+    "authorization",
+    "api_key",
+    "apikey",
+    "secret",
+    "signature",
+    "session",
+    "sessionid",
+    "jwt",
+})
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def canonical_job_url(raw_url: str) -> str:
+    """Validate and deterministically canonicalize a job URL."""
+    if not isinstance(raw_url, str):
+        raise ManualUrlError("URL must be a string")
+    url = raw_url.strip()
+    if not url:
+        raise ManualUrlError("empty URL")
+
+    try:
+        parsed = urlsplit(url)
+    except Exception as exc:
+        raise ManualUrlError("malformed URL") from exc
+
+    scheme = parsed.scheme.lower()
+    if scheme not in ("http", "https"):
+        raise ManualUrlError("unsupported URL scheme (only http and https allowed)")
+
+    if not parsed.netloc:
+        raise ManualUrlError("missing hostname in URL")
+
+    # Reject embedded userinfo
+    if "@" in parsed.netloc or parsed.username or parsed.password:
+        host = parsed.hostname or "unknown"
+        raise ManualUrlError(f"embedded credentials not allowed for {host}")
+
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        raise ManualUrlError("missing hostname in URL")
+
+    # Port handling: omit default 80 for http and 443 for https
+    port = parsed.port
+    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        port = None
+
+    netloc_normalized = f"{hostname}:{port}" if port else hostname
+
+    # Path normalization: empty -> /, non-root trailing slash stripped
+    path = parsed.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+
+    # Query inspection & normalization
+    query_items = parse_qsl(parsed.query, keep_blank_values=True)
+    for key, _ in query_items:
+        if key.lower() in _SENSITIVE_PARAM_KEYS:
+            raise ManualUrlError(f"sensitive query parameter detected for {hostname}")
+
+    # Fragment inspection (for sensitive keys in query-like fragments)
+    fragment = parsed.fragment or ""
+    if fragment:
+        frag_query_part = fragment.split("?", 1)[-1] if "?" in fragment else fragment
+        for frag_k, _ in parse_qsl(frag_query_part, keep_blank_values=True):
+            if frag_k.lower() in _SENSITIVE_PARAM_KEYS:
+                raise ManualUrlError(f"sensitive parameter in URL fragment for {hostname}")
+
+    # Filter out marketing parameters
+    filtered_query = [
+        (k, v)
+        for k, v in query_items
+        if not (k.lower().startswith("utm_") or k.lower() in ("fbclid", "gclid"))
+    ]
+    filtered_query.sort(key=lambda item: (item[0], item[1]))
+    query_str = urlencode(filtered_query, doseq=False) if filtered_query else ""
+
+    result = f"{scheme}://{netloc_normalized}{path}"
+    if query_str:
+        result = f"{result}?{query_str}"
+    if fragment:
+        result = f"{result}#{fragment}"
+    return result
+
+
+def manual_url_dedup_key(raw_url: str) -> str:
+    """Return a deterministic 64-char hex SHA-256 digest for a manual URL."""
+    canonical = canonical_job_url(raw_url)
+    payload = f"manual-url-v1|{canonical}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def stable_posting_identity(raw_url: str) -> str | None:
+    """Extract a bounded, conservative requisition identity for recognized ATS/host patterns."""
+    if not raw_url or not isinstance(raw_url, str):
+        return None
+    try:
+        parsed = urlsplit(raw_url.strip())
+    except Exception:
+        return None
+
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return None
+
+    query_dict = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    # 1. gh_jid parameter on any host (wrappers/careers)
+    if "gh_jid" in query_dict:
+        gh_jid = query_dict["gh_jid"].strip()
+        if gh_jid.isdigit() and len(gh_jid) <= 30:
+            return f"greenhouse:{gh_jid}"
+
+    path = parsed.path or ""
+
+    # 2. Greenhouse board paths
+    if hostname in ("job-boards.greenhouse.io", "boards.greenhouse.io"):
+        m = re.match(r"^/([^/]+)/jobs/(\d+)(?:/|$)", path)
+        if m:
+            return f"greenhouse:{m.group(2)}"
+
+    # 3. Roblox careers paths
+    if hostname in ("careers.roblox.com", "roblox.com"):
+        m = re.match(r"^/jobs/(\d+)(?:/|$)", path)
+        if m:
+            return f"greenhouse:{m.group(1)}"
+
+    # 4. Ashby
+    if hostname == "jobs.ashbyhq.com":
+        m = re.match(r"^/([^/]+)/([^/]+)(?:/|$)", path)
+        if m:
+            org = unquote(m.group(1)).lower().strip()
+            jid = unquote(m.group(2)).lower().strip()
+            if org and jid and len(org) <= 100 and len(jid) <= 100:
+                return f"ashby:{org}:{jid}"
+
+    # 5. Lever
+    if hostname == "jobs.lever.co":
+        m = re.match(r"^/([^/]+)/([^/]+)(?:/|$)", path)
+        if m:
+            org = unquote(m.group(1)).lower().strip()
+            jid = unquote(m.group(2)).lower().strip()
+            if org and jid and len(org) <= 100 and len(jid) <= 100:
+                return f"lever:{org}:{jid}"
+
+    # 6. Workday (*.myworkdayjobs.com)
+    if hostname.endswith(".myworkdayjobs.com"):
+        parts = [unquote(p).lower().strip() for p in path.strip("/").split("/") if p]
+        if parts:
+            final_component = parts[-1]
+            if final_component and len(final_component) <= 150:
+                return f"workday:{hostname}:{final_component}"
+
+    # 7. Apple
+    if hostname == "jobs.apple.com":
+        m = re.search(r"/details/(\d+)(?:/|$)", path)
+        if m:
+            return f"apple:{m.group(1)}"
+
+    # 8. TikTok
+    if hostname in ("lifeattiktok.com", "www.lifeattiktok.com"):
+        m = re.search(r"/search/(\d+)(?:/|$)", path)
+        if m:
+            return f"tiktok:{m.group(1)}"
+
+    # 9. Revolut (final component ends with or is a UUID)
+    if hostname in ("www.revolut.com", "revolut.com"):
+        parts = [unquote(p).lower().strip() for p in path.strip("/").split("/") if p]
+        if parts:
+            m = re.search(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$", parts[-1], re.IGNORECASE)
+            if m:
+                return f"revolut:{m.group(1).lower()}"
+
+    return None
+
+
+def collision_dedup_key(semantic_key: str, posting_identity: str) -> str:
+    """Return a versioned 64-char SHA-256 digest combining semantic key and stable posting identity."""
+    payload = f"collision-v1|{semantic_key}|{posting_identity}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
