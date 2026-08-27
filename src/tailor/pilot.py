@@ -17,7 +17,7 @@ from src import db
 from src.profile import load_profile
 from src.tailor.alignment_view import alignment_from_profile
 from src.tailor.artifacts import write_json_atomic
-from src.tailor.feedback import DEFAULT_FEEDBACK_DIR, load_feedback_index
+from src.tailor.feedback import DEFAULT_FEEDBACK_DIR, load_feedback_index, parse_feedback_record, summarize_feedback
 from src.tailor.g1 import load_banned_terms
 from src.tailor.g2 import load_taste_lessons
 from src.tailor.g2_pipeline import G2OutcomeKind, g2_bundle_to_dict, parse_g2_bundle, run_g2_loop
@@ -836,3 +836,184 @@ def select_pilot_jobs(candidates: tuple[PilotCandidate, ...], count: int = 3) ->
 
     picks.sort(key=lambda c: c.job_id)
     return tuple(replace(candidate, reasons=tuple(reasons.get(candidate.job_id, ("selected",)))) for candidate in picks)
+
+
+# ---------------------------------------------------------------------------
+# Cost accounting and the acceptance gate (spec §3.5, §6). Read-only: every
+# figure here is aggregated from artifacts a run already wrote to disk --
+# a completed run_manifest.json, render_result.json, and feedback records --
+# never from re-invoking a stage.
+# ---------------------------------------------------------------------------
+
+import math
+
+
+@dataclass(frozen=True)
+class CostReport:
+    applications: int
+    total_model_calls: int
+    calls_by_stage: tuple[tuple[str, int], ...]
+    mean_calls_per_application: float
+    g2_round_distribution: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class GateCondition:
+    name: str
+    threshold: str
+    observed: str
+    passed: bool
+
+
+@dataclass(frozen=True)
+class GateReport:
+    conditions: tuple[GateCondition, ...]
+    passed: bool
+
+
+def _discover_run_manifests(root: Path) -> tuple[tuple[Path, RunManifest], ...]:
+    """Every application's own persisted run_manifest.json under `root`,
+    read purely as a completed run's report of what happened. This is not
+    the live skip/conflict authority Task 1 warns against trusting --
+    reporting on a finished run has nothing left to re-derive against. A
+    directory whose manifest is missing or unparseable is silently excluded
+    rather than crashing the report."""
+    found: list[tuple[Path, RunManifest]] = []
+    for manifest_path in sorted(Path(root).rglob("run_manifest.json")):
+        raw = _read_json_or_none(manifest_path)
+        if raw is None:
+            continue
+        try:
+            manifest = manifest_from_dict(raw)
+        except (PilotManifestError, KeyError, TypeError, ValueError):
+            continue
+        found.append((manifest_path.parent, manifest))
+    return tuple(found)
+
+
+def _stage_record_for(manifest: RunManifest, stage: Stage) -> StageRecord | None:
+    return next((record for record in manifest.stages if record.stage == stage), None)
+
+
+def cost_report(root: Path = APPLICATIONS_ROOT) -> CostReport:
+    runs = _discover_run_manifests(root)
+    applications = len(runs)
+    total_model_calls = sum(manifest.total_model_calls for _, manifest in runs)
+
+    calls_by_stage_totals: dict[str, int] = {}
+    for _, manifest in runs:
+        for record in manifest.stages:
+            calls_by_stage_totals[record.stage.value] = (
+                calls_by_stage_totals.get(record.stage.value, 0) + record.model_calls
+            )
+    calls_by_stage = tuple(sorted(calls_by_stage_totals.items()))
+    mean_calls_per_application = (total_model_calls / applications) if applications else 0.0
+
+    round_counts: dict[int, int] = {}
+    for directory, _ in runs:
+        raw_bundle = _read_json_or_none(directory / STAGE_ARTIFACT[Stage.G2])
+        if raw_bundle is None:
+            continue
+        try:
+            bundle = parse_g2_bundle(raw_bundle)
+        except (KeyError, TypeError, ValueError):
+            continue
+        round_counts[bundle.rounds_used] = round_counts.get(bundle.rounds_used, 0) + 1
+    g2_round_distribution = tuple(sorted(round_counts.items()))
+
+    return CostReport(
+        applications=applications, total_model_calls=total_model_calls, calls_by_stage=calls_by_stage,
+        mean_calls_per_application=mean_calls_per_application, g2_round_distribution=g2_round_distribution,
+    )
+
+
+def acceptance_gate(
+    root: Path = APPLICATIONS_ROOT,
+    feedback_dir: Path = Path("data/feedback"),
+    expected_runs: int = 3,
+) -> GateReport:
+    """The seven minimum conditions from design §6 for the user to consider
+    scaling past the pilot, each reporting its own threshold and observed
+    value. Failing any of them means fix and re-run the three, not proceed
+    with a caveat -- so `passed` is a strict conjunction, and no condition
+    is skipped just because an earlier one already failed."""
+    runs = _discover_run_manifests(root)
+    conditions: list[GateCondition] = []
+
+    reached_packet = sum(
+        1 for _, manifest in runs
+        if (record := _stage_record_for(manifest, Stage.G3)) is not None
+        and record.state in (StageState.COMPLETE, StageState.SKIPPED_COMPLETE)
+    )
+    conditions.append(GateCondition(
+        name="runs_reaching_packet",
+        threshold=f"{expected_runs} of {expected_runs}",
+        observed=f"{reached_packet} of {len(runs)}",
+        passed=len(runs) == expected_runs and reached_packet == expected_runs,
+    ))
+
+    l7_failure_total = 0
+    for directory, _ in runs:
+        raw_render = _read_json_or_none(directory / STAGE_ARTIFACT[Stage.RENDER])
+        if raw_render is None:
+            continue
+        try:
+            render_result = parse_render_result(raw_render)
+        except (KeyError, TypeError, ValueError):
+            continue
+        l7_failure_total += len(render_result.l7_violations)
+    conditions.append(GateCondition(
+        name="l7_failures", threshold="0", observed=str(l7_failure_total), passed=l7_failure_total == 0,
+    ))
+
+    # The feedback index's own "latest revision per (job_id, fingerprint)"
+    # dedup rule (feedback.py's store_feedback / summarize_feedback) is
+    # re-applied here rather than exposed as a public helper there, so
+    # unsupported_claims -- the one figure summarize_feedback does not
+    # already aggregate -- is counted over the exact same record set the
+    # rest of this gate uses.
+    entries = load_feedback_index(feedback_dir)
+    latest_by_key: dict[tuple[object, object], dict[str, object]] = {}
+    for entry in entries:
+        key = (entry["job_id"], entry["alignment_fingerprint"])
+        current = latest_by_key.get(key)
+        if current is None or entry["revision"] > current["revision"]:
+            latest_by_key[key] = entry
+    records = [
+        parse_feedback_record(json.loads(Path(entry["path"]).read_text(encoding="utf-8")))
+        for entry in latest_by_key.values()
+    ]
+    unsupported_total = sum(len(record.unsupported_claims) for record in records)
+    conditions.append(GateCondition(
+        name="unsupported_claims", threshold="0", observed=str(unsupported_total),
+        passed=unsupported_total == 0,
+    ))
+
+    summary = summarize_feedback(feedback_dir)
+    min_would_submit_yes = math.ceil(2 * expected_runs / 3)
+    conditions.append(GateCondition(
+        name="would_submit_yes",
+        threshold=f">= {min_would_submit_yes} of {expected_runs}",
+        observed=f"{summary.would_submit_yes} of {summary.total}",
+        passed=summary.would_submit_yes >= min_would_submit_yes,
+    ))
+
+    max_needs_revision = expected_runs // 3
+    conditions.append(GateCondition(
+        name="needs_another_revision",
+        threshold=f"<= {max_needs_revision} of {expected_runs}",
+        observed=f"{summary.needs_revision} of {summary.total}",
+        passed=summary.needs_revision <= max_needs_revision,
+    ))
+
+    conditions.append(GateCondition(
+        name="mean_visual_quality", threshold=">= 2.0",
+        observed=f"{summary.mean_visual_quality:.2f}", passed=summary.mean_visual_quality >= 2.0,
+    ))
+
+    conditions.append(GateCondition(
+        name="mean_company_alignment", threshold=">= 2.0",
+        observed=f"{summary.mean_company_alignment:.2f}", passed=summary.mean_company_alignment >= 2.0,
+    ))
+
+    return GateReport(conditions=tuple(conditions), passed=all(condition.passed for condition in conditions))

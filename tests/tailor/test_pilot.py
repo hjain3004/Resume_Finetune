@@ -555,3 +555,195 @@ def test_selection_is_read_only(seeded_conn, db_checksum_for_conn):
     before = db_checksum_for_conn()
     eligible_candidates(seeded_conn)
     assert db_checksum_for_conn() == before
+
+
+# ---------------------------------------------------------------------------
+# Task 4: cost accounting and the acceptance gate
+# ---------------------------------------------------------------------------
+from src.tailor.pilot import (  # noqa: E402
+    CostReport,
+    GateCondition,
+    GateReport,
+    StageRecord,
+    RunManifest,
+    acceptance_gate,
+    cost_report,
+)
+from src.tailor.feedback import parse_feedback_form, store_feedback  # noqa: E402
+from src.tailor.publish import application_dir, render_result_to_dict  # noqa: E402
+from tests.fixtures.tailor.m8p6_forms import form  # noqa: E402
+
+
+def _cost_stage_record(stage, model_calls, complete=True):
+    return StageRecord(
+        stage=stage, state=StageState.COMPLETE if complete else StageState.PENDING,
+        outcome_kind="complete" if complete else "pending",
+        artifact_path=None, model_calls=model_calls if complete else 0,
+        trace_paths=(), started_at="t0", ended_at="t1", error=None,
+    )
+
+
+def _write_run(directory: Path, *, job_id, company, title, fingerprint,
+                g2_rounds=1, g3_reached=True, l7_violations=()):
+    directory.mkdir(parents=True, exist_ok=True)
+    calls = {Stage.PREPARE: 0, Stage.S1: 1, Stage.S0: 1, Stage.S2: 1,
+             Stage.S3: 1, Stage.G2: g2_rounds, Stage.RENDER: 0, Stage.G3: 0}
+    stages = tuple(
+        _cost_stage_record(stage, calls[stage], complete=(stage != Stage.G3 or g3_reached))
+        for stage in STAGE_ORDER
+    )
+    manifest = RunManifest(
+        schema_version=MANIFEST_SCHEMA, job_id=job_id, company=company, title=title,
+        alignment_fingerprint=fingerprint, stages=stages,
+        total_model_calls=sum(record.model_calls for record in stages),
+        db_mutations=0, submissions=0,
+    )
+    (directory / "run_manifest.json").write_text(json.dumps(manifest_to_dict(manifest)), encoding="utf-8")
+
+    render_result = RenderResult(
+        schema_version="m8p5.render_result.v1", job_id=job_id, company=company, title=title,
+        alignment_fingerprint=fingerprint, s3_bundle_schema_version="m8p3r.s3_bundle.v1",
+        source_path=f"{directory}/resume.tex", pdf_path=f"{directory}/resume.pdf",
+        pdf_sha256="a" * 64, page_count=1, size_bytes=1000,
+        modified_bullet_ids=("b1",), modified_bullet_line_counts=(("b1", 2),),
+        l7_violations=tuple(l7_violations), render_line_check="pass",
+    )
+    (directory / "render_result.json").write_text(json.dumps(render_result_to_dict(render_result)), encoding="utf-8")
+    return manifest
+
+
+_PILOT_SPECS = (
+    dict(job_id=119, company="Cisco", title="Engineer", fingerprint="fp119"),
+    dict(job_id=213, company="Citadel Securities", title="Engineer", fingerprint="fp213"),
+    dict(job_id=225, company="Notion", title="Engineer", fingerprint="fp225"),
+)
+
+
+def _build_pilot_root(tmp_path, overrides=None):
+    overrides = overrides or {}
+    root = tmp_path / "applications"
+    for index, spec in enumerate(_PILOT_SPECS):
+        spec = {**spec, **overrides.get(index, {})}
+        directory = application_dir(root, spec["company"], spec["title"])
+        _write_run(directory, **spec)
+    return root
+
+
+@pytest.fixture
+def three_completed_applications(tmp_path):
+    return _build_pilot_root(tmp_path)
+
+
+@pytest.fixture
+def pilot_root(tmp_path):
+    return _build_pilot_root(tmp_path)
+
+
+@pytest.fixture
+def pilot_root_incomplete(tmp_path):
+    return _build_pilot_root(tmp_path, overrides={2: {"g3_reached": False}})
+
+
+@pytest.fixture
+def pilot_root_with_l7_failure(tmp_path):
+    return _build_pilot_root(tmp_path, overrides={0: {"l7_violations": ("line 12 exceeds the L7 bound",)}})
+
+
+_UNSUPPORTED_BULLET_TEXT = "Cut p99 latency 40% by sharding the write path"
+
+
+def _write_feedback_record(feedback_dir, *, job_id, fingerprint, would_submit="yes",
+                            needs_another_revision="no", company_alignment=3, visual_quality=3,
+                            unsupported_claims=()):
+    record = parse_feedback_form(
+        form(job_id=job_id, alignment_fingerprint=fingerprint, would_submit=would_submit,
+             needs_another_revision=needs_another_revision, company_alignment=company_alignment,
+             visual_quality=visual_quality, unsupported_claims=list(unsupported_claims)),
+        job_id=job_id, alignment_fingerprint=fingerprint,
+        changed_bullet_ids=frozenset({"b1"}), bullet_plain_text_by_id={"b1": _UNSUPPORTED_BULLET_TEXT},
+    )
+    store_feedback(record, feedback_dir=feedback_dir)
+
+
+@pytest.fixture
+def good_feedback(tmp_path):
+    feedback_dir = tmp_path / "feedback"
+    _write_feedback_record(feedback_dir, job_id=119, fingerprint="fp119", would_submit="yes")
+    _write_feedback_record(feedback_dir, job_id=213, fingerprint="fp213", would_submit="yes")
+    _write_feedback_record(feedback_dir, job_id=225, fingerprint="fp225", would_submit="no")
+    return feedback_dir
+
+
+@pytest.fixture
+def feedback_with_one_unsupported_claim(tmp_path):
+    feedback_dir = tmp_path / "feedback"
+    _write_feedback_record(
+        feedback_dir, job_id=119, fingerprint="fp119",
+        unsupported_claims=[{"bullet_id": "b1", "quoted_text": "p99 latency", "why": "never measured"}],
+    )
+    _write_feedback_record(feedback_dir, job_id=213, fingerprint="fp213")
+    _write_feedback_record(feedback_dir, job_id=225, fingerprint="fp225")
+    return feedback_dir
+
+
+@pytest.fixture
+def feedback_one_yes(tmp_path):
+    feedback_dir = tmp_path / "feedback"
+    _write_feedback_record(feedback_dir, job_id=119, fingerprint="fp119", would_submit="yes")
+    _write_feedback_record(feedback_dir, job_id=213, fingerprint="fp213", would_submit="no")
+    _write_feedback_record(feedback_dir, job_id=225, fingerprint="fp225", would_submit="not_as_is")
+    return feedback_dir
+
+
+@pytest.fixture
+def feedback_two_revisions(tmp_path):
+    feedback_dir = tmp_path / "feedback"
+    _write_feedback_record(feedback_dir, job_id=119, fingerprint="fp119", needs_another_revision="yes")
+    _write_feedback_record(feedback_dir, job_id=213, fingerprint="fp213", needs_another_revision="yes")
+    _write_feedback_record(feedback_dir, job_id=225, fingerprint="fp225", needs_another_revision="no")
+    return feedback_dir
+
+
+def test_cost_report_aggregates_manifests(three_completed_applications):
+    report = cost_report(three_completed_applications)
+    assert report.applications == 3
+    assert report.total_model_calls == sum(n for _, n in report.calls_by_stage)
+    assert 5.0 <= report.mean_calls_per_application <= 7.0
+
+
+def test_gate_fails_on_any_unsupported_claim(pilot_root, feedback_with_one_unsupported_claim):
+    report = acceptance_gate(pilot_root, feedback_with_one_unsupported_claim)
+    condition = next(c for c in report.conditions if c.name == "unsupported_claims")
+    assert not condition.passed and not report.passed
+
+
+def test_gate_fails_when_fewer_than_two_would_submit(pilot_root, feedback_one_yes):
+    assert not acceptance_gate(pilot_root, feedback_one_yes).passed
+
+
+def test_gate_fails_on_any_l7_failure(pilot_root_with_l7_failure, good_feedback):
+    assert not acceptance_gate(pilot_root_with_l7_failure, good_feedback).passed
+
+
+def test_gate_fails_when_more_than_one_needs_revision(pilot_root, feedback_two_revisions):
+    assert not acceptance_gate(pilot_root, feedback_two_revisions).passed
+
+
+def test_gate_fails_when_a_run_did_not_reach_a_packet(pilot_root_incomplete, good_feedback):
+    assert not acceptance_gate(pilot_root_incomplete, good_feedback).passed
+
+
+def test_gate_passes_only_when_every_condition_passes(pilot_root, good_feedback):
+    report = acceptance_gate(pilot_root, good_feedback)
+    assert report.passed and all(c.passed for c in report.conditions)
+
+
+def test_gate_reports_observed_values_for_every_condition(pilot_root, good_feedback):
+    assert all(c.observed for c in acceptance_gate(pilot_root, good_feedback).conditions)
+
+
+def test_gate_and_cost_are_read_only(pilot_root, good_feedback):
+    before = sorted(str(p) for p in pilot_root.rglob("*"))
+    acceptance_gate(pilot_root, good_feedback)
+    cost_report(pilot_root)
+    assert sorted(str(p) for p in pilot_root.rglob("*")) == before
