@@ -215,7 +215,7 @@ def test_finalize_run_logs_but_does_not_raise_if_browser_close_fails(caplog):
 def test_main_finalizes_run_as_aborted_when_resolution_is_interrupted(tmp_path):
     db_path = str(tmp_path / "jobs.db")
 
-    def _fake_run_resolution(conn, session, *, browser_backend, resolve_limit, browser_client, summary):
+    def _fake_run_resolution(conn, session, *, browser_backend="off", resolve_limit=None, browser_client=None, summary=None, **kwargs):
         summary.record(
             {"id": 1, "url": "https://boards.greenhouse.io/acme/jobs/1", "source": "tracker_vansh"},
             ResolutionOutcome.resolved(ResolvedJD("jd", "greenhouse")),
@@ -296,7 +296,7 @@ def test_resolve_only_unknown_location_reaches_resolver(tmp_path):
 
     called = {"resolution": False}
 
-    def _fake_resolution(conn, session, *, browser_backend, resolve_limit, browser_client, summary):
+    def _fake_resolution(conn, session, *, browser_backend="off", resolve_limit=None, browser_client=None, summary=None, **kwargs):
         called["resolution"] = True
         return summary
 
@@ -358,3 +358,113 @@ def test_main_completed_run_has_run_outcome_completed_without_discovery_issues_k
     assert notes["run_outcome"] == "completed"
     assert "discovery_issues" not in notes
     assert "fatal_error" not in notes
+
+
+# --- M6.14: CLI Targeted Resolution & Fail-Closed Integration Tests ---
+
+def test_build_parser_accepts_resolve_job_id_flags():
+    parser = run_ingest.build_parser()
+    args = parser.parse_args(["--resolve-only", "--resolve-job-id", "10", "--resolve-job-id", "20"])
+    assert args.resolve_job_ids == [10, 20]
+
+
+def test_main_rejects_resolve_job_id_without_resolve_only(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-job-id", "1"])
+    assert exit_code == 1
+    assert not (tmp_path / "jobs.db").exists()
+
+
+def test_main_rejects_resolve_job_id_with_discover_only(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--discover-only", "--resolve-job-id", "1"])
+    assert exit_code == 1
+
+
+def test_main_rejects_resolve_job_id_with_source(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--source", "tracker_vansh", "--resolve-job-id", "1"])
+    assert exit_code == 1
+
+
+def test_main_rejects_resolve_job_id_with_resolve_limit(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--resolve-limit", "5", "--resolve-job-id", "1"])
+    assert exit_code == 1
+
+
+def test_main_rejects_duplicate_resolve_job_id(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--resolve-job-id", "1", "--resolve-job-id", "1"])
+    assert exit_code == 1
+
+
+def test_main_targeted_fails_closed_when_job_id_not_found(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    conn = db.get_connection(db_path)
+    db.insert_discovered(conn, [DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/1", "tracker_vansh", None)])
+    conn.close()
+
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--resolve-job-id", "1", "--resolve-job-id", "999"])
+    assert exit_code == 1
+    conn = db.get_connection(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
+
+
+def test_main_targeted_fails_closed_when_job_id_not_discovered(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    conn = db.get_connection(db_path)
+    db.insert_discovered(conn, [DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/1", "tracker_vansh", None)])
+    conn.execute("UPDATE jobs SET status = 'FILTERED_OUT' WHERE id = 1")
+    conn.commit()
+    conn.close()
+
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--resolve-job-id", "1"])
+    assert exit_code == 1
+    conn = db.get_connection(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
+
+
+def test_main_targeted_resolves_only_targeted_ids_and_scoped_gates(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    conn = db.get_connection(db_path)
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("Job1", "SWE", "Remote", "https://example.com/1", "tracker_vansh", None),
+            DiscoveredJob("Job2", "SWE", "Remote - Canada", "https://example.com/2", "tracker_vansh", None),
+            DiscoveredJob("Job3", "SWE", "Remote", "https://example.com/3", "tracker_vansh", None),
+        ],
+    )
+    conn.close()
+
+    def _fake_resolve(url, session, **kwargs):
+        return ResolvedJD(f"JD for {url}. We are unable to sponsor visas.", "greenhouse")
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_fake_resolve):
+        exit_code = run_ingest.main(
+            ["--db", db_path, "--resolve-only", "--resolve-job-id", "2", "--resolve-job-id", "3"]
+        )
+
+    assert exit_code == 0
+    conn = db.get_connection(db_path)
+    # Job 1 was not targeted, so it remains DISCOVERED with no attempts
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["status"] == Status.DISCOVERED
+    assert row1["jd_text"] is None
+
+    # Job 2 was prefiltered (Canada)
+    row2 = conn.execute("SELECT * FROM jobs WHERE id = 2").fetchone()
+    assert row2["status"] == Status.FILTERED_OUT
+    assert row2["filter_reason"] == "eligibility:country"
+
+    # Job 3 was resolved, then postfiltered (no visa sponsorship)
+    row3 = conn.execute("SELECT * FROM jobs WHERE id = 3").fetchone()
+    assert row3["status"] == Status.FILTERED_OUT
+    assert row3["filter_reason"] == "eligibility:work_authorization"
+
+    # Run record was created
+    run_row = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+    assert run_row["finished_at"] is not None
+    assert run_row["resolved"] == 1
+

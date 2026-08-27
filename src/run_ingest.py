@@ -58,6 +58,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="cap the number of DISCOVERED rows attempted this run, ordered by id "
         "(M6.10; independent of --limit, which caps discovery insertions)",
     )
+    parser.add_argument(
+        "--resolve-job-id",
+        type=_positive_int,
+        action="append",
+        dest="resolve_job_ids",
+        metavar="ID",
+        help="Resolve only specific DISCOVERED job IDs (repeatable, requires --resolve-only)",
+    )
     parser.add_argument("--db", metavar="PATH", default="data/jobs.db", help="path to the SQLite database")
     parser.add_argument(
         "--snapshot-dir",
@@ -450,7 +458,33 @@ def main(argv: list[str] | None = None) -> int:
     browser_backend = load_browser_backend()
 
     db_path = ":memory:" if args.dry_run else args.db
+    if args.resolve_job_ids:
+        if not args.resolve_only:
+            logger.error("--resolve-job-id requires --resolve-only")
+            return 1
+        if args.discover_only:
+            logger.error("--resolve-job-id cannot combine with --discover-only")
+            return 1
+        if args.source:
+            logger.error("--resolve-job-id cannot combine with --source")
+            return 1
+        if args.resolve_limit is not None:
+            logger.error("--resolve-job-id cannot combine with --resolve-limit")
+            return 1
+        if len(args.resolve_job_ids) != len(set(args.resolve_job_ids)):
+            logger.error("duplicate --resolve-job-id values provided")
+            return 1
+
+    target_ids = tuple(args.resolve_job_ids) if args.resolve_job_ids else None
     conn = db.get_connection(db_path)
+    if target_ids is not None:
+        try:
+            db.require_rows_by_ids_status(conn, target_ids, Status.DISCOVERED)
+        except db.TargetSelectionError as exc:
+            logger.error("target validation failed: %s", exc)
+            conn.close()
+            return 1
+
     run_id = db.start_run(conn)
 
     new_count = 0
@@ -513,11 +547,18 @@ def main(argv: list[str] | None = None) -> int:
         checkpoint_failed = any(issue.stage == "checkpoint" for issue in discovery_issues)
 
         if not args.discover_only:
-            pre_summary = prefilter.run_pre_resolution_gate(conn, eligibility_config)
+            pre_summary = prefilter.run_pre_resolution_gate(
+                conn, eligibility_config, job_ids=target_ids
+            )
             eligibility_summary["pre_resolution"] = pre_summary
             filtered_count += pre_summary.filtered
 
-            if db.eligibility_rows(conn, Status.DISCOVERED):
+            has_rows_to_resolve = (
+                bool(db.rows_by_ids_status(conn, target_ids, Status.DISCOVERED))
+                if target_ids is not None
+                else bool(db.eligibility_rows(conn, Status.DISCOVERED))
+            )
+            if has_rows_to_resolve:
                 session = PoliteSession()
                 browser_client = _build_tier2_client(
                     browser_backend,
@@ -531,12 +572,15 @@ def main(argv: list[str] | None = None) -> int:
                     session,
                     browser_backend=browser_backend,
                     resolve_limit=args.resolve_limit,
+                    job_ids=target_ids,
                     browser_client=browser_client,
                     summary=resolution_summary,
                 )
             print(f"Resolved {resolution_summary.resolved} job(s), {resolution_summary.content_failed} failed.")
 
-            post_summary = prefilter.run_post_resolution_gate(conn, eligibility_config)
+            post_summary = prefilter.run_post_resolution_gate(
+                conn, eligibility_config, job_ids=target_ids
+            )
             eligibility_summary["post_resolution"] = post_summary
             filtered_count += post_summary.filtered
             print(f"Filtered out {filtered_count} job(s).")
