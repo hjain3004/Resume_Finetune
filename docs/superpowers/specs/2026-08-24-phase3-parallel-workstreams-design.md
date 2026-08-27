@@ -76,8 +76,15 @@ status counts:  FILTERED_OUT 669 | RESOLVED 273 | DISCOVERED 260 |
 
 Of the 36 `SHORTLISTED` rows, **16 carry `jd_quality='ats'`** — the only rows
 `prepare_tailoring_request()` accepts. Job 279 (Quantcast) is prohibited by the
-Phase 2 closure, leaving 15. Those 15 rows collapse to **eight distinct job
-descriptions**:
+Phase 2 closure, leaving 15. Those 15 rows collapse to **eleven distinct job descriptions** under the exact
+SHA-256-of-normalised-`jd_text` grouping the M8P-7 design specifies.
+
+**Correction (2026-08-25):** this section originally said "eight". That figure was
+derived by eyeballing `jd_text` lengths, which wrongly merged Cisco 119/164 (13,445 vs
+13,556 bytes), Notion 225/248 (7,493 vs 7,287), and Palantir's two sub-clusters (4,266
+vs 4,268). Exact hashing yields eleven groups: 119 | 164 | 205+875+876 | 211 |
+213+883 | 225 | 233 | 248 | 266 | 283 | 877+878. The D1 conclusion is unchanged —
+eleven is still far short of thirty — but the number below is the corrected grouping:
 
 | Distinct JD | Row ids | `base_variant` | `jd_text` length |
 |---|---|---|---|
@@ -92,8 +99,8 @@ descriptions**:
 
 Two consequences that no prior document records:
 
-1. **A 30-resume dry run cannot be sourced from the current shortlist.** Eight
-   distinct eligible JDs exist. Reaching thirty requires promoting new rows, which
+1. **A 30-resume dry run cannot be sourced from the current shortlist.** Eleven
+   distinct eligible JDs exist (corrected from eight; see above). Reaching thirty requires promoting new rows, which
    requires running the existing Phase 2 scoring chain (`scripts/export_batch.py` →
    `scripts/score_batch.py` → `scripts/import_scores.py`) over some of the 273
    `RESOLVED` rows. `import_scores.py` **writes to SQLite**. That is a database
