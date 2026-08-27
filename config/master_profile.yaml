@@ -35,7 +35,7 @@
 # =============================================================================
 
 schema_version: "0.3.0"
-last_updated: "2026-07-30"
+last_updated: "2026-08-27"
 
 # -----------------------------------------------------------------------------
 # ATS policy -- derived from ATS_Guide_and_Optimization_Checklist.md
@@ -89,7 +89,7 @@ skills:
   ai_and_machine_learning: ["LLM Integration", "Prompt Engineering", "AI Agent Design", "Structured Output Parsing"]
   languages: ["Java", "Python", "C++", "SQL"]
   frameworks: ["Spring Boot", "Spring MVC (REST)", "FastAPI", "JUnit", "Mockito"]
-  libraries: ["Apache Kafka", "Elasticsearch", "PyTorch", "scikit-learn", "XGBoost", "PySpark"]
+  libraries: ["Apache Kafka", "RabbitMQ", "Elasticsearch", "PyTorch", "scikit-learn", "XGBoost", "PySpark"]
   apis_and_standards: ["REST", "JSON", "OpenAPI/Swagger", "OAuth2/JWT", "HTTP"]
   developer_tools: ["Jenkins", "Maven", "Docker", "Git/GitHub", "Bitbucket", "Postman", "OpenShift (OCP)", "SonarQube", "IntelliJ"]
   databases: ["PostgreSQL", "Couchbase (SDK, N1QL)", "SQL (RDBMS)"]
@@ -103,13 +103,13 @@ base_variants:
     bullet_order:
       - int_b1
       - int_b2
+      - int_b9
       - int_b3
       - am_b00_order_management_domain
       - am_b04_data_retention
       - am_b05_test_automation
       - am_b03_audit_trail
       - am_b01_dlq_consolidation
-      - am_b02_row_level_entitlement
       - ct_b1
       - ct_b2
       - cm_b1
@@ -1707,47 +1707,61 @@ experience:
       above Amdocs.
     status: ongoing
 
-    role: "Built the anti-corruption layer between Gulf African Bank and its third-party providers"
+    role: "Built the customer-onboarding integration layer between Gulf African Bank and its third-party providers, and the Core orchestration and audit plane above it"
     ownership_boundary: >-
-      CONFIRMED BY HIMANSHU 2026-07-30: the role's scope WAS the anti-corruption
-      layer - the four adapter services standing between the bank and its external
-      providers. That is the whole assignment, so "built" is accurate for the ACL
-      itself. NOT his: GAB's core banking platform, the SCAPI ESB, the digital
-      channels calling in (portals, USSD, mobile), or any third-party system on the
-      far side. If asked "what was yours?", the answer is the integration layer and
-      nothing on either side of it.
+      CONFIRMED BY HIMANSHU 2026-07-30 and EXTENDED 2026-08-27: the original scope
+      was the anti-corruption layer - the four adapter services standing between the
+      bank and its external providers - and the work then extended upward into the
+      Core onboarding service, the single internal entry point that orchestrates
+      three of those adapters and owns the audit trail for the onboarding flow. Both
+      halves are his, so "built" is accurate for the integration layer and for Core.
+      NOT his: GAB's core banking platform, the SCAPI ESB, the digital channels
+      calling in (portals, USSD, mobile), or any third-party system on the far side.
+      If asked "what was yours?", the answer is everything between the calling
+      channel and the provider boundary, and nothing on either side of it.
     scope_line: >-
       Built the anti-corruption layer between Gulf African Bank's core systems and
       four external providers - a telecom SMS and email gateway, the PesaLink
       real-time interbank transfer network, Kenya's IPRS national identity
       registry, and the Infrasoft OMNIEnterprise AML sanctions-screening service -
-      as four asynchronous Python microservices.
+      then designed the Core onboarding service above it: the single internal entry
+      point that opens an onboarding case, dispatches the right adapter
+      asynchronously, and is the system of record for every check the bank runs on a
+      new customer. Five asynchronous Python microservices in total.
 
     tech:
       primary: ["Python 3.12", "FastAPI", "async SQLAlchemy 2.0", "Pydantic v2", "PostgreSQL"]
-      secondary: ["HTTPX", "RabbitMQ (aio-pika)", "lxml", "structlog", "pytest", "respx",
-                  "Docker", "Docker Compose", "GitLab CI", "uv"]
+      secondary: ["HTTPX", "RabbitMQ (aio-pika)", "asyncpg", "lxml", "structlog", "pytest",
+                  "respx", "Docker", "Docker Compose", "GitLab CI", "uv"]
       tech_line: "Python, FastAPI, SQLAlchemy 2.0, Pydantic v2, PostgreSQL, RabbitMQ, Docker, GitLab CI"
 
     keywords:
       exact: ["Python", "FastAPI", "SQLAlchemy", "Pydantic", "PostgreSQL", "REST API",
-              "SOAP", "XML", "RabbitMQ", "Docker", "GitLab CI", "CI/CD", "pytest",
-              "async", "asyncio", "microservices", "webhooks", "HMAC", "idempotency",
-              "rate limiting", "audit trail", "AML", "KYC", "OFAC", "sanctions screening"]
+              "SOAP", "XML", "RabbitMQ", "Docker", "Docker Compose", "GitLab CI", "CI/CD",
+              "pytest", "async", "asyncio", "microservices", "webhooks", "HMAC",
+              "idempotency", "rate limiting", "audit trail", "AML", "KYC", "OFAC",
+              "sanctions screening", "transactional outbox", "dead-letter queue",
+              "message queue", "caching", "publisher confirms"]
       topical: ["payments", "real-time payments", "interbank transfer", "core banking",
                 "enterprise service bus", "anti-corruption layer", "domain-driven design",
                 "event sourcing", "exactly-once semantics", "fail-closed design",
                 "distributed systems", "PII redaction", "secrets management",
                 "XML injection", "strangler fig migration", "identity verification",
-                "regulatory compliance", "fintech"]
+                "regulatory compliance", "fintech", "service orchestration",
+                "event-driven architecture", "at-least-once delivery", "deduplication",
+                "customer onboarding", "KYC onboarding",
+                "segregation of duties", "network isolation", "data minimization", "auditability",
+                "outbox pattern", "backpressure", "worker lease"]
 
     scale:
-      services: 4
-      app_loc: 5900
-      test_loc: 4100
-      automated_tests: 233
+      services: 5
+      adapter_services: 4
+      orchestration_services: 1
+      app_loc: 8700
+      test_loc: 7720
+      automated_tests: 326
       postman_scenarios: 103
-      test_to_code_ratio: "~0.7:1"
+      test_to_code_ratio: "~0.9:1"
 
     # -------------------------------------------------------------------------
     # METRIC LEDGER
@@ -1757,24 +1771,34 @@ experience:
     # unverified     = asserted in a doc but not independently confirmed
     # -------------------------------------------------------------------------
     metric_ledger:
-      app_loc:            { value: "~5,900", provenance: counted, renderable: true }
-      test_loc:           { value: "~4,100", provenance: counted, renderable: true }
-      automated_tests:    { value: 233, provenance: counted, renderable: true, render_as: "230+" }
+      app_loc:            { value: "~8,700", provenance: counted, renderable: true, note: "RECOUNTED 2026-08-27: app/**/*.py across all five services - gab_sms 1365, gab_iprs 2251, PESALINK 2064, OMNI SCREENING 1299, audit/Core 1721. Supersedes the 2026-07-30 figure of ~5,900, which predated the Core service and later adapter work." }
+      test_loc:           { value: "~7,700", provenance: counted, renderable: true, note: "RECOUNTED 2026-08-27: tests/**/*.py - 1089 + 1280 + 1431 + 1651 + 2269. Excludes audit/tools/verify_final.py (513 lines), which is verification code but not a pytest suite." }
+      automated_tests:    { value: 326, provenance: counted, renderable: true, render_as: "320+", note: "COUNT ONLY. 2026-08-27 execution: audit/Core 69 passed, gab_iprs 61 passed, OMNI SCREENING 80 passed, PESALINK 61 passed + 1 skipped, gab_sms 55 passed. See tests_all_passing - the pass-rate claim stays PROHIBITED by Himanshu's decision." }
       postman_scenarios:  { value: 103, provenance: counted, renderable: true }
-      services:           { value: 4, provenance: counted, renderable: true }
+      services:           { value: 5, provenance: counted, renderable: true, note: "4 adapter services + 1 Core orchestration/audit service" }
+      core_commits:       { value: 20, provenance: counted, renderable: false, note: "audit repo, sole author hjain3004, 2026-08-07 to 2026-08-11 - attribution evidence, not a resume figure" }
+      integrated_services: { value: 21, provenance: counted, renderable: true, note: "Declared services across docker-compose.yml + docker-compose.integrated.yml (7 base + 14 net new); README states 21 containers. The 2026-08-12 verification report observed 20 running - render 21 as 'services', never as 'containers observed'." }
+      broker_queues:      { value: 6, provenance: counted, renderable: true, note: "core.response.v1 / core.audit.v1, each with .retry and .dlq, on one durable topic exchange" }
+      max_dispatch_attempts: { value: 5, provenance: counted, renderable: true, note: "then terminal DISPATCH_ABANDONED" }
+      response_allowlist_fields: { value: "7-8", provenance: counted, renderable: true, note: "iprs 7, pesalink 7, omni_screening 8" }
+      forbidden_pii_tokens: { value: 26, provenance: counted, renderable: true, note: "FORBIDDEN_STRINGS scanned across the whole verify_final evidence blob" }
+      auth_matrix_checks: { value: 9, provenance: counted, renderable: true, note: "3 adapters x {missing, invalid, valid} X-API-Key" }
+      e2e_scenarios:      { value: 6, provenance: counted, renderable: true, note: "verify_final.py: iprs success/business failure, omni clear/provider fault, pesalink success/provider failure" }
+      sensitive_field_tokens: { value: "31 + 11", provenance: counted, renderable: false, note: "heuristic scrubber token set and compound set in contracts.py - too granular to render" }
       pesalink_types:     { value: 8, provenance: counted, renderable: true, note: "4 PESALINK + 4 PESALINK_LOOKUP" }
       concurrency_fanout: { value: 8, provenance: counted, renderable: true, note: "8-way parallel duplicate harness" }
       webhook_attempts:   { value: 5, provenance: counted, renderable: true, note: "0s/10s/30s/2m/10m ladder" }
       caller_rate_limit:  { value: "600/min", provenance: configured, renderable: false, note: "CONFIGURED LIMIT, not observed throughput" }
       identity_rate_limit: { value: "20/min",  provenance: configured, renderable: false, note: "CONFIGURED LIMIT, per queried identity" }
       # PROHIBITED
-      tests_all_passing:  { value: null, provenance: unsourced, renderable: false, note: "test functions counted statically; suites never executed" }
+      tests_all_passing:  { value: null, provenance: none, renderable: false, note: "PROHIBITION RETAINED BY HIMANSHU 2026-08-27 despite new evidence. The suites WERE executed on 2026-08-27 in clean virtualenvs: audit/Core 69 passed, gab_iprs 61 passed, OMNI SCREENING 80 passed, PESALINK 61 passed + 1 skipped. gab_sms is NOT green - 55 passed, 2 failed (test_health_db_unreachable_returns_503, test_vendor_failure_then_retry_succeeds) and 3 collection errors in tests/concurrency_test.py, which is a live-server harness rather than a unit suite. Because one of five suites is red, no portfolio-wide pass claim renders. If gab_sms is fixed, revisit." }
       production_traffic: { value: null, provenance: none, renderable: false, note: "CONFIRMED BY HIMANSHU 2026-07-30: nothing deployed to production, no observed metrics of any kind exist" }
       # There are NO outcome metrics for this entry and there will not be any.
       # Every number here is a static count or a config value. The bullets carry
       # engineering substance instead, which is the correct trade for
       # pre-production work - do not attempt to manufacture impact figures.
       outcome_metrics:    { value: null, provenance: none, renderable: false }
+      dispatch_latency_local: { value: "~1.7s p50 before tuning the dispatcher poll interval from 1.0s to 0.2s", provenance: doc_backed, renderable: false, note: "Measured locally against mock providers only (comment in audit/app/config.py). Usable as an interview anecdote about finding polling cadence dominating end-to-end latency; NEVER renderable - it is not a production or load measurement." }
 
     bullets:
 
@@ -1786,26 +1810,39 @@ experience:
             Built the anti-corruption layer between Gulf African Bank's core systems
             and four external providers - a telecom messaging gateway, the PesaLink
             real-time interbank transfer network, Kenya's IPRS national identity
-            registry, and an AML sanctions-screening service - as four asynchronous
-            Python microservices (FastAPI, async SQLAlchemy 2.0, Pydantic v2,
-            PostgreSQL) sharing one standardized adapter architecture that isolates
-            every third-party quirk behind a single client boundary.
-          medium: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, national identity verification, and AML sanctions screening - as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)** on one standardized adapter architecture."
-          short: "Built the anti-corruption layer between a commercial bank and four external providers as four asynchronous Python microservices."
+            registry, and an AML sanctions-screening service - then designed the Core
+            onboarding service above it: a single internal front door that opens a
+            case, accepts a step invocation, returns 202 Accepted without blocking on
+            any third party, and dispatches the selected adapter out of band, making
+            one service the system of record for every check the bank runs on a new
+            customer. Five asynchronous Python services in all (FastAPI, async
+            SQLAlchemy 2.0, Pydantic v2, PostgreSQL, RabbitMQ) sharing one
+            standardized adapter architecture that isolates every third-party quirk
+            behind a single client boundary.
+          medium: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, identity verification, and AML sanctions screening - then the **Core onboarding service** above those four as the single front door and system of record: **five asynchronous Python microservices** (FastAPI, SQLAlchemy 2.0, PostgreSQL)."
+          short: "Built a commercial bank's customer-onboarding integration layer and the Core orchestration service above it, as five asynchronous Python microservices."
         evidence:
-          - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML)"
+          - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML); one Core onboarding service orchestrating three of them"
+          - "Core ingress: POST /v1/onboarding/cases then POST /v1/onboarding/cases/{id}/steps -> 202 Accepted; a database-backed dispatcher worker calls the adapter out of band"
           - "Shared layered architecture: HTTP middleware onion -> service layer -> domain (Pydantic/errors/config) -> data (async engine, append-only event log ORM)"
-          - "Each service isolates vendor quirks behind a single client class (ACL pattern); ~5,900 app LOC counted"
-        keywords_hit: ["Python", "FastAPI", "microservices", "PostgreSQL", "payments", "AML", "anti-corruption layer"]
+          - "Each service isolates vendor quirks behind a single client class (ACL pattern); ~8,700 app LOC counted across the five services on 2026-08-27"
+        keywords_hit: ["Python", "FastAPI", "microservices", "PostgreSQL", "RabbitMQ", "payments", "AML", "anti-corruption layer", "service orchestration", "customer onboarding"]
         defense: >-
-          The anti-corruption layer was the entire scope of the role, so "built" is
-          accurate. "Four external providers" describes what the layer connects
-          without implying ownership of the bank's core platform or the ESB.
+          The anti-corruption layer was the original scope and Core was designed on
+          top of it; both are authored end to end in Himanshu's repositories, so
+          "built" is accurate for each. "Four external providers" describes what the
+          layer connects without implying ownership of the bank's core platform or
+          the ESB. The bullet makes no deployment claim.
         interview_risk: |
           Naming the ACL pattern explicitly is worth it - it is Domain-Driven Design
           vocabulary and signals architectural literacy beyond "I built REST APIs".
           Be ready to define it: a translation boundary that keeps a foreign system's
           model and quirks from leaking into yours.
+          Have the two-layer story straight: four adapters translate one provider
+          each, and Core sits above them as the only door in. Know why SMS is
+          deliberately outside the Core flow - a notification is not a compliance
+          decision, so it needs no evidence trail (this is stated as a requirement in
+          the Core design doc, not a shortcut).
           Do NOT claim any deployment state. Nothing reached production; if asked,
           say so plainly.
 
@@ -2037,6 +2074,234 @@ experience:
           Also know the double-checked locking rationale: without it, N concurrent
           requests on a cold cache all trigger a token fetch (stampede).
 
+      - id: int_b9
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Designed and built the Core onboarding service, the single internal entry
+            point for Gulf African Bank's customer-onboarding checks: it opens a case,
+            commits step intent durably, returns 202 Accepted without ever blocking on
+            a third party, and hands off to a database-backed dispatcher worker that
+            claims pending work with a compare-and-swap lease, so exactly one worker
+            wins under concurrency and a crashed worker's lease expires and is
+            re-claimed rather than stranding the customer's step - with exponential
+            backoff and jitter across five attempts before a terminal
+            DISPATCH_ABANDONED state that surfaces as an operator queue instead of an
+            invisible infinite retry.
+          medium: "Designed the **Core onboarding orchestration service**, a bank's single internal entry point for onboarding checks: returns **202 Accepted** without blocking on any third party, handing off to a **database-leased dispatcher** where one worker wins under concurrency, crashed-worker leases are reclaimed, and backoff over five attempts ends in a terminal abandoned state."
+          short: >-
+            Built a Core onboarding orchestration service with a database-leased async
+            dispatcher: one winner under concurrency, crashed-worker leases reclaimed,
+            bounded backoff to a terminal state.
+        evidence:
+          - "app/dispatcher.py claim_pending_invocation: conditional UPDATE guarded on the row still being claimable, decided by rowcount, retried up to 3 times"
+          - "_claimable_invocation_clause re-claims PENDING, DISPATCHING past dispatch_lease_until, and DISPATCH_FAILED past next_attempt_at"
+          - "MAX_DISPATCH_ATTEMPTS = 5; backoff = base * 2**attempt + uniform(0, jitter); terminal state DISPATCH_ABANDONED"
+          - "tests/test_dispatcher.py: test_concurrent_dispatch_pending_once_claims_only_one_invocation, test_dispatch_pending_once_reclaims_expired_lease, test_full_retry_lifecycle_pending_to_abandoned, test_retry_reuses_idempotency_key"
+          - "request_payload cleared at DISPATCHED and DISPATCH_ABANDONED, bounding inbound-PII retention to the dispatch lifecycle (4 dedicated tests)"
+          - "Step idempotency at ingress: UNIQUE(onboarding_case_id, idempotency_key) with an IntegrityError fallback that returns the original invocation"
+        keywords_hit: ["distributed systems", "async", "asyncio", "PostgreSQL", "idempotency", "service orchestration", "FastAPI", "Python", "microservices", "worker lease", "customer onboarding"]
+        defense: >-
+          Code-read and test-backed. The Core repository is authored end to end by
+          Himanshu - 20 commits, sole author, 2026-08-07 to 2026-08-11 - so "designed
+          and built" is accurate. No deployment claim: the stack runs locally and in
+          an integrated Docker topology against mock providers.
+        interview_risk: |
+          The lease is the detail to lead with. Expect "why not SELECT then UPDATE?" -
+          the check-then-write race lets two workers read the same PENDING row; the
+          conditional UPDATE plus a rowcount check lets Postgres arbitrate and the
+          loser simply retries. Expect "why a database lease instead of a queue for
+          dispatch?" - the work item already exists in the database as durable intent,
+          so leasing that row avoids a second source of truth that can disagree with
+          it. Know why DISPATCH_ABANDONED is terminal and visible: a step that
+          silently retries forever is invisible to the operator who has to act on it.
+          Be ready to say plainly that this is a local and integrated-stack system
+          against mock providers, not production.
+
+      - id: int_b10
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Built the asynchronous result path end to end: each adapter commits its
+            business state and its outbox rows in a single transaction, a dedicated
+            publisher drains that outbox to RabbitMQ with publisher confirms, and two
+            Core consumers - one for operational response state, one for audit
+            evidence - deduplicate on an immutable event ID, verify that the broker
+            message ID matches the payload event ID, gate on schema version, and
+            commit before acknowledging, turning at-least-once delivery into
+            effectively-once consumption. Schema-invalid messages are rejected without
+            requeue to a dead-letter queue while transient database failures are
+            requeued, so bad data never blocks the queue and bad infrastructure is
+            retried, and a monotonic event-time guard stops a late-arriving stale
+            event from overwriting newer step state.
+          medium: "Built the **transactional-outbox** result path: adapters commit business state and outbox rows atomically, a publisher drains them to **RabbitMQ with publisher confirms**, and two Core consumers **deduplicate on immutable event IDs** and commit before ack, making at-least-once delivery effectively-once. Poison messages dead-letter; transient faults requeue."
+          short: >-
+            Built a transactional-outbox path over RabbitMQ with publisher confirms and
+            deduplicating consumers, making at-least-once delivery effectively-once,
+            with dead-lettering for poison messages.
+        evidence:
+          - "app/outbox.py enqueue_events adds outbox rows to the same session as the business write, so both commit or neither does"
+          - "app/outbox_publisher.py drains oldest-first over a channel opened with publisher_confirms=True; message_id = event_id, DeliveryMode.PERSISTENT, published_at watermark and attempt_count per row"
+          - "repositories.py _commit_idempotently: fetch-existing, insert, catch IntegrityError and re-read, backed by unique consumed_response_event / consumed_audit_event tables"
+          - "Consumers reject with requeue=False on JSON, validation, schema-version, or message_id mismatch (-> DLQ); requeue=True on SQLAlchemyError"
+          - "_upsert_step_state guards with WHERE current_event_at < event.occurred_at, so out-of-order delivery cannot regress state"
+          - "app/rabbitmq.py: one durable topic exchange onboarding.events with 6 queues - core.response.v1 and core.audit.v1, each with a .retry (x-message-ttl 5000, dead-letter return) and a .dlq - bound by wildcard so a new service needs no new binding"
+          - "tools/verify_final.py republishes a real response event twice against the live stack and asserts the response_delivery row count for that event_id stays 1"
+        keywords_hit: ["RabbitMQ", "event-driven architecture", "transactional outbox", "outbox pattern", "idempotency", "deduplication", "at-least-once delivery", "dead-letter queue", "distributed systems", "async", "publisher confirms"]
+        defense: >-
+          Every mechanism is code-read and test-covered, and the duplicate-delivery
+          assertion runs against the live integrated stack. LANGUAGE RULE: say
+          "at-least-once delivery with consumer-side deduplication", never
+          "exactly-once delivery" - the guarantee is at the consumer, not on the wire,
+          and an interviewer who knows the difference will test for it.
+        interview_risk: |
+          The outbox is the strongest single design answer in the portfolio. State the
+          failure it removes: an adapter cannot atomically write its own database and
+          publish to a broker, so save-then-publish loses the event on a crash and
+          publish-then-save announces a result that was never stored; writing the
+          result and the outbox row in one transaction makes the two agree by
+          construction. Then name the cost yourself - the publisher can resend, so
+          delivery is at-least-once and the consumers deduplicate on event ID.
+          Also flag unprompted: the retry queues are declared with TTL and dead-letter
+          return but nothing currently publishes into them, so delayed retry is
+          scaffolding rather than a live path. Volunteering that costs nothing and is
+          documented in the repo.
+          Know the two-failure-kinds rule cold: bad data is discarded to the DLQ so it
+          cannot block the queue, bad infrastructure is requeued and retried.
+
+      - id: int_b11
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Made the onboarding trail defensible to a regulator by splitting
+            operational state and audit evidence into two separate PostgreSQL
+            instances with separate credentials and no foreign keys across the
+            boundary, so the evidence store shares neither a failure domain nor a
+            compromise path with the system it audits; evidence rows are append-only
+            and carry the provider attempt and retry count, and intent is committed
+            before any provider call so a mid-flight crash still leaves durable proof
+            the check was attempted. Every provider response is narrowed to a fixed
+            per-service allowlist of seven to eight non-sensitive fields, enforced
+            inside the event contract itself as a validator on an immutable
+            extra-forbidden model, so an event carrying a prohibited field cannot be
+            constructed at all - an allowlist rather than a blocklist, because
+            blocklists leak the field nobody thought of.
+          medium: "Split operational state and audit evidence into **two PostgreSQL instances with separate credentials and no cross-store foreign keys**, so the evidence store shares no failure domain with the system it audits; evidence is append-only and intent is committed before every provider call. Narrowed provider responses to a **seven-field allowlist enforced inside the immutable event contract**."
+          short: >-
+            Segregated audit evidence into its own PostgreSQL instance with separate
+            credentials and no cross-store foreign keys, append-only, with a response
+            allowlist enforced in the event contract.
+        evidence:
+          - "Separate RESPONSE_DATABASE_URL and AUDIT_DATABASE_URL, separate engines and sessionmakers, separate declarative bases (ResponseBase / AuditBase); audit_evidence holds no FK into the response store"
+          - "contracts.py: _EventContext is extra='forbid', frozen=True; ResponseEvent.sanitized_response runs sanitize_core_response as a Pydantic field_validator"
+          - "_CORE_RESPONSE_ALLOWLISTS: iprs 7 fields, omni_screening 8, pesalink 7; a 31-token plus 11-compound heuristic scrubber with camelCase-boundary splitting is a second, independent layer"
+          - "Audit evidence retains audit_action, provider_attempt, retry_count and an external payload_reference - never the raw provider payload"
+          - "Allowlist re-applied on read in the case and activity APIs, so sanitization happens on write and again on read"
+          - "tests/test_audit_extensions.py::test_endpoints_never_leak_pii_or_request_payload; tests/test_contracts.py covers nested, list, financial and birthdate redaction"
+        keywords_hit: ["audit trail", "regulatory compliance", "PII redaction", "data minimization", "AML", "KYC", "PostgreSQL", "segregation of duties", "event sourcing", "fail-closed design"]
+        defense: >-
+          All controls are code-read and test-covered. DO NOT say "Core stores no
+          PII". Core deliberately retains the caller's inbound request payload while a
+          step is in flight, because the retry path has to re-send it; that column is
+          cleared once the step reaches a terminal dispatch state. The allowlist
+          covers provider responses coming back, not caller requests going in. Say
+          "pseudonymous, not PII-free" and say it unprompted.
+        interview_risk: |
+          Two lines to have ready. Why an allowlist and not a blocklist: a blocklist
+          fails open on the field nobody thought of, an allowlist fails closed. Why
+          enforcement lives in the contract rather than in each writer: every future
+          publisher inherits the guarantee, and there is no code path that can build a
+          non-compliant event and reach the broker.
+          Expect "so is Core PII-free?" - answer pseudonymous, not PII-free, and walk
+          the request_payload lifecycle: retained for retry, cleared at terminal
+          dispatch state, never returned by a case API, never rendered in the
+          dashboard, never published to the broker, never in audit evidence.
+          Expect "why two databases?" - the auditor should not share a credential or a
+          failure domain with the thing it audits; if the response store is corrupted
+          or compromised, the evidence trail is independent.
+
+      - id: int_b12
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Wrote an end-to-end verification harness that exercises the running
+            21-service integrated stack and emits a timestamped JSON evidence file
+            only after every assertion passes: six success and deliberately triggered
+            failure scenarios across the three orchestrated adapters, proof that every
+            adapter API, provider mock, and adapter database is unreachable from the
+            host, a nine-case authentication matrix run from inside the container
+            network asserting 401 for missing and invalid API keys and 2xx for the
+            valid one, a live duplicate-event republish proving consumer
+            deduplication, zero-depth checks on all six broker queues with live
+            consumers attached, and a twenty-six-token scan for prohibited identity
+            fields across the whole evidence document - backed in the unit suite by a
+            compose guard that fails the build if an adapter host port is ever
+            reintroduced.
+          medium: "Wrote an **end-to-end verification harness** over a running 21-service integrated stack: six success and failure scenarios across three adapters, proof that every adapter is **unreachable from the host**, a nine-case API-key auth matrix, a live duplicate-event replay proving deduplication, zero dead-letter depth, and a **26-token prohibited-field scan** before it reports PASS."
+          short: >-
+            Wrote an end-to-end verification harness asserting network isolation, an
+            API-key auth matrix, duplicate-event deduplication, zero dead-letter depth,
+            and a prohibited-field scan.
+        evidence:
+          - "tools/verify_final.py, 513 lines; writes reports/evidence/verify_final_<epoch>.json only after every assertion passes"
+          - "Host-unreachability assertions on the adapter ports; in-network auth matrix of 3 adapters x {missing, invalid, valid} X-API-Key asserting 401/401/2xx"
+          - "SELECT count(*) FROM response_delivery WHERE external_reference LIKE 'direct-%' must be 0 - a direct adapter call must never produce a Core record"
+          - "Duplicate republish of a real event with message_id preserved, twice, then asserts the row count for that event_id is still 1"
+          - "All 6 queues present; .retry and .dlq depth 0; core.response.v1 and core.audit.v1 each with at least one live consumer"
+          - "FORBIDDEN_STRINGS: 26 provider-shaped field names and literal probe values scanned across the serialized evidence blob"
+          - "tests/test_compose_isolation.py fails if any service in docker-compose.integrated.yml declares host ports"
+          - "Dated verification reports with PASS verdicts and matching evidence filenames under audit_docs/reports/"
+        keywords_hit: ["test automation", "Docker", "Docker Compose", "CI/CD", "security", "authentication", "network isolation", "regulatory compliance", "pytest"]
+        defense: >-
+          Describes a harness that was written and run against a local integrated
+          stack with mock providers. It is not a production-readiness claim and not a
+          load test. The framing for the isolation guarantee is "network isolation
+          plus API-key authentication" - never "Docker networking makes it secure".
+        interview_risk: |
+          The line that lands: "for an audit service, trustworthy records are the
+          whole product, so verification has to produce its own evidence rather than a
+          green tick." Both the isolation guard and the direct-access assertion have
+          been observed failing under deliberately broken conditions, which is the
+          claim worth making - "we have a test that works", not "we have a test".
+          Have the process story ready, unprompted if the conversation allows: an
+          earlier verification report cited an evidence file that turned out not to
+          exist because the run had never happened; it was caught by checking the
+          cited path, and the rule since is that the evidence filename is copied from
+          a directory listing after the run, never written from memory. Volunteering
+          that is a stronger signal than any passing test.
+
+      - id: int_b13
+        claim_type: verified
+        priority: 3
+        phrasings:
+          medium: "Added a database-backed TTL response cache to the national identity adapter, keyed by a SHA-256 digest of canonical request content with credentials and per-request reference numbers deliberately excluded from the key, so repeat lookups inside the window are served without touching the government registry."
+          short: >-
+            Added a database-backed TTL response cache keyed by a SHA-256 digest of
+            canonical request content, sparing the national identity registry repeat
+            lookups inside the window.
+        evidence:
+          - "gab_iprs/app/services/response_cache.py: cache_key = SHA-256 over json.dumps({request_type, body}, sort_keys=True, separators=(',',':'))"
+          - "Credentials and external reference numbers are excluded from the key because they do not affect the IPRS result"
+          - "Lazy expiry on read plus a cleanup_expired sweep; TTL from settings.response_cache_ttl_seconds"
+          - "Cache hits surface downstream as response_origin=cache on the Core response event, so a cached answer is distinguishable in the audit trail"
+        keywords_hit: ["caching", "identity verification", "PostgreSQL", "Python", "audit trail"]
+        defense: >-
+          Code-read. NEVER claim a hit rate, a latency improvement, or a reduction in
+          provider calls - no measurement of any kind exists.
+        interview_risk: >-
+          The interesting part is what is deliberately NOT in the key: hashing the
+          credential block or the per-request reference number would make every
+          request a miss. Expect "why a database-backed cache instead of Redis?" - one
+          fewer system to operate at this volume, the cache survives restarts, and it
+          is shared across horizontally scaled instances for free. Also know why a
+          cached identity answer is still recorded as an auditable event with its
+          origin marked - a compliance record has to say whether the registry was
+          actually consulted.
+
     known_gaps:
       - id: int_gap_employer_and_dates
         severity: high
@@ -2096,11 +2361,99 @@ experience:
         fix: "Render only as limits. Never as observed load or capacity."
       - id: int_gap_tests_not_executed
         severity: medium
+        status: open
         detail: >-
-          233 is a static count of test functions. No suite was executed during the
-          source review, so "all tests passing" is unsubstantiated even though the
-          IPRS doc asserts its 52 pass.
-        fix: "Run all four suites and record the result, or omit any pass-rate claim."
+          SUPERSEDED 2026-08-27. All five suites were executed in clean virtualenvs:
+          audit/Core 69 passed, gab_iprs 61 passed, OMNI SCREENING 80 passed, PESALINK
+          61 passed with 1 skipped, gab_sms 55 passed but 2 failed with 3 collection
+          errors. Four of five suites are green; the portfolio is not.
+        fix: >-
+          Himanshu's decision 2026-08-27: keep the pass-rate prohibition in place. The
+          count (320+) renders; no pass claim renders. Revisit once gab_sms is green -
+          see int_gap_sms_suite_red.
+
+      - id: int_gap_sms_suite_red
+        severity: medium
+        status: open
+        detail: >-
+          gab_sms is the only red suite: tests/test_health.py::test_health_db_unreachable_returns_503
+          and tests/test_idempotency_route.py::test_vendor_failure_then_retry_succeeds
+          both fail, and tests/concurrency_test.py errors at collection because it is
+          a live-server harness (it needs a running service and a `client` fixture
+          that does not exist under plain pytest), not a unit suite.
+        fix: >-
+          Fix the two failures and either move concurrency_test.py out of tests/ or
+          give it a guarded fixture, then a five-suite pass claim becomes available.
+
+      - id: int_gap_core_ownership
+        severity: medium
+        status: open
+        detail: >-
+          The Core onboarding service (audit repo) is attributed to Himanshu on the
+          strength of git history: 20 commits, sole author hjain3004, 2026-08-07 to
+          2026-08-11, with design specs and plans in the same repo. That is strong
+          attribution evidence but it has not been confirmed by Himanshu the way the
+          adapter-layer scope was on 2026-07-30.
+        fix: >-
+          Confirm with Himanshu whether Core was his own design or a team assignment
+          he implemented. If it was a team design, soften "designed and built" to
+          "built" in int_b9 and adjust the ownership_boundary. Until confirmed, the
+          bullets claim only what the repository demonstrably shows.
+
+      - id: int_gap_core_not_production
+        severity: high
+        status: resolved
+        detail: >-
+          Core has never served real traffic. It runs locally and in a 21-service
+          integrated Docker topology in which every provider is a mock, and the
+          dashboard carries an explicit local/mock-only banner. There are no
+          production metrics, no real customer data, and no live bank endpoint.
+        fix: >-
+          Same rule as the adapters: rendered variants stay silent on deployment
+          state. Never write "in production", "live", or any volume figure for Core.
+          If asked, the honest answer is "a verified local and integrated topology
+          against mock providers".
+
+      - id: int_gap_core_retry_queues_scaffolding
+        severity: medium
+        status: open
+        detail: >-
+          core.response.v1.retry and core.audit.v1.retry are declared with a 5s TTL
+          and a dead-letter return binding, but nothing currently publishes into them.
+          Delayed retry is scaffolding, not an active path.
+        fix: >-
+          Never describe the retry queues as an operating mechanism. int_b10 renders
+          only the dead-letter and requeue behaviour, which are real. Volunteer the
+          gap in interviews - it is documented in the repo and stating it first is
+          worth more than it costs.
+
+      - id: int_gap_core_stores_request_payload
+        severity: medium
+        status: open
+        detail: >-
+          Core retains the caller's inbound request payload verbatim in
+          step_invocation.request_payload while a step is in flight, because the
+          dispatch retry path re-sends it. It is cleared at DISPATCHED and
+          DISPATCH_ABANDONED, and it is never returned by a case API, rendered in the
+          dashboard, published to the broker, or written into audit evidence - but it
+          is not encrypted at rest in this implementation.
+        fix: >-
+          NEVER render or say "Core stores no PII". The correct phrasing is
+          "pseudonymous, not PII-free", with the retention bounded to the dispatch
+          lifecycle. The response allowlist covers provider responses coming back, not
+          caller requests going in.
+
+      - id: int_gap_core_container_count
+        severity: low
+        status: open
+        detail: >-
+          The integrated topology declares 21 services across docker-compose.yml and
+          docker-compose.integrated.yml and the README states it starts 21 containers,
+          but the 2026-08-12 verification report recorded 20 containers running after
+          a clean build.
+        fix: >-
+          Render "21-service integrated stack" (declared services, which is exactly
+          true). Do not write "21 containers observed running".
       - id: int_gap_sms_webhook_scaffolding
         severity: medium
         detail: >-

@@ -8,7 +8,7 @@ from src.profile_lint import MEDIUM_MAX, SHORT_MAX, lint_profile
 from scripts.validate_profile import _load_banned_terms
 from src.render.emphasis import parse_emphasis
 
-_EXPECTED_REAL_TOTALS = {"backend": 3399, "ml": 3537}
+_EXPECTED_REAL_TOTALS = {"backend": 3512, "ml": 3581}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."
