@@ -326,6 +326,12 @@ Rules:
 - M6.8: every conflict (regardless of source priority) touches the existing row's
   `last_seen_at`/`repost_count` (§7.5) — a dedup-key conflict means the posting is still being
   seen somewhere, independent of which source wins.
+- M6.14: collision-safe posting identity. If `identity_key` is explicitly supplied (e.g. from
+  manual URL discovery), it overrides the semantic key. When an incoming posting collides on
+  semantic key with an existing row, but both rows have recognized and differing stable posting
+  identities (e.g. `greenhouse:7114754` vs `greenhouse:8072244`), a deterministic collision key
+  `sha256("collision-v1|" + semantic_key + "|" + incoming_identity)` is used to store the
+  distinct requisition as a separate row without mutating the existing row.
 
 ### 4.4 Normalized interchange types (`models.py`)
 
@@ -338,6 +344,7 @@ class DiscoveredJob:
     url: str
     source: str
     date_posted: str | None   # ISO date or None
+    identity_key: str | None = None  # M6.14: explicit storage key override
 
 @dataclass(frozen=True)
 class ResolvedJD:
@@ -431,10 +438,13 @@ once, hardcode per-repo config, and save a real README as a test fixture.
 
 ### 5.3 Manual inbox adapter (`inbox_manual.py`)
 
-- `inbox/urls.txt`: one URL per line, `#` comments allowed. Each URL becomes a
-  `DiscoveredJob` with `source='inbox'`, company/title parsed later at resolution
-  (placeholder company `unknown` + the URL's domain; the resolver's `raw_title` backfills
-  title/company when available — update the row after resolution if fields were placeholders).
+- `inbox/urls.txt`: one URL per line, `#` whole-line comments allowed. URL fragments are
+  preserved. Each line is validated and canonicalized via `models.canonical_job_url()`
+  (stripping marketing parameters, checking schemes/credentials/sensitive keys).
+  M6.14: Each URL receives an explicit `identity_key = manual_url_dedup_key(canonical_url)`,
+  preventing multiple URLs on the same hostname from colliding on placeholder semantic metadata.
+  If any line contains credentials or sensitive parameters, `InboxInputError` is raised,
+  aborting all insertions and preserving `inbox/urls.txt` byte-for-byte.
 - `inbox/*.md`: manual JD paste. File format:
   - Line 1: the job URL
   - Line 2: `Company — Title — Location` (em-dash or `|` separated; be lenient)
@@ -442,8 +452,7 @@ once, hardcode per-repo config, and save a real README as a test fixture.
   These become `DiscoveredJob`s AND are immediately marked `RESOLVED` with the pasted text
   (`resolver='manual'`).
 - After successful ingestion, move processed files to `inbox/processed/` (create it), and
-  rewrite `urls.txt` keeping only unprocessed lines (a line is processed once its job row
-  exists). Never delete user files; move them.
+  clear processed URL lines from `urls.txt`. Never delete user files; move them.
 
 ### 5.4 Hybrid Discovery v2 (TARGET — M9D)
 

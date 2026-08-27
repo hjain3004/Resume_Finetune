@@ -240,3 +240,27 @@ hardening repair closes fail-closed, redirect, throttling, report-output, and st
 boundary defects in that verifier. Track C canonical adoption, S0/S2/G3 integration, live
 tailoring, CLI integration, and DB integration remain incomplete and require their own
 scoped milestones/sessions. Track B writes ignored research proposals only.
+
+---
+
+## M6.14 — Collision-Safe Posting Identity & Targeted Priority Resolution
+
+Status: COMPLETE (2026-08-27). Implements collision-safe identity contracts and targeted priority resolution.
+Design: `docs/superpowers/specs/2026-08-27-m6-14-posting-identity-priority-resolution-design.md`
+Plan: `docs/superpowers/plans/2026-08-27-m6-14-posting-identity-priority-resolution.md`
+
+Tasks & Commits:
+1. `feat(m6.14): add deterministic posting identity contracts` (`src/models.py`, `tests/test_models.py`) — `canonical_job_url`, `manual_url_dedup_key`, `stable_posting_identity`, `collision_dedup_key`, `DiscoveredJob.identity_key`.
+2. `fix(m6.14): prevent cross-requisition dedup collisions` (`src/db.py`, `tests/test_db.py`) — `get_by_dedup_key`, collision key resolution in `insert_discovered`.
+3. `fix(m6.14): give manual URLs collision-safe identities` (`src/discover/inbox_manual.py`, `tests/test_inbox_manual.py`) — fail-closed URL parsing, credential rejection, `InboxInputError`, `url_job_ids`.
+4. `feat(m6.14): add exact targeted resolution selection` (`src/db.py`, `src/prefilter.py`, `src/run_ingest.py`) — `require_rows_by_ids_status`, `rows_by_ids_status`, scoped pre/post resolution gates.
+5. `feat(m6.14): expose fail-closed priority resolution CLI` (`src/run_ingest.py`, `tests/test_run_ingest_lifecycle.py`) — `--resolve-job-id` flag, mutual exclusivity validation, pre-run status validation.
+
+Acceptance criteria:
+- Distinct manual URLs on the same hostname create separate DB rows under deterministic `manual_url_dedup_key`.
+- Cross-requisition conflicts on identical semantic metadata create separate DB rows under `collision_dedup_key` without mutating the existing row.
+- Whole-line `#` comments in `inbox/urls.txt` are ignored; fragments on URL lines are preserved.
+- Sensitive query/fragment credentials raise `InboxInputError`, preserve `inbox/urls.txt`, and insert zero rows.
+- `--resolve-job-id` requires `--resolve-only`, rejects invalid/duplicate/non-DISCOVERED IDs with exit code 1 before `db.start_run()`, and resolves only targeted jobs with scoped pre/post eligibility gates.
+- Full pytest suite 1622 passed, 1 deselected, 0 failures. No live network or model calls.
+

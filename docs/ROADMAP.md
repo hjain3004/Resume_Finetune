@@ -97,6 +97,13 @@ terminal states. M6.13R narrowed the detector to explicit subject+predicate noti
 remediation transactional and state-safe, and repaired the 35 overwritten `FILTERED_OUT` rows.
 Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
+**M6.14 — Collision-Safe Posting Identity & Targeted Priority Resolution: COMPLETE (2026-08-27).**
+Offline maintenance milestone repairing manual URL hostname dedup collisions, cross-requisition
+dedup collisions on identical semantic metadata, and providing exact fail-closed targeted priority
+resolution via `--resolve-job-id`. All additions tested offline (1622 passed, 1 deselected), zero
+network or model calls, database structure preserved. Design: `docs/superpowers/specs/2026-08-27-m6-14-posting-identity-priority-resolution-design.md`.
+Evidence in `docs/DECISIONS.md` (2026-08-27 entry).
+
 ## Phase 3 — Tailoring (M8)
 **Status: UNLOCKED; M8 item 1 and item 2 COMPLETE (2026-07-30). The prior M8 item 3 tailor/critic code is a non-production skeleton, not the live workflow. The M8 phrasing rework is complete.**
 Unlock condition met by explicit Phase 2 closure above plus the ATS-quality shortlist gate.
