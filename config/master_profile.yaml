@@ -1453,7 +1453,7 @@ projects:
       primary: ["Python", "FastAPI", "PostgreSQL", "Docker"]
       secondary: ["Docker Compose", "Kubernetes", "Terraform",
                   "AACT ClinicalTrials.gov", "pytest", "AWS"]
-      tech_line: "Python, FastAPI, PostgreSQL, Docker, Kubernetes, Terraform"
+      tech_line: "Python, FastAPI, PostgreSQL, Docker, Terraform"
 
     keywords:
       exact: ["Python", "FastAPI", "PostgreSQL", "microservices", "Docker",
@@ -1501,12 +1501,12 @@ projects:
             Built a 12-service Python microservices platform for synthetic clinical
             trial data, spanning data generation, analytics, quality scoring,
             electronic data capture, and security, with an API gateway fronting the
-            services and deployment assets for Docker Compose, Kubernetes, and
+            services and deployment assets for Docker Compose and
             Terraform.
-          medium: "Built a **12-service Python and FastAPI microservices platform** for synthetic clinical trial data - generation, analytics, quality scoring, electronic data capture, and security - deployed via **Docker Compose, Kubernetes, and Terraform**."
+          medium: "Built a **12-service Python and FastAPI microservices platform** for synthetic clinical trial data - generation, analytics, quality scoring, electronic data capture, and security - deployed via **Docker Compose and Terraform**."
           short: >-
             Built a 12-service Python and FastAPI platform for synthetic clinical
-            trial data, deployed via Docker and Kubernetes.
+            trial data, deployed via Docker and Terraform.
         evidence:
           - "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared"
           - "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root"
