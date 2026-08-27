@@ -222,3 +222,31 @@ def test_inbox_second_ingestion_is_idempotent_and_returns_job_ids(tmp_path):
     assert res2.url_job_ids == (1, 2)
     assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 2
 
+
+def test_inbox_malformed_port_aborts_all_inserts_and_redacts_secret(tmp_path):
+    inbox_dir = _make_inbox(tmp_path)
+    secret = "PORT_SECRET_VAL_123"
+    orig_content = f"https://example.com/valid/1\nhttps://example.com:{secret}/bad\nhttps://example.com/valid/2\n"
+    (inbox_dir / "urls.txt").write_text(orig_content)
+
+    conn = db.get_connection(":memory:")
+    with pytest.raises(inbox_manual.InboxInputError) as excinfo:
+        inbox_manual.ingest(conn, {"inbox_dir": str(inbox_dir)})
+
+    assert secret not in str(excinfo.value)
+    assert secret not in repr(excinfo.value)
+    assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 0
+    assert (inbox_dir / "urls.txt").read_text() == orig_content
+
+
+def test_inbox_broken_ipv6_aborts_all_inserts(tmp_path):
+    inbox_dir = _make_inbox(tmp_path)
+    orig_content = "https://[broken-ipv6/job\n"
+    (inbox_dir / "urls.txt").write_text(orig_content)
+
+    conn = db.get_connection(":memory:")
+    with pytest.raises(inbox_manual.InboxInputError):
+        inbox_manual.ingest(conn, {"inbox_dir": str(inbox_dir)})
+
+    assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 0
+    assert (inbox_dir / "urls.txt").read_text() == orig_content

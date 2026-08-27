@@ -155,6 +155,8 @@ def clean_title(raw: str | None) -> str | None:
         title = stripped
 
 
+import ipaddress
+
 _SENSITIVE_PARAM_KEYS = frozenset({
     "token",
     "access_token",
@@ -183,33 +185,79 @@ def canonical_job_url(raw_url: str) -> str:
     if not url:
         raise ManualUrlError("empty URL")
 
+    # Reject ASCII control characters anywhere in the raw URL
+    if any(ord(c) < 32 or ord(c) == 127 for c in url):
+        raise ManualUrlError("invalid control character in URL")
+
+    # Reject whitespace in URL authority before urllib splits/strips
+    if "://" in url:
+        raw_after_scheme = url.split("://", 1)[1]
+        raw_authority = raw_after_scheme.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+        if any(c.isspace() for c in raw_authority):
+            raise ManualUrlError("whitespace not allowed in URL authority")
+
     try:
         parsed = urlsplit(url)
-    except Exception as exc:
-        raise ManualUrlError("malformed URL") from exc
+    except Exception:
+        raise ManualUrlError("malformed URL") from None
 
-    scheme = parsed.scheme.lower()
+    scheme = (parsed.scheme or "").lower()
     if scheme not in ("http", "https"):
         raise ManualUrlError("unsupported URL scheme (only http and https allowed)")
 
     if not parsed.netloc:
         raise ManualUrlError("missing hostname in URL")
 
-    # Reject embedded userinfo
-    if "@" in parsed.netloc or parsed.username or parsed.password:
-        host = parsed.hostname or "unknown"
-        raise ManualUrlError(f"embedded credentials not allowed for {host}")
+    # Safe inspection of authority properties
+    try:
+        netloc = parsed.netloc
+        has_credentials = bool("@" in netloc or parsed.username or parsed.password)
+        hostname = parsed.hostname
+        port = parsed.port
+    except Exception:
+        raise ManualUrlError("malformed URL authority or port") from None
 
-    hostname = (parsed.hostname or "").lower()
+    if has_credentials:
+        raise ManualUrlError("embedded credentials not allowed in URL")
+
     if not hostname:
         raise ManualUrlError("missing hostname in URL")
 
-    # Port handling: omit default 80 for http and 443 for https
-    port = parsed.port
-    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
-        port = None
+    # Reject whitespace, ASCII control chars, and delimiter characters in hostname
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 or c in "/\\?#@" for c in hostname):
+        raise ManualUrlError("invalid characters in hostname")
 
-    netloc_normalized = f"{hostname}:{port}" if port else hostname
+    # IPv6 vs IPv4 vs DNS hostname validation and formatting
+    if netloc.startswith("["):
+        if "]" not in netloc:
+            raise ManualUrlError("malformed IPv6 authority in URL")
+        ip_str = netloc[1:netloc.index("]")]
+        try:
+            ip_obj = ipaddress.ip_address(ip_str)
+            if not isinstance(ip_obj, ipaddress.IPv6Address):
+                raise ManualUrlError("invalid IPv6 address in URL")
+        except Exception:
+            raise ManualUrlError("invalid IPv6 address in URL") from None
+        host_formatted = f"[{ip_str.lower()}]"
+    else:
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+            if isinstance(ip_obj, ipaddress.IPv6Address):
+                raise ManualUrlError("IPv6 host must be bracketed in URL")
+            host_formatted = hostname.lower()
+        except ValueError:
+            if not re.match(r"^[a-zA-Z0-9_.-]+$", hostname):
+                raise ManualUrlError("invalid characters in hostname")
+            host_formatted = hostname.lower()
+
+    # Port handling: validate range and omit default ports (80 for http, 443 for https)
+    if port is not None:
+        if not (1 <= port <= 65535):
+            raise ManualUrlError("port number out of range")
+        if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+            port = None
+
+    netloc_normalized = f"{host_formatted}:{port}" if port else host_formatted
 
     # Path normalization: empty -> /, non-root trailing slash stripped
     path = parsed.path or "/"
@@ -220,7 +268,7 @@ def canonical_job_url(raw_url: str) -> str:
     query_items = parse_qsl(parsed.query, keep_blank_values=True)
     for key, _ in query_items:
         if key.lower() in _SENSITIVE_PARAM_KEYS:
-            raise ManualUrlError(f"sensitive query parameter detected for {hostname}")
+            raise ManualUrlError("sensitive query parameter detected in URL")
 
     # Fragment inspection (for sensitive keys in query-like fragments)
     fragment = parsed.fragment or ""
@@ -228,7 +276,7 @@ def canonical_job_url(raw_url: str) -> str:
         frag_query_part = fragment.split("?", 1)[-1] if "?" in fragment else fragment
         for frag_k, _ in parse_qsl(frag_query_part, keep_blank_values=True):
             if frag_k.lower() in _SENSITIVE_PARAM_KEYS:
-                raise ManualUrlError(f"sensitive parameter in URL fragment for {hostname}")
+                raise ManualUrlError("sensitive parameter in URL fragment")
 
     # Filter out marketing parameters
     filtered_query = [
@@ -267,72 +315,124 @@ def stable_posting_identity(raw_url: str) -> str | None:
     if not hostname:
         return None
 
-    query_dict = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    # 1. gh_jid parameter on any host (wrappers/careers)
-    if "gh_jid" in query_dict:
-        gh_jid = query_dict["gh_jid"].strip()
-        if gh_jid.isdigit() and len(gh_jid) <= 30:
-            return f"greenhouse:{gh_jid}"
+    # Check query gh_jid parameters (detect conflicting or invalid values)
+    query_items = parse_qsl(parsed.query, keep_blank_values=True)
+    gh_jids = [v.strip() for k, v in query_items if k.lower() == "gh_jid"]
+    gh_identity: str | None = None
+    if gh_jids:
+        if len(set(gh_jids)) > 1:
+            return None
+        val = gh_jids[0]
+        if val.isdigit() and 1 <= len(val) <= 30:
+            gh_identity = f"greenhouse:{val}"
+        else:
+            return None
 
-    path = parsed.path or ""
+    # Parse and decode path segments
+    raw_segments = [p for p in (parsed.path or "").strip("/").split("/") if p]
+    decoded_segments: list[str] = []
+    for segment in raw_segments:
+        dec = unquote(segment).strip()
+        if any(c.isspace() or ord(c) < 32 or ord(c) == 127 or c in "/\\?#" for c in dec):
+            return None
+        decoded_segments.append(dec)
 
-    # 2. Greenhouse board paths
+    # 1. Greenhouse board paths
     if hostname in ("job-boards.greenhouse.io", "boards.greenhouse.io"):
-        m = re.match(r"^/([^/]+)/jobs/(\d+)(?:/|$)", path)
-        if m:
-            return f"greenhouse:{m.group(2)}"
+        if len(decoded_segments) >= 3 and decoded_segments[-2] == "jobs":
+            board = decoded_segments[-3]
+            jid = decoded_segments[-1]
+            if re.match(r"^[a-zA-Z0-9_-]{1,100}$", board) and jid.isdigit() and 1 <= len(jid) <= 30:
+                path_identity = f"greenhouse:{jid}"
+                if gh_identity is not None and gh_identity != path_identity:
+                    return None
+                return path_identity
+        return None
 
-    # 3. Roblox careers paths
+    # 2. Roblox careers paths
     if hostname in ("careers.roblox.com", "roblox.com"):
-        m = re.match(r"^/jobs/(\d+)(?:/|$)", path)
-        if m:
-            return f"greenhouse:{m.group(1)}"
+        if len(decoded_segments) >= 2 and decoded_segments[-2] == "jobs":
+            jid = decoded_segments[-1]
+            if jid.isdigit() and 1 <= len(jid) <= 30:
+                path_identity = f"greenhouse:{jid}"
+                if gh_identity is not None and gh_identity != path_identity:
+                    return None
+                return path_identity
+        return None
 
-    # 4. Ashby
+    # If gh_identity exists on another host with no ATS conflict
+    if gh_identity is not None:
+        if not (
+            hostname == "jobs.ashbyhq.com"
+            or hostname == "jobs.lever.co"
+            or hostname.endswith(".myworkdayjobs.com")
+            or hostname == "jobs.apple.com"
+            or hostname in ("lifeattiktok.com", "www.lifeattiktok.com")
+            or hostname in ("www.revolut.com", "revolut.com")
+        ):
+            return gh_identity
+
+    # 3. Ashby
     if hostname == "jobs.ashbyhq.com":
-        m = re.match(r"^/([^/]+)/([^/]+)(?:/|$)", path)
-        if m:
-            org = unquote(m.group(1)).lower().strip()
-            jid = unquote(m.group(2)).lower().strip()
-            if org and jid and len(org) <= 100 and len(jid) <= 100:
-                return f"ashby:{org}:{jid}"
+        if len(decoded_segments) == 2:
+            org, jid = decoded_segments[0], decoded_segments[1]
+            if re.match(r"^[a-zA-Z0-9_-]{1,100}$", org) and _UUID_RE.match(jid):
+                return f"ashby:{org.lower()}:{jid.lower()}"
+        return None
 
-    # 5. Lever
+    # 4. Lever
     if hostname == "jobs.lever.co":
-        m = re.match(r"^/([^/]+)/([^/]+)(?:/|$)", path)
-        if m:
-            org = unquote(m.group(1)).lower().strip()
-            jid = unquote(m.group(2)).lower().strip()
-            if org and jid and len(org) <= 100 and len(jid) <= 100:
-                return f"lever:{org}:{jid}"
+        if len(decoded_segments) == 2:
+            org, jid = decoded_segments[0], decoded_segments[1]
+            if re.match(r"^[a-zA-Z0-9_-]{1,100}$", org) and _UUID_RE.match(jid):
+                return f"lever:{org.lower()}:{jid.lower()}"
+        return None
 
-    # 6. Workday (*.myworkdayjobs.com)
+    # 5. Workday (*.myworkdayjobs.com)
     if hostname.endswith(".myworkdayjobs.com"):
-        parts = [unquote(p).lower().strip() for p in path.strip("/").split("/") if p]
-        if parts:
-            final_component = parts[-1]
-            if final_component and len(final_component) <= 150:
-                return f"workday:{hostname}:{final_component}"
+        if "job" in decoded_segments:
+            job_idx = decoded_segments.index("job")
+            if job_idx + 1 < len(decoded_segments):
+                final_component = decoded_segments[-1]
+                if (
+                    final_component.lower() not in ("search", "jobs", "job")
+                    and re.search(r"\d", final_component)
+                    and re.match(r"^[a-zA-Z0-9_.-]{1,150}$", final_component)
+                ):
+                    return f"workday:{hostname}:{final_component.lower()}"
+        return None
 
-    # 7. Apple
+    # 6. Apple
     if hostname == "jobs.apple.com":
-        m = re.search(r"/details/(\d+)(?:/|$)", path)
-        if m:
-            return f"apple:{m.group(1)}"
+        if "details" in decoded_segments:
+            idx = decoded_segments.index("details")
+            if idx + 1 < len(decoded_segments):
+                jid = decoded_segments[idx + 1]
+                if jid.isdigit() and 1 <= len(jid) <= 30:
+                    return f"apple:{jid}"
+        return None
 
-    # 8. TikTok
+    # 7. TikTok
     if hostname in ("lifeattiktok.com", "www.lifeattiktok.com"):
-        m = re.search(r"/search/(\d+)(?:/|$)", path)
-        if m:
-            return f"tiktok:{m.group(1)}"
+        if "search" in decoded_segments:
+            idx = decoded_segments.index("search")
+            if idx + 1 < len(decoded_segments):
+                jid = decoded_segments[idx + 1]
+                if jid.isdigit() and 1 <= len(jid) <= 30:
+                    return f"tiktok:{jid}"
+        return None
 
-    # 9. Revolut (final component ends with or is a UUID)
+    # 8. Revolut
     if hostname in ("www.revolut.com", "revolut.com"):
-        parts = [unquote(p).lower().strip() for p in path.strip("/").split("/") if p]
-        if parts:
-            m = re.search(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$", parts[-1], re.IGNORECASE)
+        if decoded_segments:
+            m = re.search(
+                r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+                decoded_segments[-1],
+                re.IGNORECASE,
+            )
             if m:
                 return f"revolut:{m.group(1).lower()}"
+        return None
 
     return None
 

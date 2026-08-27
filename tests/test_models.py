@@ -215,8 +215,8 @@ def test_stable_posting_identity_supported_ats_and_companies():
     )
     # Lever
     assert (
-        stable_posting_identity("https://jobs.lever.co/palantir/12345678-abcd")
-        == "lever:palantir:12345678-abcd"
+        stable_posting_identity("https://jobs.lever.co/palantir/452afc2e-0c79-41f8-8201-1aab7df775db")
+        == "lever:palantir:452afc2e-0c79-41f8-8201-1aab7df775db"
     )
     # Workday
     assert (
@@ -238,6 +238,96 @@ def test_stable_posting_identity_supported_ats_and_companies():
         stable_posting_identity("https://www.revolut.com/en-US/careers/position/graduate-programme-2027-software-engineer-java-3b79c804-b7e0-4b1a-9ef6-2fd69723dc7a/")
         == "revolut:3b79c804-b7e0-4b1a-9ef6-2fd69723dc7a"
     )
+
+
+# --- M6.14R URL Hardening and Strict Stable Identity Tests ---
+
+def test_canonical_job_url_malformed_port_sanitized():
+    secret = "SUPER_SECRET_PORT_VAL"
+    with pytest.raises(ManualUrlError) as excinfo:
+        canonical_job_url(f"https://example.com:{secret}/job")
+    assert secret not in str(excinfo.value)
+    assert secret not in repr(excinfo.value)
+
+
+def test_canonical_job_url_broken_ipv6_and_credentials_sanitized():
+    secret = "SUPER_SECRET_PASSWORD"
+    with pytest.raises(ManualUrlError) as excinfo:
+        canonical_job_url(f"https://user:{secret}@example.com/job")
+    assert secret not in str(excinfo.value)
+    assert secret not in repr(excinfo.value)
+
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://[broken-ipv6/job")
+
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://[not-an-ip]/job")
+
+
+def test_canonical_job_url_ipv6_canonicalization():
+    assert canonical_job_url("https://[::1]/job") == "https://[::1]/job"
+    assert canonical_job_url("https://[::1]:443/job") == "https://[::1]/job"
+    assert canonical_job_url("https://[::1]:8443/job") == "https://[::1]:8443/job"
+    assert canonical_job_url("http://[2001:db8::1]:80/job") == "http://[2001:db8::1]/job"
+    assert canonical_job_url("http://[2001:db8::1]:8080/job") == "http://[2001:db8::1]:8080/job"
+
+
+def test_canonical_job_url_host_validation_rejects_invalid_chars():
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example.com /job")
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example\n.com/job")
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example\r.com/job")
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example\x00.com/job")
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example.com:0/job")
+    with pytest.raises(ManualUrlError):
+        canonical_job_url("https://example.com:65536/job")
+
+
+def test_stable_posting_identity_strict_conflict_resolution():
+    # Conflicting gh_jid vs path
+    assert (
+        stable_posting_identity("https://careers.roblox.com/jobs/7114754?gh_jid=8072244")
+        is None
+    )
+    # Duplicate conflicting gh_jids in query
+    assert (
+        stable_posting_identity("https://careers.example.com/job?gh_jid=1&gh_jid=2")
+        is None
+    )
+    # Matching gh_jid and path
+    assert (
+        stable_posting_identity("https://careers.roblox.com/jobs/7114754?gh_jid=7114754")
+        == "greenhouse:7114754"
+    )
+
+
+def test_stable_posting_identity_strict_ashby_lever_workday():
+    # Ashby with decoded path traversal or non-UUID
+    assert stable_posting_identity("https://jobs.ashbyhq.com/acme/id%2Fextra") is None
+    assert stable_posting_identity("https://jobs.ashbyhq.com/acme/not-a-uuid") is None
+    assert stable_posting_identity("https://jobs.ashbyhq.com/acme/search") is None
+
+    # Lever with navigation or non-UUID
+    assert stable_posting_identity("https://jobs.lever.co/acme/search") is None
+    assert stable_posting_identity("https://jobs.lever.co/acme/not-a-uuid") is None
+    assert (
+        stable_posting_identity("https://jobs.lever.co/palantir/452afc2e-0c79-41f8-8201-1aab7df775db")
+        == "lever:palantir:452afc2e-0c79-41f8-8201-1aab7df775db"
+    )
+
+    # Workday navigation routes and missing digit
+    assert stable_posting_identity("https://acme.myworkdayjobs.com/en-US/jobs/search") is None
+    assert stable_posting_identity("https://acme.myworkdayjobs.com/en-US/jobs") is None
+    assert stable_posting_identity("https://acme.myworkdayjobs.com/en-US/job/nodigits") is None
+    assert (
+        stable_posting_identity("https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Software-Engineer_JR1987654")
+        == "workday:nvidia.wd5.myworkdayjobs.com:software-engineer_jr1987654"
+    )
+
 
 
 def test_stable_posting_identity_generic_returns_none():
