@@ -81,6 +81,7 @@ job-pipeline/
 │   └── wrapper_map.yaml       # M6.0: known wrapper hostname -> fixed ATS board
 ├── data/
 │   ├── company_research/inbox/ # M8: Staged company research bundles
+│   ├── feedback/               # M8P-6: immutable, revision-numbered human feedback records (gitignored)
 │   ├── jobs.db                # SQLite (gitignored)
 │   └── digests/               # daily digest output (gitignored)
 ├── snapshots/                 # per-source snapshots for diffing (gitignored)
@@ -95,7 +96,9 @@ job-pipeline/
 │   │   ├── lines.py           # M8P-5: PDF line- and character-level geometry
 │   │   └── l7.py              # M10/M8P-5: structural and tailored L7 validation
 │   ├── tailor/                # M8: Tailoring stages, G1/G2 critic, and publication
-│   │   └── publish.py         # M8P-5: atomic per-application publication and commit marker
+│   │   ├── publish.py         # M8P-5: atomic per-application publication and commit marker
+│   │   ├── feedback.py        # M8P-6: validated feedback contract, immutable revision-numbered storage
+│   │   └── g3.py              # M8P-6: deterministic review packet (review.md, packet.json)
 │   ├── __init__.py
 │   ├── models.py              # dataclasses, enums, normalization helpers
 │   ├── db.py                  # schema, connection, upsert/query helpers
@@ -124,6 +127,7 @@ job-pipeline/
 │   └── test_*.py
 ├── scripts/
 │   ├── tailor_render.py       # M8P-5: fail-closed bundle-driven render CLI
+│   ├── tailor_g3.py           # M8P-6: build/record/summarize review packet + feedback CLI
 │   └── record_fixture.py      # one-off: fetch a URL and save it as a test fixture
 ├── pyproject.toml
 └── .gitignore
