@@ -60,7 +60,6 @@ verdict deterministically from your scores.
 Every dimension scored below 3 must carry at least one finding citing that dimension. A
 dimension scored exactly 3 must carry no finding. Each finding is:
 
-```json
 {
   "dimension": "C5",
   "rule_id": "C5.template_phrasing",
@@ -69,7 +68,6 @@ dimension scored exactly 3 must carry no finding. Each finding is:
   "quoted_line": "exact substring of that bullet's after_plain",
   "explanation": "at most 200 characters"
 }
-```
 
 `rule_id` must belong to the closed vocabulary for its dimension:
 
@@ -105,12 +103,10 @@ At most eight findings total.
 
 ## Required response shape
 
-```json
 {
   "scores": {"C1": 3, "C2": 3, "C3": 3, "C4": 3, "C5": 3},
   "findings": []
 }
-```
 
 `scores` must contain exactly the five keys `C1`-`C5`, each an integer 1-3 (not a
 boolean). `findings` is an array of at most eight objects in the shape above, or empty
