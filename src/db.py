@@ -4,14 +4,27 @@ strings anywhere else in the codebase."""
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-from src.models import SOURCE_PRIORITY, DiscoveredJob, ResolvedJD, Status, clean_title, dedup_key
+from src.models import (
+    SOURCE_PRIORITY,
+    DiscoveredJob,
+    ResolvedJD,
+    Status,
+    clean_title,
+    collision_dedup_key,
+    dedup_key,
+    stable_posting_identity,
+)
 from src.tailor.s1 import S1Request
+
+_HEX_64_RE = re.compile(r"^[0-9a-f]{64}$")
+
 
 RESOLVE_FAILURE_LIMIT = 3
 
@@ -206,6 +219,10 @@ def _source_rank(source: str) -> int:
         return len(SOURCE_PRIORITY)
 
 
+def get_by_dedup_key(conn: sqlite3.Connection, key: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM jobs WHERE dedup_key = ?", (key,)).fetchone()
+
+
 def insert_discovered(
     conn: sqlite3.Connection,
     discovered: list[DiscoveredJob],
@@ -230,16 +247,45 @@ def insert_discovered(
       stay untouched; recycled-content detection (against those) happens
       post-resolution in freshness.find_content_repost, not here.
 
+    M6.14: collision-safe posting identity. If `job.identity_key` is supplied,
+    it is used directly as the storage key (validated as 64-char hex).
+    Otherwise, if the semantic key conflicts with an existing row but both rows
+    carry recognized and differing stable posting identities (different requisitions),
+    a deterministic collision key is derived and used to store/update the distinct
+    requisition without mutating the original row.
+
     `now` overrides the wall clock (UTC ISO-8601). It exists so tests can pin
     the stale/reopen windows instead of depending on the calendar date; the
     policy itself is unchanged."""
     new_count_by_source: dict[str, int] = defaultdict(int)
     now = now or _utcnow_iso()
     for job in discovered:
-        key = dedup_key(job.company, job.title, job.location)
-        existing = conn.execute(
-            "SELECT id, source, jd_text, status, last_seen_at FROM jobs WHERE dedup_key = ?", (key,)
-        ).fetchone()
+        if job.identity_key is not None:
+            if not isinstance(job.identity_key, str) or not _HEX_64_RE.match(job.identity_key):
+                raise ValueError(f"invalid explicit identity_key: {job.identity_key!r}")
+            key = job.identity_key
+            existing = conn.execute(
+                "SELECT id, source, jd_text, status, last_seen_at, url FROM jobs WHERE dedup_key = ?", (key,)
+            ).fetchone()
+        else:
+            semantic_key = dedup_key(job.company, job.title, job.location)
+            existing = conn.execute(
+                "SELECT id, source, jd_text, status, last_seen_at, url FROM jobs WHERE dedup_key = ?", (semantic_key,)
+            ).fetchone()
+            if existing is not None:
+                stored_id = stable_posting_identity(existing["url"])
+                incoming_id = stable_posting_identity(job.url)
+                if stored_id is not None and incoming_id is not None and stored_id != incoming_id:
+                    c_key = collision_dedup_key(semantic_key, incoming_id)
+                    key = c_key
+                    existing = conn.execute(
+                        "SELECT id, source, jd_text, status, last_seen_at, url FROM jobs WHERE dedup_key = ?", (key,)
+                    ).fetchone()
+                else:
+                    key = semantic_key
+            else:
+                key = semantic_key
+
         if existing is None:
             flags = None
             if (
@@ -296,11 +342,12 @@ def insert_discovered(
             _reopen_row(conn, existing["id"], job.url, job.source, now)
         elif existing["jd_text"] is None and _source_rank(job.source) < _source_rank(existing["source"]):
             conn.execute(
-                "UPDATE jobs SET url = ?, source = ? WHERE dedup_key = ?",
-                (job.url, job.source, key),
+                "UPDATE jobs SET url = ?, source = ? WHERE id = ?",
+                (job.url, job.source, existing["id"]),
             )
     conn.commit()
     return dict(new_count_by_source)
+
 
 
 def _is_older_than(iso_ts: str | None, days: int, now_iso: str) -> bool:

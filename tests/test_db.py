@@ -819,3 +819,163 @@ def test_record_resolve_failure_force_failed_sets_resolve_failed_immediately(con
     row = conn.execute("SELECT status, resolve_attempts FROM jobs WHERE id = ?", (job_id,)).fetchone()
     assert row["status"] == Status.RESOLVE_FAILED
     assert row["resolve_attempts"] == 1
+
+
+# --- M6.14 Collision-Safe Persistence Tests ---
+
+def test_insert_discovered_cross_requisition_collision_creates_two_rows(conn):
+    # 1. Roblox 7114754
+    job1 = DiscoveredJob(
+        company="Roblox",
+        title="Software Engineer - Early Career",
+        location="San Mateo, CA",
+        url="https://careers.roblox.com/jobs/7114754?gh_jid=7114754",
+        source="tracker_vansh",
+        date_posted=None,
+    )
+    res1 = db.insert_discovered(conn, [job1], now="2026-08-01T12:00:00+00:00")
+    assert res1 == {"tracker_vansh": 1}
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["url"] == "https://careers.roblox.com/jobs/7114754?gh_jid=7114754"
+    assert row1["repost_count"] == 0
+    assert row1["last_seen_at"] == "2026-08-01T12:00:00+00:00"
+
+    # 2. Roblox 8072244 with identical semantic metadata
+    job2 = DiscoveredJob(
+        company="Roblox",
+        title="Software Engineer - Early Career",
+        location="San Mateo, CA",
+        url="https://careers.roblox.com/jobs/8072244?gh_jid=8072244",
+        source="tracker_simplify",
+        date_posted=None,
+    )
+    res2 = db.insert_discovered(conn, [job2], now="2026-08-27T12:00:00+00:00")
+    assert res2 == {"tracker_simplify": 1}
+
+    # Verify two distinct rows exist
+    rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
+    assert len(rows) == 2
+
+    # Verify first row was not modified
+    row1_after = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1_after["url"] == "https://careers.roblox.com/jobs/7114754?gh_jid=7114754"
+    assert row1_after["source"] == "tracker_vansh"
+    assert row1_after["repost_count"] == 0
+    assert row1_after["last_seen_at"] == "2026-08-01T12:00:00+00:00"
+
+    # Verify second row has collision dedup key and correct fields
+    row2 = rows[1]
+    assert row2["id"] == 2
+    assert row2["url"] == "https://careers.roblox.com/jobs/8072244?gh_jid=8072244"
+    assert row2["source"] == "tracker_simplify"
+    assert row2["repost_count"] == 0
+    assert row2["last_seen_at"] == "2026-08-27T12:00:00+00:00"
+
+    # 3. Repeating 8072244 updates only its own row
+    res3 = db.insert_discovered(conn, [job2], now="2026-08-28T12:00:00+00:00")
+    assert sum(res3.values()) == 0
+    assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 2
+    row2_after = conn.execute("SELECT * FROM jobs WHERE id = 2").fetchone()
+    assert row2_after["repost_count"] == 1
+    assert row2_after["last_seen_at"] == "2026-08-28T12:00:00+00:00"
+    row1_untouched = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1_untouched["repost_count"] == 0
+
+
+def test_insert_discovered_same_posting_wrapper_and_board_remain_one_row(conn):
+    # Wrapper URL
+    job1 = DiscoveredJob(
+        company="Roblox",
+        title="Software Engineer",
+        location="San Mateo, CA",
+        url="https://careers.roblox.com/jobs/7114754?gh_jid=7114754",
+        source="tracker_vansh",
+        date_posted=None,
+    )
+    # Direct Greenhouse board URL with same gh_jid
+    job2 = DiscoveredJob(
+        company="Roblox",
+        title="Software Engineer",
+        location="San Mateo, CA",
+        url="https://job-boards.greenhouse.io/roblox/jobs/7114754",
+        source="tracker_simplify",
+        date_posted=None,
+    )
+    db.insert_discovered(conn, [job1])
+    db.insert_discovered(conn, [job2])
+
+    rows = conn.execute("SELECT * FROM jobs").fetchall()
+    assert len(rows) == 1
+    # tracker_simplify has higher priority than tracker_vansh, so it upgrades url/source
+    assert rows[0]["source"] == "tracker_simplify"
+    assert rows[0]["url"] == "https://job-boards.greenhouse.io/roblox/jobs/7114754"
+    assert rows[0]["repost_count"] == 1
+
+
+def test_insert_discovered_unrecognized_urls_retain_legacy_behavior(conn):
+    job1 = DiscoveredJob(
+        company="GenericCo",
+        title="Software Engineer",
+        location="Remote",
+        url="https://generic.example.com/job/a",
+        source="tracker_vansh",
+        date_posted=None,
+    )
+    job2 = DiscoveredJob(
+        company="GenericCo",
+        title="Software Engineer",
+        location="Remote",
+        url="https://generic.example.com/job/b",
+        source="tracker_simplify",
+        date_posted=None,
+    )
+    db.insert_discovered(conn, [job1])
+    db.insert_discovered(conn, [job2])
+
+    rows = conn.execute("SELECT * FROM jobs").fetchall()
+    assert len(rows) == 1
+    assert rows[0]["repost_count"] == 1
+
+
+def test_insert_discovered_valid_explicit_identity_key_honored(conn):
+    key = "f" * 64
+    job = DiscoveredJob(
+        company="unknown",
+        title="revolut.com",
+        location=None,
+        url="https://www.revolut.com/careers/position/swe-123",
+        source="inbox",
+        date_posted=None,
+        identity_key=key,
+    )
+    res = db.insert_discovered(conn, [job])
+    assert res == {"inbox": 1}
+    row = db.get_by_dedup_key(conn, key)
+    assert row is not None
+    assert row["dedup_key"] == key
+    assert row["url"] == "https://www.revolut.com/careers/position/swe-123"
+
+
+def test_insert_discovered_invalid_explicit_identity_key_fails(conn):
+    job = DiscoveredJob(
+        company="unknown",
+        title="revolut.com",
+        location=None,
+        url="https://www.revolut.com/careers/position/swe-123",
+        source="inbox",
+        date_posted=None,
+        identity_key="invalid_short_key",
+    )
+    with pytest.raises(ValueError, match="invalid explicit identity_key"):
+        db.insert_discovered(conn, [job])
+    assert conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 0
+
+
+def test_get_by_dedup_key_returns_row_or_none(conn):
+    job = _job()
+    db.insert_discovered(conn, [job])
+    row = db.get_by_dedup_key(conn, db.dedup_key(job.company, job.title, job.location))
+    assert row is not None
+    assert row["company"] == "Acme"
+    assert db.get_by_dedup_key(conn, "nonexistent" * 4) is None
+
