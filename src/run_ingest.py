@@ -471,6 +471,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.resolve_limit is not None:
             logger.error("--resolve-job-id cannot combine with --resolve-limit")
             return 1
+        if args.dry_run:
+            logger.error("--resolve-job-id cannot combine with --dry-run")
+            return 1
+        if args.limit is not None:
+            logger.error("--resolve-job-id cannot combine with --limit")
+            return 1
+        if args.snapshot_dir is not None:
+            logger.error("--resolve-job-id cannot combine with --snapshot-dir")
+            return 1
         if len(args.resolve_job_ids) != len(set(args.resolve_job_ids)):
             logger.error("duplicate --resolve-job-id values provided")
             return 1
@@ -531,12 +540,16 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
             if args.source is None or args.source == INBOX_SOURCE_NAME:
-                inbox_result = inbox_manual.ingest(conn, {"dry_run": args.dry_run})
+                inbox_cfg = dict(sources_cfg.get(INBOX_SOURCE_NAME, {}))
+                inbox_cfg["dry_run"] = args.dry_run
+                inbox_result = inbox_manual.ingest(conn, inbox_cfg)
                 inbox_new = inbox_result.new_urls + inbox_result.new_pastes
                 new_count += inbox_new
                 print(
                     f"Inbox: {inbox_result.new_urls} URL(s), {inbox_result.new_pastes} paste(s) ingested."
                 )
+                if inbox_result.url_job_ids and not args.dry_run:
+                    print(f"Inbox job IDs: {', '.join(str(jid) for jid in inbox_result.url_job_ids)}")
                 db.record_run_source(
                     conn, run_id, INBOX_SOURCE_NAME, discovered=inbox_new, inserted=inbox_new
                 )

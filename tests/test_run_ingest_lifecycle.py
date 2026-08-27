@@ -393,6 +393,29 @@ def test_main_rejects_resolve_job_id_with_resolve_limit(tmp_path):
     assert exit_code == 1
 
 
+def test_main_rejects_resolve_job_id_with_dry_run(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--dry-run", "--resolve-job-id", "1"])
+    assert exit_code == 1
+    assert not (tmp_path / "jobs.db").exists()
+
+
+def test_main_rejects_resolve_job_id_with_limit(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--limit", "5", "--resolve-job-id", "1"])
+    assert exit_code == 1
+    assert not (tmp_path / "jobs.db").exists()
+
+
+def test_main_rejects_resolve_job_id_with_snapshot_dir(tmp_path):
+    db_path = str(tmp_path / "jobs.db")
+    exit_code = run_ingest.main(
+        ["--db", db_path, "--resolve-only", "--snapshot-dir", str(tmp_path / "snap"), "--resolve-job-id", "1"]
+    )
+    assert exit_code == 1
+    assert not (tmp_path / "jobs.db").exists()
+
+
 def test_main_rejects_duplicate_resolve_job_id(tmp_path):
     db_path = str(tmp_path / "jobs.db")
     exit_code = run_ingest.main(["--db", db_path, "--resolve-only", "--resolve-job-id", "1", "--resolve-job-id", "1"])
@@ -468,3 +491,48 @@ def test_main_targeted_resolves_only_targeted_ids_and_scoped_gates(tmp_path):
     assert run_row["finished_at"] is not None
     assert run_row["resolved"] == 1
 
+
+def test_main_prints_inbox_job_ids_bounded_numeric_only(tmp_path, capsys):
+    db_path = str(tmp_path / "jobs.db")
+    inbox_dir = tmp_path / "inbox"
+    inbox_dir.mkdir()
+    secret_param = "tracking_param_value"
+    url1 = f"https://example.com/job/101?utm_source={secret_param}"
+    url2 = "https://example.com/job/102"
+    (inbox_dir / "urls.txt").write_text(f"{url1}\n{url2}\n")
+
+    with patch.object(
+        run_ingest,
+        "load_sources_config",
+        return_value={"inbox": {"enabled": True, "inbox_dir": str(inbox_dir)}},
+    ):
+        exit_code = run_ingest.main(
+            ["--db", db_path, "--discover-only", "--source", "inbox"]
+        )
+
+    assert exit_code == 0
+    captured = capsys.readouterr().out
+    assert "Inbox job IDs: 1, 2" in captured
+    assert "https://" not in captured
+    assert "example.com" not in captured
+    assert secret_param not in captured
+
+
+def test_main_does_not_print_inbox_job_ids_when_empty_or_dry_run(tmp_path, capsys):
+    db_path = str(tmp_path / "jobs.db")
+    inbox_dir = tmp_path / "inbox"
+    inbox_dir.mkdir()
+    (inbox_dir / "urls.txt").write_text("https://example.com/job/1\n")
+
+    with patch.object(
+        run_ingest,
+        "load_sources_config",
+        return_value={"inbox": {"enabled": True, "inbox_dir": str(inbox_dir)}},
+    ):
+        exit_code = run_ingest.main(
+            ["--db", db_path, "--discover-only", "--source", "inbox", "--dry-run"]
+        )
+
+    assert exit_code == 0
+    captured = capsys.readouterr().out
+    assert "Inbox job IDs:" not in captured
