@@ -121,3 +121,41 @@ def test_gates_are_idempotent_on_second_identical_run() -> None:
     assert second.filtered == 0
     assert second.by_flag == ()
     assert before == after
+
+
+def test_pre_resolution_gate_with_scoped_job_ids_touches_only_targets() -> None:
+    conn = _conn()
+    id1 = _insert_discovered(conn, "Software Engineer", "Remote - Canada", "https://example.com/ca")
+    id2 = _insert_discovered(conn, "Software Engineer", "Remote - UK", "https://example.com/uk")
+
+    # Scope only to id1
+    summary = prefilter.run_pre_resolution_gate(conn, load_eligibility_config(), job_ids=(id1,))
+
+    assert summary.evaluated == 1
+    assert summary.filtered == 1
+    row1 = conn.execute("SELECT status, filter_reason FROM jobs WHERE id = ?", (id1,)).fetchone()
+    row2 = conn.execute("SELECT status, filter_reason FROM jobs WHERE id = ?", (id2,)).fetchone()
+    assert row1["status"] == Status.FILTERED_OUT
+    assert row2["status"] == Status.DISCOVERED  # Untouched
+
+
+def test_post_resolution_gate_with_scoped_job_ids_touches_only_targets() -> None:
+    conn = _conn()
+    id1 = _insert_resolved(
+        conn, "Software Engineer", "New York, NY", "Starts in 2027. We are unable to sponsor visas.", "https://example.com/1"
+    )
+    id2 = _insert_resolved(
+        conn, "Backend Engineer", "New York, NY", "Starts in 2027. We are unable to sponsor visas.", "https://example.com/2"
+    )
+
+    # Scope only to id1
+    summary = prefilter.run_post_resolution_gate(conn, load_eligibility_config(), job_ids=(id1,))
+
+    assert summary.evaluated == 1
+    assert summary.filtered == 1
+    row1 = conn.execute("SELECT status FROM jobs WHERE id = ?", (id1,)).fetchone()
+    row2 = conn.execute("SELECT status FROM jobs WHERE id = ?", (id2,)).fetchone()
+    assert row1["status"] == Status.FILTERED_OUT
+    assert row2["status"] == Status.RESOLVED  # Untouched
+
+

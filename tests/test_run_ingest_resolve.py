@@ -409,3 +409,66 @@ def test_build_parser_resolve_limit_defaults_to_none():
     parser = run_ingest.build_parser()
     args = parser.parse_args(["--resolve-only"])
     assert args.resolve_limit is None
+
+
+# --- M6.14: Targeted Job ID Resolution Tests ---
+
+def test_run_resolution_targeted_job_ids_resolves_only_targeted_rows_in_order():
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("OldCo", "Old Job", "Remote", "https://example.com/job/1", "tracker_vansh", None),
+            DiscoveredJob("Acme", "SWE", "Remote", "https://example.com/job/2", "tracker_vansh", None),
+            DiscoveredJob("Beta", "SWE 2", "Remote", "https://example.com/job/3", "tracker_vansh", None),
+        ],
+    )
+    session = MagicMock()
+    resolved_urls = []
+
+    def _side_effect(url, session, **kwargs):
+        resolved_urls.append(url)
+        return ResolvedJD(f"jd for {url}", "generic")
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
+        summary = run_ingest.run_resolution(conn, session, job_ids=(3, 2))
+
+    assert summary.resolved == 2
+    assert resolved_urls == ["https://example.com/job/3", "https://example.com/job/2"]
+    row1 = db.get_by_url(conn, "https://example.com/job/1")
+    assert row1["status"] == Status.DISCOVERED
+    assert row1["jd_text"] is None
+    row2 = db.get_by_url(conn, "https://example.com/job/2")
+    assert row2["status"] == Status.RESOLVED
+    row3 = db.get_by_url(conn, "https://example.com/job/3")
+    assert row3["status"] == Status.RESOLVED
+
+
+def test_run_resolution_targeted_job_ids_skips_prefiltered_row():
+    conn = _conn()
+    db.insert_discovered(
+        conn,
+        [
+            DiscoveredJob("Acme", "SWE", "Remote - Canada", "https://example.com/job/1", "tracker_vansh", None),
+            DiscoveredJob("Beta", "SWE", "Remote", "https://example.com/job/2", "tracker_vansh", None),
+        ],
+    )
+    # Simulate pre-resolution gate having filtered row 1
+    conn.execute("UPDATE jobs SET status = ?, filter_reason = 'eligibility:country' WHERE id = 1", (Status.FILTERED_OUT,))
+    conn.commit()
+
+    session = MagicMock()
+    resolved_urls = []
+
+    def _side_effect(url, session, **kwargs):
+        resolved_urls.append(url)
+        return ResolvedJD(f"jd for {url}", "generic")
+
+    with patch.object(run_ingest.resolve, "resolve", side_effect=_side_effect):
+        summary = run_ingest.run_resolution(conn, session, job_ids=(1, 2))
+
+    assert summary.resolved == 1
+    assert resolved_urls == ["https://example.com/job/2"]
+    row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
+    assert row1["status"] == Status.FILTERED_OUT
+

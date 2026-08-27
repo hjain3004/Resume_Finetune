@@ -31,12 +31,26 @@ class EligibilityGateSummary:
     by_flag: tuple[tuple[str, int], ...] = ()
 
 
-def run_pre_resolution_gate(conn: sqlite3.Connection, config: EligibilityConfig) -> EligibilityGateSummary:
-    return _run_gate(conn, config, stage=EligibilityStage.PRE_RESOLUTION, status=Status.DISCOVERED)
+def run_pre_resolution_gate(
+    conn: sqlite3.Connection,
+    config: EligibilityConfig,
+    *,
+    job_ids: tuple[int, ...] | None = None,
+) -> EligibilityGateSummary:
+    return _run_gate(
+        conn, config, stage=EligibilityStage.PRE_RESOLUTION, status=Status.DISCOVERED, job_ids=job_ids
+    )
 
 
-def run_post_resolution_gate(conn: sqlite3.Connection, config: EligibilityConfig) -> EligibilityGateSummary:
-    return _run_gate(conn, config, stage=EligibilityStage.POST_RESOLUTION, status=Status.RESOLVED)
+def run_post_resolution_gate(
+    conn: sqlite3.Connection,
+    config: EligibilityConfig,
+    *,
+    job_ids: tuple[int, ...] | None = None,
+) -> EligibilityGateSummary:
+    return _run_gate(
+        conn, config, stage=EligibilityStage.POST_RESOLUTION, status=Status.RESOLVED, job_ids=job_ids
+    )
 
 
 def _run_gate(
@@ -45,12 +59,14 @@ def _run_gate(
     *,
     stage: EligibilityStage,
     status: Status,
+    job_ids: tuple[int, ...] | None = None,
 ) -> EligibilityGateSummary:
     evaluated = filtered = deferred = passed = 0
     by_reason: Counter[str] = Counter()
     by_flag: Counter[str] = Counter()
 
-    for row in db.eligibility_rows(conn, status):
+    for row in db.eligibility_rows(conn, status, job_ids=job_ids):
+
         evaluated += 1
         existing_flags = _flags_tuple(row["flags"])
         decision = evaluate(

@@ -365,11 +365,13 @@ def run_resolution(
     *,
     browser_backend: str = "off",
     resolve_limit: int | None = None,
+    job_ids: tuple[int, ...] | None = None,
     browser_client=None,
     summary: ResolutionSummary | None = None,
 ) -> ResolutionSummary:
     """Resolve DISCOVERED rows, ordered by id, up to `resolve_limit` (M6.10;
-    None means all eligible rows). Returns the `ResolutionSummary` (a fresh
+    None means all eligible rows). If `job_ids` is provided, resolves only
+    those DISCOVERED rows in requested order. Returns the `ResolutionSummary` (a fresh
     one if the caller didn't pass one) recording resolved/content-failed/
     transient/internal counts, tier1/tier2/manual tallies, per-source counts,
     and structured issues.
@@ -387,7 +389,14 @@ def run_resolution(
     if summary is None:
         summary = ResolutionSummary()
     manual_domains = resolve.load_manual_domains()
-    for row in db.rows_by_status(conn, Status.DISCOVERED, limit=resolve_limit):
+    if job_ids is not None:
+        raw_rows = db.rows_by_ids_status(conn, tuple(job_ids), Status.DISCOVERED)
+        row_map = {r["id"]: r for r in raw_rows}
+        rows_to_process = [row_map[jid] for jid in job_ids if jid in row_map]
+    else:
+        rows_to_process = list(db.rows_by_status(conn, Status.DISCOVERED, limit=resolve_limit))
+
+    for row in rows_to_process:
         if resolve.is_manual_domain(row["url"], manual_domains):
             status = db.record_resolve_failure(conn, row["id"], force_failed=True)
             summary.record(row, ResolutionOutcome.content_failure("manual_domain"))

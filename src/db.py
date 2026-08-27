@@ -41,6 +41,11 @@ ELIGIBLE_TAILORING_BASE_VARIANTS = frozenset({"backend", "ml"})
 class TailoringPrepError(ValueError):
     """A job row failed S1 tailoring-preparation eligibility."""
 
+
+class TargetSelectionError(ValueError):
+    """A targeted job selection failed pre-run validation."""
+
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS jobs (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,7 +143,66 @@ def get_readonly_connection(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
-def eligibility_rows(conn: sqlite3.Connection, status: Status) -> list[sqlite3.Row]:
+def rows_by_ids_status(
+    conn: sqlite3.Connection,
+    job_ids: tuple[int, ...],
+    status: Status,
+) -> list[sqlite3.Row]:
+    if not job_ids:
+        return []
+    placeholders = ",".join("?" * len(job_ids))
+    return conn.execute(
+        f"SELECT * FROM jobs WHERE status = ? AND id IN ({placeholders})",
+        (status, *job_ids),
+    ).fetchall()
+
+
+def require_rows_by_ids_status(
+    conn: sqlite3.Connection,
+    job_ids: tuple[int, ...],
+    status: Status,
+) -> list[sqlite3.Row]:
+    if not job_ids:
+        raise TargetSelectionError("job_ids cannot be empty")
+    if len(job_ids) != len(set(job_ids)):
+        raise TargetSelectionError("duplicate job_ids provided in target selection")
+    placeholders = ",".join("?" * len(job_ids))
+    rows = conn.execute(
+        f"SELECT * FROM jobs WHERE id IN ({placeholders})", job_ids
+    ).fetchall()
+    by_id = {row["id"]: row for row in rows}
+    result: list[sqlite3.Row] = []
+    for jid in job_ids:
+        if jid not in by_id:
+            raise TargetSelectionError(f"job {jid} does not exist")
+        row = by_id[jid]
+        if row["status"] != status:
+            raise TargetSelectionError(
+                f"job {jid} has status {row['status']!r}, expected {status!r}"
+            )
+        result.append(row)
+    return result
+
+
+def eligibility_rows(
+    conn: sqlite3.Connection,
+    status: Status,
+    *,
+    job_ids: tuple[int, ...] | None = None,
+) -> list[sqlite3.Row]:
+    if job_ids is not None:
+        if not job_ids:
+            return []
+        placeholders = ",".join("?" * len(job_ids))
+        return conn.execute(
+            f"""
+            SELECT id, title, location, jd_text, flags, status, filter_reason
+            FROM jobs
+            WHERE status = ? AND id IN ({placeholders})
+            ORDER BY id
+            """,
+            (status, *job_ids),
+        ).fetchall()
     return conn.execute(
         """
         SELECT id, title, location, jd_text, flags, status, filter_reason
@@ -148,6 +212,7 @@ def eligibility_rows(conn: sqlite3.Connection, status: Status) -> list[sqlite3.R
         """,
         (status,),
     ).fetchall()
+
 
 
 def merge_job_flags(conn: sqlite3.Connection, job_id: int, flags: tuple[str, ...]) -> bool:

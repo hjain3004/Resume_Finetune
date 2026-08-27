@@ -979,3 +979,39 @@ def test_get_by_dedup_key_returns_row_or_none(conn):
     assert row["company"] == "Acme"
     assert db.get_by_dedup_key(conn, "nonexistent" * 4) is None
 
+
+def test_require_rows_by_ids_status_success_and_order(conn):
+    db.insert_discovered(conn, [_job(url="https://example.com/1"), _job(title="SWE 2", url="https://example.com/2"), _job(title="SWE 3", url="https://example.com/3")])
+    rows = db.require_rows_by_ids_status(conn, (3, 1), Status.DISCOVERED)
+    assert [r["id"] for r in rows] == [3, 1]
+    assert rows[0]["title"] == "SWE 3"
+    assert rows[1]["title"] == "Software Engineer"
+
+
+def test_require_rows_by_ids_status_empty_or_duplicates_fail(conn):
+    with pytest.raises(db.TargetSelectionError, match="empty"):
+        db.require_rows_by_ids_status(conn, (), Status.DISCOVERED)
+    with pytest.raises(db.TargetSelectionError, match="duplicate"):
+        db.require_rows_by_ids_status(conn, (1, 1), Status.DISCOVERED)
+
+
+def test_require_rows_by_ids_status_missing_or_wrong_status_fail(conn):
+    db.insert_discovered(conn, [_job(url="https://example.com/1")])
+    with pytest.raises(db.TargetSelectionError, match="does not exist"):
+        db.require_rows_by_ids_status(conn, (1, 999), Status.DISCOVERED)
+
+    conn.execute("UPDATE jobs SET status = ? WHERE id = 1", (Status.RESOLVED,))
+    conn.commit()
+    with pytest.raises(db.TargetSelectionError, match="has status"):
+        db.require_rows_by_ids_status(conn, (1,), Status.DISCOVERED)
+
+
+def test_eligibility_rows_with_job_ids_scope(conn):
+    db.insert_discovered(conn, [_job(url="https://example.com/1"), _job(title="SWE 2", url="https://example.com/2")])
+    rows_all = db.eligibility_rows(conn, Status.DISCOVERED)
+    assert len(rows_all) == 2
+    rows_scoped = db.eligibility_rows(conn, Status.DISCOVERED, job_ids=(2,))
+    assert len(rows_scoped) == 1
+    assert rows_scoped[0]["id"] == 2
+
+
