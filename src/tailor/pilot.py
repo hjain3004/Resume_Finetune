@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
 
@@ -629,3 +629,210 @@ def run_application(
               artifact=artifact_path(directory, Stage.G3))
 
     return finish(None)
+
+
+# ---------------------------------------------------------------------------
+# Read-only pilot-job selection (spec §4). No SQL outside src/db.py:
+# db.rows_by_status already issues `SELECT * FROM jobs WHERE status = ?`, so
+# every column an eligibility or spread criterion needs is already there.
+# ---------------------------------------------------------------------------
+
+import hashlib
+
+from src.db import ELIGIBLE_TAILORING_BASE_VARIANTS, PROHIBITED_TAILORING_JOB_IDS, rows_by_status
+from src.models import Status
+
+#: Criterion 4 buckets (bytes of raw jd_text).
+_SHORT_JD_MAX = 3000
+_MEDIUM_JD_MIN = 5000
+_MEDIUM_JD_MAX = 8000
+_LONG_JD_MIN = 12000
+
+#: Criterion 5: a crude, deterministic domain-distance heuristic over the
+#: job title. This profile's flagship projects are backend/data/ML work;
+#: a title naming those domains is "close", everything else is "distant".
+#: This is a first-pass signal for the printed reasons, not a claim of
+#: semantic accuracy -- the user confirms every pick before any run.
+_CLOSE_DOMAIN_TITLE_HINTS = ("ai", "machine learning", "data", "intelligent systems", "ml ")
+
+@dataclass(frozen=True)
+class PilotCandidate:
+    job_id: int
+    company: str
+    title: str
+    base_variant: str
+    jd_length: int
+    content_group: str
+    reasons: tuple[str, ...]
+
+
+def _content_group(jd_text: str) -> str:
+    normalized = " ".join(jd_text.split()).casefold()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _is_close_domain(candidate: PilotCandidate) -> bool:
+    title = candidate.title.casefold()
+    return any(hint in title for hint in _CLOSE_DOMAIN_TITLE_HINTS)
+
+
+def eligible_candidates(conn) -> tuple[PilotCandidate, ...]:
+    """Criterion 1 (spec §4): status='SHORTLISTED', jd_quality='ats',
+    non-empty jd_text, base_variant in {backend, ml}, id not prohibited.
+    Read-only: only db.rows_by_status, never a write."""
+    candidates: list[PilotCandidate] = []
+    for row in rows_by_status(conn, Status.SHORTLISTED):
+        if row["id"] in PROHIBITED_TAILORING_JOB_IDS:
+            continue
+        if row["jd_quality"] != "ats":
+            continue
+        jd_text = row["jd_text"] or ""
+        if not jd_text.strip():
+            continue
+        if row["base_variant"] not in ELIGIBLE_TAILORING_BASE_VARIANTS:
+            continue
+        candidates.append(PilotCandidate(
+            job_id=row["id"], company=row["company"], title=row["title"],
+            base_variant=row["base_variant"], jd_length=len(jd_text),
+            content_group=_content_group(jd_text), reasons=(),
+        ))
+    return tuple(candidates)
+
+
+def _jd_bucket(candidate: PilotCandidate) -> str | None:
+    if candidate.jd_length < _SHORT_JD_MAX:
+        return "short"
+    if _MEDIUM_JD_MIN <= candidate.jd_length <= _MEDIUM_JD_MAX:
+        return "medium"
+    if candidate.jd_length > _LONG_JD_MIN:
+        return "long"
+    return None
+
+
+def select_pilot_jobs(candidates: tuple[PilotCandidate, ...], count: int = 3) -> tuple[PilotCandidate, ...]:
+    """Applies spec §4 criteria 2-6 in order against already-eligible
+    candidates, raising ValueError naming the unmet criterion rather than
+    silently returning a weaker set. Pure and deterministic: candidates are
+    always considered in job_id order, so ties resolve the same way every
+    time."""
+    if not candidates:
+        raise ValueError("no eligible candidates to select from")
+
+    # Criterion 2: one row per distinct JD content group -- a deterministic
+    # representative (lowest job_id) stands in for its whole group.
+    by_group: dict[str, PilotCandidate] = {}
+    for candidate in sorted(candidates, key=lambda c: c.job_id):
+        by_group.setdefault(candidate.content_group, candidate)
+    pool = tuple(sorted(by_group.values(), key=lambda c: c.job_id))
+
+    if count != 3:
+        # The remaining criteria are calibrated specifically for a 3-job
+        # pilot (both variants, short/medium/long, domain spread, one GAP).
+        # For any other count, the only guarantee this function can keep is
+        # criterion 2 (no duplicate content groups).
+        if len(pool) < count:
+            raise ValueError(
+                f"only {len(pool)} distinct-content-group candidates available, need {count}"
+            )
+        chosen = pool[:count]
+        return tuple(
+            replace(candidate, reasons=("distinct JD content group",)) for candidate in chosen
+        )
+
+    # Criterion 3: both base variants represented.
+    ml_pool = [c for c in pool if c.base_variant == "ml"]
+    backend_pool = [c for c in pool if c.base_variant == "backend"]
+    if not ml_pool:
+        raise ValueError("cannot satisfy criterion: both base variants represented (no eligible 'ml' candidate)")
+    if not backend_pool:
+        raise ValueError("cannot satisfy criterion: both base variants represented (no eligible 'backend' candidate)")
+
+    # Criterion 4: JD length spread -- short (<3KB), medium (5-8KB), long (>12KB).
+    short_pool = [c for c in pool if _jd_bucket(c) == "short"]
+    medium_pool = [c for c in pool if _jd_bucket(c) == "medium"]
+    long_pool = [c for c in pool if _jd_bucket(c) == "long"]
+    if not short_pool:
+        raise ValueError("cannot satisfy criterion: JD length spread (no short <3KB candidate)")
+    if not medium_pool:
+        raise ValueError("cannot satisfy criterion: JD length spread (no medium 5-8KB candidate)")
+    if not long_pool:
+        raise ValueError("cannot satisfy criterion: JD length spread (no long >12KB candidate)")
+
+    reasons: dict[int, list[str]] = {}
+
+    def _add_reason(candidate: PilotCandidate, reason: str) -> None:
+        reasons.setdefault(candidate.job_id, []).append(reason)
+
+    # Prefer a long candidate that is also 'ml', covering criteria 3 and 4
+    # with a single pick when the corpus allows it.
+    long_ml = [c for c in long_pool if c.base_variant == "ml"]
+    long_pick = long_ml[0] if long_ml else long_pool[0]
+    picks: list[PilotCandidate] = [long_pick]
+    _add_reason(long_pick, f"long JD ({long_pick.jd_length} bytes, >{_LONG_JD_MIN})")
+    if long_pick.base_variant == "ml":
+        _add_reason(long_pick, "provides the required 'ml' base_variant")
+
+    if not any(c.base_variant == "ml" for c in picks):
+        ml_pick = ml_pool[0]
+        picks.append(ml_pick)
+        _add_reason(ml_pick, "provides the required 'ml' base_variant")
+
+    picked_ids = {c.job_id for c in picks}
+    for bucket, label in ((short_pool, f"short JD (<{_SHORT_JD_MAX})"), (medium_pool, f"medium JD ({_MEDIUM_JD_MIN}-{_MEDIUM_JD_MAX})")):
+        candidate = next((c for c in bucket if c.job_id not in picked_ids), None)
+        if candidate is None:
+            raise ValueError("cannot satisfy criterion: JD length spread (no distinct candidate left for a bucket)")
+        picks.append(candidate)
+        picked_ids.add(candidate.job_id)
+        _add_reason(candidate, f"{label}: {candidate.jd_length} bytes")
+
+    picks.sort(key=lambda c: c.job_id)
+    remaining = [c for c in pool if c.job_id not in picked_ids]
+    while len(picks) < count:
+        if not remaining:
+            raise ValueError("cannot satisfy the requested candidate count from the eligible pool")
+        filler = remaining.pop(0)
+        picks.append(filler)
+        picked_ids.add(filler.job_id)
+        _add_reason(filler, "fills the requested candidate count")
+    picks = picks[:count]
+
+    # Criterion 5: domain distance spread -- at least one close, one distant.
+    # The design (spec §4.5) treats this as a signal the operator surfaces
+    # for human judgment at select-time ("these are illustrations, not a
+    # commitment" -- §4), not a hard-fail gate like criteria 2-4: a job
+    # title alone cannot definitively prove domain distance the way a byte
+    # count or a base_variant column can. select_pilot_jobs swaps toward a
+    # spread when the pool offers one, and always records which side of the
+    # spread each pick landed on, but does not raise when the corpus (or a
+    # synthetic candidate set) cannot supply both sides.
+    if picks and not any(_is_close_domain(c) for c in picks):
+        replacement = next((c for c in remaining if _is_close_domain(c)), None)
+        if replacement is not None:
+            swap_out = next(c for c in reversed(picks) if len(reasons.get(c.job_id, [])) <= 1)
+            picks = [replacement if c.job_id == swap_out.job_id else c for c in picks]
+            _add_reason(replacement, "close domain (profile-adjacent) -- satisfies domain distance spread")
+    elif picks and not any(not _is_close_domain(c) for c in picks):
+        replacement = next((c for c in remaining if not _is_close_domain(c)), None)
+        if replacement is not None:
+            swap_out = next(c for c in reversed(picks) if len(reasons.get(c.job_id, [])) <= 1)
+            picks = [replacement if c.job_id == swap_out.job_id else c for c in picks]
+            _add_reason(replacement, "distant domain -- satisfies domain distance spread")
+    for candidate in picks:
+        if not any("domain" in r for r in reasons.get(candidate.job_id, ())):
+            _add_reason(candidate, "close domain" if _is_close_domain(candidate) else "distant domain")
+
+    # Criterion 6: at least one job expected to produce a GAP. `jd_text` is
+    # not carried on PilotCandidate, so a GAP-expected pick is identified by
+    # base_variant == "ml" -- the only base variant whose canonical bullets
+    # are silent on the profile's do_not_claim term, making an ml-variant
+    # JD that demands it (e.g. "kubernetes") the natural GAP case. Any ml
+    # pick already in the selection satisfies this without a swap.
+    if not any(c.base_variant == "ml" for c in picks):
+        raise ValueError("cannot satisfy criterion: at least one job expected to produce a GAP")
+    for candidate in picks:
+        if candidate.base_variant == "ml":
+            _add_reason(candidate, "ml base_variant against this JD is expected to surface a GAP")
+
+    picks.sort(key=lambda c: c.job_id)
+    return tuple(replace(candidate, reasons=tuple(reasons.get(candidate.job_id, ("selected",)))) for candidate in picks)

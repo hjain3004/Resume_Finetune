@@ -431,3 +431,127 @@ def test_no_sqlite_write_occurs(tmp_repo, mock_all_stages_pass, db_checksum):
     before = db_checksum()
     run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
     assert db_checksum() == before
+
+
+# ---------------------------------------------------------------------------
+# Task 3: read-only pilot-job selection
+# ---------------------------------------------------------------------------
+
+from src.tailor.pilot import PilotCandidate, eligible_candidates, select_pilot_jobs
+
+
+@pytest.fixture
+def seeded_conn(tmp_path):
+    db_path = tmp_path / "select.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    db_module.init_db(conn)
+    rows = [
+        # id, company, title, status, jd_text, jd_quality, base_variant
+        (119, "Cisco", "Software Engineer Data/AI/Intelligent Systems", Status.SHORTLISTED,
+         "x" * 13445 + " kubernetes docker", "ats", "ml"),
+        (213, "Citadel Securities", "Graduate Software Engineer", Status.SHORTLISTED,
+         "y" * 2352, "ats", "backend"),
+        (225, "Notion", "Software Engineer", Status.SHORTLISTED, "z" * 7493, "ats", "backend"),
+        (229, "Blocked", "SWE", Status.SHORTLISTED, "a" * 1000, "ats", "backend"),
+        (279, "Blocked2", "SWE", Status.SHORTLISTED, "b" * 1000, "ats", "ml"),
+        (900, "NotATS", "SWE", Status.SHORTLISTED, "c" * 1000, "resume", "backend"),
+        (901, "NotShortlisted", "SWE", Status.SCORED, "d" * 1000, "ats", "backend"),
+    ]
+    for job_id, company, title, status, jd_text, jd_quality, base_variant in rows:
+        conn.execute(
+            """INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at,
+                                 status, jd_text, jd_quality, base_variant)
+               VALUES (?, ?, ?, ?, 'Remote', ?, 'inbox', '2026-08-01T00:00:00+00:00', ?, ?, ?, ?)""",
+            (job_id, f"key-{job_id}", company, title, f"https://example.test/{job_id}",
+             status, jd_text, jd_quality, base_variant),
+        )
+    conn.commit()
+    return conn
+
+
+@pytest.fixture
+def db_checksum_for_conn(seeded_conn, tmp_path):
+    import hashlib
+    path = tmp_path / "select.db"
+
+    def _checksum():
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    return _checksum
+
+
+def _candidate(job_id, *, base_variant="backend", jd_length=5000, content_group="g1"):
+    return PilotCandidate(job_id=job_id, company="C", title="T", base_variant=base_variant,
+                          jd_length=jd_length, content_group=content_group, reasons=())
+
+
+@pytest.fixture
+def candidates_with_duplicates():
+    return (
+        _candidate(1, content_group="dup"), _candidate(2, content_group="dup"),
+        _candidate(3, content_group="dup"), _candidate(4, base_variant="ml", jd_length=13000, content_group="g2"),
+        _candidate(5, jd_length=2000, content_group="g3"), _candidate(6, jd_length=7000, content_group="g4"),
+    )
+
+
+@pytest.fixture
+def candidates_mixed():
+    return (
+        _candidate(119, base_variant="ml", jd_length=13445, content_group="cisco"),
+        _candidate(213, base_variant="backend", jd_length=2352, content_group="citadelsec"),
+        _candidate(225, base_variant="backend", jd_length=7493, content_group="notion"),
+        _candidate(233, base_variant="backend", jd_length=2822, content_group="atos"),
+        _candidate(266, base_variant="backend", jd_length=6058, content_group="newsbreak"),
+        _candidate(283, base_variant="backend", jd_length=6210, content_group="bytedance"),
+    )
+
+
+@pytest.fixture
+def candidates_all_backend():
+    return (
+        _candidate(1, base_variant="backend", jd_length=2000, content_group="g1"),
+        _candidate(2, base_variant="backend", jd_length=6000, content_group="g2"),
+        _candidate(3, base_variant="backend", jd_length=13000, content_group="g3"),
+    )
+
+
+def test_eligible_candidates_excludes_prohibited_and_non_ats(seeded_conn):
+    ids = {c.job_id for c in eligible_candidates(seeded_conn)}
+    assert 279 not in ids and 229 not in ids
+    assert 900 not in ids and 901 not in ids
+    assert {119, 213, 225} <= ids
+    assert all(c.jd_length > 0 for c in eligible_candidates(seeded_conn))
+
+
+def test_selection_never_returns_two_rows_from_one_content_group(candidates_with_duplicates):
+    picked = select_pilot_jobs(candidates_with_duplicates, count=3)
+    assert len({c.content_group for c in picked}) == 3
+
+
+def test_selection_covers_both_base_variants(candidates_mixed):
+    picked = select_pilot_jobs(candidates_mixed, count=3)
+    assert {c.base_variant for c in picked} >= {"backend", "ml"}
+
+
+def test_selection_spreads_jd_length(candidates_mixed):
+    lengths = sorted(c.jd_length for c in select_pilot_jobs(candidates_mixed, count=3))
+    assert lengths[0] < 3000 and lengths[-1] > 12000
+
+
+def test_every_pick_carries_a_reason(candidates_mixed):
+    assert all(c.reasons for c in select_pilot_jobs(candidates_mixed, count=3))
+
+
+def test_selection_is_deterministic(candidates_mixed):
+    assert select_pilot_jobs(candidates_mixed, 3) == select_pilot_jobs(candidates_mixed, 3)
+
+
+def test_selection_raises_when_criteria_cannot_be_met(candidates_all_backend):
+    with pytest.raises(ValueError, match="base variant"):
+        select_pilot_jobs(candidates_all_backend, count=3)
+
+
+def test_selection_is_read_only(seeded_conn, db_checksum_for_conn):
+    before = db_checksum_for_conn()
+    eligible_candidates(seeded_conn)
+    assert db_checksum_for_conn() == before
