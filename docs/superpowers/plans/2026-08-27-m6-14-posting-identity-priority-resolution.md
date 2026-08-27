@@ -1,6 +1,6 @@
 # M6.14 Plan — Collision-Safe Posting Identity & Targeted Priority Resolution
 
-**Status:** COMPLETE (2026-08-27)  
+**Status:** OFFLINE COMPLETE — LIVE TARGETED SMOKE PENDING (2026-08-27)
 **Spec:** `docs/superpowers/specs/2026-08-27-m6-14-posting-identity-priority-resolution-design.md`
 
 ---
@@ -32,5 +32,18 @@
 - Implemented: `--resolve-job-id` flag, mutual exclusivity validation, pre-run status validation, scoped gate and resolution orchestration.
 - Commit: `feat(m6.14): expose fail-closed priority resolution CLI`
 
-### Task 6: Documentation and closeout
+### Task 6: M6.14R Review and Repair Hardening
+- Files: `src/models.py`, `src/discover/inbox_manual.py`, `src/run_ingest.py`, `tests/test_models.py`, `tests/test_inbox_manual.py`, `tests/test_run_ingest_lifecycle.py`
+- Implemented:
+  1. Sanitized port/authority exception handling without secret leakage (`from None`).
+  2. Strict host validation and bracketed IPv6 canonicalization (`[::1]`).
+  3. Conservative stable posting identity extraction (strict UUIDs for Ashby/Lever, route rejection for Workday, conflicting gh_jid rejection).
+  4. Operator CLI exclusions: `--resolve-job-id` rejects `--dry-run`, `--limit`, and `--snapshot-dir`.
+  5. Operator visibility: non-dry inbox runs print bounded numeric `Inbox job IDs: <id1>, <id2>`.
+- Commits:
+  - `fix(m6.14): harden URL identity validation`
+  - `fix(m6.14): complete targeted resolution operator contract`
+
+### Task 7: Documentation and closeout
 - Files: `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/DECISIONS.md`.
+- Commit: `docs(m6.14): correct offline closeout after review`

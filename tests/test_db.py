@@ -1013,5 +1013,3 @@ def test_eligibility_rows_with_job_ids_scope(conn):
     rows_scoped = db.eligibility_rows(conn, Status.DISCOVERED, job_ids=(2,))
     assert len(rows_scoped) == 1
     assert rows_scoped[0]["id"] == 2
-
-

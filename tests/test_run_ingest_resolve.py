@@ -471,4 +471,3 @@ def test_run_resolution_targeted_job_ids_skips_prefiltered_row():
     assert resolved_urls == ["https://example.com/job/2"]
     row1 = conn.execute("SELECT * FROM jobs WHERE id = 1").fetchone()
     assert row1["status"] == Status.FILTERED_OUT
-

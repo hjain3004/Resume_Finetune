@@ -157,5 +157,3 @@ def test_post_resolution_gate_with_scoped_job_ids_touches_only_targets() -> None
     row2 = conn.execute("SELECT status FROM jobs WHERE id = ?", (id2,)).fetchone()
     assert row1["status"] == Status.FILTERED_OUT
     assert row2["status"] == Status.RESOLVED  # Untouched
-
-

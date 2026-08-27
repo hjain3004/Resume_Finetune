@@ -815,7 +815,8 @@ day). Sections, in order:
 
 ```
 python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discover-only]
-                         [--limit N] [--resolve-limit N] [--db PATH] [--snapshot-dir DIR]
+                         [--limit N] [--resolve-limit N] [--resolve-job-id ID]
+                         [--db PATH] [--snapshot-dir DIR]
 ```
 
 - Default: discover → dedupe/insert → resolve (all `DISCOVERED` with attempts < 3) →
@@ -826,6 +827,12 @@ python -m src.run_ingest [--dry-run] [--source NAME] [--resolve-only] [--discove
 - `--resolve-limit N`: cap the number of `DISCOVERED` rows attempted by resolution, ordered
   by row id. This is independent of discovery `--limit` and is the required flag for bounded
   live smokes.
+- `--resolve-job-id ID`: (repeatable, M6.14) restrict resolution and pre/post eligibility gates
+  strictly to the specified `DISCOVERED` job IDs in caller order. Requires `--resolve-only`;
+  mutually exclusive with `--discover-only`, `--source`, `--resolve-limit`, `--dry-run`, `--limit`,
+  and `--snapshot-dir`. Fails closed with exit code 1 before opening/creating a database on flag
+  conflicts or duplicate/non-positive IDs, and before `db.start_run()` if any targeted ID does not
+  exist or is not in `DISCOVERED` status.
 - `--snapshot-dir DIR`: override tracker checkpoint location, primarily for isolated smoke
   runs and tests.
 - Exit code 0 on success even if some resolutions failed (failures are data, not errors);

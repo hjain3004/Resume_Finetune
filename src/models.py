@@ -441,4 +441,3 @@ def collision_dedup_key(semantic_key: str, posting_identity: str) -> str:
     """Return a versioned 64-char SHA-256 digest combining semantic key and stable posting identity."""
     payload = f"collision-v1|{semantic_key}|{posting_identity}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-

@@ -353,4 +353,3 @@ def test_discovered_job_identity_key():
     # Explicit identity key
     job2 = DiscoveredJob("unknown", "revolut.com", None, "https://revolut.com/1", "inbox", None, identity_key="a" * 64)
     assert job2.identity_key == "a" * 64
-

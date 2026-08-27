@@ -97,11 +97,13 @@ terminal states. M6.13R narrowed the detector to explicit subject+predicate noti
 remediation transactional and state-safe, and repaired the 35 overwritten `FILTERED_OUT` rows.
 Evidence in `docs/DECISIONS.md` (2026-07-25 entry).
 
-**M6.14 — Collision-Safe Posting Identity & Targeted Priority Resolution: COMPLETE (2026-08-27).**
+**M6.14 — Collision-Safe Posting Identity & Targeted Priority Resolution: OFFLINE COMPLETE — LIVE TARGETED SMOKE PENDING (2026-08-27).**
 Offline maintenance milestone repairing manual URL hostname dedup collisions, cross-requisition
 dedup collisions on identical semantic metadata, and providing exact fail-closed targeted priority
-resolution via `--resolve-job-id`. All additions tested offline (1622 passed, 1 deselected), zero
-network or model calls, database structure preserved. Design: `docs/superpowers/specs/2026-08-27-m6-14-posting-identity-priority-resolution-design.md`.
+resolution via `--resolve-job-id`. Offline implementation and hardening completed via M6.14 and M6.14R
+repairs. The production DB has not exercised the new intake or targeting path; a user-supervised
+live targeted smoke remains required before live production use. M9F-1 remains unstarted and Firecrawl
+remains disabled by default. Design: `docs/superpowers/specs/2026-08-27-m6-14-posting-identity-priority-resolution-design.md`.
 Evidence in `docs/DECISIONS.md` (2026-08-27 entry).
 
 ## Phase 3 — Tailoring (M8)

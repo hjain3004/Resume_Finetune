@@ -144,4 +144,3 @@ def ingest(conn, config: dict) -> InboxResult:
         urls_path.write_text("")
 
     return InboxResult(new_urls=new_urls, new_pastes=new_pastes, url_job_ids=tuple(url_job_ids))
-
