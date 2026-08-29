@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import pytest
 from src.render.l7 import (
     check_single_column, check_contact_in_body, check_section_headings, check_page_count,
@@ -176,6 +177,44 @@ def test_run_l7_includes_the_overlap_and_bleed_checks():
     violations = run_l7(_doc(), _pdf(boxes))
     assert any("collision" in v for v in violations)
     assert any("past the right page edge" in v for v in violations)
+
+
+def test_project_heading_date_and_following_bullet_adjacency_passes():
+    # Left project heading, right-aligned date on the same line, and following bullet directly below
+    heading_left = _line("Campus Marketplace | Java 21, Spring Boot, PostgreSQL, AWS S3", y0=208.2, y1=218.1, x0=25.2, x1=334.2)
+    date_right = _line("Sep. 2025 - Dec. 2025", y0=208.2, y1=218.1, x0=485.0, x1=590.9)
+    following_bullet = _line("• Built the backend for a campus peer-to-peer marketplace", y0=198.2, y1=208.2, x0=39.9, x1=593.6)
+    boxes = [heading_left, date_right, following_bullet]
+    assert check_no_overlap(_doc(), _pdf(boxes)) == []
+
+
+def test_genuine_text_overlap_between_heading_and_date_is_reported():
+    # If the heading extends past the start of the right-aligned date, collision must be reported
+    heading_overlong = _line("Campus Marketplace | Java 21, Spring Boot, PostgreSQL, Flyway, Spring Security, AWS S3, JUnit 5", y0=208.2, y1=218.1, x0=25.2, x1=520.0)
+    date_right = _line("Sep. 2025 - Dec. 2025", y0=208.2, y1=218.1, x0=485.0, x1=590.9)
+    boxes = [heading_overlong, date_right]
+    violations = check_no_overlap(_doc(), _pdf(boxes))
+    assert len(violations) == 1
+    assert "collision" in violations[0]
+
+
+@pytest.mark.skipif(
+    shutil.which("pdflatex") is None,
+    reason="requires a TeX installation; page fit is verified by scripts/render_bakeoff.py in the profile-edit loop",
+)
+def test_real_master_profile_base_variants_pass_l7_layout(tmp_path):
+    from src.profile import load_profile
+    from src.render.mapping import build_render_doc
+    from src.render.latex import render_latex
+    profile = load_profile("config/master_profile.yaml")
+    for var in ("backend", "ml"):
+        doc = build_render_doc(profile, var)
+        pdf_path = tmp_path / f"latex_{var}.pdf"
+        render_latex(doc, Path("profile/template.tex"), pdf_path)
+        parsed = parse_pdf(pdf_path)
+        violations = run_l7(doc, parsed)
+        assert violations == [], f"Variant {var} had L7 violations: {violations}"
+        assert parsed.page_count == 1, f"Variant {var} had {parsed.page_count} pages, expected 1"
 
 
 @pytest.mark.skipif(not (FIXTURES / "bad_two_column.pdf").exists(),

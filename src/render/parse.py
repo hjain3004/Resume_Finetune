@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pdfminer.high_level import extract_pages
-from pdfminer.layout import LAParams, LTTextContainer
+from pdfminer.layout import LAParams, LTTextContainer, LTTextLine
 
 logger = logging.getLogger(__name__)
 
@@ -52,20 +52,22 @@ def parse_pdf(path: str | Path) -> ParsedPdf:
         for element in layout:
             if not isinstance(element, LTTextContainer):
                 continue
-            text = element.get_text().strip()
-            if not text:
-                continue
-            x0, y0, x1, y1 = element.bbox
-            boxes.append(
-                TextBox(
-                    text=text,
-                    x0=float(x0),
-                    y0=float(y0),
-                    x1=float(x1),
-                    y1=float(y1),
-                    page=page_number,
-                )
-            )
+            for child in element:
+                if isinstance(child, LTTextLine):
+                    text = child.get_text().strip()
+                    if not text:
+                        continue
+                    x0, y0, x1, y1 = child.bbox
+                    boxes.append(
+                        TextBox(
+                            text=text,
+                            x0=float(x0),
+                            y0=float(y0),
+                            x1=float(x1),
+                            y1=float(y1),
+                            page=page_number,
+                        )
+                    )
 
     logger.info("parsed %s: %d text boxes", path.name, len(boxes))
     return ParsedPdf(

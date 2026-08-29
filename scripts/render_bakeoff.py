@@ -49,11 +49,11 @@ def main() -> int:
     else:
         from src.render.latex import render_latex
         _try("arm (a) LaTeX",
-             lambda: render_latex(doc, args.template, OUT / "latex.pdf"), doc)
+             lambda: render_latex(doc, args.template, OUT / f"latex_{args.variant}.pdf"), doc)
 
     from src.render.rendercv import render_rendercv
     _try("arm (b) RenderCV",
-         lambda: render_rendercv(doc, OUT / "rendercv.pdf"), doc)
+         lambda: render_rendercv(doc, OUT / f"rendercv_{args.variant}.pdf"), doc)
 
     print("\nOpen both PDFs and judge visual acceptability. That call is the user's.")
     return 0
