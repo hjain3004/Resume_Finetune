@@ -1,0 +1,31 @@
+```json
+{
+  "must_have": [
+    {"term": "Bachelor's, master's or PhD in Computer Science, Computer Engineering or related fields", "quote": "- Bachelor's, master's or PhD in Computer Science, Computer Engineering or related fields"},
+    {"term": "Exceptional programming and design skills", "quote": "- Exceptional programming and design skills"},
+    {"term": "Strong analytical skills and familiarity with probability and statistics", "quote": "- Strong analytical skills and familiarity with probability and statistics"},
+    {"term": "Ability to communicate effectively in a collaborative, complex and highly technical team environment", "quote": "- Ability to communicate effectively in a collaborative, complex and highly technical team environment"},
+    {"term": "Intellectual curiosity and passion for solving challenging problems using technology", "quote": "- Intellectual curiosity and passion for solving challenging problems using technology"}
+  ],
+  "nice_to_have": [],
+  "responsibilities_summary": [
+    {"summary": "Build software tools that turn trading strategies into working systems", "quote": "- Create technological tools that bring trading strategies to life"},
+    {"summary": "Build research platforms that handle large data volumes with high performance", "quote": "- Develop high-performance, large data research platforms"},
+    {"summary": "Design system architectures, platforms, and web frameworks as an individual engineer", "quote": "As an engineer, you can create system architectures, develop platforms and build web frameworks."},
+    {"summary": "Apply advanced techniques such as distributed computing, NLP, and machine learning in the work", "quote": "apply innovative techniques including distributed computing, natural language processing, machine learning and more."},
+    {"summary": "Ship on short development cycles so work reaches production quickly", "quote": "With short development cycles, work rapidly goes into production."},
+    {"summary": "Collaborate in small teams on finance-domain products", "quote": "- Work in small teams to build the future of finance"}
+  ],
+  "seniority_signals": [
+    "Software Engineer – University Graduate (US)",
+    "- Bachelor's, master's or PhD in Computer Science, Computer Engineering or related fields"
+  ],
+  "disqualifiers": [],
+  "company_context": {
+    "domain": {"claim": "Global market making in financial markets, technology-driven", "quote": "Citadel Securities is a technology-driven, next-generation global market maker."},
+    "product": {"claim": "Liquidity, pricing, and end-to-end trade execution for institutional and retail investors across financial products", "quote": "We provide institutional and retail investors with world-class liquidity, competitive pricing and seamless front-to-back execution in a broad array of financial products."},
+    "stage_or_scale": null
+  },
+  "suspected_injection": []
+}
+```

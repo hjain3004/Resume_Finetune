@@ -1,0 +1,44 @@
+{
+  "must_have": [
+    {"term": "less than two years of engineering experience", "quote": "You have less than two years of engineering experience."},
+    {"term": "data structures, algorithms, and distributed systems", "quote": "You have solid fundamentals in data structures, algorithms, and distributed systems, with a customer-minded, pragmatic approach to solving problems."},
+    {"term": "Expertise building and prototyping", "quote": "Expertise building and prototyping: You’re excited to build and iterate quickly"},
+    {"term": "AI/ML", "quote": "you’ve started exploring AI/ML through coursework, projects, internships, or hackathons"},
+    {"term": "UI, APIs, data", "quote": "You’re comfortable learning how different parts of a product fit together (UI, APIs, data)"},
+    {"term": "relational databases like Postgres or MySQL", "quote": "have some familiarity with relational databases like Postgres or MySQL"},
+    {"term": "Thoughtful problem-solving", "quote": "Thoughtful problem-solving: You approach problems holistically, starting with a clear and accurate understanding of the context."},
+    {"term": "navigate ambiguity", "quote": "You can navigate ambiguity successfully, decompose complex problems into clean solutions"},
+    {"term": "Impact-driven approach to technology", "quote": "Impact-driven approach to technology: You see technologies as tools to achieve user impact rather than ends in themselves."},
+    {"term": "Cursor, Claude Code, and other AI-assisted development environments", "quote": "You stay current with the latest tools like Cursor, Claude Code, and other AI-assisted development environments"},
+    {"term": "Proactive communication and high agency", "quote": "Proactive communication and high agency: You own your work, communicating clearly about progress and blockers."}
+  ],
+  "nice_to_have": [
+    {"term": "React, TypeScript, Node.js, Postgres, and Elasticsearch", "quote": "You have experience with any part of our technology stack: React, TypeScript, Node.js, Postgres, and Elasticsearch."},
+    {"term": "the interaction between technology and society", "quote": "You care about the interaction between technology and society, the ways in which they inform each other, and our responsibility as technologists to be conscious of that relationship."},
+    {"term": "computing pioneers like Ada Lovelace, Douglas Engelbart, Alan Kay", "quote": "You’ve heard of computing pioneers like Ada Lovelace, Douglas Engelbart, Alan Kay, and others—and understand why we’re big fans of their work."}
+  ],
+  "responsibilities_summary": [
+    {"summary": "Prototype and ship an AI-powered improvement to the product together with the team.", "quote": "Partner with your team to prototype and ship an AI-powered product improvement"},
+    {"summary": "Own a scoped project taking a model or technique into production, including monitoring, guardrails, and latency/cost/reliability work.", "quote": "Own a scoped productionization project: integrate a new model/technique into an existing workflow, add monitoring + guardrails, or improve latency/cost/reliability."},
+    {"summary": "Build or extend evaluation sets, run experiments, analyze the results, and turn findings into product or system changes.", "quote": "Contribute to evals and iteration loops: build or extend an evaluation set, run experiments, analyze results, and translate learnings into product or system changes."},
+    {"summary": "Build model-powered product features end to end, covering UX, APIs, retrieval, and orchestration.", "quote": "AI product engineering: building model-powered features end-to-end (UX, APIs, retrieval, orchestration, quality, and reliability)"},
+    {"summary": "Improve model integration and performance and build the serving and experimentation infrastructure behind it.", "quote": "Model & systems engineering: improving model integration and performance (latency, cost, safety, robustness) and building the infrastructure that supports model serving and experimentation"},
+    {"summary": "Create evaluation frameworks and automated or human-in-the-loop testing to measure and raise model and product quality.", "quote": "Evaluation & quality (evals): creating evaluation frameworks and automated/ human-in-the-loop testing to measure and improve model and product quality"},
+    {"summary": "Work on features built on LLMs, embeddings, and related AI technologies.", "quote": "You'll work on cutting-edge AI-powered features, leveraging LLMs, embeddings, and other AI technologies to make Notion more intelligent and capable."},
+    {"summary": "Take ownership of projects and make the technical decisions they require.", "quote": "You'll take ownership of projects that matter, make critical technical decisions, and contribute your unique perspective to our product vision."},
+    {"summary": "Collaborate cross-functionally with design, product, and data partners.", "quote": "Working alongside passionate experts across design, product, and data, you'll help shape the future of how people work."}
+  ],
+  "seniority_signals": [
+    "You have less than two years of engineering experience.",
+    "We're looking for an Early Career AI Engineer to join as a strategic partner in shaping Notion's AI vision.",
+    "You'll tackle meaningful challenges with increasing autonomy, crafting code that millions of users will experience.",
+    "can take an idea from prototype to a working feature with guidance"
+  ],
+  "disqualifiers": [],
+  "company_context": {
+    "domain": {"claim": "Collaborative AI workspace software for teams", "quote": "Notion is the collaborative AI workspace where teams and agents think together."},
+    "product": {"claim": "A single place unifying knowledge, projects, meetings, and AI tools", "quote": "We're building one place where your knowledge, projects, meetings, and AI tools live side by side, so work is faster, clearer, and less fragmented."},
+    "stage_or_scale": {"claim": "Used at scale by millions of individuals through large companies", "quote": "Millions of individuals, small teams, and large companies run their work on Notion."}
+  },
+  "suspected_injection": []
+}

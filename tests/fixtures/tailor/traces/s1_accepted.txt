@@ -1,0 +1,43 @@
+{
+  "must_have": [
+    {"term": "Python", "quote": "Proficiencyin Python, with a strong understanding of fundamental data structures."},
+    {"term": "fundamental data structures", "quote": "Proficiencyin Python, with a strong understanding of fundamental data structures."},
+    {"term": "TensorFlow", "quote": "Hands-on experience with machine learning frameworks such as TensorFlow,PyTorch, or scikit-learn."},
+    {"term": "PyTorch", "quote": "Hands-on experience with machine learning frameworks such as TensorFlow,PyTorch, or scikit-learn."},
+    {"term": "scikit-learn", "quote": "Hands-on experience with machine learning frameworks such as TensorFlow,PyTorch, or scikit-learn."},
+    {"term": "Apache Spark", "quote": "Familiarity with distributed data processing technologies, including Apache Spark, Hadoop (MapReduce), or Apache Flink."},
+    {"term": "Hadoop (MapReduce)", "quote": "Familiarity with distributed data processing technologies, including Apache Spark, Hadoop (MapReduce), or Apache Flink."},
+    {"term": "Apache Flink", "quote": "Familiarity with distributed data processing technologies, including Apache Spark, Hadoop (MapReduce), or Apache Flink."},
+    {"term": "Docker", "quote": "Experience with containerization and orchestration tools, such as Docker and Kubernetes, for deploying data and machine learning workloads."},
+    {"term": "Kubernetes", "quote": "Experience with containerization and orchestration tools, such as Docker and Kubernetes, for deploying data and machine learning workloads."},
+    {"term": "Bachelor’s + 0 years of relevant experience", "quote": "Completion within the past 3 years, or current enrollment with expected completion within 12 months, of a certification or relevant degree program (e.g., Associate’s, Apprenticeship, Boot Camp, or Certification in a specialized program + 1 year of relevant experience, High School Diploma + 2 years of relevant experience) or Bachelor’s + 0 years of relevant experience."}
+  ],
+  "nice_to_have": [
+    {"term": "AI/ML", "quote": "Hands-on experience with AI/ML."},
+    {"term": "AWS", "quote": "Familiarity with major cloud platforms, such as AWS, Azure, or Google Cloud."},
+    {"term": "Azure", "quote": "Familiarity with major cloud platforms, such as AWS, Azure, or Google Cloud."},
+    {"term": "Google Cloud", "quote": "Familiarity with major cloud platforms, such as AWS, Azure, or Google Cloud."},
+    {"term": "distributed systems concepts", "quote": "Understanding of distributed systems concepts, including scalability, reliability, fault tolerance, and data consistency, as well as familiarity with distributed computing patterns (e.g., load balancing, consensus algorithms, and inter-service communication)."},
+    {"term": "distributed computing patterns", "quote": "Understanding of distributed systems concepts, including scalability, reliability, fault tolerance, and data consistency, as well as familiarity with distributed computing patterns (e.g., load balancing, consensus algorithms, and inter-service communication)."}
+  ],
+  "responsibilities_summary": [
+    {"summary": "Build advanced data pipelines, machine learning infrastructure, and analytics platforms for internal Cisco business groups.", "quote": "You will join teams focused on developing advanced data pipelines, machine learning infrastructure, and analytics platforms within business groups such as S&TO, Supply Chain, and Infrastructure Engineering."},
+    {"summary": "Develop scalable data pipelines, design analytics platforms, and build supporting infrastructure for machine learning work.", "quote": "You are a passionate software engineer withexpertisein developing scalable data pipelines, designing robust analytics platforms, and building infrastructure to support machine learning initiatives."},
+    {"summary": "Build and maintain internal software tools and platforms that let business groups apply AI and data-driven insights.", "quote": "By building andmaintainingkey software tools and platforms, you enable Cisco’s business groups toleverageAI and data-driven insights for operational excellence and strategic growth."},
+    {"summary": "Keep the data infrastructure reliable and high quality.", "quote": "Your work ensures high-quality, reliable data infrastructure that supports Cisco’s leadership in intelligent, scalable technology solutions."}
+  ],
+  "seniority_signals": [
+    "Software Engineer Data/AI/Intelligent Systems I (Full Time)",
+    "Bachelor’s + 0 years of relevant experience",
+    "Completion within the past 3 years, or current enrollment with expected completion within 12 months, of a certification or relevant degree program"
+  ],
+  "disqualifiers": [
+    "Completion within the past 3 years, or current enrollment with expected completion within 12 months, of a certification or relevant degree program"
+  ],
+  "company_context": {
+    "domain": {"claim": "Builds AI-driven platforms and data infrastructure at global scale.", "quote": "Our dedicated team members are building the future of Cisco’s AI-driven platforms and data infrastructure, supporting innovation across the globe."},
+    "product": {"claim": "Sells solutions that give customers security, visibility, and insights across their digital footprint.", "quote": "These solutions provide customers with unparalleled security, visibility, and insights across the entire digital footprint."},
+    "stage_or_scale": {"claim": "Established company operating for 40 years across physical and digital worlds.", "quote": "We’ve been innovating fearlessly for 40 years to create solutions that power how humans and technology work together across the physical and digital worlds."}
+  },
+  "suspected_injection": []
+}
