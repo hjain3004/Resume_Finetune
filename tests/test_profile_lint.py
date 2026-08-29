@@ -8,7 +8,7 @@ from src.profile_lint import MEDIUM_MAX, SHORT_MAX, lint_profile
 from scripts.validate_profile import _load_banned_terms
 from src.render.emphasis import parse_emphasis
 
-_EXPECTED_REAL_TOTALS = {"backend": 3499, "ml": 3581}
+_EXPECTED_REAL_TOTALS = {"backend": 3141, "ml": 3341}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."
@@ -113,6 +113,9 @@ def test_real_variants_have_exact_shape_and_budget():
     profile = load_profile("config/master_profile.yaml")
     assert set(profile.base_variants) == set(_EXPECTED_REAL_TOTALS)
     for name, expected_total in _EXPECTED_REAL_TOTALS.items():
-        assert len(profile.base_variants[name].bullet_order) == 13
+        assert len(profile.base_variants[name].bullet_order) == 12
         assert _real_variant_total(profile, name) == expected_total
-        assert expected_total <= 3600
+        # Heuristic ceiling derived from what actually fits on one page (ml is 3341 chars).
+        # This character ceiling is a heuristic guard, not a page-fit proof; the authoritative
+        # check is rendering and running L7 layout/size checks (see docs/superpowers/specs/2026-08-23-m8p-3-s3-static-g1-design.md §9.1).
+        assert expected_total <= 3400

@@ -103,7 +103,6 @@ base_variants:
     bullet_order:
       - int_b1
       - int_b2
-      - int_b9
       - int_b3
       - am_b00_order_management_domain
       - am_b04_data_retention
@@ -127,7 +126,6 @@ base_variants:
       - am_b01_dlq_consolidation
       - am_b02_row_level_entitlement
       - sepsis_b3
-      - sepsis_b8
       - frd_b1
       - frd_b3
 
@@ -141,7 +139,7 @@ projects:
     display_date: "Feb. 2026 - May 2026"
     name: "PeerChat - Peer Discovery Module"
     # Rendered header line. Keep <= ~95 chars so it never wraps.
-    display_title: "PeerChat - Peer Discovery for a Serverless P2P Chat System"
+    display_title: "PeerChat - Peer Discovery"
     org: "San Jose State University"
     context: >-
       Distributed systems course project built by a ~15-person class split into
@@ -822,7 +820,7 @@ projects:
   - id: fake_review_detection
     display_date: "Feb. 2026 - Apr. 2026"
     name: "Fake Review Detection on Yelp (Multi-Signal Pipeline)"
-    display_title: "Fake Review Detection on Yelp - Multi-Signal Detection Pipeline"
+    display_title: "Fake Review Detection on Yelp"
     org: "San Jose State University - CMPE 255, Data Mining"
     context: >-
       Course project, Group 7, 4-person team, organized as six layers:
@@ -855,7 +853,7 @@ projects:
     tech:
       primary: ["Python", "PySpark", "PyTorch", "Transformers", "scikit-learn"]
       secondary: ["Delta Lake", "pandas", "NumPy", "matplotlib", "joblib"]
-      tech_line: "Python, PySpark, Delta Lake, PyTorch, Transformers, scikit-learn"
+      tech_line: "Python, PySpark, Delta Lake, PyTorch, scikit-learn"
 
     keywords:
       exact: ["PySpark", "Apache Spark", "ETL", "data pipeline", "Delta Lake", "OLAP",
@@ -1152,7 +1150,7 @@ projects:
   - id: campus_marketplace
     display_date: "Sep. 2025 - Dec. 2025"
     name: "Campus Marketplace"
-    display_title: "Campus Marketplace - Peer-to-Peer Marketplace Backend for a University Campus"
+    display_title: "Campus Marketplace"
     org: "San Jose State University"
     context: >-
       CMPE 202 team project (team "codebuggers", 3 developers). Himanshu authored
@@ -1185,7 +1183,7 @@ projects:
       primary: ["Java 21", "Spring Boot", "PostgreSQL", "Flyway", "JUnit 5"]
       secondary: ["Spring Security", "OAuth2 Resource Server", "JJWT", "MapStruct",
                   "Lombok", "AWS S3", "Google Vertex AI (Gemini)", "JaCoCo", "Maven"]
-      tech_line: "Java 21, Spring Boot, PostgreSQL, Flyway, Spring Security, AWS S3, JUnit 5"
+      tech_line: "Java 21, Spring Boot, PostgreSQL, AWS S3"
 
     keywords:
       exact: ["Java", "Spring Boot", "PostgreSQL", "REST API", "JWT", "OAuth2",
@@ -1416,7 +1414,7 @@ projects:
   - id: clinical_trial_platform
     display_date: "Sep. 2025 - Dec. 2025"
     name: "Synthetic Clinical Trial Data Platform"
-    display_title: "Synthetic Clinical Trial Data Platform - Microservices for Regulated Trial Data"
+    display_title: "Synthetic Clinical Trial Data Platform"
     org: "San Jose State University"
     context: >-
       CMPE 272 project. A 12-service Python microservices platform that generates
