@@ -58,7 +58,12 @@ output.
 1. Every `quote` you emit anywhere in your output must be an **exact,
    case-sensitive substring** of the request's `jd_text` — copy the
    characters verbatim, do not paraphrase, truncate mid-word, or normalize
-   whitespace/casing.
+   whitespace/casing. **Copy punctuation byte-for-byte.** Never convert a
+   straight apostrophe (') to a curly one (’), straight quotes (") to curly
+   quotes (“ ”), or a hyphen (-) to an en/em dash (– —) - and never do the
+   reverse. If the JD writes "You've", your quote must contain "You've" with the
+   same apostrophe character. Typographic normalization is the single most common
+   cause of a rejected quote.
 2. Every `term` you emit must itself be an **exact, case-sensitive
    substring of its own `quote`** — use the JD's exact surface form (e.g. if
    the JD says "Golang", do not normalize it to "Go"; if it says "K8s", do
