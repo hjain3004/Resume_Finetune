@@ -35,13 +35,44 @@ def check_identity_survives(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
     return violations
 
 
+def _known_date_ranges(doc: RenderDoc) -> tuple[str, ...]:
+    return tuple(
+        entry.date_range
+        for group in (doc.education, doc.experience, doc.projects)
+        for entry in group
+        if entry.date_range
+    )
+
+
+def _haystack_without_date_ranges(doc: RenderDoc, parsed: ParsedPdf) -> str:
+    """M8V-1 3b: a right-aligned project/experience date range can land, in
+    PDF extraction order, between a bullet's two wrapped physical lines
+    (confirmed live: sepsis_b5's continuation was split by its project's
+    own date range). Stripping every KNOWN date range this document
+    actually declares -- never an arbitrary token -- and re-collapsing
+    whitespace rejoins the bullet's own wrapped halves without touching
+    anything else. A bullet that is genuinely missing stays missing: this
+    can only ever remove text that was never part of the bullet."""
+    stripped = parsed.normalized_text
+    for date_range in _known_date_ranges(doc):
+        stripped = stripped.replace(_normalize(date_range), " ")
+    return _normalize(stripped)
+
+
 def check_bullets_survive(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
     haystack = parsed.normalized_text
-    return [
-        f"L7 bullet: {bullet.bullet_id} did not survive PDF extraction"
-        for bullet in doc.all_bullets()
-        if _normalize(bullet.text) not in haystack
-    ]
+    stripped_haystack = None
+    violations = []
+    for bullet in doc.all_bullets():
+        normalized = _normalize(bullet.text)
+        if normalized in haystack:
+            continue
+        if stripped_haystack is None:
+            stripped_haystack = _haystack_without_date_ranges(doc, parsed)
+        if normalized in stripped_haystack:
+            continue
+        violations.append(f"L7 bullet: {bullet.bullet_id} did not survive PDF extraction")
+    return violations
 
 
 def check_skills_survive(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
@@ -307,16 +338,39 @@ def check_metrics_survive(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
     return violations
 
 
+def _stitched_bold_candidates(pages: tuple[RenderedPage, ...]) -> tuple[str, ...]:
+    """M8V-1 3a: a bold phrase that wraps across a line becomes two separate
+    `bold_run_texts` entries on two `RenderedLine`s, so the plain per-line
+    substring test never sees them as one string (confirmed live:
+    am_b01_dlq_consolidation, cm_b1 x2). Every individual bold run is still
+    a candidate on its own (the original, unmodified check); in addition,
+    each bold run on one line is paired with each bold run on the
+    immediately following line within the same page -- exactly "the end of
+    one line's bold run plus the start of the next line's bold run", which
+    is what a genuine wrap continuation looks like. This never joins runs
+    across a page boundary and never joins non-adjacent lines, so it cannot
+    manufacture a match for text that was never actually printed in bold."""
+    candidates: list[str] = []
+    for page in pages:
+        per_line_runs = [tuple(normalize(text) for text in line.bold_run_texts) for line in page.lines]
+        for runs in per_line_runs:
+            candidates.extend(runs)
+        for runs_a, runs_b in zip(per_line_runs, per_line_runs[1:]):
+            for run_a in runs_a:
+                for run_b in runs_b:
+                    candidates.append(f"{run_a} {run_b}")
+    return tuple(candidates)
+
+
 def check_emphasis_rendered(doc: RenderDoc, pages: tuple[RenderedPage, ...]) -> list[str]:
     """For every bullet with non-empty emphasis, each emphasised substring
     must appear inside a bold run on the page -- proves \\textbf{} actually
-    reached the PDF rather than being escaped away."""
-    bold_texts = tuple(
-        normalize(text)
-        for page in pages
-        for line in page.lines
-        for text in line.bold_run_texts
-    )
+    reached the PDF rather than being escaped away. A bold span that wraps
+    across a line is stitched from its two adjacent-line halves before
+    matching; a span that was genuinely never rendered bold anywhere still
+    fails, since it can never appear in any real bold run or any pair of
+    truly adjacent ones."""
+    bold_texts = _stitched_bold_candidates(pages)
     violations = []
     for bullet in doc.all_bullets():
         for start, end in bullet.emphasis:
@@ -327,6 +381,22 @@ def check_emphasis_rendered(doc: RenderDoc, pages: tuple[RenderedPage, ...]) -> 
                     f"{bullet.text[start:end]!r} did not render bold"
                 )
     return violations
+
+
+def check_no_do_not_claim_in_pdf(do_not_claim: tuple[str, ...], parsed: ParsedPdf) -> list[str]:
+    """Belt-and-braces against failure #3 at the far end: no do_not_claim
+    term may appear anywhere in the extracted PDF text, regardless of
+    which surface (bullet, skills, tech_line, display_title, project_name)
+    put it there. Deliberately decoupled from RenderDoc -- do_not_claim is
+    a profile-level fact, not a rendered-document one -- so the caller
+    supplies it directly (e.g. from the same profile that produced the
+    draft being rendered)."""
+    haystack = parsed.normalized_text
+    return [
+        f"L7 do_not_claim: term {term!r} found in rendered PDF text"
+        for term in do_not_claim
+        if _normalize(term) in haystack
+    ]
 
 
 def check_within_page_vertical(doc: RenderDoc, parsed: ParsedPdf) -> list[str]:
@@ -397,10 +467,14 @@ def run_l7_tailored(
     parsed: ParsedPdf,
     pages: tuple[RenderedPage, ...],
     modified_bullet_ids: frozenset[str],
+    do_not_claim: tuple[str, ...] = (),
 ) -> list[str]:
     """Every existing run_l7 check plus the six tailored-render checks
-    above. run_l7 itself is unchanged so the M10 tests and
-    scripts/render_bakeoff.py keep working."""
+    above, plus check_no_do_not_claim_in_pdf (M8V-1 Task 3). run_l7 itself
+    is unchanged so the M10 tests and scripts/render_bakeoff.py keep
+    working. `do_not_claim` defaults to empty so every existing caller of
+    this four-argument signature is unaffected; a caller that has the
+    profile's do_not_claim list on hand should pass it."""
     violations = list(run_l7(doc, parsed))
     violations.extend(check_bullet_line_counts(doc, pages, modified_bullet_ids))
     violations.extend(check_metrics_survive(doc, parsed))
@@ -408,5 +482,6 @@ def run_l7_tailored(
     violations.extend(check_within_page_vertical(doc, parsed))
     violations.extend(check_no_invisible_text(doc, pages))
     violations.extend(check_printable_margin(doc, parsed))
+    violations.extend(check_no_do_not_claim_in_pdf(do_not_claim, parsed))
     logger.info("L7 (tailored): %d violation(s)", len(violations))
     return violations
