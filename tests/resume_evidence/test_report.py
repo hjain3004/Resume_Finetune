@@ -73,4 +73,3 @@ def test_markdown_contains_exact_hash_approval_command(tmp_path):
     markdown = render_report_markdown(report)
     assert digest in markdown
     assert "--approved-report-sha256" in markdown
-

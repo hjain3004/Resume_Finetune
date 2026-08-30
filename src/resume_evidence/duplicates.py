@@ -126,4 +126,3 @@ def find_duplicates(
                     )
                 )
     return tuple(pairs)
-

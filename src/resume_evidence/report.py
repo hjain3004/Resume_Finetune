@@ -221,4 +221,3 @@ def render_report_markdown(report: ResearchReport) -> str:
         ]
     )
     return "\n".join(lines)
-

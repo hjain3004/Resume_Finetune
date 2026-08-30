@@ -205,4 +205,3 @@ def lookup_outcomes(
             continue
         selected.append(record)
     return tuple(sorted(selected, key=lambda item: item.reference_id))
-

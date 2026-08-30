@@ -48,4 +48,3 @@ def test_lookup_rejects_invalid_month_limit(valid_outcome_record, value):
     bank = dataclasses.replace(EvidenceBank.empty(), outcomes=(valid_outcome_record,))
     with pytest.raises(EvidenceValidationError):
         lookup_outcomes(bank, max_months=value)
-
