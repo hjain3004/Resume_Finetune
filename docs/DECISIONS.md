@@ -2554,3 +2554,36 @@ seconds of same-host spacing, records both transport attempts and their outcomes
 research state, and stops the affected batch on fallback failure. Normalized captures carry
 transport-neutral provenance and `layout_capture_available: false` when no screenshot is made;
 the Huntr parser must never consume provider-specific dictionaries.
+
+## 2026-08-30 — M8Q-0BR offline acquisition and Huntr parser repair
+
+M8Q-0BR repairs page-provenance, transport, fallback, timeout, spacing, proxy, link-policy, and
+checkpoint defects without another live smoke. Replay of the three existing ignored captures
+found 91 sections/91 promotable composites on the real-resume hub, 26 sections/2 promotable
+composites/24 illustrative examples on the software page, and 20 sections/1 promotable
+composite/19 illustrative examples on the ML page. Exact individual outcome evidence appeared in
+91, 7, and 9 sections respectively; unknown and illustrative records remain excluded.
+
+The parser uses frozen page-context and page/example contracts. Composite promotion requires
+explicit page-level provenance linking the collection to logged interviews, recruiter screens, or
+offers plus reconstruction/anonymization evidence and an exact outcome quote in the same section.
+Bullets, page titles, “why this resume is great” prose, and outcomes from other sections cannot
+promote a record. Composite records retain their reconstructed/anonymized limitation.
+
+The operator classifies real subprocess results with a typed bounded outcome contract, passes a
+180-second timeout, and uses `--proxy basic` as the only permitted Firecrawl proxy mode. `auto`,
+`enhanced`, and `stealth` are prohibited. The explicit fallback flag enables exactly one existing
+`Crawl4AIBrowserClient` attempt only for retrieval or deterministic incomplete-extraction
+failures; authentication, CAPTCHA, login, paywall, robots, policy, budget, rate-limit, provider,
+malformed-output, and timeout outcomes are terminal. Same-host spacing covers both transports,
+checkpoints strictly record both attempts, and provider adapters drop LinkedIn/external navigation
+links without following them. No Playwright transport or dependency was added, and no stealth or
+anti-bot circumvention is permitted.
+
+Commits: `de7fa71` (page-level provenance) and `b9e6de9` (transport/fallback/checkpoint repair).
+Offline verification passed: 164 resume-evidence tests, 50 M8Q CLI/integration tests, and 1852
+full-suite tests with 1 deselected. Database SHA-256 remained
+`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+
+M8Q-0B Task 5, bulk acquisition, corpus annotation/import, corpus approval/adoption, tailoring,
+SkillOpt, and all later milestones remain pending.

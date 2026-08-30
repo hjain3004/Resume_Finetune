@@ -304,3 +304,13 @@ workflow consumes this foundation. M8, Phase 3, M8V, and both human pilots remai
   `applications/` (D4). Full test suite: 1477 passed, 1 deselected (+44 net tests over M8P-4).
   `data/jobs.db` checksum unchanged; no live model, network, `pdflatex`, or DB mutation occurred.
   G3, review packet, feedback capture, and both human pilots remain incomplete.
+
+- 2026-08-30: **M8Q-0BR is COMPLETE offline.** Repaired the M8Q-0B Tasks 2–4 foundation with
+  typed page-level Huntr provenance, exact section-local outcome evidence, typed bounded Firecrawl
+  outcomes, a 180-second timeout, `--proxy basic` only, strict atomic checkpoints, two-second
+  cross-transport spacing, safe provider link filtering, and an explicit one-attempt fallback to
+  the existing Crawl4AI client. The three existing smoke captures remain ignored and were replayed
+  read-only; no new live smoke occurred during repair. No Playwright transport, stealth, or
+  anti-bot circumvention was added. Verification: 164 resume-evidence tests, 50 M8Q CLI/integration
+  tests, and 1852 full-suite tests with 1 deselected. M8Q-0B Task 5, bulk acquisition,
+  annotation/import, corpus approval/adoption, tailoring, and SkillOpt remain pending.

@@ -19,7 +19,7 @@
 - Do not start if M8Q-0A is incomplete, the focused foundation tests fail, or the canonical loader cannot validate a synthetic corpus.
 - Preserve all unrelated dirty files. Never stage `data/`, `inbox/urls.txt`, `docs/sampleJD.md`, profile files, prompts, applications, or traces.
 - Firecrawl calls are sequential on `huntr.co`; maintain at least 2 seconds between same-host requests.
-- Never pass `--profile`, `--actions`, `--proxy`, credentials, cookies, or an API key on the command line. Authentication comes only from stored CLI credentials or the environment.
+- Never pass `--profile`, `--actions`, credentials, cookies, or an API key on the command line. The research operator passes only `--proxy basic`; authentication comes only from stored CLI credentials or the environment.
 - Use `--redact-pii`, `--only-main-content`, and normal public scraping. No auth, CAPTCHA, paywall, stealth, enhanced proxy, or anti-bot escalation.
 - Never scrape LinkedIn. Do not follow LinkedIn links discovered on resume pages.
 - A Firecrawl 403, CAPTCHA, login wall, paywall, robots refusal, missing account information, or exhausted budget stops the affected batch.
@@ -794,3 +794,31 @@ batch. A fallback capture may omit screenshots when complete markdown and HTML a
 it records `layout_capture_available: false`, actual transport provenance, and the limitation.
 The Huntr parser consumes only the transport-neutral normalized capture envelope, never a
 provider-specific response object.
+
+### M8Q-0BR repair milestone (2026-08-30)
+
+M8Q-0BR repairs the offline contracts exposed by the first three-page smoke without performing
+another live smoke. The Huntr parser now separates page-level methodology from bounded resume
+sections, requires publisher outcome provenance plus reconstruction/anonymization for composite
+promotion, preserves exact section and methodology quotes, and retains composite limitations.
+Read-only replay of the three existing ignored captures found 91 sections/91 promotable composites
+on the real-resume hub, 26 sections/2 promotable composites/24 illustrative sections on the
+software page, and 20 sections/1 promotable composite/19 illustrative sections on the ML page.
+Exact per-example outcome evidence appeared in 91, 7, and 9 sections respectively.
+
+The operator now classifies real subprocess results through a typed bounded outcome contract,
+passes a finite 180-second timeout, and uses `--proxy basic` only. `auto`, `enhanced`, and
+`stealth` are prohibited. `--allow-crawl4ai-fallback` is disabled by default and enables exactly
+one existing ordinary `Crawl4AIBrowserClient` attempt only after `retrieval_failure` or
+deterministic `incomplete_extraction`; terminal access, authentication, policy, budget,
+rate-limit, and timeout outcomes never activate it. Both attempts are recorded in a strict atomic
+checkpoint, and the client closes in `finally`. Provider normalization drops LinkedIn and
+unrelated external navigation links without visiting them; strict caller-supplied captures remain
+fail-closed for unsafe links.
+
+No new live smoke occurred during repair: the three ignored captures and smoke report were not
+overwritten. Playwright was not added as a transport; Crawl4AI remains the approved ordinary
+browser fallback, with no stealth or anti-bot circumvention. Verification passed with 164
+`tests/resume_evidence/` tests, 50 M8Q CLI/integration tests, and 1852 full-suite tests with one
+intentional deselection. M8Q-0B Task 5, bulk acquisition, annotation/import, and later tailoring
+integration remain pending.

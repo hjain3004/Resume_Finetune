@@ -283,3 +283,15 @@ Acceptance criteria:
 - Sensitive query/fragment credentials raise `InboxInputError`, preserve `inbox/urls.txt`, and insert zero rows.
 - `--resolve-job-id` requires `--resolve-only`, rejects invalid/duplicate/non-DISCOVERED IDs with exit code 1 before `db.start_run()`, and resolves only targeted jobs with scoped pre/post eligibility gates.
 - Full pytest suite passes with 0 failures offline. No live network or model calls. Live targeted smoke remains pending.
+
+M8Q-0BR (2026-08-30) is complete offline as a repair of the M8Q-0B Tasks 2–4 foundation. The
+parser separates page-level Huntr methodology/reconstruction from per-example sections, preserves
+exact quotes and composite limitations, and excludes illustrative/unknown records. The research
+operator classifies real Firecrawl results with bounded diagnostics, passes a 180-second timeout,
+uses only `--proxy basic`, enforces two-second spacing across transports, validates checkpoints
+strictly and atomically, filters unsafe/external navigation links at provider boundaries, and
+wires an explicit one-attempt fallback to the existing `Crawl4AIBrowserClient`. No new live smoke
+occurred; the three existing ignored captures were replayed read-only. Verification passed with
+164 resume-evidence tests, 50 M8Q CLI/integration tests, and 1852 full-suite tests with 1
+deselected. M8Q-0B Task 5, bulk acquisition, annotation/import, approval/adoption, tailoring, and
+SkillOpt remain pending.
