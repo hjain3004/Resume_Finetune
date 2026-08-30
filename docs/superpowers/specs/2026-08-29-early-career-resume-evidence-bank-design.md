@@ -136,8 +136,9 @@ data/
 └── resume_research/                  # ignored; private local research state
     ├── inbox/
     │   └── <reference_id>/
-    │       ├── candidate.yaml
-    │       ├── source.md
+    │       ├── bundle.yaml
+    │       ├── sources/
+    │       │   └── <source_id>.md
     │       ├── layout.png|pdf        # optional; private visual reference
     │       └── acquisition.json
     ├── reports/
@@ -404,14 +405,23 @@ content are distinct; superficial employer/name swaps do not create a new record
 
 Promotion is an explicit offline operation:
 
-1. validate every expected staged record;
-2. reject missing, unexpected, invalid, or duplicate records;
-3. generate the complete review report;
-4. require the user's corpus-level approval;
-5. build the canonical corpus in a temporary sibling directory;
-6. validate the staged canonical directory through the canonical loader;
-7. atomically promote the complete directory;
-8. accept a byte-identical rerun as unchanged and reject a conflicting overwrite.
+1. freeze a private manifest that explicitly lists outcome records to promote and outcome records
+   excluded from promotion, with a nonempty reason for every exclusion;
+2. validate every expected staged record, including excluded records, so structurally corrupt input
+   cannot be hidden by labeling it excluded;
+3. reject missing, unexpected, invalid, or unresolved duplicate records; there is no implicit skip;
+4. generate the complete review report over promoted and explicitly excluded records;
+5. require the user's corpus-level approval;
+6. build the canonical corpus from only the manifest's promoted records in a temporary sibling
+   directory;
+7. validate the staged canonical directory through the canonical loader;
+8. atomically promote the complete directory;
+9. accept a byte-identical rerun as unchanged and reject a conflicting overwrite.
+
+Every promoted outcome must have an `ACCEPTED` admission decision. A `REJECTED` or `NEEDS_REVIEW`
+candidate may remain in the private research corpus only as an explicit exclusion and must appear in
+the report. Pattern cards may cite only promoted outcomes. At least 50 promoted outcomes must be
+Huntr records.
 
 The canonical corpus has an explicit schema and corpus version. Updating an existing record requires
 a future refresh operation that preserves prior hashes and records the reason. V1 does not implement
