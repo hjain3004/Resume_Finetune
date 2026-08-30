@@ -14,6 +14,7 @@ from pathlib import Path
 from src import db
 from src.tailor.pilot import (
     APPLICATIONS_ROOT,
+    DEFAULT_PROMPT_DIR,
     STAGE_ARTIFACT,
     Stage,
     _discover_run_manifests,
@@ -23,6 +24,7 @@ from src.tailor.pilot import (
     cost_report,
     eligible_candidates,
     select_pilot_jobs,
+    shakedown,
 )
 from src.tailor.pilot import run_application
 from src.tailor.publish import parse_render_result
@@ -63,6 +65,7 @@ def cmd_run(args) -> int:
             root=Path(args.root) if args.root else APPLICATIONS_ROOT,
             trace_dir=Path(args.trace_dir) if args.trace_dir else Path("data/traces"),
             feedback_dir=Path(args.feedback_dir) if args.feedback_dir else DEFAULT_FEEDBACK_DIR,
+            prompt_dir=Path(args.prompts) if getattr(args, "prompts", None) else DEFAULT_PROMPT_DIR,
             stop_after=stop_after, only=only, dry_run=args.dry_run,
             allow_rerun_after_feedback=args.allow_rerun_after_feedback,
         )
@@ -83,6 +86,53 @@ def cmd_run(args) -> int:
         return 0
     except Exception as exc:
         return _fail("run", exc)
+
+
+def cmd_shakedown(args) -> int:
+    """Runs the complete preflight (including render) before ever touching
+    the model, then the same run_application the real pilot uses -- writing
+    under --root, so a later real pilot run resumes at zero cost. Frames a
+    failure as a bug report, not a pilot result: M8P-7 assumed a working
+    pipeline with a human reviewing output, and this is a debugging tool,
+    not that."""
+    try:
+        stop_after = Stage(args.stop_after) if args.stop_after else None
+        only = Stage(args.only) if args.only else None
+        outcome = shakedown(
+            args.job_id, db_path=args.db, profile_path=args.profile or DEFAULT_PROFILE,
+            root=Path(args.root) if args.root else APPLICATIONS_ROOT,
+            trace_dir=Path(args.trace_dir) if args.trace_dir else Path("data/traces"),
+            feedback_dir=Path(args.feedback_dir) if args.feedback_dir else DEFAULT_FEEDBACK_DIR,
+            prompt_dir=Path(args.prompts) if getattr(args, "prompts", None) else DEFAULT_PROMPT_DIR,
+            stop_after=stop_after, only=only, dry_run=args.dry_run,
+            allow_rerun_after_feedback=args.allow_rerun_after_feedback,
+        )
+        if outcome.preflight_findings:
+            print("shakedown: preflight failed -- no model call was made", file=sys.stderr)
+            for finding in outcome.preflight_findings:
+                print(f"  [{finding.check}] {finding.surface}: {finding.message}", file=sys.stderr)
+            return 1
+
+        run_outcome = outcome.run_outcome
+        if run_outcome.failed_stage is not None:
+            failed_record = next(
+                (record for record in run_outcome.manifest.stages if record.stage is run_outcome.failed_stage), None
+            )
+            print("shakedown: BUG REPORT -- a stage failed", file=sys.stderr)
+            print(f"  stage: {run_outcome.failed_stage.value}", file=sys.stderr)
+            print(f"  outcome kind: {failed_record.outcome_kind if failed_record else 'unknown'}", file=sys.stderr)
+            print(f"  diagnostic: {failed_record.error if failed_record else 'unknown failure'}", file=sys.stderr)
+            for trace in (failed_record.trace_paths if failed_record else ()):
+                print(f"  trace: {trace}", file=sys.stderr)
+            if run_outcome.retry_command:
+                print(f"  retry with: {run_outcome.retry_command}", file=sys.stderr)
+            return 1
+
+        print(f"shakedown: job {args.job_id} completed clean "
+              f"({run_outcome.manifest.total_model_calls} model calls)")
+        return 0
+    except Exception as exc:
+        return _fail("shakedown", exc)
 
 
 def cmd_cost(args) -> int:
@@ -183,11 +233,26 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--root")
     run.add_argument("--trace-dir")
     run.add_argument("--feedback-dir")
+    run.add_argument("--prompts")
     run.add_argument("--stop-after", choices=stage_choices)
     run.add_argument("--only", choices=stage_choices)
     run.add_argument("--dry-run", action="store_true")
     run.add_argument("--allow-rerun-after-feedback", action="store_true")
     run.set_defaults(func=cmd_run)
+
+    shakedown_parser = sub.add_parser("shakedown")
+    shakedown_parser.add_argument("--job-id", type=int, required=True)
+    shakedown_parser.add_argument("--db", required=True)
+    shakedown_parser.add_argument("--profile")
+    shakedown_parser.add_argument("--root")
+    shakedown_parser.add_argument("--trace-dir")
+    shakedown_parser.add_argument("--feedback-dir")
+    shakedown_parser.add_argument("--prompts")
+    shakedown_parser.add_argument("--stop-after", choices=stage_choices)
+    shakedown_parser.add_argument("--only", choices=stage_choices)
+    shakedown_parser.add_argument("--dry-run", action="store_true")
+    shakedown_parser.add_argument("--allow-rerun-after-feedback", action="store_true")
+    shakedown_parser.set_defaults(func=cmd_shakedown)
 
     cost = sub.add_parser("cost")
     cost.add_argument("--root")

@@ -13,7 +13,7 @@ import scripts.tailor_pilot as pilot_cli
 from scripts.tailor_pilot import main
 from src import db
 from src.models import Status
-from tests.tailor.test_pilot import _build_pilot_root, _write_feedback_record
+from tests.tailor.test_pilot import _build_pilot_root, _write_clean_prompt_dir, _write_feedback_record
 
 
 def _seed_jobs(path: Path, jobs) -> None:
@@ -53,6 +53,8 @@ def corpus_db(tmp_path):
 
 def test_select_then_dry_run_then_cost_gate_index(tmp_path, corpus_db, capsys):
     applications = tmp_path / "applications"
+    prompts_dir = tmp_path / "prompts"
+    _write_clean_prompt_dir(prompts_dir)
 
     # 1. select: read-only, names the same three jobs the design's own
     #    illustrative §4 example does (one ml/long, one short, one medium).
@@ -66,7 +68,7 @@ def test_select_then_dry_run_then_cost_gate_index(tmp_path, corpus_db, capsys):
     #    cost and writes nothing -- before any real stage is ever invoked.
     for job_id in (119, 213, 225):
         assert main(["run", "--job-id", str(job_id), "--dry-run", "--db", str(corpus_db),
-                     "--root", str(applications)]) == 0
+                     "--root", str(applications), "--prompts", str(prompts_dir)]) == 0
     assert not applications.exists()
 
     # 3. cost/gate/index over an already-complete pilot root (the shape a

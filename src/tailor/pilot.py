@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import tempfile
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
@@ -22,6 +23,7 @@ from src.tailor.g1 import load_banned_terms
 from src.tailor.g2 import load_taste_lessons
 from src.tailor.g2_pipeline import G2OutcomeKind, g2_bundle_to_dict, parse_g2_bundle, run_g2_loop
 from src.tailor.g3 import G3OutcomeKind, build_review_packet, publish_packet
+from src.tailor.preflight import PreflightFinding, run_preflight
 from src.tailor.publish import RenderOutcomeKind, application_dir, parse_render_result, render_and_publish
 from src.tailor.s0 import S0Response, build_s0_request, parse_s0_response, s0_response_to_dict
 from src.tailor.s0_pipeline import S0OutcomeKind, run_s0_invocation
@@ -314,6 +316,15 @@ def run_application(
 
     # ---- PREPARE ----
     started = _now()
+    with tempfile.TemporaryDirectory() as preflight_workdir:
+        preflight_report = run_preflight(
+            profile_path, template_path, prompt_dir, Path(preflight_workdir), skip_render=True,
+        )
+    if not preflight_report.passed:
+        findings_text = "; ".join(f"[{f.check}] {f.surface}: {f.message}" for f in preflight_report.findings)
+        record(Stage.PREPARE, StageState.FAILED, "preflight_failure", started=started,
+              error=f"preflight failed with {len(preflight_report.findings)} finding(s): {findings_text}")
+        return finish(Stage.PREPARE)
     if not allow_rerun_after_feedback:
         if any(entry.get("job_id") == job_id for entry in load_feedback_index(feedback_dir)):
             record(Stage.PREPARE, StageState.FAILED, "feedback_recorded", started=started,
@@ -629,6 +640,54 @@ def run_application(
               artifact=artifact_path(directory, Stage.G3))
 
     return finish(None)
+
+
+# ---------------------------------------------------------------------------
+# Shakedown mode (M8V-1 Task 4). M8P-7 assumed a working pipeline with a
+# human reviewing output; it is not shaped to be used as a debugger. This
+# separates the two: shakedown runs the COMPLETE preflight (including
+# render) before ever touching the model, then runs the same
+# run_application the real pilot uses -- writing under the same --root, so
+# a later real pilot run resumes whatever it already got through at zero
+# cost -- and frames a stage failure as a bug report rather than a pilot
+# result.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ShakedownOutcome:
+    preflight_findings: tuple[PreflightFinding, ...]
+    run_outcome: RunOutcome | None
+
+
+def shakedown(
+    job_id: int, *, db_path: Path, profile_path: Path,
+    root: Path = APPLICATIONS_ROOT,
+    template_path: Path = Path("profile/template.tex"),
+    banned_words_path: Path = Path("config/banned_words.txt"),
+    taste_path: Path = Path("config/taste.md"),
+    trace_dir: Path = Path("data/traces"),
+    feedback_dir: Path = DEFAULT_FEEDBACK_DIR,
+    prompt_dir: Path = DEFAULT_PROMPT_DIR,
+    stop_after: Stage | None = None,
+    only: Stage | None = None,
+    dry_run: bool = False,
+    allow_rerun_after_feedback: bool = False,
+) -> ShakedownOutcome:
+    with tempfile.TemporaryDirectory() as preflight_workdir:
+        report = run_preflight(
+            profile_path, template_path, prompt_dir, Path(preflight_workdir), skip_render=False,
+        )
+    if not report.passed:
+        return ShakedownOutcome(preflight_findings=report.findings, run_outcome=None)
+
+    run_outcome = run_application(
+        job_id, db_path=db_path, profile_path=profile_path, root=root, template_path=template_path,
+        banned_words_path=banned_words_path, taste_path=taste_path, trace_dir=trace_dir,
+        feedback_dir=feedback_dir, prompt_dir=prompt_dir, stop_after=stop_after, only=only,
+        dry_run=dry_run, allow_rerun_after_feedback=allow_rerun_after_feedback,
+    )
+    return ShakedownOutcome(preflight_findings=(), run_outcome=run_outcome)
 
 
 # ---------------------------------------------------------------------------

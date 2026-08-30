@@ -165,6 +165,47 @@ def _seed_db(db_path, *, job_id=PILOT_JOB_ID, status=Status.SHORTLISTED,
     conn.commit()
     conn.close()
 
+def _write_clean_prompt_dir(prompt_dir):
+    """A minimal, model-free-preflight-clean prompt set: no fence, marker
+    exactly once, and a self-consistent (semantically trivial) documented
+    shape per stage. Isolates run_application/shakedown tests from the two
+    real, disclosed tailoring_s0.md/tailoring_s1.md documentation defects
+    Task 1 found and explicitly left unfixed -- those are a real,
+    out-of-scope finding about docs/prompts/, not a plumbing defect."""
+    prompt_dir.mkdir(parents=True, exist_ok=True)
+    (prompt_dir / "tailoring_s1.md").write_text(
+        'Return one JSON object.\n\n{{S1_REQUEST_JSON}}\n\nShape:\n'
+        '{\n  "must_have": [], "nice_to_have": [], "responsibilities_summary": [],\n'
+        '  "seniority_signals": [], "disqualifiers": [], "company_context": null,\n'
+        '  "suspected_injection": []\n}\n',
+        encoding="utf-8",
+    )
+    (prompt_dir / "tailoring_s0.md").write_text(
+        'Return one JSON object.\n\n{{S0_REQUEST_JSON}}\n\nShape:\n'
+        '{\n  "context_mode": "jd_only", "points": [\n'
+        '    {"sentence": "a", "profile_ids": ["p1"], "requirement_terms": ["t1"], "jd_quotes": ["q1"]},\n'
+        '    {"sentence": "b", "profile_ids": ["p2"], "requirement_terms": ["t2"], "jd_quotes": ["q2"]}\n'
+        '  ]\n}\n',
+        encoding="utf-8",
+    )
+    (prompt_dir / "tailoring_s2.md").write_text(
+        'Return one JSON object.\n\n{{S2_REQUEST_JSON}}\n\nShape:\n'
+        '{\n  "base_variant": "backend",\n  "projects": [{"project_id": "p1", "reason": "r", "s0_point_indexes": [0]}],\n'
+        '  "bullet_order": ["b1"],\n  "coverage": []\n}\n',
+        encoding="utf-8",
+    )
+    (prompt_dir / "tailoring_s3.md").write_text(
+        'Return one JSON object.\n\n{{S3_REQUEST_JSON}}\n\nShape:\n'
+        '{"bullet_edits": [], "skill_additions": []}\n',
+        encoding="utf-8",
+    )
+    (prompt_dir / "tailoring_g2.md").write_text(
+        'Return one JSON object.\n\n{{G2_REQUEST_JSON}}\n\nShape:\n'
+        '{"scores": {"C1": 3, "C2": 3, "C3": 3, "C4": 3, "C5": 3}, "findings": []}\n',
+        encoding="utf-8",
+    )
+
+
 @pytest.fixture
 def tmp_repo(tmp_path):
     db_path = tmp_path / "jobs.db"
@@ -178,9 +219,12 @@ def tmp_repo(tmp_path):
     )
     conn.commit()
     conn.close()
+    prompts_dir = tmp_path / "prompts"
+    _write_clean_prompt_dir(prompts_dir)
     return SimpleNamespace(
         root=tmp_path, db=db_path, profile=Path("config/master_profile.yaml"),
         applications=tmp_path / "applications", feedback=tmp_path / "feedback",
+        prompts=prompts_dir,
     )
 
 @pytest.fixture
@@ -262,42 +306,42 @@ def mock_all_stages_pass(monkeypatch, spy_invocations):
     return chain
 
 def test_dry_run_makes_no_model_call_and_writes_no_artifact(tmp_repo, spy_invocations):
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications, dry_run=True)
     assert spy_invocations.call_count == 0
     assert outcome.manifest.total_model_calls == 0
     assert not list(tmp_repo.applications.rglob("s1_response.json"))
 
 def test_full_run_reports_five_to_seven_model_calls(tmp_repo, mock_all_stages_pass):
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications)
     assert 5 <= outcome.manifest.total_model_calls <= 7
     assert all(r.state in (StageState.COMPLETE, StageState.SKIPPED_COMPLETE)
               for r in outcome.manifest.stages)
 
 def test_rerun_of_a_complete_application_costs_zero_calls(tmp_repo, mock_all_stages_pass, spy_invocations):
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     spy_invocations.reset()
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications)
     assert spy_invocations.call_count == 0
     assert outcome.manifest.total_model_calls == 0
 
 def test_rerun_produces_byte_identical_artifacts(tmp_repo, mock_all_stages_pass):
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     before = {p: p.read_bytes() for p in tmp_repo.applications.rglob("*.json") if p.name != "run_manifest.json"}
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     after = {p: p.read_bytes() for p in tmp_repo.applications.rglob("*.json") if p.name != "run_manifest.json"}
     assert after == before
 
 def test_tampered_upstream_artifact_produces_conflict_and_changes_nothing(tmp_repo, mock_all_stages_pass):
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     bundle = next(tmp_repo.applications.rglob("s3_bundle.json"))
     raw = json.loads(bundle.read_text())
     raw["alignment_fingerprint"] = "0" * 64
     bundle.write_text(json.dumps(raw), encoding="utf-8")
     before = {p: p.read_bytes() for p in tmp_repo.applications.rglob("*.json") if p != bundle and p.name != "run_manifest.json"}
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications)
     assert outcome.failed_stage is Stage.S3
     after = {p: p.read_bytes() for p in tmp_repo.applications.rglob("*.json") if p != bundle and p.name != "run_manifest.json"}
@@ -357,11 +401,11 @@ def mock_g2_fails_then_passes(monkeypatch, spy_invocations):
     return chain
 
 def test_mid_chain_failure_resumes_at_the_failed_stage(tmp_repo, mock_g2_fails_then_passes, spy_invocations):
-    first = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    first = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                             root=tmp_repo.applications)
     assert first.failed_stage is Stage.G2
     spy_invocations.reset()
-    second = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    second = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                              root=tmp_repo.applications)
     assert second.failed_stage is None
     assert spy_invocations.call_count <= 3      # only G2 (and downstream) re-ran
@@ -371,7 +415,7 @@ def test_failure_reports_a_retry_command_and_a_trace_path(tmp_repo, monkeypatch)
         return S1Outcome(kind=S1OutcomeKind.INVOCATION_FAILURE, response=None, error="boom",
                          trace_path=Path("data/traces/fake.json"))
     monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", fake_s1_fail)
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications)
     assert outcome.retry_command and "--only s1" in outcome.retry_command
     record = next(r for r in outcome.manifest.stages if r.stage is Stage.S1)
@@ -382,37 +426,37 @@ def test_no_automatic_retry_on_failure(tmp_repo, monkeypatch, spy_invocations):
         spy_invocations.record("s1")
         return S1Outcome(kind=S1OutcomeKind.INVOCATION_FAILURE, response=None, error="boom", trace_path=None)
     monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", fake_s1_fail)
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     assert spy_invocations.calls_for("s1") == 1
 
 def test_prohibited_job_is_refused(tmp_repo, mock_all_stages_pass):
-    outcome = run_application(279, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    outcome = run_application(279, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     assert outcome.failed_stage is Stage.PREPARE
     assert "no such row" in (outcome.manifest.stages[0].error or "") or \
            "prohibited" in (outcome.manifest.stages[0].error or "")
 
 def test_rerun_after_feedback_is_refused_by_default(tmp_repo, mock_all_stages_pass):
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications,
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications,
                    feedback_dir=tmp_repo.feedback)
     tmp_repo.feedback.mkdir(parents=True, exist_ok=True)
     (tmp_repo.feedback / "index.jsonl").write_text(
         json.dumps({"job_id": PILOT_JOB_ID, "alignment_fingerprint": "fp", "revision": 1}) + "\n",
         encoding="utf-8",
     )
-    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts,
                               root=tmp_repo.applications, feedback_dir=tmp_repo.feedback)
     assert outcome.failed_stage is Stage.PREPARE
     assert "feedback" in (outcome.manifest.stages[0].error or "")
 
 def test_rerun_after_feedback_with_flag_writes_to_a_rerun_subdirectory(tmp_repo, mock_all_stages_pass):
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications,
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications,
                    feedback_dir=tmp_repo.feedback)
     tmp_repo.feedback.mkdir(parents=True, exist_ok=True)
     (tmp_repo.feedback / "index.jsonl").write_text(
         json.dumps({"job_id": PILOT_JOB_ID, "alignment_fingerprint": "fp", "revision": 1}) + "\n",
         encoding="utf-8",
     )
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications,
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications,
                    feedback_dir=tmp_repo.feedback, allow_rerun_after_feedback=True)
     assert list(tmp_repo.applications.rglob("rerun-1/s3_bundle.json"))
 
@@ -429,7 +473,7 @@ def test_operator_cannot_submit_an_application():
 
 def test_no_sqlite_write_occurs(tmp_repo, mock_all_stages_pass, db_checksum):
     before = db_checksum()
-    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, root=tmp_repo.applications)
+    run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
     assert db_checksum() == before
 
 
@@ -747,3 +791,73 @@ def test_gate_and_cost_are_read_only(pilot_root, good_feedback):
     acceptance_gate(pilot_root, good_feedback)
     cost_report(pilot_root)
     assert sorted(str(p) for p in pilot_root.rglob("*")) == before
+
+
+# ---------------------------------------------------------------------------
+# Task 4: shakedown mode -- preflight gates every model call
+# ---------------------------------------------------------------------------
+import yaml  # noqa: E402
+
+from src.tailor.pilot import ShakedownOutcome, shakedown  # noqa: E402
+
+
+@pytest.fixture
+def broken_profile(tmp_path):
+    """A real profile mutated so a do_not_claim term leaks onto tech_line
+    -- run_preflight's check_profile_do_not_claim must catch it."""
+    raw = yaml.safe_load(Path("config/master_profile.yaml").read_text(encoding="utf-8"))
+    term = raw["do_not_claim"][0]
+    raw["projects"][0]["tech"]["tech_line"] = raw["projects"][0]["tech"]["tech_line"] + f" {term}"
+    broken_path = tmp_path / "broken_master_profile.yaml"
+    broken_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
+    return broken_path
+
+
+def _fail_if_s1_is_called(spy_invocations):
+    def fail_if_called(*args, **kwargs):
+        spy_invocations.record("s1")
+        raise AssertionError("model should not have been called: preflight should have gated this")
+    return fail_if_called
+
+
+def test_shakedown_refuses_to_call_the_model_when_preflight_fails(tmp_repo, broken_profile, spy_invocations, monkeypatch):
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", _fail_if_s1_is_called(spy_invocations))
+    outcome = shakedown(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=broken_profile, root=tmp_repo.applications)
+    assert spy_invocations.call_count == 0
+    assert outcome.preflight_findings
+    assert outcome.run_outcome is None
+
+
+def test_run_application_fails_closed_on_preflight(tmp_repo, broken_profile, spy_invocations, monkeypatch):
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", _fail_if_s1_is_called(spy_invocations))
+    result = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=broken_profile, root=tmp_repo.applications)
+    assert spy_invocations.call_count == 0
+    assert result.failed_stage is Stage.PREPARE
+    assert "preflight" in (result.manifest.stages[0].error or "").casefold()
+
+
+def test_shakedown_artifacts_are_reusable_by_a_later_run(tmp_repo, mock_all_stages_pass, spy_invocations):
+    first = shakedown(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
+    assert first.run_outcome is not None
+    assert first.run_outcome.failed_stage is None
+    spy_invocations.reset()
+    second = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile, prompt_dir=tmp_repo.prompts, root=tmp_repo.applications)
+    assert spy_invocations.call_count == 0
+    assert second.failed_stage is None
+
+
+def test_shakedown_runs_preflight_including_render(tmp_repo, broken_profile, monkeypatch):
+    """Unlike run_application's own preflight gate (skip_render=True),
+    shakedown runs the complete preflight, including the render check."""
+    calls = []
+    from src.tailor import pilot as pilot_module
+
+    real_run_preflight = pilot_module.run_preflight
+
+    def spy_run_preflight(*args, **kwargs):
+        calls.append(kwargs.get("skip_render"))
+        return real_run_preflight(*args, **kwargs)
+
+    monkeypatch.setattr(pilot_module, "run_preflight", spy_run_preflight)
+    shakedown(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=broken_profile, root=tmp_repo.applications)
+    assert calls == [False]

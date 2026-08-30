@@ -14,7 +14,7 @@ import pytest
 from scripts.tailor_pilot import build_parser, main
 from src import db
 from src.models import Status
-from tests.tailor.test_pilot import _build_pilot_root, _write_feedback_record
+from tests.tailor.test_pilot import _build_pilot_root, _write_clean_prompt_dir, _write_feedback_record
 
 
 def test_pilot_cli_contract_exists():
@@ -32,6 +32,7 @@ class TmpRepo:
     root: Path
     db: Path
     applications: Path
+    prompts: Path
 
 
 def _seed_jobs(path: Path, jobs) -> None:
@@ -66,7 +67,9 @@ def tmp_repo(tmp_path):
         dict(id=279, company="Blocked Co", title="Blocked Role", status=Status.SHORTLISTED,
              jd_text="b" * 3000, base_variant="ml"),
     ])
-    return TmpRepo(root=tmp_path, db=db_path, applications=tmp_path / "applications")
+    prompts_dir = tmp_path / "prompts"
+    _write_clean_prompt_dir(prompts_dir)
+    return TmpRepo(root=tmp_path, db=db_path, applications=tmp_path / "applications", prompts=prompts_dir)
 
 
 @pytest.fixture
@@ -104,14 +107,14 @@ def test_select_is_read_only_and_prints_reasons(tmp_repo, db_checksum, capsys):
 
 def test_run_dry_run_writes_nothing(tmp_repo):
     code = main(["run", "--job-id", "225", "--dry-run", "--db", str(tmp_repo.db),
-                "--root", str(tmp_repo.applications)])
+                "--root", str(tmp_repo.applications), "--prompts", str(tmp_repo.prompts)])
     assert code == 0
     assert not tmp_repo.applications.exists()
 
 
 def test_run_prohibited_job_exits_nonzero(tmp_repo, capsys):
     code = main(["run", "--job-id", "279", "--db", str(tmp_repo.db),
-                "--root", str(tmp_repo.applications)])
+                "--root", str(tmp_repo.applications), "--prompts", str(tmp_repo.prompts)])
     captured = capsys.readouterr()
     assert code == 1
     assert "prohibited" in captured.err
