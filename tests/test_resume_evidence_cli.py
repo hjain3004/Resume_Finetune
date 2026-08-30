@@ -114,3 +114,8 @@ def test_lookup_missing_returns_three(tmp_path, capsys):
 def test_stats_empty_bank_succeeds(tmp_path, capsys):
     assert main(["stats", "--bank-root", str(tmp_path / "missing")]) == 0
     assert "outcomes=0" in capsys.readouterr().out
+
+
+def test_argument_contract_failure_returns_one(capsys):
+    assert main(["lookup"]) == 1
+    assert "INVALID:" in capsys.readouterr().err

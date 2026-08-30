@@ -9,6 +9,7 @@ end to end.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import itertools
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,8 +85,8 @@ def _base_kwargs() -> dict:
         schema_version=SCHEMA,
         reference_id="cand_syn_001",
         source_kind=SourceKind.HUNTR,
-        layout_file="layouts/syn.typ",
-        layout_sha256="a" * 64,
+        layout_file=None,
+        layout_sha256=None,
         role_family=RoleFamily.BACKEND_PLATFORM,
         target_role="Backend Engineer",
         target_level="New Grad",
@@ -239,6 +240,39 @@ def test_unsafe_source_urls_fail(valid_candidate, bundle_dir, url):
 
 def test_valid_bundle_passes(valid_candidate, bundle_dir):
     policy.validate_outcome_bundle(valid_candidate, bundle_dir)
+
+
+def test_outcome_bundle_rejects_unsupported_schema(valid_candidate, bundle_dir):
+    candidate = dataclasses.replace(valid_candidate, schema_version="m8q.resume_evidence.v999")
+    with pytest.raises(EvidenceValidationError, match="schema_version"):
+        policy.validate_outcome_bundle(candidate, bundle_dir)
+
+
+def test_optional_layout_is_path_and_hash_bound(make_bundle):
+    candidate, root = make_bundle()
+    layout = root / "layout.pdf"
+    layout.write_bytes(b"synthetic layout bytes")
+    digest = hashlib.sha256(layout.read_bytes()).hexdigest()
+    valid = dataclasses.replace(
+        candidate, layout_file="layout.pdf", layout_sha256=digest
+    )
+    policy.validate_outcome_bundle(valid, root)
+
+    with pytest.raises(EvidenceValidationError, match="layout hash"):
+        policy.validate_outcome_bundle(
+            dataclasses.replace(valid, layout_sha256="0" * 64), root
+        )
+    with pytest.raises(EvidenceValidationError, match="appear together"):
+        policy.validate_outcome_bundle(
+            dataclasses.replace(candidate, layout_file="layout.pdf"), root
+        )
+    with pytest.raises(EvidenceValidationError, match="layout path"):
+        policy.validate_outcome_bundle(
+            dataclasses.replace(
+                candidate, layout_file="../escaped.pdf", layout_sha256=digest
+            ),
+            root,
+        )
 
 
 def test_resume_and_outcome_source_may_be_equal(make_bundle):
@@ -399,7 +433,7 @@ def test_to_outcome_record_drops_private_paths_and_round_trips(
     for src in record.sources:
         assert isinstance(src, CanonicalSourceRecord)
         assert not hasattr(src, "snapshot_file")
-    assert record.layout_sha256 == "a" * 64
+    assert record.layout_sha256 is None
     assert not hasattr(record, "layout_file")
 
     out = tmp_path / "record.yaml"
@@ -424,6 +458,14 @@ def test_to_doctrine_record_drops_snapshot_file(doctrine_bundle, tmp_path):
 def test_doctrine_bundle_valid(doctrine_bundle):
     record, root = doctrine_bundle
     policy.validate_doctrine_bundle(record, root)
+
+
+def test_doctrine_bundle_rejects_unsupported_schema(doctrine_bundle):
+    record, root = doctrine_bundle
+    with pytest.raises(EvidenceValidationError, match="schema_version"):
+        policy.validate_doctrine_bundle(
+            dataclasses.replace(record, schema_version="m8q.resume_evidence.v999"), root
+        )
 
 
 def test_doctrine_quote_must_be_anchored(doctrine_bundle):
@@ -485,6 +527,15 @@ def test_pattern_card_valid_with_two_outcomes():
     policy.validate_pattern_card(
         _pattern(), {"cand_a", "cand_b", "cand_c"}, set()
     )
+
+
+def test_pattern_card_rejects_unsupported_schema():
+    with pytest.raises(EvidenceValidationError, match="schema_version"):
+        policy.validate_pattern_card(
+            dataclasses.replace(_pattern(), schema_version="m8q.resume_evidence.v999"),
+            {"cand_a", "cand_b"},
+            set(),
+        )
 
 
 def test_pattern_card_valid_with_one_doctrine():

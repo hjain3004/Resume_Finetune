@@ -43,6 +43,7 @@ from urllib.parse import parse_qsl, urlsplit
 from src.resume_evidence.experience import professional_experience_months
 from src.resume_evidence.model import (
     CanonicalSourceRecord,
+    SCHEMA_VERSION,
     DoctrineCandidate,
     DoctrineRecord,
     EditorialDimension,
@@ -250,6 +251,35 @@ def _recognized_resume_sections(text: str) -> set[str]:
     return found
 
 
+def _check_schema_version(value: str, field: str) -> None:
+    if value != SCHEMA_VERSION:
+        raise EvidenceValidationError(
+            f"{field}.schema_version: unsupported value {value!r}"
+        )
+
+
+def _check_optional_layout(candidate: OutcomeCandidate, bundle_dir: Path) -> None:
+    if (candidate.layout_file is None) != (candidate.layout_sha256 is None):
+        raise EvidenceValidationError(
+            "layout_file and layout_sha256 must appear together"
+        )
+    if candidate.layout_file is None:
+        return
+    root = Path(bundle_dir).resolve()
+    layout = (Path(bundle_dir) / candidate.layout_file).resolve()
+    if layout == root or not layout.is_relative_to(root) or not layout.is_file():
+        raise EvidenceValidationError(
+            f"layout path escapes the bundle or is missing: {candidate.layout_file!r}"
+        )
+    digest = candidate.layout_sha256 or ""
+    if (
+        len(digest) != 64
+        or any(character not in _HEX for character in digest)
+        or hashlib.sha256(layout.read_bytes()).hexdigest() != digest
+    ):
+        raise EvidenceValidationError("layout hash mismatch")
+
+
 # --------------------------------------------------------------------------- #
 # outcome bundle validation
 # --------------------------------------------------------------------------- #
@@ -284,6 +314,7 @@ def validate_outcome_bundle(candidate: OutcomeCandidate, bundle_dir: Path) -> No
     section structure.
     """
     bundle_dir = Path(bundle_dir)
+    _check_schema_version(candidate.schema_version, "outcome")
 
     by_id: dict[str, SourceRecord] = {}
     for source in candidate.sources:
@@ -305,6 +336,7 @@ def validate_outcome_bundle(candidate: OutcomeCandidate, bundle_dir: Path) -> No
     for source in candidate.sources:
         _check_url_safety(source.url)
         snapshot_text[source.source_id] = _load_snapshot(bundle_dir, source)
+    _check_optional_layout(candidate, bundle_dir)
 
     _check_editorial_complete(candidate)
 
@@ -382,6 +414,7 @@ def evaluate_admission(candidate: OutcomeCandidate) -> AdmissionDecision:
 # --------------------------------------------------------------------------- #
 def validate_doctrine_bundle(record: DoctrineCandidate, bundle_dir: Path) -> None:
     """Raise :class:`EvidenceValidationError` on any doctrine integrity failure."""
+    _check_schema_version(record.schema_version, "doctrine")
     if not record.early_career_applicability.strip():
         raise EvidenceValidationError(
             "doctrine early_career_applicability must be non-empty"
@@ -407,6 +440,7 @@ def validate_pattern_card(
     card: PatternCard, outcome_ids: set[str], doctrine_ids: set[str]
 ) -> None:
     """Require a sufficient, resolvable evidentiary basis for a pattern card."""
+    _check_schema_version(card.schema_version, "pattern")
     distinct_outcomes = set(card.outcome_record_ids)
     if len(distinct_outcomes) < 2 and len(card.doctrine_record_ids) < 1:
         raise EvidenceValidationError(

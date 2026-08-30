@@ -42,7 +42,16 @@ def test_content_affecting_query_values_are_preserved():
 
 
 def test_exact_resume_hash_duplicate_is_reported(valid_candidate):
-    right = dataclasses.replace(valid_candidate, reference_id="cand_synthetic_002")
+    right = dataclasses.replace(
+        valid_candidate,
+        reference_id="cand_synthetic_002",
+        sources=tuple(
+            dataclasses.replace(
+                source, url=source.url.replace("example.test", "different.test")
+            )
+            for source in valid_candidate.sources
+        ),
+    )
     pairs = find_duplicates(
         (valid_candidate, right),
         {
@@ -51,7 +60,7 @@ def test_exact_resume_hash_duplicate_is_reported(valid_candidate):
         },
     )
     assert len(pairs) == 1
-    assert pairs[0].kind in {"source_url", "content_sha256"}
+    assert pairs[0].kind == "content_sha256"
     assert pairs[0].similarity == 1.0
 
 

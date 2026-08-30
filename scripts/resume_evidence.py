@@ -34,6 +34,11 @@ _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 
+class _ContractParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise EvidenceValidationError(f"arguments: {message}")
+
+
 def _bounded(exc: BaseException) -> str:
     text = " ".join(str(exc).split())
     return text[:300] if text else type(exc).__name__
@@ -84,7 +89,7 @@ def _publish_report(output: Path, markdown: str, payload: dict[str, object]) -> 
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="resume-evidence")
+    parser = _ContractParser(prog="resume-evidence")
     sub = parser.add_subparsers(dest="command", required=True)
 
     validate_bundle = sub.add_parser("validate-bundle")
@@ -213,4 +218,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
