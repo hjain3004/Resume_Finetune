@@ -1,0 +1,54 @@
+schema_version: m8q.resume_evidence.v1
+reference_id: cand_fixture_001
+source_kind: individual_public_story
+sources:
+  - source_id: src_resume
+    url: https://example.test/story/resume
+    title: Synthetic Resume Snapshot
+    retrieved_at: '2026-02-01T00:00:00Z'
+    content_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+    snapshot_file: sources/resume.md
+  - source_id: src_outcome
+    url: https://example.test/story/outcome
+    title: Synthetic Outcome Note
+    retrieved_at: '2026-02-01T00:00:00Z'
+    content_sha256: '1111111111111111111111111111111111111111111111111111111111111111'
+    snapshot_file: sources/outcome.md
+resume_source_id: src_resume
+outcome_source_id: src_outcome
+layout_file: layouts/fixture.typ
+layout_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+role_family: general_swe
+target_role: Software Engineer
+target_level: New Grad
+graduation_month: '2025-05'
+professional_intervals:
+  - start_month: '2025-06'
+    end_month: '2026-01'
+internship_intervals:
+  - start_month: '2024-05'
+    end_month: '2024-08'
+professional_experience_months: 7
+experience_confidence: derived
+outcome_tier: final_interview
+outcome_evidence_quote: Reached the final round for the platform team.
+outcome_evidence_confidence: self_reported
+resume_representation: anonymized
+resume_version_attribution: publisher_linked
+section_order:
+  - summary
+  - experience
+  - projects
+  - education
+feature_tags:
+  - one_page
+  - quantified_bullets
+editorial_ratings:
+  - dimension: technical_specificity
+    score: 3
+    explanation: Some specific tools are named.
+  - dimension: ownership_clarity
+    score: 2
+    explanation: Individual versus team contribution is unclear.
+limitations:
+  - Single anonymized data point.
