@@ -222,6 +222,17 @@ M8P-6 (2026-08-26) is COMPLETE offline. Tasks 1–3 established the validated fe
 
 M8P-7 Tasks 1–5 of 9 (2026-08-27) have landed on `main` — **partial**. `src/tailor/pilot.py` adds the pilot operator: the stage table and run manifest (rebuilt from artifacts on every run, never trusted as the source of truth, so a stale or corrupted `run_manifest.json` cannot cause a stage to be skipped); a resumable, idempotent chain driver composing the existing S1→S0→S2→S3→static G1→G2→render+L7→G3 stage functions with cost accounting and no automatic retry; read-only, deterministic pilot-job selection (`eligible_candidates`/`select_pilot_jobs`); cost accounting and the seven-condition acceptance gate from design §6; and `scripts/tailor_pilot.py`'s `select`/`run`/`cost`/`gate`/`index` CLI. The operator reimplements no parsing, validation, or hydration of its own and cannot submit an application (both grep-tested). **The live three-resume pilot (Task 6) has not run, M8P-8 (Tasks 7–9) has not started, and no resume has yet been produced.** Neither M8, Phase 3, nor any pilot is marked complete.
 
+M8Q-0A (2026-08-30) is **COMPLETE OFFLINE**. It adds strict staged/canonical evidence
+contracts, deterministic 0–36-month post-graduation experience calculation (internships and
+co-ops excluded), outcome/doctrine/pattern admission policy, duplicate analysis, an explicit
+promote-or-exclude corpus manifest, deterministic review reports bound to an exact user-approved
+SHA-256, strict advisory lookup, atomic idempotent canonical promotion, and an offline CLI. This
+does not mean the evidence corpus exists or has been adopted. M8Q-0B remains pending: the
+three-page Huntr smoke, public-source acquisition, at least **50 validated Huntr** outcome
+records, doctrine acquisition, human corpus review/approval, and canonical adoption have not
+occurred. No tailoring stage, prompt, profile, Company Bank record, SQLite row, or SkillOpt
+workflow consumes this foundation. M8, Phase 3, M8V, and both human pilots remain incomplete.
+
 ## Log
 - 2026-07-14: File recreated (was missing from repo since project start — the original
   package copy was never added). Statuses set from verified repo/DB state, not from

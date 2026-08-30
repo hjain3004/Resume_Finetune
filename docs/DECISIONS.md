@@ -2499,3 +2499,38 @@ Seven architectural decisions and repairs are recorded with this milestone:
 **Verification.** Full test suite: all tests pass offline (0 failures). `git diff --check` and `git diff --check a4ec24f..HEAD` clean. `data/jobs.db` SHA-256 unchanged: `a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`. Snapshot hashes unchanged.
 
 **Status:** `M6.14 OFFLINE COMPLETE — LIVE TARGETED SMOKE PENDING`. The production database has not exercised the new intake or targeting path; a user-supervised live targeted smoke remains required. M9F-1 remains unstarted, Firecrawl remains disabled by default, scoring, tailoring, and pilots were not started.
+
+## 2026-08-30 — M8Q-0A Resume Evidence Bank offline foundation
+
+M8Q-0A establishes a deterministic advisory evidence-bank boundary without acquiring or adopting
+any real resume corpus. The approved design and implementation plan are
+`docs/superpowers/specs/2026-08-29-early-career-resume-evidence-bank-design.md` and
+`docs/superpowers/plans/2026-08-29-m8q-0a-resume-evidence-foundation.md`.
+
+1. **Canonical disk layout:** the implemented bank root is
+   `<bank_root>/current/{corpus.yaml,outcomes/,doctrine/,patterns/}`. The design's earlier flat
+   tree was illustrative; the plan's atomic-current layout is authoritative. A missing `current/`
+   means an empty advisory bank, not an error. Promotion uses one complete sibling staging tree and
+   one `os.replace`; a byte-identical rerun is `UNCHANGED`, while a conflicting current bank is
+   never overwritten.
+2. **Strict serialization assumptions:** when `serde.parse_canonical_corpus` receives a directory,
+   it resolves `root/corpus.yaml`; the operational canonical store uses its separate strict manifest
+   plus one YAML file per record. String tuples and manifest IDs are case-insensitively unique, so
+   spelling/case variants cannot silently create separate identities.
+3. **Experience convention:** professional experience is the conventional half-open month delta
+   after graduation; `2023-01` through `2026-01` is 36 months. Overlaps are merged, pre-graduation
+   time is clipped, and internships/co-ops are excluded from the cap. The earlier plan example that
+   labeled an overlapping interval set as 18 months is arithmetically 17 under this convention.
+4. **Privacy and approval boundary:** raw source snapshots, full resumes, screenshots/PDFs, and
+   private paths remain under ignored `data/resume_research/`. Canonical records contain public
+   provenance, hashes, bounded excerpts, annotations, and derived patterns only. Promotion requires
+   an exact SHA-256 of the deterministic complete-corpus report and an explicit promote-or-exclude
+   disposition for every staged outcome.
+5. **No integration decision:** M8Q-0A is advisory infrastructure only. It does not change S0, S2,
+   S3, G2, G3, prompts, profile content, the Company Bank, applications, or SQLite. M8Q-0B must first
+   complete the three-page public Huntr smoke, acquire at least 50 validated Huntr outcome records
+   plus doctrine, and obtain user approval before a canonical corpus is adopted. Any tailoring or
+   SkillOpt use requires another approved milestone.
+
+M8, Phase 3, M8V, the three-resume pilot, and the thirty-resume dry run remain incomplete. No live
+network, Firecrawl, Crawl4AI, model, database, or rendering action is authorized by this decision.

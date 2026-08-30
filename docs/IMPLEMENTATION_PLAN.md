@@ -218,6 +218,22 @@ M8P-6 (2026-08-26) is complete offline: the validated human-feedback contract an
 
 M8P-7 Tasks 1–5 of 9 (2026-08-27) are **partial**, on a separate branch (`m8p-7-operator`), rebased onto the post-M8P-6 `main` (cleanly dropping the two already-merged M8P-6 commits it had carried as its base) and fast-forward merged as `a3180a3` with no conflicts. The five commits are `1b8a593` (stage table and run manifest, rebuilt from artifacts every run and never trusted as the source of truth), `95414d2` (resumable, idempotent chain driver — S1→S0→S2→S3→static G1→G2→render+L7→G3 — composing existing stage functions only, with cost accounting and no automatic retry), `48e8edc` (read-only, deterministic pilot-job selection against the live SHORTLISTED corpus, `db.rows_by_status` only, no new SQL), `081ed20` (cost accounting and the seven-condition acceptance gate from design §6, `unsupported_claims` required to be exactly 0), and `a3180a3` (`scripts/tailor_pilot.py`'s `select`/`run`/`cost`/`gate`/`index` CLI). Focused verification (`tests/tailor/test_pilot.py`, `tests/test_tailor_pilot_cli.py`, `tests/test_m8p7_integration.py`) passed 52 tests; full suite passed 1581 with 1 deselected (up from the 1529/1 post-M8P-6 baseline; net +52). `data/jobs.db` checksum unchanged — the operator is read-only against SQLite (`get_readonly_connection` plus `db.prepare_tailoring_request`/`tailoring_base_variant`/`rows_by_status` only, no `.execute(` anywhere in operator code) and makes no model call, no network call, and no `pdflatex` call outside a mocked stage pipeline. **Tasks 6–9 still require:** Task 6, the live three-resume pilot session (user-only, not attempted); Tasks 7–9, the M8P-8 thirty-resume dry run (corpus preparation, a resumable batch queue with a circuit breaker, and the live batch run itself), all gated on the user's acceptance-gate decision after Task 6. No resume has yet been produced. Neither M8, Phase 3, nor any pilot is marked complete.
 
+M8Q-0A (2026-08-30) is complete as the offline Resume Evidence Bank foundation described by
+`docs/superpowers/specs/2026-08-29-early-career-resume-evidence-bank-design.md` and implemented
+through `docs/superpowers/plans/2026-08-29-m8q-0a-resume-evidence-foundation.md`. Acceptance
+criteria satisfied: frozen staged/canonical contracts; strict YAML and semantic validation;
+half-open post-graduation month arithmetic; anchored 4–25-word evidence; privacy-safe canonical
+projections; URL/hash/signature duplicate reporting; whole-corpus explicit disposition; stable
+JSON/Markdown reports; exact report-SHA approval binding; strict canonical loading; atomic,
+idempotent promotion; advisory lookup; offline CLI exit contracts; and AST integration guards
+against networking, SQLite, tailoring imports, SQL, and fetch/scrape commands. The foundation does
+not create `config/resume_evidence_bank/current/` during closeout. M8Q-0B, live research, the
+three-page smoke, the 50-Huntr minimum, doctrine acquisition, user corpus approval/adoption,
+tailoring integration, and SkillOpt integration remain separate pending milestones.
+Closeout verification: 142 focused M8Q tests and 1,780 full-suite tests passed, with the
+repository's single intentional deselection; `data/jobs.db` remained byte-identical at SHA-256
+`a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1`.
+
 The approved Company Knowledge Bank supporting subsystem is split into three ordered tracks:
 
 1. **Track A — Gemini foundation:**

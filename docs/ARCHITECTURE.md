@@ -68,12 +68,22 @@ agentic scout ─────────┘             ^
 
 *Note on M8 Company Bank*: The M8 Track A implementation provides the offline foundation only (`config/company_bank`, `src/company_bank`, and `data/company_research/inbox`). It does not integrate with SQLite, eligibility, scoring, or live tailoring.*
 
+*Note on M8Q-0A Resume Evidence Bank*: `src/resume_evidence/` and
+`scripts/resume_evidence.py` are a deterministic, fully offline advisory foundation. Private
+research bundles belong under the Git-ignored `data/resume_research/` tree. A user-approved
+canonical corpus may later be promoted atomically under
+`config/resume_evidence_bank/current/`, but M8Q-0A creates no live corpus and performs no web
+research. Complete resumes, screenshots, PDFs, and source snapshot paths never enter canonical
+YAML. Nothing in this subsystem reads or writes SQLite or changes S0/S2/S3/G2/G3, prompts,
+profiles, the Company Bank, or SkillOpt.*
+
 ```
 job-pipeline/
 ├── CLAUDE.md
 ├── docs/                      # this documentation package
 ├── config/
 │   ├── company_bank/          # M8: Offline company knowledge base
+│   ├── resume_evidence_bank/  # M8Q: approved advisory metadata only; current/ absent until adoption
 │   ├── sources.yaml           # tracker repos, watchlist, toggles
 │   ├── eligibility.yaml       # M6.11: sole eligibility business policy
 │   ├── location_taxonomy.yaml # M6.11: local country/state vocabulary
@@ -81,6 +91,7 @@ job-pipeline/
 │   └── wrapper_map.yaml       # M6.0: known wrapper hostname -> fixed ATS board
 ├── data/
 │   ├── company_research/inbox/ # M8: Staged company research bundles
+│   ├── resume_research/         # M8Q: private staged evidence, reports, checkpoints (gitignored)
 │   ├── feedback/               # M8P-6: immutable, revision-numbered human feedback records (gitignored)
 │   ├── jobs.db                # SQLite (gitignored)
 │   └── digests/               # daily digest output (gitignored)
@@ -91,6 +102,7 @@ job-pipeline/
 ├── applications/              # M8P-5: published tailored applications (gitignored)
 ├── src/
 │   ├── company_bank/          # M8: Offline knowledge foundation (Track A)
+│   ├── resume_evidence/       # M8Q-0A: offline validation, reporting, lookup, atomic promotion
 │   ├── render/                # M10/M8P-5: LaTeX rendering, geometry, L7
 │   │   ├── tailored.py        # M8P-5: draft-to-RenderDoc projection and fingerprint binding
 │   │   ├── lines.py           # M8P-5: PDF line- and character-level geometry
@@ -128,6 +140,7 @@ job-pipeline/
 ├── scripts/
 │   ├── tailor_render.py       # M8P-5: fail-closed bundle-driven render CLI
 │   ├── tailor_g3.py           # M8P-6: build/record/summarize review packet + feedback CLI
+│   ├── resume_evidence.py     # M8Q-0A: offline evidence-bank operator; no fetch/scrape command
 │   └── record_fixture.py      # one-off: fetch a URL and save it as a test fixture
 ├── pyproject.toml
 └── .gitignore
