@@ -54,6 +54,10 @@ def _url(value: object, field: str) -> str:
     parts = urlsplit(value)
     if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
         raise ValueError(f"{field}: unsafe URL")
+    try:
+        parts.port
+    except ValueError as exc:
+        raise ValueError(f"{field}: unsafe URL") from exc
     if any(key.casefold() in _SENSITIVE_KEYS for key, _ in parse_qsl(parts.query, keep_blank_values=True)):
         raise ValueError(f"{field}: query contains sensitive key")
     if parts.hostname.casefold() == "linkedin.com" or parts.hostname.casefold().endswith(".linkedin.com"):
@@ -111,7 +115,23 @@ def parse_capture(raw: object) -> ResearchCapture:
 def _links(source_url: str, links: object) -> list[str]:
     if not isinstance(links, list):
         return []
-    return [urljoin(source_url, item) for item in links if isinstance(item, str)]
+    approved: list[str] = []
+    seen: set[str] = set()
+    for item in links:
+        if not isinstance(item, str):
+            continue
+        resolved = urljoin(source_url, item)
+        parts = urlsplit(resolved)
+        host = (parts.hostname or "").casefold().removeprefix("www.")
+        if host == "linkedin.com" or (host and host != "huntr.co"):
+            continue
+        normalized = _url(resolved, "capture.links[]")
+        normalized_parts = urlsplit(normalized)
+        normalized = urlunsplit(("https", "huntr.co", normalized_parts.path or "/", normalized_parts.query, ""))
+        if normalized not in seen:
+            approved.append(normalized)
+            seen.add(normalized)
+    return approved
 
 
 def normalize_firecrawl_capture(raw: object, source_url: str, captured_at: str) -> ResearchCapture:
@@ -131,6 +151,21 @@ def normalize_crawl4ai_capture(raw: object, source_url: str, captured_at: str, *
         metadata.update({"firecrawl_attempted": True, "firecrawl_result": firecrawl_failure})
     envelope = {"schema_version": SCHEMA_VERSION, "source_url": source_url, "final_url": raw.get("final_url", source_url), "transport": "crawl4ai", "captured_at": captured_at, "markdown": raw.get("markdown"), "links": _links(source_url, raw.get("links", [])), "html_sha256": hashlib.sha256(html.encode()).hexdigest() if html else None, "layout_capture_available": False, "transport_metadata": metadata}
     return parse_capture(envelope)
+
+
+def normalize_crawl4ai_page(page: object, source_url: str, captured_at: str, *, firecrawl_failure: str | None = None) -> ResearchCapture:
+    """Adapt the project-owned Tier2Page without depending on Crawl4AI types."""
+    return normalize_crawl4ai_capture(
+        {
+            "markdown": getattr(page, "markdown", None),
+            "html": getattr(page, "html", None),
+            "final_url": getattr(page, "final_url", source_url),
+            "links": [],
+        },
+        source_url,
+        captured_at,
+        firecrawl_failure=firecrawl_failure,
+    )
 
 
 def write_capture_atomic(path: Path, capture: ResearchCapture) -> None:
