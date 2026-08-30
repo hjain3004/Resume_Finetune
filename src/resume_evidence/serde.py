@@ -163,7 +163,7 @@ def _format_utc(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _expect_enum(enum_cls: type, value: object, field: str):
+def _expect_enum(enum_cls: type, value: object, field: str) -> Any:
     if not isinstance(value, str):
         raise EvidenceValidationError(f"{field}: expected string enum value")
     try:
@@ -177,35 +177,53 @@ def _expect_enum(enum_cls: type, value: object, field: str):
 # --------------------------------------------------------------------------- #
 # collection expectations (dedup during parsing, before a set could hide dupes)
 # --------------------------------------------------------------------------- #
-def _expect_str_tuple(value: object, field: str) -> tuple[str, ...]:
-    items = _expect_list(value, field)
-    seen: set[str] = set()
-    out: list[str] = []
-    for index, item in enumerate(items):
-        text = _expect_str(item, f"{field}[{index}]")
-        key = text.casefold()
-        if key in seen:
-            raise EvidenceValidationError(
-                f"{field}[{index}]: case-insensitive duplicate string {text!r}"
-            )
-        seen.add(key)
-        out.append(text)
-    return tuple(out)
+def _parse_deduped_tuple(
+    value: object,
+    field: str,
+    item_parser: Callable[[object, str], Any],
+    *,
+    dedup_key: Callable[[Any], Any],
+    on_duplicate: Callable[[Any], str],
+) -> tuple[Any, ...]:
+    """Parse a list, reject repeats by ``dedup_key``, return an immutable tuple.
 
-
-def _expect_enum_tuple(enum_cls: type, value: object, field: str) -> tuple:
+    ``item_parser(item, "<field>[i]")`` parses each element; ``dedup_key`` derives
+    the hashable identity checked for repeats; ``on_duplicate`` builds the message
+    tail for a rejected repeat (this helper prefixes the ``<field>[i]:`` path).
+    Every strict record-list parser routes through here so the dedup rule cannot
+    drift between record types.
+    """
     items = _expect_list(value, field)
     seen: set = set()
     out: list = []
     for index, item in enumerate(items):
-        member = _expect_enum(enum_cls, item, f"{field}[{index}]")
-        if member in seen:
-            raise EvidenceValidationError(
-                f"{field}[{index}]: duplicate enum value {member.value!r}"
-            )
-        seen.add(member)
-        out.append(member)
+        parsed = item_parser(item, f"{field}[{index}]")
+        key = dedup_key(parsed)
+        if key in seen:
+            raise EvidenceValidationError(f"{field}[{index}]: {on_duplicate(parsed)}")
+        seen.add(key)
+        out.append(parsed)
     return tuple(out)
+
+
+def _expect_str_tuple(value: object, field: str) -> tuple[str, ...]:
+    return _parse_deduped_tuple(
+        value,
+        field,
+        _expect_str,
+        dedup_key=lambda text: text.casefold(),
+        on_duplicate=lambda text: f"case-insensitive duplicate string {text!r}",
+    )
+
+
+def _expect_enum_tuple(enum_cls: type, value: object, field: str) -> tuple[Any, ...]:
+    return _parse_deduped_tuple(
+        value,
+        field,
+        lambda item, item_field: _expect_enum(enum_cls, item, item_field),
+        dedup_key=lambda member: member,
+        on_duplicate=lambda member: f"duplicate enum value {member.value!r}",
+    )
 
 
 def _parse_tuple(
@@ -228,7 +246,9 @@ _CANONICAL_SOURCE_KEYS = frozenset(
 )
 
 
-def _parse_source(value: object, field: str, *, staged: bool):
+def _parse_source(
+    value: object, field: str, *, staged: bool
+) -> SourceRecord | CanonicalSourceRecord:
     obj = _expect_mapping(value, field)
     _expect_keys(
         obj,
@@ -251,20 +271,16 @@ def _parse_source(value: object, field: str, *, staged: bool):
     return CanonicalSourceRecord(**common)
 
 
-def _parse_sources(value: object, field: str, *, staged: bool) -> tuple:
-    items = _expect_list(value, field)
-    seen: set[str] = set()
-    out: list = []
-    for index, item in enumerate(items):
-        record = _parse_source(item, f"{field}[{index}]", staged=staged)
-        key = record.source_id.casefold()
-        if key in seen:
-            raise EvidenceValidationError(
-                f"{field}[{index}]: duplicate source_id {record.source_id!r}"
-            )
-        seen.add(key)
-        out.append(record)
-    return tuple(out)
+def _parse_sources(
+    value: object, field: str, *, staged: bool
+) -> tuple[SourceRecord | CanonicalSourceRecord, ...]:
+    return _parse_deduped_tuple(
+        value,
+        field,
+        lambda item, item_field: _parse_source(item, item_field, staged=staged),
+        dedup_key=lambda record: record.source_id.casefold(),
+        on_duplicate=lambda record: f"duplicate source_id {record.source_id!r}",
+    )
 
 
 def _parse_interval(value: object, field: str) -> EmploymentInterval:
@@ -289,18 +305,13 @@ def _parse_rating(value: object, field: str) -> EditorialRating:
 
 
 def _parse_ratings(value: object, field: str) -> tuple[EditorialRating, ...]:
-    items = _expect_list(value, field)
-    seen: set = set()
-    out: list[EditorialRating] = []
-    for index, item in enumerate(items):
-        rating = _parse_rating(item, f"{field}[{index}]")
-        if rating.dimension in seen:
-            raise EvidenceValidationError(
-                f"{field}[{index}]: duplicate dimension {rating.dimension.value!r}"
-            )
-        seen.add(rating.dimension)
-        out.append(rating)
-    return tuple(out)
+    return _parse_deduped_tuple(
+        value,
+        field,
+        _parse_rating,
+        dedup_key=lambda rating: rating.dimension,
+        on_duplicate=lambda rating: f"duplicate dimension {rating.dimension.value!r}",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -334,7 +345,9 @@ _OUTCOME_SHARED_KEYS = {
 }
 
 
-def _build_outcome(obj: dict[str, object], field: str, *, staged: bool):
+def _build_outcome(
+    obj: dict[str, object], field: str, *, staged: bool
+) -> OutcomeCandidate | OutcomeRecord:
     required = set(_OUTCOME_SHARED_KEYS)
     if staged:
         required.add("layout_file")
@@ -442,7 +455,9 @@ _DOCTRINE_KEYS = frozenset(
 )
 
 
-def _build_doctrine(obj: dict[str, object], field: str, *, staged: bool):
+def _build_doctrine(
+    obj: dict[str, object], field: str, *, staged: bool
+) -> DoctrineCandidate | DoctrineRecord:
     _expect_keys(obj, _DOCTRINE_KEYS, frozenset(), field)
     shared = dict(
         schema_version=_expect_str(obj["schema_version"], f"{field}.schema_version"),
@@ -564,19 +579,15 @@ def _parse_unique_id_tuple(
     item_parser: Callable[[object, str], Any],
     id_attr: str,
 ) -> tuple:
-    items = _expect_list(value, field)
-    seen: set[str] = set()
-    out: list = []
-    for index, item in enumerate(items):
-        record = item_parser(item, f"{field}[{index}]")
-        key = getattr(record, id_attr).casefold()
-        if key in seen:
-            raise EvidenceValidationError(
-                f"{field}[{index}]: duplicate {id_attr} {getattr(record, id_attr)!r}"
-            )
-        seen.add(key)
-        out.append(record)
-    return tuple(out)
+    return _parse_deduped_tuple(
+        value,
+        field,
+        item_parser,
+        dedup_key=lambda record: getattr(record, id_attr).casefold(),
+        on_duplicate=lambda record: (
+            f"duplicate {id_attr} {getattr(record, id_attr)!r}"
+        ),
+    )
 
 
 def parse_canonical_corpus(root: Path) -> CanonicalCorpus:
