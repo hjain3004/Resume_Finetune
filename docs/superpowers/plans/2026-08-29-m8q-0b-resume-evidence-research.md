@@ -776,3 +776,21 @@ DB mutation, tailoring run, prompt/profile change, Company Bank change, or Skill
 
 Stop. The next work, if requested, is a separate evidence-bank integration design—not an automatic
 continuation of M8Q-0B.
+
+### M8Q-0B transport decision (2026-08-30)
+
+The first approved Firecrawl CLI attempt used version 1.19.29 and failed normally after
+approximately 58 seconds with `All scraping engines failed to retrieve content from this URL.`
+The target remains publicly accessible through an ordinary independent reader, and the
+Firecrawl balance remained 1,249 before and after, so no credit was consumed. Firecrawl remains
+the primary acquisition transport, with at most one attempt per target. The approved Crawl4AI
+path may receive at most one explicitly selected fallback attempt after a recorded Firecrawl
+retrieval failure or incomplete extraction; this is not an automatic retry loop and does not
+authorize proxies, stealth, authentication, CAPTCHA handling, or broader crawling.
+
+Same-host spacing remains at least two seconds across transports. Both failed and successful
+attempts are recorded in ignored checkpoints/reports, and a Crawl4AI failure ends the affected
+batch. A fallback capture may omit screenshots when complete markdown and HTML are available;
+it records `layout_capture_available: false`, actual transport provenance, and the limitation.
+The Huntr parser consumes only the transport-neutral normalized capture envelope, never a
+provider-specific response object.

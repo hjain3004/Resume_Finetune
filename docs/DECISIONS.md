@@ -2534,3 +2534,23 @@ any real resume corpus. The approved design and implementation plan are
 
 M8, Phase 3, M8V, the three-resume pilot, and the thirty-resume dry run remain incomplete. No live
 network, Firecrawl, Crawl4AI, model, database, or rendering action is authorized by this decision.
+
+## 2026-08-30 — M8Q-0B Firecrawl retrieval failure and bounded fallback
+
+The approved Huntr Firecrawl smoke command was executed once against the outcome hub using CLI
+1.19.29. It completed normally in approximately 58 seconds with exit code 1 and the provider
+diagnostic `All scraping engines failed to retrieve content from this URL.` The output file was
+absent, and the credit balance stayed at 1,249, confirming no billable scrape. An independent
+ordinary reader confirmed the public source remains accessible; this was therefore a
+provider-specific retrieval failure, not a missing page, malformed command, authentication
+failure, executor timeout, or local publication failure.
+
+The approved Crawl4AI fallback is activated narrowly for this host smoke: Firecrawl remains the
+primary transport and receives no retry; each target may receive at most one explicitly selected
+Crawl4AI fallback after a recorded retrieval failure or incomplete extraction. The fallback uses
+the existing deterministic lifecycle with cache bypass and no stealth, proxy, profile,
+authentication, actions, CAPTCHA handling, or alternate identity. It preserves at least two
+seconds of same-host spacing, records both transport attempts and their outcomes under ignored
+research state, and stops the affected batch on fallback failure. Normalized captures carry
+transport-neutral provenance and `layout_capture_available: false` when no screenshot is made;
+the Huntr parser must never consume provider-specific dictionaries.
