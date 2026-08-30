@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from dataclasses import dataclass
 from enum import Enum
@@ -81,7 +82,7 @@ def _validate(raw: object) -> ResearchCapture:
     except (ValueError, TypeError) as exc:
         raise ValueError("capture.transport: unsupported transport") from exc
     timestamp = raw["captured_at"]
-    if not isinstance(timestamp, str) or len(timestamp) != 20 or timestamp[-1] != "Z":
+    if not isinstance(timestamp, str) or re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", timestamp) is None:
         raise ValueError("capture.captured_at: expected UTC timestamp")
     markdown = raw["markdown"]
     if not isinstance(markdown, str) or not markdown.strip():
