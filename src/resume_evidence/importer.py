@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from datetime import datetime
+
+import yaml
 
 from src.resume_evidence import serde
 from src.resume_evidence.duplicates import DuplicatePair, find_duplicates
@@ -22,6 +28,8 @@ from src.resume_evidence.policy import (
     validate_doctrine_bundle,
     validate_outcome_bundle,
     validate_pattern_card,
+    to_doctrine_record,
+    to_outcome_record,
 )
 from src.resume_evidence.serde import EvidenceValidationError
 
@@ -75,6 +83,20 @@ class ValidatedCorpus:
         return tuple(
             item.reference_id for item in self.decisions if item.disposition == "promote"
         )
+
+
+class ImportStatus(str, Enum):
+    CREATED = "created"
+    UNCHANGED = "unchanged"
+
+
+@dataclass(frozen=True)
+class ImportResult:
+    status: ImportStatus
+    outcome_count: int
+    doctrine_count: int
+    pattern_count: int
+    target: Path
 
 
 def _strict_mapping(path: Path, field: str) -> dict[str, object]:
@@ -345,15 +367,105 @@ def import_corpus(
     *,
     approved_report_sha256: str,
     approved_at: datetime,
-) -> ValidatedCorpus:
-    """Validate approval binding; Task 7 adds canonical atomic publication."""
-    del bank_root, approved_at
+) -> ImportResult:
+    """Validate, build, re-load, and atomically promote one complete canonical bank."""
     validated = validate_corpus(inbox_root, manifest_path)
     from src.resume_evidence.report import build_report, report_sha256
+    from src.resume_evidence.store import load_evidence_bank
 
     expected = report_sha256(build_report(validated))
     if approved_report_sha256 != expected:
         raise EvidenceValidationError(
             "approval report SHA-256 does not match the current validated corpus"
         )
-    return validated
+    if (
+        not isinstance(approved_at, datetime)
+        or approved_at.tzinfo is None
+        or approved_at.utcoffset() != timezone.utc.utcoffset(approved_at)
+        or approved_at.microsecond != 0
+    ):
+        raise EvidenceValidationError(
+            "approved_at must be a whole-second timezone-aware UTC datetime"
+        )
+
+    promoted_ids = set(validated.promoted_outcome_ids)
+    outcomes = tuple(
+        to_outcome_record(candidate)
+        for candidate in validated.outcomes
+        if candidate.reference_id in promoted_ids
+    )
+    doctrine = tuple(to_doctrine_record(candidate) for candidate in validated.doctrine)
+    patterns = validated.patterns
+
+    bank_root = Path(bank_root)
+    bank_root.mkdir(parents=True, exist_ok=True)
+    stage_parent = Path(tempfile.mkdtemp(prefix=".evidence-stage-", dir=bank_root))
+    stage = stage_parent / "current"
+    target = bank_root / "current"
+    try:
+        for name in ("outcomes", "doctrine", "patterns"):
+            (stage / name).mkdir(parents=True, exist_ok=True)
+        manifest_payload = {
+            "schema_version": SCHEMA_VERSION,
+            "corpus_version": validated.corpus_version,
+            "approved_at": approved_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "approval_report_sha256": approved_report_sha256,
+            "outcome_ids": [item.reference_id for item in outcomes],
+            "doctrine_ids": [item.doctrine_id for item in doctrine],
+            "pattern_ids": [item.pattern_id for item in patterns],
+        }
+        (stage / "corpus.yaml").write_text(
+            yaml.safe_dump(manifest_payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        for record in outcomes:
+            (stage / "outcomes" / f"{record.reference_id}.yaml").write_text(
+                serde.dump_outcome_record(record), encoding="utf-8"
+            )
+        for record in doctrine:
+            (stage / "doctrine" / f"{record.doctrine_id}.yaml").write_text(
+                serde.dump_doctrine_record(record), encoding="utf-8"
+            )
+        for card in patterns:
+            (stage / "patterns" / f"{card.pattern_id}.yaml").write_text(
+                serde.dump_pattern_card(card), encoding="utf-8"
+            )
+
+        staged_bank = load_evidence_bank(stage_parent)
+        if (
+            len(staged_bank.outcomes) != len(outcomes)
+            or len(staged_bank.doctrine) != len(doctrine)
+            or len(staged_bank.patterns) != len(patterns)
+        ):
+            raise EvidenceValidationError("staged canonical bank count mismatch")
+
+        def tree_bytes(path: Path) -> dict[str, bytes]:
+            return {
+                str(item.relative_to(path)): item.read_bytes()
+                for item in sorted(path.rglob("*"))
+                if item.is_file()
+            }
+
+        if target.exists():
+            load_evidence_bank(bank_root)
+            if tree_bytes(target) != tree_bytes(stage):
+                raise EvidenceValidationError(
+                    "canonical evidence bank conflict: existing current differs"
+                )
+            return ImportResult(
+                ImportStatus.UNCHANGED,
+                len(outcomes),
+                len(doctrine),
+                len(patterns),
+                target,
+            )
+        os.replace(stage, target)
+        return ImportResult(
+            ImportStatus.CREATED,
+            len(outcomes),
+            len(doctrine),
+            len(patterns),
+            target,
+        )
+    finally:
+        shutil.rmtree(stage_parent, ignore_errors=True)

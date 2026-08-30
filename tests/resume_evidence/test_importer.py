@@ -8,10 +8,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from src.resume_evidence.importer import import_corpus, validate_corpus
+from src.resume_evidence import importer
+from src.resume_evidence.importer import ImportStatus, import_corpus, validate_corpus
 from src.resume_evidence.model import EditorialDimension
 from src.resume_evidence.policy import AdmissionStatus
+from src.resume_evidence.report import build_report, report_sha256
 from src.resume_evidence.serde import EvidenceValidationError
+from src.resume_evidence.store import load_evidence_bank
 
 
 def _sha(text: str) -> str:
@@ -310,3 +313,104 @@ def test_import_is_bound_to_exact_approved_report_hash(tmp_path):
             approved_at=datetime(2026, 8, 30, tzinfo=timezone.utc),
         )
     assert not bank_root.exists()
+
+
+def _approved_import(root, manifest, bank_root, *, approved_at=None):
+    digest = report_sha256(build_report(validate_corpus(root, manifest)))
+    return import_corpus(
+        root,
+        manifest,
+        bank_root,
+        approved_report_sha256=digest,
+        approved_at=approved_at or datetime(2026, 8, 30, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+
+def _tree_bytes(root: Path) -> dict[str, bytes]:
+    return {
+        str(path.relative_to(root)): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def test_first_import_creates_valid_canonical_bank_without_private_paths(tmp_path):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    result = _approved_import(root, manifest, bank_root)
+    assert result.status is ImportStatus.CREATED
+    assert result.outcome_count == 1
+    assert result.doctrine_count == 1
+    assert result.pattern_count == 1
+    bank = load_evidence_bank(bank_root)
+    assert [item.reference_id for item in bank.outcomes] == ["outcome_a"]
+    all_yaml = "".join(
+        path.read_text(encoding="utf-8") for path in (bank_root / "current").rglob("*.yaml")
+    )
+    assert "snapshot_file" not in all_yaml
+    assert "layout_file" not in all_yaml
+
+
+def test_identical_import_is_unchanged_and_preserves_bytes(tmp_path):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    _approved_import(root, manifest, bank_root)
+    before = _tree_bytes(bank_root / "current")
+    result = _approved_import(root, manifest, bank_root)
+    assert result.status is ImportStatus.UNCHANGED
+    assert _tree_bytes(bank_root / "current") == before
+    assert not list(bank_root.glob(".evidence-stage-*"))
+
+
+def test_differing_existing_bank_fails_without_overwrite(tmp_path):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    _approved_import(root, manifest, bank_root)
+    before = _tree_bytes(bank_root / "current")
+    with pytest.raises(EvidenceValidationError, match="conflict"):
+        _approved_import(
+            root,
+            manifest,
+            bank_root,
+            approved_at=datetime(2026, 8, 30, 12, 0, 1, tzinfo=timezone.utc),
+        )
+    assert _tree_bytes(bank_root / "current") == before
+
+
+def test_invalid_staged_canonical_yaml_blocks_promotion(tmp_path, monkeypatch):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    monkeypatch.setattr(importer.serde, "dump_outcome_record", lambda value: "not: [valid")
+    with pytest.raises(EvidenceValidationError):
+        _approved_import(root, manifest, bank_root)
+    assert not (bank_root / "current").exists()
+    assert not list(bank_root.glob(".evidence-stage-*"))
+
+
+def test_replace_failure_leaves_target_absent_and_cleans_stage(tmp_path, monkeypatch):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+
+    def fail_replace(source, target):
+        raise OSError("synthetic replace failure")
+
+    monkeypatch.setattr(importer.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="synthetic"):
+        _approved_import(root, manifest, bank_root)
+    assert not (bank_root / "current").exists()
+    assert not list(bank_root.glob(".evidence-stage-*"))
+
+
+def test_loader_rejects_unexpected_file_and_filename_id_mismatch(tmp_path):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    _approved_import(root, manifest, bank_root)
+    extra = bank_root / "current" / "unexpected.txt"
+    extra.write_text("bad", encoding="utf-8")
+    with pytest.raises(EvidenceValidationError, match="unexpected"):
+        load_evidence_bank(bank_root)
+    extra.unlink()
+    record = bank_root / "current" / "outcomes" / "outcome_a.yaml"
+    record.rename(record.with_name("wrong.yaml"))
+    with pytest.raises(EvidenceValidationError):
+        load_evidence_bank(bank_root)
