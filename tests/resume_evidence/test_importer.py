@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import copy
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 import yaml
 
-from src.resume_evidence.importer import validate_corpus
+from src.resume_evidence.importer import import_corpus, validate_corpus
 from src.resume_evidence.model import EditorialDimension
 from src.resume_evidence.policy import AdmissionStatus
 from src.resume_evidence.serde import EvidenceValidationError
@@ -295,3 +296,17 @@ def test_unsupported_schema_version_fails(tmp_path):
     manifest.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     with pytest.raises(EvidenceValidationError, match="schema_version"):
         validate_corpus(root, manifest)
+
+
+def test_import_is_bound_to_exact_approved_report_hash(tmp_path):
+    root, manifest = _base_corpus(tmp_path)
+    bank_root = tmp_path / "bank"
+    with pytest.raises(EvidenceValidationError, match="approval"):
+        import_corpus(
+            root,
+            manifest,
+            bank_root,
+            approved_report_sha256="0" * 64,
+            approved_at=datetime(2026, 8, 30, tzinfo=timezone.utc),
+        )
+    assert not bank_root.exists()

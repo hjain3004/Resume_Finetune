@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
+from datetime import datetime
 
 from src.resume_evidence import serde
 from src.resume_evidence.duplicates import DuplicatePair, find_duplicates
@@ -335,3 +336,24 @@ def validate_corpus(inbox_root: Path, manifest_path: Path) -> ValidatedCorpus:
         decisions=decisions,
         duplicates=duplicates,
     )
+
+
+def import_corpus(
+    inbox_root: Path,
+    manifest_path: Path,
+    bank_root: Path,
+    *,
+    approved_report_sha256: str,
+    approved_at: datetime,
+) -> ValidatedCorpus:
+    """Validate approval binding; Task 7 adds canonical atomic publication."""
+    del bank_root, approved_at
+    validated = validate_corpus(inbox_root, manifest_path)
+    from src.resume_evidence.report import build_report, report_sha256
+
+    expected = report_sha256(build_report(validated))
+    if approved_report_sha256 != expected:
+        raise EvidenceValidationError(
+            "approval report SHA-256 does not match the current validated corpus"
+        )
+    return validated
