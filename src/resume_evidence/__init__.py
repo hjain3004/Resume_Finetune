@@ -24,6 +24,7 @@ from src.resume_evidence.model import (
     SourceKind,
     SourceRecord,
 )
+from src.resume_evidence.store import EvidenceBank, load_evidence_bank, lookup_outcomes
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -48,4 +49,7 @@ __all__ = [
     "DoctrineRecord",
     "PatternCard",
     "CanonicalCorpus",
+    "EvidenceBank",
+    "load_evidence_bank",
+    "lookup_outcomes",
 ]
