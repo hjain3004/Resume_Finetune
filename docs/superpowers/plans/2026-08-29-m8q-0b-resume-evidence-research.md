@@ -148,12 +148,18 @@ The first is the outcome-linked hub. The second deliberately mixes verified comp
 illustrative examples. The third is a negative-control legacy guide: it must not promote merely
 because its example looks polished.
 
+**Firecrawl CLI 1.19.29 correction (verified 2026-08-30):** `screenshot` in `--format` and
+`--full-page-screenshot` are mutually exclusive screenshot requests. The first live attempt
+correctly stopped before spending a credit when the CLI rejected that duplication. For the first
+two pages, use `--format markdown,links` together with `--full-page-screenshot`; the flag adds the
+single full-page screenshot output. Do not add `screenshot` back to the format list.
+
 - [ ] **Step 1: Scrape the outcome hub as the install/live check**
 
 Run exactly one normal scrape:
 
 ```bash
-firecrawl scrape "https://huntr.co/resume-examples/real-resume-examples" --format markdown,links,screenshot --only-main-content --redact-pii --full-page-screenshot --timing -o data/resume_research/smoke/real-resume-examples.json
+firecrawl scrape "https://huntr.co/resume-examples/real-resume-examples" --format markdown,links --only-main-content --redact-pii --full-page-screenshot --timing -o data/resume_research/smoke/real-resume-examples.json
 ```
 
 Expected: exit 0, nonempty markdown, same-domain links, and screenshot metadata. Do not rerun if
@@ -171,7 +177,7 @@ do not copy any such material to tracked files.
 After at least 2 seconds since the prior Huntr request:
 
 ```bash
-firecrawl scrape "https://huntr.co/resume-examples/software-engineer-resume-examples" --format markdown,links,screenshot --only-main-content --redact-pii --full-page-screenshot --timing -o data/resume_research/smoke/software-engineer-resume-examples.json
+firecrawl scrape "https://huntr.co/resume-examples/software-engineer-resume-examples" --format markdown,links --only-main-content --redact-pii --full-page-screenshot --timing -o data/resume_research/smoke/software-engineer-resume-examples.json
 ```
 
 Expected: the capture preserves enough labeling to distinguish verified composites from
