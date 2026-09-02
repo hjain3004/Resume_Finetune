@@ -126,6 +126,14 @@ throttling, report-output, and staging-boundary defects in that verifier. Track 
 adoption, S0/S2/G3 integration, live tailoring, CLI integration, and DB integration remain
 incomplete and require their own scoped milestone.
 
+**M8N — Apply-Now lane (design approved 2026-09-01, not implemented).** A file-fed entry to the
+same S1→S0→S2→S3→G1→G2→RENDER+L7→G3 chain for live postings while the DB-fed pilot is
+completed. Never reads or writes `data/jobs.db` for tailoring; outputs under gitignored
+`applications_manual/`. M8N-1 adds an anchored screen brief before S0, the typed company view
+into S0, and an anchored hiring-manager read after render using the M8Q §9 editorial rubric.
+M8Q remains an evaluator asset with no corpus and is not a dependency. Spec:
+`docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md`.
+
 
 ## Upgrades (M9–M12)
 **Status: see docs/UPGRADE_PLAN.md.** M9 items 1–2 (cadence, watchlist adapter) are

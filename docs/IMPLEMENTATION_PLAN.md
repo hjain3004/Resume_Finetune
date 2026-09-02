@@ -259,6 +259,38 @@ scoped milestones/sessions. Track B writes ignored research proposals only.
 
 ---
 
+## M8N — Apply-Now Tailoring Lane
+
+Status: DESIGN APPROVED 2026-09-01 — NOT IMPLEMENTED. Three ordered milestones, one per
+session: M8N-0 (file-fed full chain), M8N-1 (screen brief, company view, hiring-manager read),
+M8N-2 (phrasing proposals, golden set).
+Design: `docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md`
+Plan (M8N-0): `docs/superpowers/plans/2026-09-01-m8n-0-apply-now-lane.md`
+
+Why: live postings exist now, ingestion last ran 2026-07-12, and the DB-gated pilot cannot
+accept a pasted posting. The lane is the same validated chain with a file entry point; it never
+opens `data/jobs.db` for tailoring and never writes it.
+
+M8N-0 acceptance criteria (spec §11 holds the measurable bar):
+- `deb1f9d`, `ee035d0`, `30bc989` cherry-picked onto `main`; all existing tests green.
+- The two documented-shape defects in `docs/prompts/tailoring_s1.md` and
+  `docs/prompts/tailoring_s0.md` fixed (approved under spec N12, recorded in DECISIONS.md);
+  `check_prompt_invariants(docs/prompts)` returns no findings; the LinkedIn prompt moved to
+  `docs/reference/`.
+- `scripts/tailor_now.py run --jd ... --company ... --title ... --variant ...` produces an
+  accepted G3 packet and one-page PDF under `applications_manual/` for jobs 225, 119, and 211
+  (JD text exported read-only with `export-jd`), with G2 PASS and empty L7 violations.
+- A second identical run makes zero model calls; a mismatched JD for the same directory is refused.
+- L7 failure writes `rejected/` and no accepted marker.
+- Every stage receives the lane's `--model` command (spy-tested); the lane manifest records it.
+- The pilot's behavior and tests are unchanged after the chain extraction.
+- `pytest -q` green offline; no network, DB, or model calls in tests.
+- ROADMAP, ARCHITECTURE §11, CLAUDE.md/AGENTS.md commands, `.gitignore` updated per spec §6/§14.
+
+M8N-1 and M8N-2 get their own plans after M8N-0 closes; do not start them in the M8N-0 session.
+
+---
+
 ## M6.14 — Collision-Safe Posting Identity & Targeted Priority Resolution
 
 Status: OFFLINE COMPLETE — LIVE TARGETED SMOKE PENDING (2026-08-27).

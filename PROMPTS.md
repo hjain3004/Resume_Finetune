@@ -51,6 +51,19 @@ config/profile_summary.md from them, factually, and show it to me for approval b
 committing. Do not build any tailoring functionality; that's Phase 3 and gated on my
 dry-run feedback.
 
+## M8N-0
+Read CLAUDE.md, docs/ARCHITECTURE.md, docs/TAILORING_METHODOLOGY.md §3–§4, the design
+docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md (all of it), and the plan
+docs/superpowers/plans/2026-09-01-m8n-0-apply-now-lane.md. Implement M8N-0 only, task by
+task, in a git worktree, using superpowers:subagent-driven-development or
+superpowers:executing-plans. Do not start M8N-1. Do not open data/jobs.db except through the
+read-only export-jd helper. Never stage data/, inbox/, applications_manual/, profile/, or
+docs/sampleJD.md. The only prompt edits permitted are the two documented-shape fixes in
+tailoring_s1.md and tailoring_s0.md described in plan Task 2, which I approve now under spec
+N12; make no other prompt change. When pytest is green and the
+three benchmark jobs (225, 119, 211) reach G3 through the lane, stop and walk me through the
+review packets; I approve before you commit the closeout docs.
+
 ## Debugging template (any milestone)
 Acceptance check failed: [paste the check text from IMPLEMENTATION_PLAN.md].
 Output: [paste error/output]. Fix within the constraints of CLAUDE.md — if the fix

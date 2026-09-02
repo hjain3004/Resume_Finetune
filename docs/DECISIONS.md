@@ -2587,3 +2587,39 @@ full-suite tests with 1 deselected. Database SHA-256 remained
 
 M8Q-0B Task 5, bulk acquisition, corpus annotation/import, corpus approval/adoption, tailoring,
 SkillOpt, and all later milestones remain pending.
+
+## 2026-09-01 — M8N Apply-Now tailoring lane approved (design only)
+
+Design: `docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md`. Approved by the user
+on 2026-09-01 with the instruction that planning and documentation are done in this session
+and execution belongs to other agents, one milestone per session (M8N-0 → M8N-1 → M8N-2).
+
+Decisions N1–N12 recorded in the spec §3. The ones that reverse or refine earlier positions:
+
+- N1: the lane runs the full validated chain (S1→S0→S2→S3→G1→G2→RENDER+L7→G3). A reduced
+  chain that skipped S3/G2 was proposed and withdrawn because it cannot meet the "at par or
+  better" bar.
+- N3: L7 remains a hard gate in the lane; rejected renders are written under `rejected/` for
+  inspection, never accepted.
+- N4: `deb1f9d`, `ee035d0`, `30bc989` from `m8v-1-verification` are cherry-picked onto `main`
+  in M8N-0 (each verified to merge cleanly with `git merge-tree --write-tree`); `921b5be` is
+  not. Merging the branch as a whole remains deferred.
+- N6: the LinkedIn "senior hiring manager" prompt (`docs/prompts/resume_prompt.md`) is not a
+  runtime prompt. Its intent becomes two anchored stages in M8N-1 (screen brief, hiring-manager
+  read). The file moves to `docs/reference/`.
+- N7: the phrasing library in `config/master_profile.yaml`, not prompt length, is the primary
+  quality ceiling; M8N-2 produces user-merged phrasing proposals; any schema change for
+  angle-keyed phrasings needs its own design.
+- N8: the lane never browses; company context enters only through the typed
+  `CompanyPositioningView` from a lane-local bank imported from the staged inbox.
+- N9: M8Q is not a dependency; its §9 editorial rubric is reused verbatim by the
+  hiring-manager read.
+- N11: `--variant` is human-chosen; the model never picks the base variant.
+- N12: new prompts (`tailoring_sb.md`, `tailoring_hr.md`) and amendments to `tailoring_s0.md`
+  and `tailoring_s2.md` require user approval and an entry here before first live use.
+
+Verified facts recorded in spec §2 (renderer passes L7 on the base variant; job 225 reached
+RENDER and failed only on the L7 wrap defect; the DB gate and stale ingestion are why the
+pilot cannot serve today's postings; M8Q has no corpus; 20/20 company bundles are staged and
+unadopted). Full suite on 2026-09-01: 1851 passed, 1 deselected, 1 unrelated date-sensitive
+failure in `tests/test_firecrawl_budget.py::test_budget_reserve_exhausts_monthly`.
