@@ -1013,3 +1013,16 @@ def test_eligibility_rows_with_job_ids_scope(conn):
     rows_scoped = db.eligibility_rows(conn, Status.DISCOVERED, job_ids=(2,))
     assert len(rows_scoped) == 1
     assert rows_scoped[0]["id"] == 2
+
+
+def test_job_row_for_export_returns_row_or_none(tmp_path):
+    from tests.tailor.test_pilot import _seed_db
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text="Python " * 60)
+    conn = db.get_readonly_connection(db_path)
+    try:
+        row = db.job_row_for_export(conn, 225)
+        assert row["company"] == "Notion" and row["jd_quality"] == "ats"
+        assert db.job_row_for_export(conn, 999) is None
+    finally:
+        conn.close()

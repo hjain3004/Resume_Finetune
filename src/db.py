@@ -926,6 +926,14 @@ def jd_text_by_id(conn: sqlite3.Connection, job_id: int) -> str | None:
     return row["jd_text"] if row else None
 
 
+def job_row_for_export(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    """Read-only single-row read for the Apply-Now benchmark export (M8N-0)."""
+    return conn.execute(
+        "SELECT id, company, title, jd_text, jd_quality, base_variant, status FROM jobs WHERE id = ?",
+        (job_id,),
+    ).fetchone()
+
+
 def prepare_tailoring_request(conn: sqlite3.Connection, job_id: int) -> S1Request:
     """Read-only S1 job-preparation boundary (M8P-1).
 
