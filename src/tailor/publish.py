@@ -119,9 +119,20 @@ def parse_render_result(raw: object) -> RenderResult:
     )
 
 
+def _write_rejected(reject_dir: Path, tmp_pdf: Path, pdf_name: str, violations: tuple[str, ...]) -> None:
+    """Copy a render that failed L7 somewhere a human can look at it. Never
+    writes render_result.json; the accepted marker stays absent."""
+    reject_dir = Path(reject_dir)
+    reject_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(tmp_pdf.with_suffix(".tex"), reject_dir / "resume.tex")
+    shutil.copy(tmp_pdf, reject_dir / pdf_name)
+    write_json_atomic(reject_dir / "l7_report.json", list(violations))
+
+
 def render_and_publish(
     profile, draft, *, root: Path, template_path: Path,
     canonical_text_by_id: dict[str, str], s3_bundle_schema_version: str,
+    directory: Path | None = None, reject_dir: Path | None = None,
 ) -> RenderOutcome:
     try:
         doc = render_doc_from_draft(profile, draft)
@@ -130,7 +141,7 @@ def render_and_publish(
         kind = RenderOutcomeKind.FINGERPRINT_MISMATCH if "fingerprint" in message else RenderOutcomeKind.MAPPING_FAILURE
         return RenderOutcome(kind, None, (), message)
 
-    directory = application_dir(root, draft.company, draft.title)
+    directory = Path(directory) if directory is not None else application_dir(root, draft.company, draft.title)
     marker_path = directory / "render_result.json"
     if marker_path.exists():
         existing = parse_render_result(json.loads(marker_path.read_text(encoding="utf-8")))
@@ -162,6 +173,8 @@ def render_and_publish(
 
         violations = tuple(run_l7_tailored(doc, parsed, pages, modified_ids))
         if violations:
+            if reject_dir is not None:
+                _write_rejected(Path(reject_dir), tmp_pdf, profile.ats["filename_pattern"], violations)
             return RenderOutcome(RenderOutcomeKind.L7_FAILURE, None, violations, None)
 
         directory.mkdir(parents=True, exist_ok=True)

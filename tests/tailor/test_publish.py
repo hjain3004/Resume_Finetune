@@ -207,3 +207,40 @@ def test_publish_module_never_imports_the_model_boundary():
     source = Path("src/tailor/publish.py").read_text(encoding="utf-8")
     assert "src.tailor.invoke" not in source
     assert "src.llm_trace" not in source
+
+
+# ---------------------------------------------------------------------------
+# M8N-0: explicit directory override and rejected output on L7 failure
+# ---------------------------------------------------------------------------
+
+
+def test_directory_override_is_used_instead_of_derived_dir(profile, real_draft, tmp_path, stub_render_good_pdf):
+    target = tmp_path / "custom" / "acme-fixture_role-second"
+    outcome = render_and_publish(profile, real_draft, root=tmp_path, template_path=TEMPLATE,
+                                 canonical_text_by_id={}, s3_bundle_schema_version="v1",
+                                 directory=target)
+    assert outcome.kind is RenderOutcomeKind.VALID
+    assert (target / "render_result.json").exists()
+    assert not application_dir(tmp_path, "Acme", "Fixture Role").exists()
+
+
+def test_l7_failure_writes_rejected_artifacts_and_no_marker(profile, real_draft, tmp_path, stub_render_bad_pdf):
+    target = tmp_path / "acme-fixture_role"
+    reject = target / "rejected"
+    outcome = render_and_publish(profile, real_draft, root=tmp_path, template_path=TEMPLATE,
+                                 canonical_text_by_id={}, s3_bundle_schema_version="v1",
+                                 directory=target, reject_dir=reject)
+    assert outcome.kind is RenderOutcomeKind.L7_FAILURE
+    assert outcome.violations
+    assert (reject / "resume.tex").exists()
+    assert (reject / profile.ats["filename_pattern"]).exists()
+    assert json.loads((reject / "l7_report.json").read_text(encoding="utf-8")) == list(outcome.violations)
+    assert not (target / "render_result.json").exists()
+
+
+def test_l7_failure_without_reject_dir_writes_nothing(profile, real_draft, tmp_path, stub_render_bad_pdf):
+    outcome = render_and_publish(profile, real_draft, root=tmp_path, template_path=TEMPLATE,
+                                 canonical_text_by_id={}, s3_bundle_schema_version="v1")
+    assert outcome.kind is RenderOutcomeKind.L7_FAILURE
+    assert not list(tmp_path.rglob("rejected"))
+    assert not list(tmp_path.rglob("*.tex"))
