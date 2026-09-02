@@ -93,7 +93,7 @@ The shape below is shown without markdown fences deliberately. Reproduce it the 
     {"term": "<exact JD surface form>", "quote": "<exact JD substring containing the term>"}
   ],
   "nice_to_have": [
-    {"term": "<exact JD surface form>", "quote": "<exact JD substring containing the term>"}
+    {"term": "<exact JD surface form of a preferred item>", "quote": "<exact JD substring containing the preferred item>"}
   ],
   "responsibilities_summary": [
     {"summary": "<your plain-language summary of one responsibility>", "quote": "<exact JD substring supporting it>"}

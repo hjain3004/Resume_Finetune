@@ -2623,3 +2623,13 @@ RENDER and failed only on the L7 wrap defect; the DB gate and stale ingestion ar
 pilot cannot serve today's postings; M8Q has no corpus; 20/20 company bundles are staged and
 unadopted). Full suite on 2026-09-01: 1851 passed, 1 deselected, 1 unrelated date-sensitive
 failure in `tests/test_firecrawl_budget.py::test_budget_reserve_exhausts_monthly`.
+
+## 2026-09-01 — M8N-0 prompt documented-shape fixes (approved)
+
+`docs/prompts/tailoring_s1.md`: the `nice_to_have` example term no longer duplicates the
+`must_have` placeholder (the structural duplicate-term guard rejected the prompt's own
+example). `docs/prompts/tailoring_s0.md`: the example now shows two `points` entries,
+matching the prompt's own two-to-four rule. No rule sentence changed. Approved by the user
+at M8N-0 kickoff under spec N12; `check_prompt_invariants(docs/prompts)` now returns no
+findings. The LinkedIn hiring-manager prompt moved to
+`docs/reference/linkedin_hiring_manager_prompt.md` (spec N6).

@@ -103,24 +103,14 @@ def test_fenced_prompt_is_found(tmp_prompt_dir_with_fence):
     assert any("fence" in f.message for f in findings)
 
 
-def test_real_prompts_have_exactly_the_two_known_shape_defects():
-    """Empirically discovered while implementing this check (2026-08-27):
-    the real tailoring_s1.md and tailoring_s0.md prompts each document a
-    response shape that fails their OWN stage's structural parser --
-    tailoring_s1.md's example reuses the identical placeholder term across
-    must_have and nice_to_have (tripping the structural duplicate-term
-    guard), and tailoring_s0.md's example shows only one `points` entry
-    against the prompt's own "two to four" rule. Neither is one of the
-    five already-fixed live failures; both are newly discovered by this
-    check and are out of scope to fix in M8V-1 (see docs/DECISIONS.md).
-    No fence or marker defect exists in any real prompt, and s2/s3/g2 have
-    no shape defect."""
+def test_real_prompts_have_no_invariant_findings():
+    """M8N-0 fixed the two documented-shape defects M8V-1 discovered
+    (S1 duplicate placeholder term across must_have/nice_to_have; S0
+    single-point example against its own two-to-four rule). The real
+    prompt directory must now be clean: no fence, no marker defect, no
+    shape defect, for every runtime prompt."""
     findings = check_prompt_invariants(Path("docs/prompts"))
-    surfaces_with_findings = {f.surface for f in findings}
-    assert surfaces_with_findings == {"tailoring_s0.md", "tailoring_s1.md"}
-    assert all("shape" in f.message.casefold() for f in findings)
-    assert all("fence" not in f.message.casefold() for f in findings)
-    assert all("exactly once" not in f.message for f in findings)
+    assert findings == (), [f.message for f in findings]
 
 
 def test_preflight_makes_no_model_call():
@@ -161,17 +151,12 @@ def test_run_preflight_aggregates_all_checks_and_passes_on_clean_repo(tmp_path, 
     assert report.findings == ()
 
 
-def test_run_preflight_against_the_real_repo_surfaces_exactly_the_known_shape_findings(tmp_path):
-    """`run_preflight` (not just check_prompt_invariants directly) against
-    the real repo's prompt directory must report only the two known shape
-    defects -- no do_not_claim leak, no fence, no marker defect."""
+def test_run_preflight_against_the_real_repo_passes_without_render(tmp_path):
     report = run_preflight(
         Path("config/master_profile.yaml"), Path("profile/template.tex"),
         Path("docs/prompts"), tmp_path, skip_render=True,
     )
-    assert report.passed is False
-    assert {f.surface for f in report.findings} == {"tailoring_s0.md", "tailoring_s1.md"}
-    assert all(f.check == "prompt_invariants" for f in report.findings)
+    assert report.passed is True, [f.message for f in report.findings]
 
 
 @pytest.mark.skipif(shutil.which("pdflatex") is None, reason="pdflatex not installed")

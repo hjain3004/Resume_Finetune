@@ -11,6 +11,12 @@ explanation. The object must have exactly these fields:
       "profile_ids": ["exact supplied project or experience id"],
       "requirement_terms": ["exact supplied S1 must_have or nice_to_have term"],
       "jd_quotes": ["exact supplied S1 evidence-pool quote"]
+    },
+    {
+      "sentence": "a second, different advisory strategy sentence",
+      "profile_ids": ["another exact supplied project or experience id"],
+      "requirement_terms": ["another exact supplied S1 term"],
+      "jd_quotes": ["another exact supplied S1 evidence-pool quote"]
     }
   ]
 }
