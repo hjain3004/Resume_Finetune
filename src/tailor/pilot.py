@@ -22,10 +22,18 @@ from src.tailor.g1 import load_banned_terms
 from src.tailor.g2 import load_taste_lessons
 from src.tailor.g2_pipeline import G2OutcomeKind, g2_bundle_to_dict, parse_g2_bundle, run_g2_loop
 from src.tailor.g3 import G3OutcomeKind, build_review_packet, publish_packet
+from src.tailor.invoke import DEFAULT_CLAUDE_CMD
 from src.tailor.publish import RenderOutcomeKind, application_dir, parse_render_result, render_and_publish
 from src.tailor.s0 import S0Response, build_s0_request, parse_s0_response, s0_response_to_dict
 from src.tailor.s0_pipeline import S0OutcomeKind, run_s0_invocation
-from src.tailor.s1 import S1Response, parse_s1_request, parse_s1_response, s1_request_to_dict, s1_response_to_dict
+from src.tailor.s1 import (
+    S1Request,
+    S1Response,
+    parse_s1_request,
+    parse_s1_response,
+    s1_request_to_dict,
+    s1_response_to_dict,
+)
 from src.tailor.s1_pipeline import S1OutcomeKind, run_s1_invocation
 from src.tailor.s2 import S2Response, build_s2_request, parse_s2_response, s2_response_to_dict
 from src.tailor.s2_pipeline import S2OutcomeKind, run_s2_invocation
@@ -267,6 +275,21 @@ def _envelope(job_id: int, response_dict: dict, alignment_fingerprint: str | Non
     return envelope
 
 
+def _prepare_failure(job_id: int, outcome_kind: str, error: str, started: str) -> RunOutcome:
+    """A PREPARE-stage failure that happens before any application directory
+    is resolved (feedback refusal, DB read failure): one FAILED PREPARE
+    record, empty company/title, no retry command, nothing written to disk."""
+    record = StageRecord(
+        stage=Stage.PREPARE, state=StageState.FAILED, outcome_kind=outcome_kind, artifact_path=None,
+        model_calls=0, trace_paths=(), started_at=started, ended_at=_now(), error=bounded(error),
+    )
+    manifest = RunManifest(
+        schema_version=MANIFEST_SCHEMA, job_id=job_id, company="", title="", alignment_fingerprint=None,
+        stages=(record,), total_model_calls=0, db_mutations=0, submissions=0,
+    )
+    return RunOutcome(manifest=manifest, failed_stage=Stage.PREPARE, retry_command=None)
+
+
 def run_application(
     job_id: int, *, db_path: Path, profile_path: Path,
     root: Path = APPLICATIONS_ROOT,
@@ -281,12 +304,58 @@ def run_application(
     dry_run: bool = False,
     allow_rerun_after_feedback: bool = False,
 ) -> RunOutcome:
+    started = _now()
+    if not allow_rerun_after_feedback:
+        if any(entry.get("job_id") == job_id for entry in load_feedback_index(feedback_dir)):
+            return _prepare_failure(
+                job_id, "feedback_recorded",
+                "feedback already recorded for this job; rerun refused (use --allow-rerun-after-feedback)", started,
+            )
+
+    conn = db.get_readonly_connection(db_path)
+    try:
+        try:
+            s1_request = db.prepare_tailoring_request(conn, job_id)
+            variant = db.tailoring_base_variant(conn, job_id)
+        except Exception as exc:
+            return _prepare_failure(job_id, "prepare_failure", str(exc), started)
+    finally:
+        conn.close()
+
+    directory = application_dir(root, s1_request.company, s1_request.title)
+    if allow_rerun_after_feedback and any(
+        entry.get("job_id") == job_id for entry in load_feedback_index(feedback_dir)
+    ):
+        n = 1
+        while (directory / f"rerun-{n}").exists():
+            n += 1
+        directory = directory / f"rerun-{n}"
+
+    return run_stages(
+        s1_request, variant, directory=directory, profile_path=profile_path, root=root,
+        template_path=template_path, banned_words_path=banned_words_path, taste_path=taste_path,
+        trace_dir=trace_dir, prompt_dir=prompt_dir, stop_after=stop_after, only=only, dry_run=dry_run,
+    )
+
+
+def run_stages(
+    s1_request: S1Request, variant: str, *,
+    directory: Path, profile_path: Path, root: Path,
+    template_path: Path = Path("profile/template.tex"),
+    banned_words_path: Path = Path("config/banned_words.txt"),
+    taste_path: Path = Path("config/taste.md"),
+    trace_dir: Path = Path("data/traces"),
+    prompt_dir: Path = DEFAULT_PROMPT_DIR,
+    stop_after: Stage | None = None, only: Stage | None = None, dry_run: bool = False,
+    claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
+    reject_dir: Path | None = None,
+    retry_prefix: str | None = None,
+) -> RunOutcome:
+    job_id = s1_request.job_id
+    company, title = s1_request.company, s1_request.title
     stage_records: list[StageRecord] = []
     total_model_calls = 0
-    company = ""
-    title = ""
     alignment_fingerprint: str | None = None
-    directory: Path | None = None
     effective_stop_after = only if only is not None else stop_after
 
     def record(stage: Stage, state: StageState, outcome_kind: str, *, started: str, artifact: Path | None = None,
@@ -306,41 +375,12 @@ def run_application(
         )
         if directory is not None and not dry_run:
             write_json_atomic(directory / "run_manifest.json", manifest_to_dict(manifest))
-        retry_command = (
-            f"python -m scripts.tailor_pilot run --job-id {job_id} --only {failed_stage.value}"
-            if failed_stage is not None else None
-        )
+        prefix = retry_prefix or f"python -m scripts.tailor_pilot run --job-id {job_id}"
+        retry_command = f"{prefix} --only {failed_stage.value}" if failed_stage is not None else None
         return RunOutcome(manifest=manifest, failed_stage=failed_stage, retry_command=retry_command)
 
     # ---- PREPARE ----
     started = _now()
-    if not allow_rerun_after_feedback:
-        if any(entry.get("job_id") == job_id for entry in load_feedback_index(feedback_dir)):
-            record(Stage.PREPARE, StageState.FAILED, "feedback_recorded", started=started,
-                  error="feedback already recorded for this job; rerun refused (use --allow-rerun-after-feedback)")
-            return finish(Stage.PREPARE)
-
-    conn = db.get_readonly_connection(db_path)
-    try:
-        try:
-            s1_request = db.prepare_tailoring_request(conn, job_id)
-            variant = db.tailoring_base_variant(conn, job_id)
-        except Exception as exc:
-            record(Stage.PREPARE, StageState.FAILED, "prepare_failure", started=started, error=str(exc))
-            return finish(Stage.PREPARE)
-    finally:
-        conn.close()
-
-    company, title = s1_request.company, s1_request.title
-    directory = application_dir(root, company, title)
-    if allow_rerun_after_feedback and any(
-        entry.get("job_id") == job_id for entry in load_feedback_index(feedback_dir)
-    ):
-        n = 1
-        while (directory / f"rerun-{n}").exists():
-            n += 1
-        directory = directory / f"rerun-{n}"
-
     prepare_exists = artifact_path(directory, Stage.PREPARE).exists()
     prepare_complete = stage_is_complete(directory, Stage.PREPARE, job_id=job_id, alignment_fingerprint=None)
     if prepare_complete:
@@ -380,6 +420,7 @@ def run_application(
         outcome = run_s1_invocation(
             s1_request, prompt_template_path=prompt_dir / "tailoring_s1.md",
             request_path=artifact_path(directory, Stage.PREPARE), trace_dir=trace_dir,
+            claude_cmd=claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S1OutcomeKind.VALID:
@@ -417,6 +458,7 @@ def run_application(
         outcome = run_s0_invocation(
             s0_request, prompt_template_path=prompt_dir / "tailoring_s0.md",
             request_path=artifact_path(directory, Stage.S1), trace_dir=trace_dir,
+            claude_cmd=claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S0OutcomeKind.VALID:
@@ -470,6 +512,7 @@ def run_application(
         outcome = run_s2_invocation(
             s2_request, prompt_template_path=prompt_dir / "tailoring_s2.md",
             request_path=artifact_path(directory, Stage.S0), trace_dir=trace_dir,
+            claude_cmd=claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S2OutcomeKind.VALID:
@@ -513,6 +556,7 @@ def run_application(
         outcome = run_s3_invocation(
             s3_request, prompt_template_path=prompt_dir / "tailoring_s3.md",
             request_path=artifact_path(directory, Stage.S2), banned_terms=banned_terms, trace_dir=trace_dir,
+            claude_cmd=claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S3OutcomeKind.VALID:
@@ -553,6 +597,7 @@ def run_application(
             s3_prompt_template_path=prompt_dir / "tailoring_s3.md",
             request_path=artifact_path(directory, Stage.S3), banned_terms=banned_terms,
             taste_lessons=taste_lessons, trace_dir=trace_dir,
+            claude_cmd=claude_cmd,
         )
         calls = outcome.bundle.model_calls if outcome.bundle is not None else 1
         total_model_calls += calls
@@ -591,6 +636,7 @@ def run_application(
             profile, g2_bundle.accepted_s3_bundle.draft, root=root, template_path=template_path,
             canonical_text_by_id=canonical_text_by_id,
             s3_bundle_schema_version=g2_bundle.accepted_s3_bundle.schema_version,
+            directory=directory, reject_dir=reject_dir,
         )
         if render_outcome.kind not in (RenderOutcomeKind.VALID, RenderOutcomeKind.ALREADY_PUBLISHED):
             record(Stage.RENDER, StageState.FAILED, render_outcome.kind.value, started=started,

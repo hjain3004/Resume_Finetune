@@ -747,3 +747,119 @@ def test_gate_and_cost_are_read_only(pilot_root, good_feedback):
     acceptance_gate(pilot_root, good_feedback)
     cost_report(pilot_root)
     assert sorted(str(p) for p in pilot_root.rglob("*")) == before
+
+
+# ---------------------------------------------------------------------------
+# M8N-0: run_stages is the shared chain; run_application delegates to it
+# ---------------------------------------------------------------------------
+
+from src.tailor.invoke import DEFAULT_CLAUDE_CMD
+from src.tailor.pilot import run_stages
+from src.tailor.s1 import S1Request
+
+
+def _lane_request(job_id=PILOT_JOB_ID):
+    return S1Request(job_id=job_id, company="Example", title="Engineer", jd_text="Python", jd_quality="ats")
+
+
+def test_run_stages_matches_run_application_stage_states(tmp_repo, mock_all_stages_pass):
+    via_pilot = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+                                root=tmp_repo.applications)
+    other_root = tmp_repo.root / "applications_b"
+    from src.tailor.publish import application_dir
+    via_stages = run_stages(_lane_request(), "ml", directory=application_dir(other_root, "Example", "Engineer"),
+                            profile_path=tmp_repo.profile, root=other_root)
+    assert [(r.stage, r.state) for r in via_stages.manifest.stages] == \
+           [(r.stage, r.state) for r in via_pilot.manifest.stages]
+    assert via_stages.manifest.total_model_calls == via_pilot.manifest.total_model_calls
+    assert via_stages.failed_stage is None
+
+
+def test_run_stages_threads_claude_cmd_to_every_runner(tmp_repo, monkeypatch):
+    chain = _build_valid_chain()
+    seen: dict[str, tuple] = {}
+
+    def fake_s1(request, **kwargs):
+        seen["s1"] = kwargs.get("claude_cmd")
+        return S1Outcome(kind=S1OutcomeKind.VALID, response=chain.s1, error=None, trace_path=None)
+
+    def fake_s0(request, **kwargs):
+        seen["s0"] = kwargs.get("claude_cmd")
+        return S0Outcome(kind=S0OutcomeKind.VALID, response=chain.s0, error=None, trace_path=None)
+
+    def fake_s2(request, **kwargs):
+        seen["s2"] = kwargs.get("claude_cmd")
+        return S2Outcome(kind=S2OutcomeKind.VALID, response=chain.s2, error=None, trace_path=None)
+
+    def fake_s3(request, **kwargs):
+        seen["s3"] = kwargs.get("claude_cmd")
+        return S3Outcome(kind=S3OK.VALID, bundle=chain.s3_bundle, g1_report=chain.s3_bundle.g1, error=None, trace_path=None)
+
+    def fake_g2(s3_request, s3_bundle, **kwargs):
+        seen["g2"] = kwargs.get("claude_cmd")
+        return G2Outcome(kind=G2OutcomeKind.PASSED_ROUND_1, bundle=chain.g2_bundle, error=None, trace_paths=())
+
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", fake_s1)
+    monkeypatch.setattr("src.tailor.pilot.run_s0_invocation", fake_s0)
+    monkeypatch.setattr("src.tailor.pilot.run_s2_invocation", fake_s2)
+    monkeypatch.setattr("src.tailor.pilot.run_s3_invocation", fake_s3)
+    monkeypatch.setattr("src.tailor.pilot.run_g2_loop", fake_g2)
+    cmd = ("claude", "-p", "--model", "sonnet", "--tools", "", "--no-session-persistence", "--")
+    run_stages(_lane_request(), "ml", directory=tmp_repo.root / "app", profile_path=tmp_repo.profile,
+               root=tmp_repo.root, claude_cmd=cmd, stop_after=Stage.G2)
+    assert seen == {"s1": cmd, "s0": cmd, "s2": cmd, "s3": cmd, "g2": cmd}
+
+
+def test_run_stages_default_command_is_the_pilot_constant(tmp_repo, monkeypatch):
+    chain = _build_valid_chain()
+    seen = {}
+
+    def fake_s1(request, **kwargs):
+        seen["s1"] = kwargs.get("claude_cmd")
+        return S1Outcome(kind=S1OutcomeKind.VALID, response=chain.s1, error=None, trace_path=None)
+
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", fake_s1)
+    run_stages(_lane_request(), "ml", directory=tmp_repo.root / "app", profile_path=tmp_repo.profile,
+               root=tmp_repo.root, stop_after=Stage.S1)
+    assert seen["s1"] == DEFAULT_CLAUDE_CMD
+
+
+def test_run_stages_passes_directory_and_reject_dir_to_render(tmp_repo, mock_all_stages_pass, monkeypatch):
+    captured = {}
+    original = __import__("src.tailor.pilot", fromlist=["render_and_publish"]).render_and_publish
+
+    def spy_render(profile, draft, *, root, **kwargs):
+        captured.update(kwargs)
+        return original(profile, draft, root=root, **kwargs)
+
+    monkeypatch.setattr("src.tailor.pilot.render_and_publish", spy_render)
+    target = tmp_repo.root / "apps" / "example-engineer"
+    run_stages(_lane_request(), "ml", directory=target, profile_path=tmp_repo.profile,
+               root=tmp_repo.root / "apps", reject_dir=target / "rejected")
+    assert captured["directory"] == target
+    assert captured["reject_dir"] == target / "rejected"
+
+
+def test_run_stages_retry_prefix_shapes_the_retry_command(tmp_repo, monkeypatch):
+    def failing_s1(request, **kwargs):
+        return S1Outcome(kind=S1OutcomeKind.INVOCATION_FAILURE, response=None, error="down", trace_path=None)
+
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", failing_s1)
+    outcome = run_stages(_lane_request(), "ml", directory=tmp_repo.root / "app", profile_path=tmp_repo.profile,
+                         root=tmp_repo.root, retry_prefix="python -m scripts.tailor_now run --jd jd.txt")
+    assert outcome.failed_stage is Stage.S1
+    assert outcome.retry_command == "python -m scripts.tailor_now run --jd jd.txt --only s1"
+
+
+def test_run_stages_negative_job_id_round_trips_through_artifacts(tmp_repo, mock_all_stages_pass):
+    """Lane job ids are negative (spec §7.7). Every envelope and completeness
+    check must accept them."""
+    directory = tmp_repo.root / "neg"
+    first = run_stages(_lane_request(job_id=-424242), "ml", directory=directory,
+                       profile_path=tmp_repo.profile, root=tmp_repo.root, stop_after=Stage.S2)
+    assert first.failed_stage is None
+    second = run_stages(_lane_request(job_id=-424242), "ml", directory=directory,
+                        profile_path=tmp_repo.profile, root=tmp_repo.root, stop_after=Stage.S2)
+    by_stage = {r.stage: r.state for r in second.manifest.stages}
+    assert by_stage[Stage.S1] is StageState.SKIPPED_COMPLETE
+    assert by_stage[Stage.S2] is StageState.SKIPPED_COMPLETE
