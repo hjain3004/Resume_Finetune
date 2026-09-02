@@ -22,6 +22,7 @@
 - No new dependencies. No SQL outside `src/db.py`. Type hints everywhere; dataclasses at module boundaries; `logging`, never `print`, inside `src/`.
 - Prompt files: the only edits permitted in this milestone are the two documented-shape fixes in Task 2, which require the user's explicit approval at kickoff (spec N12) and a `docs/DECISIONS.md` entry.
 - Run tests with the project interpreter: `.venv/bin/python -m pytest ...`. Operator scripts run as `PYTHONPATH=. .venv/bin/python -m scripts.<name>` or `.venv/bin/python -m scripts.<name>` from the repo root.
+- **Worktree environment.** `.venv/`, `data/`, `inbox/jd/`, and `applications*/` are gitignored and exist only in the main checkout at `/Users/himanshu_jain/aero/Resume_Finetune/job-pipeline` (call it `<main>`). From the worktree: run Python as `<main>/.venv/bin/python -m pytest ...` from the worktree root, and confirm once that `<main>/.venv/bin/python -c 'import src, scripts; print(src.__file__)'` run from the worktree root prints a path inside the worktree, not `<main>`. Wherever this plan writes `data/jobs.db`, pass `<main>/data/jobs.db` (read-only) from the worktree; take the Task 1 checksum from that absolute path. Task 7 Steps 3–7 run in `<main>` on `main` after the branch is merged (see Task 7).
 - Every model call in the live benchmark (Task 7) is user-supervised. The default model is whatever `claude -p` uses; `--model` selects another.
 
 ---
@@ -208,7 +209,7 @@ the preflight's prompt-invariant check scans every `*.md` there.
 
 ```
 
-Then tell the user to delete `docs/prompts/resume_prompt.md` from the main checkout at merge time (it is theirs and untracked; do not delete files outside the worktree).
+Do not touch the original. Tell the user to delete `docs/prompts/resume_prompt.md` from the main checkout once this task lands (it is theirs and untracked; do not delete files outside the worktree). Until they do, the two flipped preflight tests and the lane's own preflight fail in the main checkout only, because `check_prompt_invariants` scans every `*.md` under `docs/prompts/` and that file has no substitution marker.
 
 - [ ] **Step 7: Record the approval**
 
@@ -1597,9 +1598,13 @@ git add docs/ARCHITECTURE.md CLAUDE.md AGENTS.md
 git commit -m "docs(m8n0): document the Apply-Now lane entry point and commands"
 ```
 
+- [ ] **Step 2b: Merge before the live work**
+
+Follow `superpowers:finishing-a-development-branch` now: merge the worktree branch into `main` (no push) and remove the worktree. Steps 3–7 run in the main checkout on `main`, so `inbox/jd/`, `data/traces/`, and `applications_manual/` land where the user keeps them rather than in a disposable worktree. The closeout commit in Step 7 is made on `main` directly.
+
 - [ ] **Step 3: User-supervised benchmark (live model calls; spec §11)**
 
-Only with the user present. For each job, export then run:
+Only with the user present, in the main checkout. For each job, export then run:
 
 ```bash
 .venv/bin/python -m scripts.tailor_now export-jd --job-id 225 --out inbox/jd/225.txt
@@ -1670,7 +1675,7 @@ git add docs/DECISIONS.md docs/ROADMAP.md docs/IMPLEMENTATION_PLAN.md tests/fixt
 git commit -m "docs(m8n0): close the Apply-Now lane milestone with benchmark results"
 ```
 
-Then follow `superpowers:finishing-a-development-branch` to merge the worktree branch into `main`. Do not push (origin is public; see the user's standing instruction).
+The branch was already merged in Step 2b; this commit lands on `main`. Do not push (origin is public; see the user's standing instruction).
 
 ---
 
