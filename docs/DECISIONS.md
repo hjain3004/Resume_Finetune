@@ -2633,3 +2633,15 @@ matching the prompt's own two-to-four rule. No rule sentence changed. Approved b
 at M8N-0 kickoff under spec N12; `check_prompt_invariants(docs/prompts)` now returns no
 findings. The LinkedIn hiring-manager prompt moved to
 `docs/reference/linkedin_hiring_manager_prompt.md` (spec N6).
+
+## 2026-09-03 — M8N-0b Task 3 prompt edit (approved)
+
+Per M8N-0b plan Step 0/Task 3 and spec N12, the user explicitly approved a single-sentence edit to `docs/prompts/tailoring_s2.md`. The definition of a `covered` entry was updated to require keyword hits for all comma/slash/and/or separated parts of a compound term, except for parts drawn from `assumed_baseline_terms` which require no keyword hit. The edit also added guidance to prefer `gap` for requirements that are only computer-science fundamentals.
+## 2026-09-03 — M8N-0b S3 length gate + prompt sentence (approved, N12)
+
+`src/tailor/s3.py`: an edited bullet may exceed the original length by at most the longest
+`motivating_term` (spec M8N-0b B5); the uncited-vocabulary, numeric-token, and leading-verb
+guards are unchanged, so the extra characters can only be the mirrored covered term.
+`docs/prompts/tailoring_s3.md`: one sentence added asking the model to tighten elsewhere when
+mirroring a longer term. `s3_length_growth_rejected.txt` still rejects (B7). Approved by the
+user at M8N-0b kickoff.

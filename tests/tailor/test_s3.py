@@ -100,7 +100,7 @@ def test_s3_rejects_unselected_bullet_and_bad_motivating_term():
     "Built the **anti-corruption layer** across four asynchronous Python Kubernetes microservices.",
     "Built the **anti-corruption layer** across four asynchronous Python microservices with additional wording.",
 ])
-def test_s3_rejects_verb_newline_uncited_vocabulary_or_length_growth(after):
+def test_s3_rejects_verb_newline_or_uncited_vocabulary(after):
     request = _request_fixture()
     with pytest.raises(S3SemanticError):
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after)], "skill_additions": []}), request)
@@ -142,6 +142,35 @@ def test_s3_hydration_preserves_structure_skills_and_derives_change_log():
     assert changes[0].before == source
     assert changes[0].motivating_jd_quotes == ("Python",)
     assert "--- canonical" in derive_unified_diff(request, draft)
+    
+def test_s3_length_growth_bound():
+    request = _request_fixture()
+    s1 = replace(request.s1, must_have=(Requirement("Distributed Systems", "q"),))
+    s2 = replace(request.s2, coverage=(CoverageEntry("Distributed Systems", "covered", ("int_b1",)),))
+    request = replace(request, s1=s1, s2=s2)
+
+    # original int_b1 length: 173 chars. Motivating term "Distributed Systems" length: 19. Budget: 19.
+    # Base text: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    
+    base_after = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, identity verification, and AML sanctions screening - then the **Core onboarding service** above those four as the single front door and system of record: **five asynchronous Python microservices** (FastAPI, SQLAlchemy 2.0, PostgreSQL)."
+    
+    # We want +19 exact. Motivating term "Distributed Systems" is 19 chars.
+    after_over_budget = base_after.replace("microservices** (FastAPI", "microservices** Distributed Systems (FastAPI") # +20
+    after_exactly_budget = after_over_budget.replace("four external", "the external") # -1 => +19
+    
+    # accepted
+    parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_exactly_budget, terms=["Distributed Systems"])], "skill_additions": []}), request)
+    
+    # rejected (+1)
+    with pytest.raises(S3SemanticError, match="length grew beyond the mirrored term"):
+        parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_over_budget, terms=["Distributed Systems"])], "skill_additions": []}), request)
+        
+    # rejected (uncited word within budget)
+    after_uncited = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)** uncited"
+    with pytest.raises(S3SemanticError, match="uncited vocabulary"):
+        parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_uncited, terms=["Distributed Systems"])], "skill_additions": []}), request)
+
+
 
 
 def test_s3_edit_budget_exactly_exposes_tokens_and_ratio():

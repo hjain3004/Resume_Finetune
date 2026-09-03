@@ -174,5 +174,9 @@ def test_scikit_learn_length_growth_is_still_rejected():
     s3_request = build_s3_request(s1_request.job_id, s1_request.company, s1_request.title, s1, s0, s2, alignment)
 
     raw = (FIXTURES / "s3_length_growth_rejected.txt").read_text(encoding="utf-8")
-    with pytest.raises(S3SemanticError, match="length grew"):
+    # before: 215 chars ("...fusing them through a logistic-regression...")
+    # after:  228 chars ("...fusing them through a scikit-learn logistic-regression...")
+    # motivating_term: "scikit-learn" (12 chars)
+    # 228 - 215 = 13 > 12 budget.
+    with pytest.raises(S3SemanticError, match="length grew beyond the mirrored term"):
         parse_s3_response(raw, s3_request)

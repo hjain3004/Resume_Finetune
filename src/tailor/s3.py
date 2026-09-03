@@ -251,7 +251,7 @@ def _synthetic_s2_request(
             counts.append((item.owner_id, 0))
         counts[-1] = (item.owner_id, counts[-1][1] + 1)
     variant = SelectionVariant(alignment.base_variant, alignment.project_ids, tuple(item.bullet_id for item in alignment.bullets), tuple(exp_order), tuple(counts))
-    catalog = SelectionCatalog(alignment.base_variant, (variant,), projects, experiences, bullets, alignment.do_not_claim)
+    catalog = SelectionCatalog(alignment.base_variant, (variant,), projects, experiences, bullets, alignment.do_not_claim, ())
     try:
         return build_s2_request(job_id, company, title, s1, s0, catalog)
     except Exception as exc:
@@ -336,8 +336,9 @@ def _validate_bullet_edit(edit: BulletEdit, request: S3Request) -> None:
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: leading action verb changed")
     if _numeric_tokens(source.plain_text) != _numeric_tokens(plain_after):
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: numeric-token multiset changed")
-    if len(plain_after) > len(source.plain_text):
-        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: plain-text length grew")
+    budget = max((len(term) for term in edit.motivating_terms), default=0)
+    if len(plain_after) > len(source.plain_text) + budget:
+        raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: plain-text length grew beyond the mirrored term")
     before_counts = Counter(_words(source.plain_text))
     after_counts = Counter(_words(plain_after))
     motivating_words = set(_words(" ".join(edit.motivating_terms)))
