@@ -144,6 +144,7 @@ class _SyntheticShapeContext:
                 experience_order=(), experience_bullet_counts=(),
             ),),
             projects=(), experiences=(), bullets=(), do_not_claim=(),
+            assumed_baseline_terms=(),
         )
         self.s2_request = build_s2_request(1, "Synthetic", "Engineer", s1, s0, catalog)
         s2 = S2Response(base_variant="synthetic", projects=(), bullet_order=(), coverage=())

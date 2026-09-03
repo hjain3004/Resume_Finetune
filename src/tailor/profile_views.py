@@ -69,6 +69,7 @@ class SelectionCatalog:
     experiences: tuple[SelectionEntry, ...]
     bullets: tuple[SelectionBullet, ...]
     do_not_claim: tuple[str, ...]
+    assumed_baseline_terms: tuple[str, ...]
 
 
 def positioning_from_profile(profile: MasterProfile) -> PositioningView:
@@ -110,6 +111,7 @@ def selection_from_profile(profile: MasterProfile, recommended_base_variant: str
         experiences=tuple(SelectionEntry(e.id, "experience", f"{e.employer} — {e.title}", e.keywords_exact, e.keywords_topical) for e in profile.experience),
         bullets=tuple(bullets),
         do_not_claim=profile.do_not_claim,
+        assumed_baseline_terms=(),
     )
 
 
@@ -127,6 +129,7 @@ def selection_to_dict(catalog: SelectionCatalog) -> dict[str, Any]:
         "experiences": [_selection_entry(e) for e in catalog.experiences],
         "bullets": [{"id": b.id, "owner_id": b.owner_id, "owner_kind": b.owner_kind, "priority": b.priority, "claim_type": b.claim_type, "keywords_hit": list(b.keywords_hit)} for b in catalog.bullets],
         "do_not_claim": list(catalog.do_not_claim),
+        "assumed_baseline_terms": list(catalog.assumed_baseline_terms),
     }
 
 
@@ -178,7 +181,7 @@ def parse_positioning(raw: dict[str, Any]) -> PositioningView:
 
 
 def parse_selection(raw: dict[str, Any]) -> SelectionCatalog:
-    o = _obj(raw, {"recommended_base_variant", "variants", "projects", "experiences", "bullets", "do_not_claim"}, "$")
+    o = _obj(raw, {"recommended_base_variant", "variants", "projects", "experiences", "bullets", "do_not_claim", "assumed_baseline_terms"}, "$")
     recommended = _str(o["recommended_base_variant"], "$.recommended_base_variant")
     projects = _parse_entries(o["projects"], "$.projects", False)
     experiences = _parse_entries(o["experiences"], "$.experiences", False)
@@ -262,7 +265,7 @@ def parse_selection(raw: dict[str, Any]) -> SelectionCatalog:
                 raise ProfileViewError("variant contains bullet from unselected project")
         variants.append(SelectionVariant(name, projects_order, bullet_order, tuple(stored_order), tuple(counts)))
     if not any(v.name == recommended for v in variants): raise ProfileViewError("recommended variant is unknown")
-    return SelectionCatalog(recommended, tuple(variants), projects, experiences, tuple(bullets), _strings(o["do_not_claim"], "do_not_claim"))
+    return SelectionCatalog(recommended, tuple(variants), projects, experiences, tuple(bullets), _strings(o["do_not_claim"], "do_not_claim"), _strings(o["assumed_baseline_terms"], "assumed_baseline_terms"))
 
 
 positioning_view_to_dict = positioning_to_dict

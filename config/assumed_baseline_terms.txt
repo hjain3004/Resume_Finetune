@@ -1,0 +1,12 @@
+# Terms a CS-graduate resume is not expected to keyword-match (spec M8N-0b B2).
+# One term per line; matched case-insensitively after whitespace collapse.
+data structures
+algorithms
+data structures and algorithms
+object-oriented programming
+object oriented programming
+oop
+git
+version control
+unit testing
+debugging

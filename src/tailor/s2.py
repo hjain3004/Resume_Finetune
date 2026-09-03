@@ -8,7 +8,24 @@ from src.tailor.profile_views import SelectionCatalog, SelectionBullet, selectio
 from src.tailor.s0 import S0Request, S0Response, S0SemanticError, s0_request_to_dict, s0_response_to_dict, parse_s0_request, parse_s0_response
 from src.tailor.s1 import S1Response, s1_response_to_dict, parse_s1_response_dict
 
+import re
+from pathlib import Path
 def _norm(v: str) -> str: return " ".join(v.casefold().split())
+def _split_term(term: str) -> list[str]:
+    parts = [p.strip() for p in re.split(r'(?i),\s+and\s+|,\s+or\s+|;\s*|\s+/\s+|,\s*|\s+and\s+|\s+or\s+', term) if p.strip()]
+    return parts if len(parts) > 1 else [term]
+def load_assumed_baseline_terms(path: Path) -> tuple[str, ...]:
+    if not path.exists(): return ()
+    seen = set()
+    result = []
+    for line in path.read_text().splitlines():
+        line = line.split("#")[0].strip()
+        if not line: continue
+        normed = line.casefold()
+        if normed not in seen:
+            seen.add(normed)
+            result.append(line)
+    return tuple(result)
 class S2ParseError(ValueError): pass
 class S2SemanticError(ValueError): pass
 class S2ValidationError(ValueError): pass
@@ -99,7 +116,6 @@ def parse_s2_response(raw_output: str, request: S2Request) -> S2Response:
         status = _str(x["status"], "coverage.status")
         if status not in {"covered", "gap"}: raise S2ParseError("invalid coverage status")
         ids = _strs(x["bullet_ids"], "coverage.bullet_ids")
-        if status == "covered" and not ids: raise S2ParseError("covered entry needs bullets")
         if status == "gap" and ids: raise S2ParseError("gap must have no bullets")
         coverage.append(CoverageEntry(_str(x["term"], "coverage.term"), status, ids))
     response = S2Response(_str(o["base_variant"], "base_variant"), tuple(choices), order, tuple(coverage))
@@ -154,11 +170,19 @@ def validate_s2_selection(response: S2Response, request: S2Request) -> None:
     terms = [x.term for x in response.coverage]
     if len(terms) != len(set(terms)) or terms != required: raise S2ValidationError("coverage must contain each must_have exactly once and in order")
     blocked = {_norm(x) for x in catalog.do_not_claim}; covered = set(response.bullet_order)
+    baseline = {_norm(t) for t in catalog.assumed_baseline_terms}
     for entry in response.coverage:
-        if _norm(entry.term) in blocked and entry.status == "covered": raise S2ValidationError("do_not_claim term covered")
+        components = _split_term(entry.term)
+        if (any(_norm(c) in blocked for c in components) or _norm(entry.term) in blocked) and entry.status == "covered": raise S2ValidationError("do_not_claim term covered")
         if entry.status == "covered":
             if any(bid not in covered for bid in entry.bullet_ids): raise S2ValidationError("coverage cites unselected bullet")
-            if not any(_norm(entry.term) == _norm(keyword) for bid in entry.bullet_ids for keyword in bullets[bid].keywords_hit): raise S2ValidationError("covered term has no exact keyword hit")
+            hits = {_norm(k) for bid in entry.bullet_ids for k in bullets[bid].keywords_hit}
+            required = [c for c in components if _norm(c) not in baseline]
+            if not required:
+                if not entry.bullet_ids: raise S2ValidationError("all-baseline covered term must still cite a selected bullet")
+            else:
+                for comp in required:
+                    if _norm(comp) not in hits: raise S2ValidationError("covered term has no exact keyword hit")
 
 def s2_response_to_dict(response: S2Response) -> dict[str, Any]:
     return {"base_variant": response.base_variant, "projects": [{"project_id": p.project_id, "reason": p.reason, "s0_point_indexes": list(p.s0_point_indexes)} for p in response.projects], "bullet_order": list(response.bullet_order), "coverage": [{"term": c.term, "status": c.status, "bullet_ids": list(c.bullet_ids)} for c in response.coverage]}

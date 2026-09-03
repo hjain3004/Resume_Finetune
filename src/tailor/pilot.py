@@ -295,6 +295,7 @@ def run_application(
     root: Path = APPLICATIONS_ROOT,
     template_path: Path = Path("profile/template.tex"),
     banned_words_path: Path = Path("config/banned_words.txt"),
+    assumed_baseline_terms_path: Path = Path("config/assumed_baseline_terms.txt"),
     taste_path: Path = Path("config/taste.md"),
     trace_dir: Path = Path("data/traces"),
     feedback_dir: Path = DEFAULT_FEEDBACK_DIR,
@@ -334,6 +335,7 @@ def run_application(
     return run_stages(
         s1_request, variant, directory=directory, profile_path=profile_path, root=root,
         template_path=template_path, banned_words_path=banned_words_path, taste_path=taste_path,
+        assumed_baseline_terms_path=assumed_baseline_terms_path,
         trace_dir=trace_dir, prompt_dir=prompt_dir, stop_after=stop_after, only=only, dry_run=dry_run,
     )
 
@@ -343,6 +345,7 @@ def run_stages(
     directory: Path, profile_path: Path, root: Path,
     template_path: Path = Path("profile/template.tex"),
     banned_words_path: Path = Path("config/banned_words.txt"),
+    assumed_baseline_terms_path: Path = Path("config/assumed_baseline_terms.txt"),
     taste_path: Path = Path("config/taste.md"),
     trace_dir: Path = Path("data/traces"),
     prompt_dir: Path = DEFAULT_PROMPT_DIR,
@@ -476,6 +479,8 @@ def run_stages(
     # ---- S2 ----
     started = _now()
     catalog = profile.for_selection(variant)
+    from src.tailor.s2 import load_assumed_baseline_terms
+    catalog = replace(catalog, assumed_baseline_terms=load_assumed_baseline_terms(assumed_baseline_terms_path))
     s2_request = build_s2_request(job_id, company, title, s1, s0, catalog)
     s2_exists = artifact_path(directory, Stage.S2).exists()
     # S2's own completeness needs the alignment fingerprint, which is only

@@ -152,6 +152,7 @@ def run_manual_application(
     profile_path: Path = Path("config/master_profile.yaml"),
     template_path: Path = Path("profile/template.tex"),
     banned_words_path: Path = Path("config/banned_words.txt"),
+    assumed_baseline_terms_path: Path = Path("config/assumed_baseline_terms.txt"),
     taste_path: Path = Path("config/taste.md"),
     trace_dir: Path = Path("data/traces"),
     prompt_dir: Path = DEFAULT_PROMPT_DIR,
@@ -210,6 +211,7 @@ def run_manual_application(
     return run_stages(
         s1_request, variant, directory=directory, profile_path=profile_path, root=Path(root),
         template_path=template_path, banned_words_path=banned_words_path, taste_path=taste_path,
+        assumed_baseline_terms_path=assumed_baseline_terms_path,
         trace_dir=trace_dir, prompt_dir=prompt_dir, stop_after=stop_after, only=only, dry_run=dry_run,
         claude_cmd=claude_cmd, reject_dir=directory / "rejected", retry_prefix=retry_prefix,
     )
