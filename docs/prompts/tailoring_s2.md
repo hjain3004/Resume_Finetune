@@ -22,9 +22,7 @@ have exactly these fields:
 Select only supplied ids and never write, rewrite, or paraphrase a bullet.
 Projects are ordered and each choice must cite one or more valid zero-based S0
 point indexes. `bullet_order` is ordered and globally unique. Coverage contains
-every S1 must_have exactly once and in S1 order. A `covered` entry has one or
-more selected bullets whose `keywords_hit` contains the exact normalized term;
-use `gap` with an empty bullet_ids array when no exact mapping exists. Never
+every S1 must_have exactly once and in S1 order. A `covered` entry names one or more selected bullets and, for each part of the term (a comma / "and" / "or" / "/"-separated list counts as multiple parts), some named bullet's `keywords_hit` contains that part exactly — except parts drawn from `assumed_baseline_terms`, which need no keyword hit. Use `gap` with an empty `bullet_ids` array when a non-baseline part has no exact keyword hit, and prefer `gap` for a requirement that is only computer-science fundamentals. Never
 cover a do_not_claim term. Preserve the chosen variant's project count,
 experience order, per-entry counts, bullet count, and within-owner priority
 order. Swap at most one project. Use S0 only as a tie-break after coverage.
