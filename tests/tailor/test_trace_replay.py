@@ -177,6 +177,6 @@ def test_scikit_learn_length_growth_is_still_rejected():
     # before: 215 chars ("...fusing them through a logistic-regression...")
     # after:  228 chars ("...fusing them through a scikit-learn logistic-regression...")
     # motivating_term: "scikit-learn" (12 chars)
-    # 228 - 215 = 13 > 12 budget.
+    # 228 - 215 = 13 > 12 budget. The margin is exactly 1 char, which is intentionally thin and within spec B5.
     with pytest.raises(S3SemanticError, match="length grew beyond the mirrored term"):
         parse_s3_response(raw, s3_request)

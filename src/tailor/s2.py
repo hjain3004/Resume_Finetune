@@ -116,6 +116,7 @@ def parse_s2_response(raw_output: str, request: S2Request) -> S2Response:
         status = _str(x["status"], "coverage.status")
         if status not in {"covered", "gap"}: raise S2ParseError("invalid coverage status")
         ids = _strs(x["bullet_ids"], "coverage.bullet_ids")
+        if status == "covered" and not ids: raise S2ParseError("covered entry needs bullets")
         if status == "gap" and ids: raise S2ParseError("gap must have no bullets")
         coverage.append(CoverageEntry(_str(x["term"], "coverage.term"), status, ids))
     response = S2Response(_str(o["base_variant"], "base_variant"), tuple(choices), order, tuple(coverage))

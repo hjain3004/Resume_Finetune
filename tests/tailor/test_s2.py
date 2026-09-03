@@ -156,7 +156,7 @@ def test_s2_baseline_exemption():
 
     request3 = replace(request, s1=replace(request.s1, must_have=(Requirement("data structures and algorithms", "q"),)))
     raw["coverage"][0] = {"term": "data structures and algorithms", "status": "covered", "bullet_ids": []}
-    with pytest.raises(S2ValidationError, match="all-baseline covered term must still cite a selected bullet"):
+    with pytest.raises(S2ParseError, match="covered entry needs bullets"):
         parse_s2_response(json.dumps(raw), request3)
     
     raw["coverage"][0] = {"term": "data structures and algorithms", "status": "gap", "bullet_ids": []}
