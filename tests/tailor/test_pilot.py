@@ -95,6 +95,9 @@ from tests.tailor.test_m8p2_contracts import _fixtures
 
 PILOT_JOB_ID = 225
 
+
+
+
 def _build_valid_chain():
     """A genuinely consistent, real-profile chain (S1/S0/S2/S3Bundle/
     G2Bundle/RenderResult), all bound to the same alignment_fingerprint,
@@ -863,3 +866,49 @@ def test_run_stages_negative_job_id_round_trips_through_artifacts(tmp_repo, mock
     by_stage = {r.stage: r.state for r in second.manifest.stages}
     assert by_stage[Stage.S1] is StageState.SKIPPED_COMPLETE
     assert by_stage[Stage.S2] is StageState.SKIPPED_COMPLETE
+
+@pytest.fixture
+def mock_zero_covered_s2(monkeypatch, spy_invocations):
+    chain = _build_valid_chain()
+
+    def fake_s1(request, **kwargs):
+        spy_invocations.record("s1")
+        return S1Outcome(kind=S1OutcomeKind.VALID, response=chain.s1, error=None, trace_path=None)
+
+    def fake_s0(request, **kwargs):
+        spy_invocations.record("s0")
+        return S0Outcome(kind=S0OutcomeKind.VALID, response=chain.s0, error=None, trace_path=None)
+
+    def fake_s2(request, **kwargs):
+        from dataclasses import replace
+        spy_invocations.record("s2")
+        gap_coverage = tuple(replace(c, status="gap", bullet_ids=()) for c in chain.s2.coverage)
+        zero_covered = replace(chain.s2, coverage=gap_coverage)
+        return S2Outcome(kind=S2OutcomeKind.VALID, response=zero_covered, error=None, trace_path=None)
+
+    def fake_s3(request, **kwargs):
+        spy_invocations.record("s3")
+        pytest.fail("S3 should not be called when S2 coverage is zero")
+
+    monkeypatch.setattr("src.tailor.pilot.run_s1_invocation", fake_s1)
+    monkeypatch.setattr("src.tailor.pilot.run_s0_invocation", fake_s0)
+    monkeypatch.setattr("src.tailor.pilot.run_s2_invocation", fake_s2)
+    monkeypatch.setattr("src.tailor.pilot.run_s3_invocation", fake_s3)
+
+def test_zero_covered_s2_halts_with_no_tailorable_coverage(tmp_repo, mock_zero_covered_s2, spy_invocations):
+    outcome = run_application(PILOT_JOB_ID, db_path=tmp_repo.db, profile_path=tmp_repo.profile,
+                              root=tmp_repo.applications)
+    assert outcome.failed_stage == Stage.S3
+
+    stages = {r.stage: r.state for r in outcome.manifest.stages}
+    assert stages[Stage.S1] == StageState.COMPLETE
+    assert stages[Stage.S0] == StageState.COMPLETE
+    assert stages[Stage.S2] == StageState.COMPLETE
+    assert stages[Stage.S3] == StageState.FAILED
+
+    halt_record = next(r for r in outcome.manifest.stages if r.stage == Stage.S3)
+    assert halt_record.outcome_kind == "NO_TAILORABLE_COVERAGE"
+    assert outcome.retry_command is None
+
+    assert "s3" not in spy_invocations.calls
+    assert "g2" not in spy_invocations.calls

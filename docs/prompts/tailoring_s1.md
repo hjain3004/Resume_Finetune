@@ -114,7 +114,7 @@ Notes on the shape:
 
 - `must_have` / `nice_to_have`: every requirement the JD states as required
   vs. merely preferred. Both are arrays of `{term, quote}`; use `[]` if
-  there are none.
+  there are none. Each `term` must represent one atomic requirement. Split list-like compound requirements separated by commas, semicolons, slashes, `and`, or `or` into separate entries. For example, `data structures, algorithms, and distributed systems` becomes three entries. Each atomic entry retains the same exact supporting JD quote. Do not split multiword technical concepts such as `machine learning`, `distributed systems`, `Spring Boot`, or `Google Cloud` merely because they contain multiple words.
 - `responsibilities_summary`: your own short, plain-language summaries of
   what the role actually does day to day, each anchored to a supporting
   quote. This is the one field where you write original phrasing (the

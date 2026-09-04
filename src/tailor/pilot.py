@@ -37,7 +37,7 @@ from src.tailor.s1 import (
 from src.tailor.s1_pipeline import S1OutcomeKind, run_s1_invocation
 from src.tailor.s2 import S2Response, build_s2_request, parse_s2_response, s2_response_to_dict
 from src.tailor.s2_pipeline import S2OutcomeKind, run_s2_invocation
-from src.tailor.s3 import build_s3_request
+from src.tailor.s3 import build_s3_request, s3_request_to_dict
 from src.tailor.s3_pipeline import S3OutcomeKind, parse_s3_bundle, run_s3_invocation, s3_bundle_to_dict
 
 DEFAULT_PROMPT_DIR = Path("docs/prompts")
@@ -379,7 +379,13 @@ def run_stages(
         if directory is not None and not dry_run:
             write_json_atomic(directory / "run_manifest.json", manifest_to_dict(manifest))
         prefix = retry_prefix or f"python -m scripts.tailor_pilot run --job-id {job_id}"
-        retry_command = f"{prefix} --only {failed_stage.value}" if failed_stage is not None else None
+        retry_command = None
+        if failed_stage is not None:
+            failed_record = next((r for r in manifest.stages if r.stage == failed_stage), None)
+            if failed_record and failed_record.outcome_kind == "NO_TAILORABLE_COVERAGE":
+                retry_command = None
+            else:
+                retry_command = f"{prefix} --only {failed_stage.value}"
         return RunOutcome(manifest=manifest, failed_stage=failed_stage, retry_command=retry_command)
 
     # ---- PREPARE ----
@@ -534,8 +540,19 @@ def run_stages(
         record(Stage.S2, StageState.COMPLETE, outcome.kind.value, started=started,
               artifact=artifact_path(directory, Stage.S2), model_calls=1,
               trace_paths=(outcome.trace_path,))
+
     if effective_stop_after is Stage.S2:
         return finish(None)
+
+    # ---- HALT CHECK (M8N-0c) ----
+    if not any(entry.status == "covered" for entry in s2.coverage):
+        record(Stage.S3, StageState.FAILED, "NO_TAILORABLE_COVERAGE", started=_now(),
+               error="Pipeline halted: zero actionable covered terms after baseline mapping.")
+        return finish(Stage.S3)
+
+    from src.tailor.s3 import build_s3_request
+    s3_request = build_s3_request(job_id, company, title, s1, s0, s2, alignment)
+
 
     # ---- S3 ----
     started = _now()

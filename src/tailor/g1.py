@@ -146,25 +146,25 @@ def run_static_g1(
             if contains_normalized_phrase(text, term):
                 _violate(violations, "L6", location, f"do_not_claim term: {term}")
 
-    by_id = {item.bullet_id: item for item in draft.bullets}
-    covered = {entry.term: entry for entry in request.s2.coverage if entry.status == "covered"}
-    all_text = " ".join(text for _, text in _text_items(draft))
-    for requirement in request.s1.must_have:
-        entry = covered.get(requirement.term)
-        if entry is None:
-            continue
-        bullet_text = " ".join(by_id[item].plain_text for item in entry.bullet_ids if item in by_id)
-        if not contains_normalized_phrase(bullet_text, requirement.term):
-            _violate(violations, "L3", f"must_have:{requirement.term}", "covered term missing from mapped bullet")
-        if not contains_normalized_phrase(" ".join(item for _, items in draft.skills for item in items), requirement.term):
-            _violate(violations, "L3", f"must_have:{requirement.term}", "covered term missing from skills")
-        count = _occurrences(all_text, requirement.term)
-        if count > 4:
-            _violate(violations, "L3", f"must_have:{requirement.term}", "term appears more than four times")
-        covered_index = [item.term for item in request.s1.must_have if item.term in covered].index(requirement.term)
-        if covered_index < 5 and count not in (2, 3):
-            _violate(violations, "L3", f"must_have:{requirement.term}", "first five covered terms must appear two or three times")
+    from .placement import evaluate_placement
+    must_have_terms = [r.term for r in request.s1.must_have]
 
+    placements = evaluate_placement(must_have_terms, request.s2, draft)
+
+    for i, p in enumerate(placements):
+        if not p.mapped_bullet_present:
+            _violate(violations, "L3", f"must_have:{p.term}", "covered term missing from mapped bullet")
+        if not p.skills_present:
+            _violate(violations, "L3", f"must_have:{p.term}", "covered term missing from skills")
+
+        count = p.document_occurrence_count
+        if count > 4:
+            _violate(violations, "L3", f"must_have:{p.term}", "term appears more than four times")
+        if i < 5 and count not in (2, 3):
+            _violate(violations, "L3", f"must_have:{p.term}", "first five covered terms must appear two or three times")
+
+
+    by_id = {item.bullet_id: item for item in draft.bullets}
     canonical = {item.bullet_id: item for item in alignment.bullets}
     edited = {item.bullet_id for item in response.bullet_edits}
     for bullet_id in edited:
@@ -181,8 +181,12 @@ def run_static_g1(
             _violate(violations, "L4", f"bullet:{bullet_id}", "leading action verb changed")
         if _numeric_tokens(source.plain_text) != _numeric_tokens(plain):
             _violate(violations, "L4", f"bullet:{bullet_id}", "numeric-token multiset changed")
-        if len(plain) > len(source.plain_text):
-            _violate(violations, "L4", f"bullet:{bullet_id}", "plain-text length grew")
+
+        from .placement import get_length_allowance
+        edit = next((e for e in response.bullet_edits if e.bullet_id == bullet_id), None)
+        allowance = get_length_allowance(edit.motivating_terms) if edit else 0
+        if len(plain) > len(source.plain_text) + allowance:
+            _violate(violations, "L4", f"bullet:{bullet_id}", "plain-text length grew beyond the mirrored term")
 
     budget = calculate_edit_budget(request, draft)
     if budget.ratio > 0.15:

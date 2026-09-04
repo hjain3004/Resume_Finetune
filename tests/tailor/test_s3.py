@@ -142,7 +142,7 @@ def test_s3_hydration_preserves_structure_skills_and_derives_change_log():
     assert changes[0].before == source
     assert changes[0].motivating_jd_quotes == ("Python",)
     assert "--- canonical" in derive_unified_diff(request, draft)
-    
+
 def test_s3_length_growth_bound():
     request = _request_fixture()
     s1 = replace(request.s1, must_have=(Requirement("Distributed Systems", "q"),))
@@ -151,20 +151,20 @@ def test_s3_length_growth_bound():
 
     # original int_b1 length: 173 chars. Motivating term "Distributed Systems" length: 19. Budget: 19.
     # Base text: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
-    
+
     base_after = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, identity verification, and AML sanctions screening - then the **Core onboarding service** above those four as the single front door and system of record: **five asynchronous Python microservices** (FastAPI, SQLAlchemy 2.0, PostgreSQL)."
-    
+
     # We want +19 exact. Motivating term "Distributed Systems" is 19 chars.
     after_over_budget = base_after.replace("microservices** (FastAPI", "microservices** Distributed Systems (FastAPI") # +20
     after_exactly_budget = after_over_budget.replace("four external", "the external") # -1 => +19
-    
+
     # accepted
-    parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_exactly_budget, terms=["Distributed Systems"])], "skill_additions": []}), request)
-    
+    parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_exactly_budget, terms=["Distributed Systems"])], "skill_additions": [{"category": "languages", "term": "Distributed Systems", "motivating_term": "Distributed Systems"}]}), request)
+
     # rejected (+1)
     with pytest.raises(S3SemanticError, match="length grew beyond the mirrored term"):
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_over_budget, terms=["Distributed Systems"])], "skill_additions": []}), request)
-        
+
     # rejected (uncited word within budget)
     after_uncited = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)** uncited"
     with pytest.raises(S3SemanticError, match="uncited vocabulary"):
@@ -188,3 +188,102 @@ def test_s3_edit_budget_exactly_exposes_tokens_and_ratio():
         assert budget.changed_tokens == 20 - count
         assert budget.base_tokens == 20
         assert budget.ratio == expected_ratio
+
+def test_s3_placement_projection_missing_skills_only():
+    from src.tailor.s3 import s3_request_to_dict
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = []
+    for b in request.alignment.bullets:
+        bullets.append(replace(b, source_text=b.source_text + " Python", plain_text=b.plain_text + " Python"))
+    skills = [] # empty skills
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+    d = s3_request_to_dict(req2)
+    reqs = d.get("placement_requirements", [])
+    r = next((x for x in reqs if x["term"] == "Python"), None)
+    assert r is not None
+    assert r["missing_from"] == ["skills"]
+
+def test_s3_placement_projection_missing_bullet_only():
+    from src.tailor.s3 import s3_request_to_dict
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = []
+    for b in request.alignment.bullets:
+        bullets.append(replace(b, source_text=b.source_text.replace("Python", ""), plain_text=b.plain_text.replace("Python", "")))
+    skills = [("languages", ("Python",))]
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+    d = s3_request_to_dict(req2)
+    reqs = d.get("placement_requirements", [])
+    r = next((x for x in reqs if x["term"] == "Python"), None)
+    assert r is not None
+    assert r["missing_from"] == ["bullet"]
+
+def test_s3_placement_projection_missing_both():
+    from src.tailor.s3 import s3_request_to_dict
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = []
+    for b in request.alignment.bullets:
+        bullets.append(replace(b, source_text=b.source_text.replace("Python", ""), plain_text=b.plain_text.replace("Python", "")))
+    skills = []
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+    d = s3_request_to_dict(req2)
+    reqs = d.get("placement_requirements", [])
+    r = next((x for x in reqs if x["term"] == "Python"), None)
+    assert r is not None
+    assert r["missing_from"] == ["bullet", "skills"]
+
+def test_s3_placement_projection_missing_neither():
+    from src.tailor.s3 import s3_request_to_dict
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = []
+    for b in request.alignment.bullets:
+        bullets.append(replace(b, source_text=b.source_text + " Python", plain_text=b.plain_text + " Python"))
+    skills = [("languages", ("Python",))]
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+    d = s3_request_to_dict(req2)
+    reqs = d.get("placement_requirements", [])
+    r = next((x for x in reqs if x["term"] == "Python"), None)
+    assert r is None
+
+def test_s3_validation_rejects_partial_placement():
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = list(request.alignment.bullets)
+    b0 = bullets[0]
+    bullets[0] = replace(b0, source_text=b0.source_text.replace("Python", ""), plain_text=b0.plain_text.replace("Python", ""))
+    skills = []
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+
+    # Attempting to return no edits when placements are missing
+    with pytest.raises(S3SemanticError, match="placement: missing mapped-bullet placement"):
+        parse_s3_response(json.dumps(_empty()), req2)
+
+def test_s3_validation_accepts_already_dual_placed():
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = list(request.alignment.bullets)
+    b0 = bullets[0]
+    bullets[0] = replace(b0, source_text=b0.source_text + " Python", plain_text=b0.plain_text + " Python")
+    skills = [("languages", ("Python",))]
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+
+    # Should cleanly pass with no edits
+    parse_s3_response(json.dumps(_empty()), req2)
+
+def test_s3_validation_rejects_wrong_mapped_bullet():
+    request = _request_fixture()
+    from dataclasses import replace
+    bullets = list(request.alignment.bullets)
+    b0 = bullets[0]
+    b1 = bullets[1] # not mapped
+    bullets[0] = replace(b0, source_text=b0.source_text.replace("Python", ""), plain_text=b0.plain_text.replace("Python", ""))
+    bullets[1] = replace(b1, source_text=b1.source_text + " Python", plain_text=b1.plain_text + " Python")
+    skills = [("languages", ("Python",))]
+    req2 = replace(request, alignment=replace(request.alignment, bullets=tuple(bullets), skills=tuple(skills)))
+
+    # Python is in b1, but b0 is the mapped bullet. So mapped-bullet placement is missing.
+    with pytest.raises(S3SemanticError, match="placement: missing mapped-bullet placement"):
+        parse_s3_response(json.dumps(_empty()), req2)

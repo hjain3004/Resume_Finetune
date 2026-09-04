@@ -2667,3 +2667,10 @@ Next scoped milestone: the S3↔G1 keyword-placement gap — S3 must reliably mi
 
 ## 2026-09-03 — 9b478d1 note
 Source-line-count and test-to-code-ratio claims removed from the master profile at the user's instruction; test/file/structural counts kept; render fixture re-recorded; suite green.
+
+## 2026-09-03 — M8N-0c Prompt and Methodology Changes (Approved)
+The user explicitly approved targeted prompt and methodology changes for M8N-0c (Atomic Keyword Placement Contract Repair).
+1. `docs/prompts/tailoring_s1.md`: Added instructions to split list-like compound requirements into atomic terms.
+2. `docs/prompts/tailoring_s2.md`: Updated to use `gap` for terms with no exact keyword hit in a selected bullet, including baseline terms, unless actual evidence exists.
+3. `docs/prompts/tailoring_s3.md`: Added instructions specifying the deterministic `placement_requirements` list derived from S2-covered terms, requiring missing placements using minimal substitutions without rephrasing unrelated text or hallucinating.
+4. `docs/TAILORING_METHODOLOGY.md`: Updated S1 definition to describe atomic terms, and G1 L3 definition to clarify that placement bounds apply to *S2-covered atomic* must-have terms only, not all S1 terms (exempting gaps).

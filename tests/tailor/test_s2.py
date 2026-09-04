@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 
 from src.profile import load_profile
-from src.tailor.s2 import S2ParseError, S2ValidationError, build_s2_request, build_s2_prompt, parse_s2_response, _split_term, load_assumed_baseline_terms
+from src.tailor.s2 import S2ParseError, S2ValidationError, build_s2_request, build_s2_prompt, parse_s2_response, load_assumed_baseline_terms
 from tests.tailor.test_m8p2_contracts import _fixtures
 
 
@@ -117,15 +117,6 @@ def test_s2_prompt_contains_complete_contract_and_has_one_marker():
     with pytest.raises(S2ValidationError):
         parse_s2_response(json.dumps(raw), request)
 
-def test_split_term():
-    assert _split_term("a, b, and c") == ["a", "b", "c"]
-    assert _split_term("a and b") == ["a", "b"]
-    assert _split_term("a; b") == ["a", "b"]
-    assert _split_term("a / b") == ["a", "b"]
-    assert _split_term("single term") == ["single term"]
-    assert _split_term("a,b") == ["a", "b"]
-    assert _split_term(" a ,  b  ") == ["a", "b"]
-
 def test_load_assumed_baseline_terms(tmp_path):
     p = tmp_path / "baseline.txt"
     p.write_text("a\nb\n# c\nA\n\n")
@@ -136,35 +127,46 @@ def test_s2_baseline_exemption():
     from src.tailor.s1 import Requirement
     request = _request()
     raw = _valid(request)
-    
+
     request = replace(request, catalog=replace(request.catalog, assumed_baseline_terms=("data structures", "algorithms")))
-    
+
     b0_index = next(i for i, b in enumerate(request.catalog.bullets) if b.id == "int_b1")
     b0 = request.catalog.bullets[b0_index]
     b0_mod = replace(b0, keywords_hit=b0.keywords_hit + ("distributed systems",))
     new_bullets = request.catalog.bullets[:b0_index] + (b0_mod,) + request.catalog.bullets[b0_index+1:]
     request = replace(request, catalog=replace(request.catalog, bullets=new_bullets))
-    
-    raw["coverage"][0] = {"term": "data structures, algorithms, and distributed systems", "status": "covered", "bullet_ids": [b0.id]}
-    request = replace(request, s1=replace(request.s1, must_have=(Requirement("data structures, algorithms, and distributed systems", "q"),)))
-    
-    parse_s2_response(json.dumps(raw), request)
-    
-    request2 = replace(request, catalog=replace(request.catalog, bullets=request.catalog.bullets[:b0_index] + (b0,) + request.catalog.bullets[b0_index+1:]))
-    with pytest.raises(S2ValidationError, match="covered term has no exact keyword hit"):
-        parse_s2_response(json.dumps(raw), request2)
 
-    request3 = replace(request, s1=replace(request.s1, must_have=(Requirement("data structures and algorithms", "q"),)))
-    raw["coverage"][0] = {"term": "data structures and algorithms", "status": "covered", "bullet_ids": []}
+    request = replace(request, s1=replace(request.s1, must_have=(
+        Requirement("data structures", "q"),
+        Requirement("algorithms", "q"),
+        Requirement("distributed systems", "q"),
+    )))
+
+    raw["coverage"] = [
+        {"term": "data structures", "status": "gap", "bullet_ids": []},
+        {"term": "algorithms", "status": "gap", "bullet_ids": []},
+        {"term": "distributed systems", "status": "covered", "bullet_ids": [b0.id]},
+    ]
+
+    # Should pass
+    parse_s2_response(json.dumps(raw), request)
+
+    # Unrelated bullet citation fails
+    raw_bad = dict(raw)
+    raw_bad["coverage"] = list(raw["coverage"])
+    raw_bad["coverage"][0] = {"term": "data structures", "status": "covered", "bullet_ids": [b0.id]} # b0 doesn't have 'data structures'
+    with pytest.raises(S2ValidationError, match="covered term has no exact keyword hit"):
+        parse_s2_response(json.dumps(raw_bad), request)
+
+    # Missing bullet for covered term fails
+    raw_bad2 = dict(raw)
+    raw_bad2["coverage"] = list(raw["coverage"])
+    raw_bad2["coverage"][2] = {"term": "distributed systems", "status": "covered", "bullet_ids": []}
     with pytest.raises(S2ParseError, match="covered entry needs bullets"):
-        parse_s2_response(json.dumps(raw), request3)
-    
-    raw["coverage"][0] = {"term": "data structures and algorithms", "status": "gap", "bullet_ids": []}
-    parse_s2_response(json.dumps(raw), request3)
+        parse_s2_response(json.dumps(raw_bad2), request)
 
     request4 = replace(request, catalog=replace(request.catalog, do_not_claim=("helm",)))
-    raw["coverage"][0] = {"term": "kubernetes and helm", "status": "covered", "bullet_ids": [b0.id]}
-    request4 = replace(request4, s1=replace(request4.s1, must_have=(Requirement("kubernetes and helm", "q"),)))
+    raw["coverage"] = [{"term": "helm", "status": "covered", "bullet_ids": [b0.id]}]
+    request4 = replace(request4, s1=replace(request4.s1, must_have=(Requirement("helm", "q"),)))
     with pytest.raises(S2ValidationError, match="do_not_claim term covered"):
         parse_s2_response(json.dumps(raw), request4)
-

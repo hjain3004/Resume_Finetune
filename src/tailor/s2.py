@@ -11,9 +11,7 @@ from src.tailor.s1 import S1Response, s1_response_to_dict, parse_s1_response_dic
 import re
 from pathlib import Path
 def _norm(v: str) -> str: return " ".join(v.casefold().split())
-def _split_term(term: str) -> list[str]:
-    parts = [p.strip() for p in re.split(r'(?i),\s+and\s+|,\s+or\s+|;\s*|\s+/\s+|,\s*|\s+and\s+|\s+or\s+', term) if p.strip()]
-    return parts if len(parts) > 1 else [term]
+
 def load_assumed_baseline_terms(path: Path) -> tuple[str, ...]:
     if not path.exists(): return ()
     seen = set()
@@ -173,17 +171,15 @@ def validate_s2_selection(response: S2Response, request: S2Request) -> None:
     blocked = {_norm(x) for x in catalog.do_not_claim}; covered = set(response.bullet_order)
     baseline = {_norm(t) for t in catalog.assumed_baseline_terms}
     for entry in response.coverage:
-        components = _split_term(entry.term)
-        if (any(_norm(c) in blocked for c in components) or _norm(entry.term) in blocked) and entry.status == "covered": raise S2ValidationError("do_not_claim term covered")
+        norm_term = _norm(entry.term)
+        if norm_term in blocked and entry.status == "covered":
+            raise S2ValidationError("do_not_claim term covered")
         if entry.status == "covered":
-            if any(bid not in covered for bid in entry.bullet_ids): raise S2ValidationError("coverage cites unselected bullet")
+            if any(bid not in covered for bid in entry.bullet_ids):
+                raise S2ValidationError("coverage cites unselected bullet")
             hits = {_norm(k) for bid in entry.bullet_ids for k in bullets[bid].keywords_hit}
-            required = [c for c in components if _norm(c) not in baseline]
-            if not required:
-                if not entry.bullet_ids: raise S2ValidationError("all-baseline covered term must still cite a selected bullet")
-            else:
-                for comp in required:
-                    if _norm(comp) not in hits: raise S2ValidationError("covered term has no exact keyword hit")
+            if norm_term not in hits:
+                raise S2ValidationError("covered term has no exact keyword hit")
 
 def s2_response_to_dict(response: S2Response) -> dict[str, Any]:
     return {"base_variant": response.base_variant, "projects": [{"project_id": p.project_id, "reason": p.reason, "s0_point_indexes": list(p.s0_point_indexes)} for p in response.projects], "bullet_order": list(response.bullet_order), "coverage": [{"term": c.term, "status": c.status, "bullet_ids": list(c.bullet_ids)} for c in response.coverage]}

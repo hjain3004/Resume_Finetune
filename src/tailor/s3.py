@@ -193,6 +193,25 @@ def build_s3_request(
 
 
 def s3_request_to_dict(request: S3Request) -> dict[str, object]:
+    from .placement import evaluate_placement
+    must_have_terms = [r.term for r in request.s1.must_have]
+
+    placements = evaluate_placement(must_have_terms, request.s2, request.alignment)
+    placement_requirements = []
+
+    for p in placements:
+        missing = []
+        if not p.mapped_bullet_present:
+            missing.append("bullet")
+        if not p.skills_present:
+            missing.append("skills")
+        if missing:
+            placement_requirements.append({
+                "term": p.term,
+                "missing_from": missing,
+                "mapped_bullets": list(p.mapped_bullet_ids)
+            })
+
     return {
         "job_id": request.job_id,
         "company": request.company,
@@ -202,6 +221,7 @@ def s3_request_to_dict(request: S3Request) -> dict[str, object]:
         "s0": s0_response_to_dict(request.s0),
         "s2": s2_response_to_dict(request.s2),
         "alignment": alignment_to_dict(request.alignment),
+        "placement_requirements": placement_requirements,
     }
 
 
@@ -259,7 +279,7 @@ def _synthetic_s2_request(
 
 
 def parse_s3_request(raw: object) -> S3Request:
-    obj = _object(raw, {"job_id", "company", "title", "context_mode", "s1", "s0", "s2", "alignment"}, "$")
+    obj = _object(raw, {"job_id", "company", "title", "context_mode", "s1", "s0", "s2", "alignment", "placement_requirements"}, "$")
     if isinstance(obj["job_id"], bool) or not isinstance(obj["job_id"], int):
         raise S3ParseError("$.job_id: expected integer")
     company = _string(obj["company"], "$.company")
@@ -336,7 +356,8 @@ def _validate_bullet_edit(edit: BulletEdit, request: S3Request) -> None:
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: leading action verb changed")
     if _numeric_tokens(source.plain_text) != _numeric_tokens(plain_after):
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: numeric-token multiset changed")
-    budget = max((len(term) for term in edit.motivating_terms), default=0)
+    from .placement import get_length_allowance
+    budget = get_length_allowance(edit.motivating_terms)
     if len(plain_after) > len(source.plain_text) + budget:
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: plain-text length grew beyond the mirrored term")
     before_counts = Counter(_words(source.plain_text))
@@ -373,7 +394,48 @@ def _validate_skill_additions(response: S3Response, request: S3Request) -> None:
         existing.add(_normalize(addition.term))
 
 
+
+def validate_covered_term_placement(request: S3Request, response: S3Response) -> None:
+    from .placement import evaluate_placement
+    from dataclasses import replace
+    covered = {entry.term: entry for entry in request.s2.coverage if entry.status == "covered"}
+    must_have_terms = [r.term for r in request.s1.must_have]
+
+    for edit in response.bullet_edits:
+        for t in edit.motivating_terms:
+            if t not in covered or edit.bullet_id not in covered[t].bullet_ids:
+                raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: cites a term not mapped to that bullet")
+
+    draft_bullets = list(request.alignment.bullets)
+    by_id = {b.bullet_id: i for i, b in enumerate(draft_bullets)}
+    for edit in response.bullet_edits:
+        if edit.bullet_id in by_id:
+            i = by_id[edit.bullet_id]
+            b = draft_bullets[i]
+            from .s3 import parse_emphasis
+            try:
+                plain, _ = parse_emphasis(edit.after)
+            except Exception:
+                plain = edit.after
+            draft_bullets[i] = replace(b, plain_text=plain)
+
+    categories = {category: list(items) for category, items in request.alignment.skills}
+    for add in response.skill_additions:
+        categories[add.category].append(add.term)
+    draft_skills = tuple((c, tuple(v)) for c, v in categories.items())
+
+    draft_alignment = replace(request.alignment, bullets=tuple(draft_bullets), skills=draft_skills)
+
+    placements = evaluate_placement(must_have_terms, request.s2, draft_alignment)
+
+    for p in placements:
+        if not p.mapped_bullet_present:
+            raise S3SemanticError(f"placement: missing mapped-bullet placement for term '{p.term}'")
+        if not p.skills_present:
+            raise S3SemanticError(f"placement: missing Skills placement for term '{p.term}'")
+
 def parse_s3_response(raw_output: str, request: S3Request) -> S3Response:
+
     try:
         value = json.loads(raw_output)
     except json.JSONDecodeError as exc:
@@ -410,6 +472,7 @@ def parse_s3_response(raw_output: str, request: S3Request) -> S3Response:
     for edit in response.bullet_edits:
         _validate_bullet_edit(edit, request)
     _validate_skill_additions(response, request)
+    validate_covered_term_placement(request, response)
     return response
 
 
@@ -608,6 +671,7 @@ def hydrate_s3(request: S3Request, response: S3Response) -> TailoredDraft:
     for edit in response.bullet_edits:
         _validate_bullet_edit(edit, request)
     _validate_skill_additions(response, request)
+    validate_covered_term_placement(request, response)
     edits = {edit.bullet_id: edit for edit in response.bullet_edits}
     bullets: list[DraftBullet] = []
     for source in request.alignment.bullets:

@@ -141,8 +141,7 @@ about/company sections under the same rule as every other field: every claim car
 verbatim supporting quote from the JD; if the JD says nothing about the company,
 company_context is null — never inferred from outside knowledge. Remaining output:
 `{must_have: [{term, quote}], nice_to_have: [{term, quote}], responsibilities_summary,
-seniority_signals: [quote], disqualifiers: [quote]}`. Every term carries a verbatim
-supporting quote from the JD — a term without a quote is invalid (this is the
+seniority_signals: [quote], disqualifiers: [quote]}`. Every term is atomic: list-like compound requirements are split into separate atomic entries, while multiword technical concepts remain intact. Every atomic term carries a verbatim JD quote — a term without a quote is invalid (this is the
 anti-hallucination device on the analysis side; the JD is the only evidence source).
 Terms are recorded in the JD's exact surface form (P1).
 
@@ -177,8 +176,7 @@ Machine-checked; not a prompt instruction.
 - L1 structure: LaTeX section skeleton identical to base variant (reorder/swap only).
 - L2 lexicon: zero matches against banned_words.txt (P3 seed + user's list + taste.md
   additions marked `[lint]`).
-- L3 keyword bounds: each S1 must_have term appears ≥1 in a bullet AND ≥1 in skills
-  (dual placement); no term > 4 occurrences document-wide; top-5 terms in the 2–3 range.
+- L3 keyword bounds: each S2-covered atomic must-have term appears at least once in one of its mapped bullets and at least once in Skills. Gap terms are not placement obligations. No covered atomic term appears more than four times document-wide; the first five covered atomic terms appear two or three times.
 - L4 bullet shape: every modified bullet ≤ 2 lines rendered, starts with a past-tense
   action verb, contains ≥ 1 digit unless the base bullet had none.
 - L5 edit budget: ≤ 15% per §3-S3.

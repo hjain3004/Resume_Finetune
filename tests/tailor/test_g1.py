@@ -22,8 +22,19 @@ def _fixture():
     s2_request = _request()
     s2_response = parse_s2_response(json.dumps(_valid(s2_request)), s2_request)
     alignment = alignment_from_profile(profile, s2_request, s2_response)
+
+    # Force int_b1 to have Python in its text so it doesn't need an edit to satisfy placement
+    bullets = []
+    for b in alignment.bullets:
+        if b.bullet_id == "int_b1":
+            from dataclasses import replace
+            b = replace(b, source_text=b.source_text + " Python")
+        bullets.append(b)
+    alignment = replace(alignment, bullets=tuple(bullets))
+
     request = build_s3_request(1, "Example", "Engineer", s2_request.s1, s2_request.s0, s2_response, alignment)
     return request, parse_s3_response('{"bullet_edits": [], "skill_additions": []}', request)
+
 
 
 def _clean(request):
@@ -274,7 +285,7 @@ def test_g1_adversarial_edit_budget_over_15_percent_fails():
     request, response, draft = _valid_bundle()
     base_text = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty"
     alignment = AlignmentView("backend", (), (), (AlignmentBullet("b", "e", "experience", "", base_text, (), (), "verified"),), (), (), "0" * 64)
-    synthetic_request = replace(request, alignment=alignment)
+    synthetic_request = replace(request, alignment=alignment, s1=replace(request.s1, must_have=()), s2=replace(request.s2, coverage=()))
     over_budget_text = " ".join(base_text.split()[:16])  # 4/20 = 0.20 > 0.15
     synthetic_draft = TailoredDraft(
         synthetic_request.job_id, synthetic_request.company, synthetic_request.title, "backend", (), (),
@@ -284,3 +295,40 @@ def test_g1_adversarial_edit_budget_over_15_percent_fails():
     report = run_static_g1(synthetic_request, empty_response, synthetic_draft, ())
     assert report.status is G1Status.FAIL
     assert any(v.rule == "L5" for v in report.violations)
+
+def test_g1_length_growth_bound():
+    from src.tailor.s1 import Requirement
+    from src.tailor.s2 import CoverageEntry
+    request, _ = _fixture()
+    b0 = request.alignment.bullets[0]
+    # base text is 120 chars
+    # motivate with a 10 char term
+    terms = ["TenCharTerm"]
+    s1 = replace(request.s1, must_have=(Requirement("TenCharTerm", "q"),))
+    s2 = replace(request.s2, coverage=(CoverageEntry("TenCharTerm", "covered", ("b1",)),))
+    request = replace(request, s1=s1, s2=s2)
+
+    from src.tailor.s3 import S3Response, DraftBullet, BulletEdit
+    from src.tailor.g1 import TailoredDraft
+
+    # +10 length exactly
+    after_exact = b0.plain_text + "TenCharTer" # exactly 10 chars added
+    response_exact = S3Response(bullet_edits=(BulletEdit(b0.bullet_id, after_exact, ("TenCharTerm",), ""),), skill_additions=())
+    draft_exact = TailoredDraft(
+        request.job_id, request.company, request.title, request.alignment.base_variant, request.alignment.project_ids, request.alignment.experience_ids,
+        tuple(DraftBullet(b.bullet_id, b.owner_id, b.owner_kind, after_exact, after_exact, ()) if b.bullet_id == b0.bullet_id else DraftBullet(b.bullet_id, b.owner_id, b.owner_kind, b.source_text, b.plain_text, ()) for b in request.alignment.bullets),
+        request.alignment.skills, request.alignment.fingerprint
+    )
+    report_exact = run_static_g1(request, response_exact, draft_exact, ())
+    assert not any(v.rule == "L4" for v in report_exact.violations)
+
+    # +12 length
+    after_over = b0.plain_text + "TenCharTermX" # 12 chars added (budget is 11)
+    response_over = S3Response(bullet_edits=(BulletEdit(b0.bullet_id, after_over, ("TenCharTerm",), ""),), skill_additions=())
+    draft_over = TailoredDraft(
+        request.job_id, request.company, request.title, request.alignment.base_variant, request.alignment.project_ids, request.alignment.experience_ids,
+        tuple(DraftBullet(b.bullet_id, b.owner_id, b.owner_kind, after_over, after_over, ()) if b.bullet_id == b0.bullet_id else DraftBullet(b.bullet_id, b.owner_id, b.owner_kind, b.source_text, b.plain_text, ()) for b in request.alignment.bullets),
+        request.alignment.skills, request.alignment.fingerprint
+    )
+    report_over = run_static_g1(request, response_over, draft_over, ())
+    assert any(v.rule == "L4" for v in report_over.violations)
