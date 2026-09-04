@@ -261,9 +261,7 @@ scoped milestones/sessions. Track B writes ignored research proposals only.
 
 ## M8N — Apply-Now Tailoring Lane
 
-Status: DESIGN APPROVED 2026-09-01 — NOT IMPLEMENTED. Three ordered milestones, one per
-session: M8N-0 (file-fed full chain), M8N-1 (screen brief, company view, hiring-manager read),
-M8N-2 (phrasing proposals, golden set).
+Status: M8N-0 COMPLETE 2026-09-01 (c065756); M8N-0b COMPLETE 2026-09-03 (55737c8..3a2ae25); §11 bar not met — see DECISIONS.md; M8N-1/M8N-2 NOT STARTED
 Design: `docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md`
 Plan (M8N-0): `docs/superpowers/plans/2026-09-01-m8n-0-apply-now-lane.md`
 
@@ -286,6 +284,8 @@ M8N-0 acceptance criteria (spec §11 holds the measurable bar):
 - The pilot's behavior and tests are unchanged after the chain extraction.
 - `pytest -q` green offline; no network, DB, or model calls in tests.
 - ROADMAP, ARCHITECTURE §11, CLAUDE.md/AGENTS.md commands, `.gitignore` updated per spec §6/§14.
+
+M8N-0b acceptance evidence: see `docs/DECISIONS.md` for the live benchmark table (2026-09-03).
 
 M8N-1 and M8N-2 get their own plans after M8N-0 closes; do not start them in the M8N-0 session.
 

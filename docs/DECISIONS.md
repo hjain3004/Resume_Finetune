@@ -2645,3 +2645,25 @@ guards are unchanged, so the extra characters can only be the mirrored covered t
 `docs/prompts/tailoring_s3.md`: one sentence added asking the model to tighten elsewhere when
 mirroring a longer term. `s3_length_growth_rejected.txt` still rejects (B7). Approved by the
 user at M8N-0b kickoff.
+
+## 2026-09-03 — M8N-0b closeout
+
+M8N-0b landed the two gate corrections and they are verified: S2 compound-term component matching (B1) via config/assumed_baseline_terms.txt; S3 length gate bounded by the longest motivating_term (B5). No fabrication guard, model command, or master_profile.yaml touched. Commits 55737c8..3a2ae25.
+
+Live benchmark (2026-09-03, claude -p):
+| Job | Reached | S2 coverage | S3 edits | G2 | L7 | Pages | Calls | Result |
+|---|---|---|---|---|---|---|---|---|
+| 225 Notion backend | S3 / G1 | cleared S2 | 0, then 2 | — | — | — | — | FAIL |
+| 119 Cisco ml | G3 | 2/8 | 0 | 3/3/3/3/3 pass | clean | 1 | 2 | pass, untailored |
+| 211 Citadel backend | G3 | 0/7 | 0 | 3/3/3/3/3 pass | clean | 1 | 5 | pass, untailored |
+
+Findings: §11 bar (M8N-0 spec §11) NOT met. 225 clears S2 for the first time (B1 works) but S3 cannot place covered terms — an empty S3 fails G1 L3, a substantive S3 trips the unchanged uncited-vocabulary fabrication guard on invented claim text. 119's old S3 length-growth failure (spec §2) is gone (B5 works), but S3 made zero edits so 119 and 211 are the untailored base variants; their 3/3/3/3/3 G2 is vacuous.
+
+data/jobs.db SHA-256 unchanged: a9966f4afa4771b61e5b1838c9930e4c64062dc9d85d6fbb49cef17447843ae1.
+
+Note: 9b478d1 purged source-line-count claims from master_profile.yaml after the benchmark, so the 119/211 PDFs under applications_manual/ were rendered from the pre-purge profile.
+
+Next scoped milestone: the S3↔G1 keyword-placement gap — S3 must reliably mirror covered must-have terms into bullet text + skills to satisfy G1 L3, within the fabrication guards (or S1 extraction / the keywords_hit↔L3 relationship needs rework). Its own design + plan.
+
+## 2026-09-03 — 9b478d1 note
+Source-line-count and test-to-code-ratio claims removed from the master profile at the user's instruction; test/file/structural counts kept; render fixture re-recorded; suite green.
