@@ -8,7 +8,10 @@ from src.profile_lint import MEDIUM_MAX, SHORT_MAX, lint_profile
 from scripts.validate_profile import _load_banned_terms
 from src.render.emphasis import parse_emphasis
 
-_EXPECTED_REAL_TOTALS = {"backend": 3141, "ml": 3341}
+# backend dropped 3141 -> 3129 when the "17,000-line" phrase was removed from the
+# campus_marketplace cm_b1 medium phrasing (source-line-count claims purged from the
+# master profile at the user's instruction, 2026-09-03).
+_EXPECTED_REAL_TOTALS = {"backend": 3129, "ml": 3341}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."

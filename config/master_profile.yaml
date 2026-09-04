@@ -1196,8 +1196,6 @@ projects:
 
     scale:
       main_java_files: 366
-      main_loc: 17194
-      test_loc: 22809
       test_methods: 1179
       controllers: 20
       entities: 24
@@ -1208,14 +1206,10 @@ projects:
     # counted = statically counted from the repository at 2026-07-30
     # -------------------------------------------------------------------------
     metric_ledger:
-      main_loc:          { value: 17194, provenance: counted, renderable: true, render_as: "17,000+" }
-      test_loc:          { value: 22809, provenance: counted, renderable: true, render_as: "22,000+" }
       test_methods:      { value: 1179, provenance: counted, renderable: true, render_as: "1,100+" }
       controllers:       { value: 20, provenance: counted, renderable: true }
       entities:          { value: 24, provenance: counted, renderable: true }
       flyway_migrations: { value: 30, provenance: counted, renderable: true }
-      test_to_code_ratio: { value: "1.33:1", provenance: counted, renderable: true,
-                            note: "22,809 test LOC over 17,194 main LOC." }
       commit_share:      { value: "48 of 68", provenance: counted, renderable: false,
                            note: "Ownership evidence for interviews. Do not print a commit share on a resume." }
       test_coverage_90pct: { value: null, provenance: contradicted, renderable: false,
@@ -1235,23 +1229,23 @@ projects:
           long: >-
             Built the backend for a campus peer-to-peer marketplace as the primary
             developer on a 3-person team, authoring 48 of 68 commits across a
-            17,000-line Java 21 and Spring Boot service organized by domain, with
-            20 REST controllers, 24 JPA entities, and 30 Flyway-controlled schema
+            domain-organized Java 21 and Spring Boot service with 20 REST
+            controllers, 24 JPA entities, and 30 Flyway-controlled schema
             migrations over PostgreSQL.
-          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a 3-person team - a **17,000-line Java 21 and Spring Boot service** with 20 REST controllers, 24 JPA entities, and **30 Flyway-controlled PostgreSQL migrations**."
+          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a 3-person team - a **Java 21 and Spring Boot service** with 20 REST controllers, 24 JPA entities, and **30 Flyway-controlled PostgreSQL migrations**."
           short: >-
             Built the backend of a campus peer-to-peer marketplace in Java 21 and
             Spring Boot - 20 REST controllers, 24 JPA entities, 30 Flyway
             migrations.
         evidence:
-          - "campus-marketplace/src/main/java: 366 files, 17,194 LOC counted 2026-07-30"
+          - "campus-marketplace/src/main/java: 366 files counted 2026-07-30"
           - "20 files matching @RestController; 24 matching @Entity; 30 .sql files under src/main/resources/db"
           - "git shortlog -sne --all: hjain3004 + Himanshu Jain = 48 of 68 commits"
         keywords_hit: ["Java", "Spring Boot", "PostgreSQL", "REST API", "Flyway"]
         defense: >-
           "Primary developer" is supported by a 48-of-68 commit share, not by sole
-          authorship - this was a 3-person team. The counted line and file totals
-          describe the whole backend, which is accurate for the scope of the
+          authorship - this was a 3-person team. The counted file and component
+          totals describe the whole backend, which is accurate for the scope of the
           sentence; per-feature ownership is in ownership_boundary and must be
           used if an interviewer drills into a specific subsystem.
         interview_risk: |
@@ -1294,20 +1288,15 @@ projects:
         priority: 2
         phrasings:
           long: >-
-            Authored the bulk of a 1,179-test suite spanning 22,809 lines of test
-            code against 17,194 lines of application code - a 1.33 to 1 test to
-            code ratio - covering the listing, user, payment, and security domains
-            with JUnit 5.
+            Authored the bulk of a 1,179-test suite covering the listing, user,
+            payment, and security domains with JUnit 5.
           medium: >-
-            Authored the bulk of a 1,179-test JUnit 5 suite - 22,809 test lines
-            against 17,194 application lines, a 1.33 to 1 ratio - across the
-            listing, user, payment, and security domains.
+            Authored the bulk of a 1,179-test JUnit 5 suite across the listing,
+            user, payment, and security domains.
           short: >-
-            Authored the bulk of a 1,179-test JUnit 5 suite, a 1.33 to 1 test to
-            code ratio.
+            Authored the bulk of a 1,179-test JUnit 5 suite.
         evidence:
           - "1,179 @Test occurrences across 60 files under campus-marketplace/src/test"
-          - "22,809 test LOC vs 17,194 main LOC, counted 2026-07-30"
           - "git log --author=himanshu --name-only: 84 file touches under src/test"
         keywords_hit: ["JUnit", "unit testing", "integration testing", "test coverage"]
         defense: ""
@@ -1388,9 +1377,9 @@ projects:
           pom.xml but no coverage report exists in the working tree and no run was
           recorded. The number has no source.
         fix: >-
-          Drop the percentage. Render the counted 1,179 tests and the 1.33:1 test
-          to code ratio instead - both reproduce in one command. Only reinstate a
-          percentage after running 'mvn jacoco:report' and reading the real figure.
+          Drop the percentage. Render the counted 1,179 tests instead - they
+          reproduce in one command. Only reinstate a percentage after running
+          'mvn jacoco:report' and reading the real figure.
       - id: cm_gap_chatbot_not_mine
         severity: high
         status: open
@@ -1464,13 +1453,11 @@ projects:
     scale:
       microservices: 12
       python_files: 146
-      python_loc: 53480
       test_files: 17
       test_functions: 22
 
     metric_ledger:
       microservices:     { value: 12, provenance: counted, renderable: true }
-      python_loc:        { value: 53480, provenance: counted, renderable: true, render_as: "53,000+" }
       security_service_touches: { value: 24, provenance: counted, renderable: false,
                                   note: "Sole-authorship evidence for the security service. Interview use only." }
       commit_share:      { value: "243 of 251", provenance: counted, renderable: false,
@@ -1478,7 +1465,7 @@ projects:
       ai_authored_commits: { value: 147, provenance: counted, renderable: false,
                              note: "Of the 243 claimed commits, 147 were AI-assisted - specified, prompted, reviewed, and integrated by Himanshu. Counted as his authorship. Never printed, but he must know this number before any interview about this project." }
       test_functions:      { value: 22, provenance: counted, renderable: false,
-                             note: "22 test functions across 53,480 lines. Actively harmful to print. Do not use this project as testing-rigor evidence - use Campus Marketplace instead." }
+                             note: "Only 22 test functions. Actively harmful to print. Do not use this project as testing-rigor evidence - use Campus Marketplace instead." }
       aact_studies:        { value: 557805, provenance: counted, renderable: true, render_as: "557,000+",
                              note: "CORRECTED 2026-07-30: previously and wrongly marked unsourced. Counted from the AACT ClinicalTrials.gov dataset by data/AACT/scripts/02_process_aact.py; docs/AACT_INTEGRATION.md:424 states 'Loads existing cache (557,805 studies)'. Output artifact data/AACT/processed/aact_statistics_cache.json is 474KB on disk." }
       aact_source_size_gb: { value: 15, provenance: doc_backed, renderable: true, render_as: "15 GB",
@@ -1508,7 +1495,7 @@ projects:
         evidence:
           - "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared"
           - "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root"
-          - "146 Python files, 53,480 LOC counted 2026-07-30"
+          - "146 Python files counted 2026-07-30"
         keywords_hit: ["Python", "FastAPI", "microservices", "Docker", "Kubernetes", "Terraform"]
         defense: >-
           "Built" covers 243 of 251 commits - 96 written directly, 147 specified,
@@ -1639,8 +1626,8 @@ projects:
         severity: high
         status: open
         detail: >-
-          22 test functions across 17 files against 53,480 lines of Python. For
-          comparison, Campus Marketplace has 1,179 tests over 17,194 lines.
+          Only 22 test functions across 17 files. For comparison, Campus
+          Marketplace has 1,179 tests.
         fix: >-
           Never cite this project as testing evidence. If a JD emphasizes testing
           rigor, select Campus Marketplace and the Amdocs experience instead. If
@@ -1755,11 +1742,8 @@ experience:
       services: 5
       adapter_services: 4
       orchestration_services: 1
-      app_loc: 8700
-      test_loc: 7720
       automated_tests: 326
       postman_scenarios: 103
-      test_to_code_ratio: "~0.9:1"
 
     # -------------------------------------------------------------------------
     # METRIC LEDGER
@@ -1769,8 +1753,6 @@ experience:
     # unverified     = asserted in a doc but not independently confirmed
     # -------------------------------------------------------------------------
     metric_ledger:
-      app_loc:            { value: "~8,700", provenance: counted, renderable: true, note: "RECOUNTED 2026-08-27: app/**/*.py across all five services - gab_sms 1365, gab_iprs 2251, PESALINK 2064, OMNI SCREENING 1299, audit/Core 1721. Supersedes the 2026-07-30 figure of ~5,900, which predated the Core service and later adapter work." }
-      test_loc:           { value: "~7,700", provenance: counted, renderable: true, note: "RECOUNTED 2026-08-27: tests/**/*.py - 1089 + 1280 + 1431 + 1651 + 2269. Excludes audit/tools/verify_final.py (513 lines), which is verification code but not a pytest suite." }
       automated_tests:    { value: 326, provenance: counted, renderable: true, render_as: "320+", note: "COUNT ONLY. 2026-08-27 execution: audit/Core 69 passed, gab_iprs 61 passed, OMNI SCREENING 80 passed, PESALINK 61 passed + 1 skipped, gab_sms 55 passed. See tests_all_passing - the pass-rate claim stays PROHIBITED by Himanshu's decision." }
       postman_scenarios:  { value: 103, provenance: counted, renderable: true }
       services:           { value: 5, provenance: counted, renderable: true, note: "4 adapter services + 1 Core orchestration/audit service" }
@@ -1823,7 +1805,7 @@ experience:
           - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML); one Core onboarding service orchestrating three of them"
           - "Core ingress: POST /v1/onboarding/cases then POST /v1/onboarding/cases/{id}/steps -> 202 Accepted; a database-backed dispatcher worker calls the adapter out of band"
           - "Shared layered architecture: HTTP middleware onion -> service layer -> domain (Pydantic/errors/config) -> data (async engine, append-only event log ORM)"
-          - "Each service isolates vendor quirks behind a single client class (ACL pattern); ~8,700 app LOC counted across the five services on 2026-08-27"
+          - "Each service isolates vendor quirks behind a single client class (ACL pattern) across the five services"
         keywords_hit: ["Python", "FastAPI", "microservices", "PostgreSQL", "RabbitMQ", "payments", "AML", "anti-corruption layer", "service orchestration", "customer onboarding"]
         defense: >-
           The anti-corruption layer was the original scope and Core was designed on
@@ -1995,25 +1977,22 @@ experience:
         priority: 2
         phrasings:
           long: >-
-            Authored 230+ automated tests (roughly a 0.7:1 test-to-code ratio) plus
-            103 Postman negative-path scenarios, layering Pydantic edge-case tests,
-            respx-mocked vendor contract tests covering retry-then-succeed and retry
-            exhaustion, full ASGI end-to-end tests, and custom concurrency harnesses
-            for race conditions unit tests cannot reach; containerized all four
-            services with Docker Compose topologies and branch-gated GitLab CI
-            pipelines.
+            Authored 230+ automated tests plus 103 Postman negative-path scenarios,
+            layering Pydantic edge-case tests, respx-mocked vendor contract tests
+            covering retry-then-succeed and retry exhaustion, full ASGI end-to-end
+            tests, and custom concurrency harnesses for race conditions unit tests
+            cannot reach; containerized all four services with Docker Compose
+            topologies and branch-gated GitLab CI pipelines.
           medium: >-
-            Authored 230+ automated tests (~0.7:1 test-to-code ratio) plus 103 Postman
-            negative-path scenarios, including respx-mocked vendor contract tests and
-            custom concurrency harnesses for races unit tests cannot reach;
-            containerized all four services with Docker Compose and GitLab CI.
+            Authored 230+ automated tests plus 103 Postman negative-path scenarios,
+            including respx-mocked vendor contract tests and custom concurrency
+            harnesses for races unit tests cannot reach; containerized all four
+            services with Docker Compose and GitLab CI.
           short: >-
-            Authored 230+ automated tests (~0.7:1 test-to-code ratio) and 103 Postman
-            negative-path scenarios; containerized all four services with Docker
-            Compose and GitLab CI.
+            Authored 230+ automated tests and 103 Postman negative-path scenarios;
+            containerized all four services with Docker Compose and GitLab CI.
         evidence:
           - "Static count of test functions: 60 + 54 + 52 + 67 = 233 across the four services"
-          - "~4,100 test LOC vs ~5,900 app LOC"
           - "respx HTTP mocking; pytest-asyncio; mock vendor backends with injectable failure modes"
         keywords_hit: ["pytest", "test automation", "Docker", "GitLab CI", "CI/CD"]
         defense: >-
@@ -2022,8 +2001,7 @@ experience:
           test functions were counted statically and the suites were never executed.
           Run them first if you want that claim.
         interview_risk: |
-          The 0.7:1 ratio is worth saying out loud - most intern codebases sit near
-          0.05:1. Be ready to describe the layering in order, and to name one race
+          Be ready to describe the test layering in order, and to name one race
           the concurrency harness caught that a unit test could not.
 
       - id: int_b7
@@ -2245,7 +2223,7 @@ experience:
             API-key auth matrix, duplicate-event deduplication, zero dead-letter depth,
             and a prohibited-field scan.
         evidence:
-          - "tools/verify_final.py, 513 lines; writes reports/evidence/verify_final_<epoch>.json only after every assertion passes"
+          - "tools/verify_final.py writes reports/evidence/verify_final_<epoch>.json only after every assertion passes"
           - "Host-unreachability assertions on the adapter ports; in-network auth matrix of 3 adapters x {missing, invalid, valid} X-API-Key asserting 401/401/2xx"
           - "SELECT count(*) FROM response_delivery WHERE external_reference LIKE 'direct-%' must be 0 - a direct adapter call must never produce a Core record"
           - "Duplicate republish of a real event with message_id preserved, twice, then asserts the row count for that event_id is still 1"
@@ -2463,10 +2441,10 @@ experience:
         status: resolved
         detail: >-
           RESOLVED 2026-07-30 by the date correction. Employment dates (06/2026 -
-          08/2026) now agree with the repo artifacts, so ~5,900 app LOC and ~4,100
-          test LOC across four services sit inside a full summer rather than a
-          four-day window. The two services with no history in the working copy are a
-          local-checkout artifact, not a timeline problem.
+          08/2026) now agree with the repo artifacts, so the four services sit
+          inside a full summer rather than a four-day window. The two services with
+          no history in the working copy are a local-checkout artifact, not a
+          timeline problem.
         fix: >-
           If asked "how long did this take?", the answer is the internship duration.
           No reconciliation needed.
