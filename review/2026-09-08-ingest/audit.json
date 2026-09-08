@@ -1,0 +1,167 @@
+{
+  "date": "2026-09-08",
+  "overall": "FAIL",
+  "findings": [
+    {
+      "invariant": "I1",
+      "status": "WARN",
+      "evidence": [
+        {
+          "source": "inbox",
+          "consecutive_zero_runs": 3
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "invariant": "I2",
+      "status": "FAIL",
+      "evidence": [
+        {
+          "resolved": 0,
+          "failed": 6,
+          "rate": 0.0
+        },
+        {
+          "domain": "www.amazon.jobs",
+          "row_ids": [
+            3,
+            5,
+            14,
+            15,
+            809
+          ],
+          "resolver_gap": true
+        },
+        {
+          "domain": "www.tesla.com",
+          "row_ids": [
+            6,
+            9,
+            10,
+            11,
+            12,
+            13,
+            228,
+            250
+          ],
+          "resolver_gap": true
+        },
+        {
+          "domain": "www.equipmentshare.com",
+          "row_ids": [
+            243,
+            328,
+            354,
+            355
+          ],
+          "resolver_gap": true
+        },
+        {
+          "domain": "job-boards.eu.greenhouse.io",
+          "row_ids": [
+            318,
+            319,
+            320
+          ],
+          "resolver_gap": true
+        },
+        {
+          "domain": "jobright.ai",
+          "row_ids": [
+            485,
+            486,
+            487,
+            489,
+            492,
+            494,
+            506,
+            507,
+            632,
+            746
+          ],
+          "resolver_gap": true
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "invariant": "I3",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I3b",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I4",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I5",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I6a",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I6b",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I7",
+      "status": "SKIP",
+      "evidence": [],
+      "detail": "run via tests/test_idempotency.py or `scripts.audit --db-before/--db-after` (weekly cadence, SELF_HEALING \u00a73)"
+    },
+    {
+      "invariant": "I8",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I9",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I10",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I11",
+      "status": "FAIL",
+      "evidence": [],
+      "detail": "scored/shortlisted/tailored rows exist but data/traces/ has no trace files"
+    },
+    {
+      "invariant": "I12",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    },
+    {
+      "invariant": "I13",
+      "status": "PASS",
+      "evidence": [],
+      "detail": ""
+    }
+  ]
+}
