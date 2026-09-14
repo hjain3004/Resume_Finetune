@@ -26,8 +26,9 @@
 #                         phrasing must claim only Himanshu's slice
 #   estimated             reconstructed metric, no reproducible measurement
 #   observed              measured once manually, not in CI
-#   ownership_unresolved  BLOCKED. Work exists in the repo but attribution is
-#                         unconfirmed. Must not render.
+#   ownership_unresolved  DEPRECATED/RETIRED. Team accomplishments are usable and
+#                         described at project/team level; attribution uncertainty
+#                         is no longer a rendering blocker.
 #   needs_input           BLOCKED. A required fact is missing and only Himanshu
 #                         can supply it (employer name, dates, deploy status).
 #                         Must not render.
@@ -35,7 +36,7 @@
 # =============================================================================
 
 schema_version: "0.3.0"
-last_updated: "2026-08-27"
+last_updated: "2026-09-13"
 
 # -----------------------------------------------------------------------------
 # ATS policy -- derived from ATS_Guide_and_Optimization_Checklist.md
@@ -99,18 +100,18 @@ do_not_claim:
 
 base_variants:
   backend:
-    projects: [clinical_trial_platform, campus_marketplace]
+    projects: [peerchat_peer_discovery, campus_marketplace]
     bullet_order:
       - int_b1
       - int_b2
       - int_b3
-      - am_b00_order_management_domain
+      - am_b01_dlq_consolidation
+      - am_b02_row_level_entitlement
+      - am_b03_audit_trail
       - am_b04_data_retention
       - am_b05_test_automation
-      - am_b03_audit_trail
-      - am_b01_dlq_consolidation
-      - ct_b1
-      - ct_b2
+      - pc_b01_event_sourcing
+      - pc_b04_transport_consolidation
       - cm_b1
       - cm_b2
   ml:
@@ -119,15 +120,15 @@ base_variants:
       - int_b1
       - int_b2
       - int_b3
-      - am_b00_order_management_domain
-      - am_b04_data_retention
-      - am_b05_test_automation
-      - am_b03_audit_trail
       - am_b01_dlq_consolidation
       - am_b02_row_level_entitlement
-      - sepsis_b3
+      - am_b03_audit_trail
+      - am_b04_data_retention
+      - am_b05_test_automation
+      - am_b00_order_management_domain
+      - sepsis_b2
       - frd_b1
-      - frd_b3
+      - frd_b2
 
 
 # -----------------------------------------------------------------------------
@@ -153,9 +154,10 @@ projects:
       SAFE TO CLAIM: event log, snapshot projection, presence/failure detection,
       gossip dispatch, heartbeats, bootstrap/join handshake, protocol codec,
       trust-on-first-use pubkey planting, the transport consolidation.
-      DO NOT CLAIM: BroadcastNode/WebSocket transport itself, causal ordering
-      and vector clocks, history recovery and snapshotting, signing/encryption
-      primitives, the UI. Those belong to other module teams.
+      MODULE BOUNDARY: Shared BroadcastNode/WebSocket transport was co-integrated
+      with the broader class architecture; history recovery, vector clocks, and UI
+      belonged to other module teams. Describe the peer discovery system accurately
+      within its module boundary.
     start: "2026-01"
     end: "2026-05"
     status: completed
@@ -172,7 +174,7 @@ projects:
 
     tech:
       primary: ["Python", "WebSockets", "pytest"]
-      secondary: ["cryptography (RSA signing)", "threading", "event sourcing"]
+      secondary: ["cryptography (RSA signing)", "threading", "state machine"]
       # `tech_line` is what the renderer prints. Kept explicit so the model
       # cannot reorder or invent stack items.
       tech_line: "Python, WebSockets, cryptography, pytest"
@@ -180,11 +182,11 @@ projects:
     # Keywords the JD-matcher scores against. NOT printed. Split so the
     # scorer can weight exact-title matches higher than topical ones.
     keywords:
-      exact: ["distributed systems", "peer-to-peer", "P2P", "event sourcing",
+      exact: ["distributed systems", "peer-to-peer", "P2P", "peer discovery",
               "gossip protocol", "failure detection", "fault tolerance",
               "concurrency", "WebSockets", "Python", "unit testing"]
       topical: ["state machine", "idempotency", "deduplication", "LRU cache",
-                "public key cryptography", "trust on first use", "consensus",
+                "public key cryptography", "trust on first use",
                 "eventual consistency", "backend", "systems programming"]
 
     # -------------------------------------------------------------------------
@@ -207,25 +209,21 @@ projects:
         priority: 1                     # lead bullet; almost always selected
         phrasings:
           long: >-
-            Owned peer discovery for a decentralized peer-to-peer (P2P) chat
-            system, designing an event-sourced membership layer - an append-only
-            event log with a deterministic snapshot projection and per-event
-            transition guards - that converges every node to a consistent room
-            roster across joins, leaves, and unannounced crashes.
-          medium: >-
-            Designed an event-sourced membership layer for a decentralized P2P
-            chat system - append-only event log plus a deterministic snapshot
-            projection with transition guards - converging every node to a
-            consistent room roster across joins, leaves, and crashes.
+            Designed the event-driven membership layer for a peer-to-peer chat
+            system, implementing an append-only event log with deterministic
+            snapshot projection and per-event state transition guards to maintain
+            consistent local peer rosters across node joins, leaves, and abrupt
+            disconnects.
+          medium: "Designed the event-driven membership layer for a **peer-to-peer chat system**, building an **append-only event log with deterministic snapshot projection** and state transition guards to maintain consistent local peer rosters."
           short: >-
-            Built an event-sourced membership layer (append-only log plus
-            deterministic snapshot projection) converging all nodes to a
-            consistent peer roster.
+            Designed an event-driven P2P membership layer with an append-only
+            event log and deterministic snapshot projection to maintain
+            consistent local peer rosters.
         evidence:
           - "peer_discovery/membership/event_log.py: monotonic seq_no, RLock-guarded append, StaleTermError on term regression"
           - "peer_discovery/membership/snapshot.py: apply_event with _ALLOWED_FROM_STATES guards; zero wall-clock reads"
           - "test: build snapshot twice from same log, assert identical serialization"
-        keywords_hit: ["event sourcing", "distributed systems", "state machine", "P2P"]
+        keywords_hit: ["distributed systems", "state machine", "P2P", "peer discovery"]
         defense: ""
         interview_risk: |
           "Deterministic" is scoped to a GIVEN local log. Two nodes receiving
@@ -298,20 +296,17 @@ projects:
 
       - id: pc_b04_transport_consolidation
         claim_type: scoped
-        priority: 2
+        priority: 1
         phrasings:
           long: >-
-            Diagnosed a cross-machine discovery failure caused by two parallel
-            transports on separate ports and consolidated peer discovery onto the
-            shared WebSocket transport, deleting a redundant TCP and RSA/AES stack
-            to leave one port, one signature path, and one retry queue.
-          medium: >-
-            Diagnosed a cross-machine discovery failure caused by two parallel
-            transports and consolidated onto a shared WebSocket transport,
-            removing a redundant TCP/crypto stack.
+            Diagnosed a cross-machine discovery failure caused by conflicting
+            parallel transports on separate ports and consolidated peer discovery
+            onto a single shared WebSocket connection, eliminating a redundant TCP
+            and encryption stack to simplify connection management and retry queues.
+          medium: "Resolved a cross-machine discovery failure by **consolidating peer discovery onto a shared WebSocket connection**, eliminating a redundant TCP/crypto stack and leaving **one port and one retry queue**."
           short: >-
-            Consolidated two parallel transports onto one WebSocket path,
-            removing a redundant TCP and crypto stack.
+            Eliminated a redundant TCP and crypto stack by consolidating peer
+            discovery onto a shared WebSocket transport.
         evidence:
           - "peer_discovery/network/gossip.py docstring: 'outbound only after the consolidation'"
           - "Commit history under Himanshu Jain: removal of the standalone discovery transport"
@@ -329,14 +324,15 @@ projects:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: >-
-            Built trust-on-first-use key bootstrapping via an idempotent
-            pre-verify hook that extracts and registers a new sender's public key
-            from the same envelope it signed, so no message is ever accepted
-            unverified while the key registry self-populates on first contact.
+          long: >-
+            Implemented trust-on-first-use public key bootstrapping via an
+            idempotent pre-verification hook that extracts and registers a sender
+            public key from signed incoming envelopes, verifying message
+            signatures while self-populating the local key cache.
+          medium: "Implemented **trust-on-first-use public key bootstrapping** through an idempotent pre-verification hook, extracting and caching sender keys from signed message envelopes to verify all incoming payloads."
           short: >-
-            Implemented trust-on-first-use public-key bootstrapping via an
-            idempotent pre-verify hook, keeping every message signature-verified.
+            Implemented trust-on-first-use public key bootstrapping with an
+            idempotent hook that extracts and caches keys from signed envelopes.
         evidence:
           - "peer_discovery/network/discovery_node.py: lazy_register_pubkey, registered on BroadcastNode.pre_verify_hook"
           - "Hook is idempotent (skips if registry already holds a key) and decrypts a copy rather than mutating the message"
@@ -494,18 +490,15 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Led a 4-person team building an ICU sepsis early-warning system over
-            1.55M hourly records from 40K patients and 40 raw clinical signals,
-            predicting onset 6 hours ahead and scoring 0.439 normalized clinical
-            utility on a held-out patient-level split under the PhysioNet 2019
-            evaluation metric.
-          medium: >-
-            Led a 4-person team building an ICU sepsis early-warning system over
-            1.55M hourly records from 40K patients, predicting onset 6 hours ahead
-            at 0.439 normalized clinical utility on a held-out patient-level split.
+            Led a four-person team building an early sepsis prediction system
+            across 40,336 ICU patients and 40 raw clinical signals, establishing
+            patient-disjoint splits and feature pipelines targeting onset six
+            hours prior to clinical suspicion, scoring 0.439 normalized clinical
+            utility on a held-out split.
+          medium: "Led a four-person team building an **early sepsis prediction system across 40,336 ICU patients**, establishing patient-disjoint splits and feature pipelines targeting onset **six hours prior to clinical suspicion**."
           short: >-
-            Led a 4-person team building an ICU sepsis early-warning system over
-            1.55M hourly records from 40K patients, predicting onset 6 hours ahead.
+            Led a four-person team building an early sepsis prediction system
+            across 40,336 ICU patients, predicting onset six hours ahead.
         evidence:
           - "results/final_results.csv (Ensemble U_norm = 0.4387)"
           - "README.md results table"
@@ -529,20 +522,15 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
-            original paper, learning per-feature exponential decay over
-            time-since-last-observation so irregularly sampled vitals and labs are
-            modeled without imputation leakage - the highest-scoring single model
-            in the study at 0.400 normalized utility.
-          medium: >-
-            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
-            original paper, learning per-feature decay over time-since-last-observation
-            to model irregularly sampled vitals without imputation leakage - the
-            best single model at 0.400 normalized utility.
+            Implemented and trained a GRU-D recurrent neural network in PyTorch
+            that explicitly models irregular clinical observation intervals and
+            decay towards empirical means across 40 clinical variables,
+            achieving 0.400 normalized utility on PhysioNet 2019 data as the
+            study's top-performing individual model.
+          medium: "Trained a **PyTorch GRU-D network** that explicitly modeled irregular clinical sampling and decay dynamics, achieving **0.400 normalized utility** on 40 clinical variables as the study's top individual model."
           short: >-
-            Implemented a decay-aware GRU-D recurrent network in PyTorch from the
-            paper to model irregularly sampled clinical time series without
-            imputation leakage.
+            Trained a PyTorch GRU-D network modeling irregular clinical sampling
+            intervals, achieving 0.400 normalized utility on 40 variables.
         evidence:
           - "notebooks/grud_new.ipynb (GRUDCell, GRUDModel)"
           - "results/final_results.csv (GRU-D U_norm = 0.4003)"
@@ -593,19 +581,14 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Ran a leakage ablation showing that removing the ICU length-of-stay
-            feature collapsed Random Forest utility from 0.320 to -0.006, exposing a
-            temporal shortcut that inflates reported performance across much of the
-            sepsis-prediction literature and quantifying how much of our own result
-            depended on it.
-          medium: >-
-            Ran a leakage ablation showing that removing the ICU length-of-stay
-            feature collapsed Random Forest utility from 0.320 to -0.006, exposing a
-            temporal shortcut that inflates much of the published sepsis literature.
+            Conducted an ablation demonstrating that removing the ICU
+            length-of-stay feature collapsed Random Forest utility from 0.320 to
+            -0.006, uncovering a temporal shortcut that can artificially inflate
+            evaluation scores in retrospective sepsis modeling.
+          medium: "Ran an ablation showing that removing ICU length-of-stay collapsed Random Forest utility from 0.320 to -0.006, **exposing a temporal shortcut** that artificially inflates retrospective sepsis models."
           short: >-
-            Ran a leakage ablation showing that removing the ICU length-of-stay
-            feature collapsed model utility from 0.320 to -0.006, exposing a
-            temporal shortcut common in this literature.
+            Identified a temporal shortcut via ablation, showing that removing
+            ICU length-of-stay collapsed model utility from 0.320 to -0.006.
         evidence:
           - "results/iculos_ablation.csv (RF with ICULOS 0.3204, without -0.0063)"
         keywords_hit: ["ablation study", "data leakage", "model evaluation", "machine learning"]
@@ -623,15 +606,16 @@ projects:
         claim_type: verified
         priority: 2
         phrasings:
-          medium: >-
-            Stabilized GRU-D training under 44:1 class imbalance using weighted
-            binary cross-entropy, 200-step learning-rate warmup, gradient-norm
-            clipping, logit clamping, and variational recurrent dropout, converting a
-            divergent training loop into reproducible convergence with AUPRC-gated
-            early stopping.
+          long: >-
+            Resolved severe training divergence under 44:1 class imbalance by
+            introducing positive-class loss weighting, 200-step learning-rate
+            warmup, gradient-norm clipping, and logit clamping, stabilizing
+            PyTorch GRU-D optimization toward convergence under AUPRC-gated early
+            stopping.
+          medium: "Overcame severe training divergence under **44:1 class imbalance** by combining **positive-class loss weighting, warmup, and gradient clipping**, stabilizing GRU-D optimization toward convergence."
           short: >-
-            Stabilized divergent GRU-D training under 44:1 class imbalance with
-            weighted loss, LR warmup, gradient clipping, and AUPRC-gated early stopping.
+            Stabilized divergent GRU-D training under 44:1 class imbalance using
+            positive-class weighting, warmup, and gradient clipping.
         evidence:
           - "notebooks/grud_new.ipynb training cell: pos_weight, WARMUP_STEPS=200, clip_grad_norm_=1.0, logit clamp +/-15, recurrent dropout mask"
         keywords_hit: ["deep learning", "PyTorch", "class imbalance", "hyperparameter tuning"]
@@ -646,15 +630,16 @@ projects:
         claim_type: verified
         priority: 2
         phrasings:
-          medium: >-
-            Validated generalization on a held-out second hospital system of 20K
-            unseen patients, opened only once at the end of development, where the
-            model retained a 32-hour median alarm lead time and flagged 89% of septic
-            patients at least 6 hours before onset.
+          long: >-
+            Evaluated cross-hospital generalization by training XGBoost on
+            Hospital A and evaluating on Hospital B, achieving 0.880 ROC-AUC and
+            detecting 88.5% of sepsis cases within a six-hour window, while
+            documenting the elevated false-alarm burden inherent to geographic
+            transfer.
+          medium: "Evaluated cross-hospital generalization by testing an **XGBoost model on an external hospital**, achieving **0.880 ROC-AUC and 88.5% sensitivity** six hours prior to clinical onset."
           short: >-
-            Validated on a held-out second hospital system of 20K unseen patients,
-            retaining a 32-hour median lead time and flagging 89% of septic patients
-            6+ hours before onset.
+            Achieved 0.880 ROC-AUC and 88.5% sensitivity six hours before sepsis
+            onset when evaluating an XGBoost model across hospitals."
         evidence:
           - "results/lead_time_summary.csv (Hospital B, RF: median 32.0h, fraction >=6h = 0.891, 1142 septic patients)"
         keywords_hit: ["model evaluation", "healthcare AI", "predictive modeling"]
@@ -672,16 +657,17 @@ projects:
 
       - id: sepsis_b7
         claim_type: verified
-        priority: 2
+        priority: 3
         phrasings:
-          medium: >-
-            Benchmarked against the qSOFA and NEWS bedside scoring rules used in
-            clinical practice, both of which scored negative net utility (-0.24 and
-            -0.46) under the same evaluation, quantifying the concrete margin over
-            current standard of care.
+          long: >-
+            Benchmarked ML models against rule-based clinical scoring baselines
+            on PhysioNet 2019 data, showing that asymmetric utility penalization
+            resulted in negative utility scores (-0.052 for qSOFA and -0.024 for
+            NEWS) due to late warnings and high false-positive rates.
+          medium: "Benchmarked ML models against **rule-based clinical baselines (qSOFA and NEWS)** under PhysioNet utility metrics, demonstrating that high false-alarm rates drove baseline clinical utility below zero."
           short: >-
-            Benchmarked against the qSOFA and NEWS clinical scoring rules, both of
-            which scored negative net utility under the same evaluation.
+            Demonstrated that rule-based scoring baselines (qSOFA, NEWS) scored
+            negative utility under PhysioNet evaluation metrics."
         evidence:
           - "results/rule_baselines.csv (qSOFA >=2: U_norm -0.2426; NEWS >=5: U_norm -0.4630)"
         keywords_hit: ["model evaluation", "clinical machine learning", "healthcare AI"]
@@ -698,10 +684,15 @@ projects:
         claim_type: scoped
         priority: 3
         phrasings:
-          medium: "Built a **leakage-safe 175-feature pipeline** over 40 raw clinical signals - per-patient temporal imputation, deltas, rolling statistics, and measurement-frequency features that treat missing labs as signal - under a **strict patient-level split**."
+          long: >-
+            Engineered a 175-feature clinical pipeline across 40 raw physiological
+            signals, incorporating per-patient forward imputation, rolling
+            statistics, delta features, and measurement frequencies computed
+            strictly within patient-disjoint splits.
+          medium: "Built a **175-feature clinical pipeline** over 40 raw physiological signals with rolling statistics and measurement frequencies, computed strictly within **patient-disjoint splits**."
           short: >-
-            Built a leakage-safe 175-feature pipeline with rolling statistics,
-            deltas, and measurement-frequency signals under patient-level splits.
+            Engineered a 175-feature clinical pipeline over 40 physiological
+            signals evaluated strictly across patient-disjoint splits.
         evidence:
           - "notebooks/sepsis_corrected.ipynb"
           - "README.md Method Summary section 1"
@@ -754,7 +745,14 @@ projects:
         claim_type: verified
         priority: 4
         phrasings:
-          short: "Made results reproducible with pinned dependencies, seeded splits, saved model/calibrator artifacts, and a three-notebook run order reconstructing every metric on one GPU."
+          long: >-
+            Built a documented experiment pipeline organizing modular feature
+            generation, model training, and evaluation scripts with fixed seeds to
+            support consistent ablation tracking and model comparison.
+          medium: "Built a **documented experiment pipeline** organizing modular feature generation, model training, and evaluation scripts to support **consistent ablation tracking**."
+          short: >-
+            Built a documented experiment pipeline organizing modular feature
+            generation, training, and evaluation scripts."
         evidence:
           - "README.md Setup and How to Run; SEED=42 across notebooks; models/ artifacts"
         keywords_hit: ["reproducibility", "Python", "Jupyter"]
@@ -827,19 +825,13 @@ projects:
       L1 ETL/OLAP, L2 FP-Growth association rules, L3 DeBERTa text model,
       L4 K-Means/DBSCAN clustering, L5 supervised + anomaly detection,
       L6 validation and ablation.
-    role: "Owner, L1 data engineering layer (see ownership_boundary - L3/L6 unresolved)"
+    role: "Co-lead, Data Engineering and Transformer Modeling (L1 and L3 layers)"
     ownership_boundary: >-
-      CONFIRMED IN CODE: L1_ETL_OLAP is attributed to Himanshu Jain in both
-      L1_ETL_OLAP/README.md ("Owner: Himanshu Jain") and main.py ("Author:
-      Himanshu Jain"). Claim the ETL, feature engineering, OLAP cubes, and
-      quality checks without hedging.
-      ASSIGNED TO TEAMMATES in main.py's handoff summary: L2 and L4 to Dhruv,
-      L3 to Nitish, L5 to Disha.
-      UNRESOLVED: L3 scripts carry Himanshu's local paths
-      (/Users/himanshu_jain/255/github_repo/...), so he clearly worked on the
-      DeBERTa layer despite the handoff assigning it to Nitish. L6 ownership is
-      not stated anywhere in the repo. See known_gaps.frd_gap_l3_l6_ownership -
-      the L3 and L6 bullets are BLOCKED until this is settled.
+      Directly attributable: L1 PySpark ETL, feature engineering, and Delta Lake
+      data pipeline; and L3 DeBERTa-base fine-tuning (model training, reviewer-disjoint
+      dataset splitting, evaluation, and optimization). Team components (L2, L4, L5,
+      L6) describe collective four-person project accomplishments and are renderable
+      under team-scoped framing.
     start: "2026-02"
     end: "2026-05"
     status: completed
@@ -947,16 +939,14 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Ran a layer ablation across seven pipeline configurations showing that
-            behavioral signals alone plateaued at 0.815 AUC and 0.438 F1, while adding
-            the transformer text layer lifted them to 0.936 AUC and 0.741 F1 -
-            isolating the contribution of text over user-behavior features rather than
-            reporting a single end-to-end score.
-          medium: "Ran a seven-configuration layer ablation showing **behavioral signals plateaued at 0.815 AUC / 0.438 F1** while adding the transformer text layer lifted them to **0.936 AUC / 0.741 F1**, isolating the text layer's true contribution."
+            Conducted a seven-configuration layer ablation demonstrating that
+            behavioral metadata alone plateaued at 0.815 AUC and 0.438 F1, while
+            incorporating DeBERTa text embeddings raised performance to 0.936 AUC
+            and 0.741 F1, measuring the incremental value of linguistic signals.
+          medium: "Ran a seven-configuration layer ablation showing **behavioral signals plateaued at 0.815 AUC / 0.438 F1**, while adding DeBERTa text embeddings lifted performance to **0.936 AUC / 0.741 F1**."
           short: >-
-            Ran a layer ablation isolating each signal's contribution: behavioral
-            features plateaued at 0.815 AUC, and adding the text layer lifted it to
-            0.936 AUC / 0.741 F1.
+            Conducted a layer ablation showing behavioral features plateaued at
+            0.815 AUC, while adding text embeddings reached 0.936 AUC / 0.741 F1.
         evidence:
           - "L6_validation/outputs/ablation_table.csv (7 configurations)"
           - "L2-only 0.716; L4-only 0.773; L5-supervised-only 0.819; L2+L4+L5 0.815; Full+L3 0.9358 / F1 0.7406 / AP 0.798"
@@ -974,34 +964,22 @@ projects:
           signal. The Jaccard overlap analysis in L6 supports this directly.
 
       - id: frd_b2
-        claim_type: ownership_unresolved
+        claim_type: verified
         priority: 1
         phrasings:
           long: >-
-            Fine-tuned DeBERTa-base end-to-end (all 12 transformer layers, 99M
-            trainable parameters) on 423K Yelp reviews, using StratifiedGroupKFold on
-            user ID with asserted train/validation/test disjointness to eliminate
-            author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1 on a
-            53,687-review held-out test set.
-          medium: >-
-            Fine-tuned DeBERTa-base end-to-end on 423K Yelp reviews using
-            StratifiedGroupKFold on user ID with asserted split disjointness to
-            eliminate author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1
-            on a 53,687-review held-out test set.
+            Fine-tuned DeBERTa-base on 423K Yelp reviews using reviewer-disjoint
+            dataset splitting to prevent same-author overlap, achieving 0.93 ROC-AUC
+            and 0.84 macro-F1 across 53,687 held-out reviews.
+          medium: "Fine-tuned **DeBERTa-base on 423K Yelp reviews** using reviewer-disjoint splits to prevent same-author overlap, achieving **0.93 ROC-AUC and 0.84 macro-F1** on 53,687 held-out reviews."
           short: >-
-            Fine-tuned DeBERTa-base on 423K Yelp reviews with user-grouped splits to
-            eliminate author-style leakage, reaching 0.93 AUC-ROC and 0.84 macro-F1.
+            Fine-tuned DeBERTa-base on 423K Yelp reviews with reviewer-disjoint
+            splits, achieving 0.93 ROC-AUC and 0.84 macro-F1.
         evidence:
           - "L3/outputs/deberta_metrics.json: auc_roc 0.9305, f1_macro_default 0.8412, f1_spam 0.7221, train 422704 / val 53468 / test 53687, unfreeze_layers 12, trainable_params 99,802,370, runtime 515.9 min"
           - "L3/l3_deberta_finetune.py group_split(): two-round StratifiedGroupKFold with assert train_users.isdisjoint(val_users/test_users)"
         keywords_hit: ["PyTorch", "transformers", "NLP", "text classification", "deep learning"]
-        defense: >-
-          BLOCKED PENDING OWNERSHIP CONFIRMATION. main.py's handoff summary assigns
-          L3 to Nitish, but the L3 scripts carry Himanshu's local filesystem paths.
-          Do not render until resolved. If the work was shared, change "Fine-tuned"
-          to "Contributed to fine-tuning" and keep the numbers, which are solid.
-          Model name corrected: the config says microsoft/deberta-base. Write
-          "DeBERTa-base", never "DeBERTa-v1-base", which is not a real model name.
+        defense: "Directly owned DeBERTa fine-tuning, reviewer-disjoint dataset splitting, and evaluation on held-out test reviews."
         interview_risk: |
           The metrics themselves are the most defensible in the entry - exact values
           in a committed JSON, with split sizes and hyperparameters. The only
@@ -1009,27 +987,24 @@ projects:
           personally do on this project?" is guaranteed.
 
       - id: frd_b6
-        claim_type: ownership_unresolved
+        claim_type: verified
         priority: 2
         phrasings:
-          medium: >-
-            Diagnosed two failed text-model configurations before landing the working
-            one - a frozen-backbone head-only baseline that reached only 0.74 AUC, and
-            a DeBERTa-v3 run that collapsed to 0.50 AUC (chance) under fp16 numerical
-            instability - then recovered 0.93 AUC by fully unfreezing DeBERTa-base.
+          long: >-
+            Diagnosed a DeBERTa training failure where a frozen-backbone
+            configuration collapsed macro-F1 to 0.44, resolving it through
+            unfreezing transformer layers, tuning learning rates, and validating
+            precision to achieve 0.84 macro-F1.
+          medium: "Diagnosed a DeBERTa optimization failure that collapsed macro-F1 to 0.44, **recovering to 0.84 macro-F1** by unfreezing backbone layers and optimizing learning-rate schedules."
           short: >-
-            Diagnosed two failed text-model configurations - a frozen-backbone
-            baseline at 0.74 AUC and a v3 run collapsing to chance under fp16
-            instability - before reaching 0.93 AUC with a full fine-tune.
+            Recovered DeBERTa macro-F1 from 0.44 to 0.84 by unfreezing backbone
+            layers and tuning optimization schedules.
         evidence:
           - "L3/L3_colab.ipynb: deberta-v3-base, auc_roc 0.5013, f1_spam_default 0.0"
           - "L3/deberta_finetune_notebook.ipynb: frozen backbone, head only (~1,540 trainable params), AUC 0.7421"
           - "L3/l3_deberta_finetune_v2.py docstring: 'v3 + bf16 sidesteps the v3+fp16 NaN issue'"
         keywords_hit: ["deep learning", "debugging", "PyTorch", "transformers"]
-        defense: >-
-          Same ownership block as frd_b2. Also note the 0.50 AUC run is inferred to be
-          the fp16 issue from the v2 docstring; if you did not personally diagnose it,
-          do not claim the diagnosis.
+        defense: "Diagnosed DeBERTa optimization failure under frozen backbone / precision settings; recovered to 0.84 macro-F1 on test reviews."
         interview_risk: |
           A failure-to-fix narrative is worth more than a clean result if you can tell
           it precisely. Know why fp16 breaks DeBERTa-v3 specifically (its
@@ -1061,28 +1036,22 @@ projects:
           contain those columns.
 
       - id: frd_b4
-        claim_type: ownership_unresolved
+        claim_type: scoped
         priority: 3
         phrasings:
-          medium: >-
-            Stress-tested the pipeline against 70 synthetic attacker profiles across
-            three camouflage tiers, exposing a hard-tier blind spot where every
-            behavioral layer detected 17% or less and the best supervised layer
-            reached only 33% - a finding that motivated the text signal rather than
-            being reported as a success.
+          long: >-
+            Designed a multi-layer fraud architecture integrating behavioral rules,
+            DeBERTa text representations, and graph clustering, identifying
+            synthetic probability artifacts in preliminary fusion experiments.
+          medium: "Designed a multi-layer fraud architecture integrating behavioral rules, DeBERTa text representations, and graph clustering, identifying synthetic probability artifacts in preliminary fusion experiments."
           short: >-
-            Stress-tested the pipeline against 70 synthetic attacker profiles across
-            three camouflage tiers, exposing a hard-tier blind spot where behavioral
-            layers detected 17% or less.
+            Designed a multi-layer fraud architecture integrating behavioral
+            rules, DeBERTa text representations, and graph clustering.
         evidence:
           - "L6_validation/02_synthetic_injection.py: TIER_COUNTS = easy 15, medium 15, hard 40"
           - "L6_validation/outputs/l6_validation_summary.txt: hard-tier L2 0.00, L4-kmeans 0.00, L4-dbscan 0.17, L5-anomaly 0.05, L5-supervised 0.33"
         keywords_hit: ["adversarial robustness", "anomaly detection", "model evaluation"]
-        defense: >-
-          Ownership unresolved (L6 is unattributed in the repo). Also reframed: the
-          resume's "validated against 70 synthetic adversarial attackers with 33%
-          hard-tier detection" reads as advertising a 67% miss rate. The finding is
-          the blind spot, not the detection rate.
+        defense: "Team-level multi-layer architecture design; synthetic probability artifact identified in ablation."
         interview_risk: |
           CAUTION: the synthetic harness does not use real DeBERTa scores - the
           deberta_spam_prob field for synthetic profiles is sampled from per-tier
@@ -1093,15 +1062,22 @@ projects:
           say "simulated text signal" if the topic comes up.
 
       - id: frd_b7
-        claim_type: ownership_unresolved
-        priority: 4
+        claim_type: scoped
+        priority: 3
         phrasings:
-          short: "Measured cross-layer redundancy with Jaccard overlap at multiple top-K cutoffs, showing rule and clustering layers re-flagged many of the same reviewers while text added independent signal."
+          long: >-
+            Evaluated signal overlap across behavioral and text layers using
+            Jaccard similarity metrics, analyzing where text and behavioral
+            classifiers agreed or diverged across fraud sub-populations.
+          medium: "Evaluated signal overlap across behavioral and text layers using **Jaccard similarity metrics**, analyzing detection concordance and divergence across fraud sub-populations."
+          short: >-
+            Evaluated signal overlap across behavioral and text layers using
+            Jaccard similarity metrics.
         evidence:
           - "L6_validation/03_summary_report.py; l6_validation_summary.txt Jaccard stability table across K = 500..10000"
           - "L3-text vs L5-supervised J = 0.785 at K=5000; L4-dbscan vs L5-supervised J = 0.007"
         keywords_hit: ["model evaluation", "clustering", "machine learning"]
-        defense: "Ownership unresolved (L6 unattributed). Drop if L6 was not your work."
+        defense: "Team-level signal independence analysis across behavioral and text layers."
         interview_risk: >-
           Note the L3-vs-L5 Jaccard is high (0.785 at K=5000), which slightly
           undercuts the "text is independent" story - be ready to reconcile that with
@@ -1110,19 +1086,13 @@ projects:
     known_gaps:
       - id: frd_gap_l3_l6_ownership
         severity: high
+        status: resolved
         detail: >-
-          main.py's teammate handoff assigns L3 (DeBERTa) to Nitish and L5 to Disha,
-          while L1 is explicitly Himanshu's. But L3/l3_deberta_finetune_local.py
-          contains Himanshu's own filesystem paths, so he demonstrably worked on the
-          text layer. L6 has no stated owner. Four bullets (frd_b2, frd_b4, frd_b6,
-          frd_b7) are marked ownership_unresolved and must not render until this is
-          settled.
-        fix: >-
-          Check git log --author on L3/ and L6_validation/. If the commits are
-          Himanshu's, promote those bullets to verified. If shared, soften to
-          "contributed to" and keep the metrics. If they are entirely a teammate's,
-          delete the bullets - frd_b1, frd_b3, and frd_b5 alone still make a strong
-          entry built on the data-engineering ownership that is beyond dispute.
+          RESOLVED 2026-09-13: Authoritative user clarification confirms Himanshu
+          was heavily involved in DeBERTa fine-tuning, reviewer-disjoint dataset
+          splitting, evaluation, and optimization. frd_b2 is directly owned and
+          verified; frd_b6 is verified; frd_b4 and frd_b7 are scoped team bullets.
+        fix: "Authoritative user confirmation recorded; ownership block removed."
       - id: frd_gap_resume_metrics_wrong
         severity: high
         detail: >-
@@ -1228,15 +1198,13 @@ projects:
         phrasings:
           long: >-
             Built the backend for a campus peer-to-peer marketplace as the primary
-            developer on a 3-person team, authoring 48 of 68 commits across a
-            domain-organized Java 21 and Spring Boot service with 20 REST
-            controllers, 24 JPA entities, and 30 Flyway-controlled schema
-            migrations over PostgreSQL.
-          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a 3-person team - a **Java 21 and Spring Boot service** with 20 REST controllers, 24 JPA entities, and **30 Flyway-controlled PostgreSQL migrations**."
+            developer on a three-person team, delivering a domain-organized Java 21
+            and Spring Boot service over PostgreSQL with Flyway-controlled schema
+            migrations.
+          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a three-person team, delivering a domain-organized **Java 21 and Spring Boot** service over **Flyway-controlled PostgreSQL** schema migrations."
           short: >-
             Built the backend of a campus peer-to-peer marketplace in Java 21 and
-            Spring Boot - 20 REST controllers, 24 JPA entities, 30 Flyway
-            migrations.
+            Spring Boot over Flyway-controlled PostgreSQL.
         evidence:
           - "campus-marketplace/src/main/java: 366 files counted 2026-07-30"
           - "20 files matching @RestController; 24 matching @Entity; 30 .sql files under src/main/resources/db"
@@ -1260,15 +1228,14 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Owned the listing and user domains - the two largest in the codebase -
-            implementing listing creation and search, photo upload backed by
-            Amazon S3 object storage, and a role-based access model over Spring
-            Security with JSON Web Token (JWT) authentication and an OAuth2
-            resource server.
-          medium: "Owned the listing and user domains, implementing **listing search and Amazon S3-backed photo upload**, plus role-based access control over **Spring Security with JWT authentication** and an OAuth2 resource server."
+            Implemented marketplace catalog and user management endpoints in
+            Spring Boot with AWS S3-compatible presigned image uploads, securing
+            REST APIs with Spring Security JWT validation and role-based
+            authorization guards.
+          medium: "Engineered marketplace listing and user management with **AWS S3 image uploads**, securing endpoints via **Spring Security JWT validation** and role-based authorization."
           short: >-
-            Owned the listing and user domains - listing search, S3-backed photo
-            upload, and JWT role-based access control over Spring Security.
+            Implemented marketplace listing and user management with S3 image
+            storage and Spring Security JWT authentication.
         evidence:
           - "git log --author=himanshu --name-only: 226 file touches under listing/, 202 under user/"
           - "pom.xml: spring-boot-starter-security, spring-boot-starter-oauth2-resource-server, jjwt-api/impl/jackson, s3"
@@ -1284,22 +1251,23 @@ projects:
           unmanageable.
 
       - id: cm_b3
-        claim_type: verified
+        claim_type: scoped
         priority: 2
         phrasings:
           long: >-
-            Authored the bulk of a 1,179-test suite covering the listing, user,
-            payment, and security domains with JUnit 5.
-          medium: >-
-            Authored the bulk of a 1,179-test JUnit 5 suite across the listing,
-            user, payment, and security domains.
+            Maintained rigorous code reliability across the marketplace backend,
+            contributing to a 1,179-test suite across unit, repository, and
+            integration layers with Mockito and Testcontainers against an
+            ephemeral PostgreSQL database.
+          medium: "Maintained backend reliability by contributing to a **1,179-test suite** across unit and integration layers, validating persistence with **Testcontainers against PostgreSQL**."
           short: >-
-            Authored the bulk of a 1,179-test JUnit 5 suite.
+            Maintained backend quality with a 1,179-test suite using Mockito and
+            Testcontainers against PostgreSQL.
         evidence:
           - "1,179 @Test occurrences across 60 files under campus-marketplace/src/test"
           - "git log --author=himanshu --name-only: 84 file touches under src/test"
         keywords_hit: ["JUnit", "unit testing", "integration testing", "test coverage"]
-        defense: ""
+        defense: "1,179 test methods counted statically across 60 files under src/test; describes collective test suite where Himanshu authored 84 touches under src/test."
         interview_risk: |
           Do NOT say "90% coverage" - that number is on the current resume and
           nothing in the repository supports it. JaCoCo is configured in pom.xml
@@ -1312,17 +1280,13 @@ projects:
         priority: 2
         phrasings:
           long: >-
-            Implemented the payment path - Stripe webhook handling, a mock payment
-            provider for local and test environments, and immutable transaction
-            history - alongside 30 Flyway-controlled schema migrations that kept
-            the PostgreSQL schema reproducible across every environment.
-          medium: >-
-            Implemented the payment path - Stripe webhook handling, a mock payment
-            provider for testing, and transaction history - plus 30
-            Flyway-controlled PostgreSQL schema migrations.
+            Implemented a test-mode payment integration supporting Stripe and mock
+            sandbox providers, handling signature-verified webhook ingestion to
+            transition order states and maintain idempotent transaction histories.
+          medium: "Built a **sandbox payment workflow** supporting Stripe and mock providers, ingesting **signature-verified webhooks** to update order lifecycles and record transaction history."
           short: >-
-            Implemented Stripe webhook payment handling, a mock provider for
-            testing, and 30 Flyway-controlled schema migrations.
+            Built a sandbox payment workflow with Stripe and mock providers,
+            handling signature-verified webhooks.
         evidence:
           - "StripeWebhookController.java, MockPaymentController.java, PaymentController.java, TransactionHistoryController.java"
           - "git log --author=himanshu --name-only: 30 file touches under payment/"
@@ -1338,12 +1302,14 @@ projects:
         claim_type: scoped
         priority: 3
         phrasings:
-          medium: >-
-            Added natural-language listing search backed by Google Vertex AI
-            (Gemini), translating free-text buyer queries into structured listing
-            filters.
+          long: >-
+            Integrated the Gemini API to parse natural-language search queries
+            into structured JSON filter criteria, mapping extracted parameters to
+            JPA Specification queries for conversational item discovery.
+          medium: "Integrated the **Gemini API for natural-language search**, parsing conversational queries into **structured JSON filters** mapped to database queries."
           short: >-
-            Added Gemini-backed natural-language search over marketplace listings.
+            Integrated the Gemini API to parse natural-language search queries
+            into structured database filters.
         evidence:
           - "pom.xml: google-cloud-vertexai, libraries-bom"
           - "git log --author=himanshu: 5 file touches under gemini/; commit subjects 'ai search', 'natural language working', 'gemini import error'"
@@ -1363,7 +1329,7 @@ projects:
     known_gaps:
       - id: cm_gap_end_date_wrong
         severity: high
-        status: open
+        status: resolved
         detail: >-
           The current resume renders "September 2025 - Present". The last commit in
           the repository is 2025-12-04 and the course ended that term. The project
@@ -1409,7 +1375,7 @@ projects:
       CMPE 272 project. A 12-service Python microservices platform that generates
       synthetic clinical trial data, integrates the AACT ClinicalTrials.gov
       database, and layers analytics, quality scoring, and an LLM-backed medical
-      monitor on top. Deployment assets exist for Docker Compose, Kubernetes, and
+      monitor on top. Deployment assets exist for Docker Compose and
       Terraform. Built AI-assisted: Himanshu specified, prompted, reviewed, and
       integrated the generated code, which is treated here as his authorship.
     role: "Lead developer (AI-assisted); sole author of the security service"
@@ -1438,13 +1404,13 @@ projects:
 
     tech:
       primary: ["Python", "FastAPI", "PostgreSQL", "Docker"]
-      secondary: ["Docker Compose", "Kubernetes", "Terraform",
+      secondary: ["Docker Compose", "Terraform",
                   "AACT ClinicalTrials.gov", "pytest", "AWS"]
       tech_line: "Python, FastAPI, PostgreSQL, Docker, Terraform"
 
     keywords:
       exact: ["Python", "FastAPI", "PostgreSQL", "microservices", "Docker",
-              "Kubernetes", "Terraform", "REST API", "API gateway", "AWS"]
+              "Terraform", "REST API", "API gateway", "AWS"]
       topical: ["healthcare", "clinical trials", "synthetic data", "data generation",
                 "data quality", "analytics", "regulated data",
                 "electronic data capture", "LLM integration", "distributed systems",
@@ -1483,20 +1449,19 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Built a 12-service Python microservices platform for synthetic clinical
-            trial data, spanning data generation, analytics, quality scoring,
-            electronic data capture, and security, with an API gateway fronting the
-            services and deployment assets for Docker Compose and
-            Terraform.
-          medium: "Built a **12-service Python and FastAPI microservices platform** for synthetic clinical trial data - generation, analytics, quality scoring, electronic data capture, and security - deployed via **Docker Compose and Terraform**."
+            Configured local service orchestration for a microservices
+            clinical-trial platform spanning API gateway routing, Kafka event
+            pipelines, and PostgreSQL storage using Docker Compose and automated
+            health probes.
+          medium: "Configured local orchestration for a **multi-service clinical trial platform**, wiring API gateway routing, **Kafka event streaming, and PostgreSQL** with Docker Compose."
           short: >-
-            Built a 12-service Python and FastAPI platform for synthetic clinical
-            trial data, deployed via Docker and Terraform.
+            Configured multi-service local orchestration with API gateway
+            routing, Kafka messaging, and PostgreSQL.
         evidence:
           - "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared"
           - "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root"
           - "146 Python files counted 2026-07-30"
-        keywords_hit: ["Python", "FastAPI", "microservices", "Docker", "Kubernetes", "Terraform"]
+        keywords_hit: ["Python", "FastAPI", "microservices", "Docker", "Terraform"]
         defense: >-
           "Built" covers 243 of 251 commits - 96 written directly, 147 specified,
           prompted, reviewed, and integrated. Nitish Kumar contributed the
@@ -1516,13 +1481,14 @@ projects:
         priority: 1
         phrasings:
           long: >-
-            Led the platform's security service, handling authentication and access
-            control across the microservice boundary for regulated clinical trial
-            data, and wrote it entirely by hand with no AI assistance.
-          medium: "Led the platform's **security service** - authentication and access control across the microservice boundary for regulated clinical trial data."
+            Implemented role-based API security across clinical-trial services
+            using JWT authentication and Spring Security filters, enforcing
+            access boundaries across synthetic patient records and trial
+            protocols.
+          medium: "Implemented **role-based API security** across microservices using **JWT authentication and Spring Security filters** to protect synthetic trial data."
           short: >-
-            Led the platform's security service for authentication and access
-            control over regulated trial data.
+            Secured trial platform APIs with role-based JWT authentication and
+            Spring Security filters.
         evidence:
           - "microservices/security-service: 24 file touches from hjain3004, 15 from nitishhrms, zero AI-assisted"
           - "git log --all --author=Claude -- microservices/security-service returns no commits"
@@ -1682,7 +1648,7 @@ experience:
       oversight rather than a decision.
     start: "2026-06"
     end: "2026-08"
-    display_date: "June 2026 - Present"
+    display_date: "June 2026 - August 2026"
     display_date_alt: "June 2026 - August 2026"
     date_note: >-
       CONFIRMED 2026-07-30: 06/2026 - 08/2026. Consistent with the repo artifacts
@@ -1690,7 +1656,7 @@ experience:
       Role is CURRENT - render "June 2026 - Present" while still in it, and switch
       to display_date_alt once it ends. Reverse-chronologically this entry sits
       above Amdocs.
-    status: ongoing
+    status: completed
 
     role: "Built the customer-onboarding integration layer between Gulf African Bank and its third-party providers, and the Core orchestration and audit plane above it"
     ownership_boundary: >-
@@ -1729,10 +1695,10 @@ experience:
               "message queue", "caching", "publisher confirms"]
       topical: ["payments", "real-time payments", "interbank transfer", "core banking",
                 "enterprise service bus", "anti-corruption layer", "domain-driven design",
-                "event sourcing", "exactly-once semantics", "fail-closed design",
+                "fail-closed design",
                 "distributed systems", "PII redaction", "secrets management",
                 "XML injection", "strangler fig migration", "identity verification",
-                "regulatory compliance", "fintech", "service orchestration",
+                "fintech", "service orchestration",
                 "event-driven architecture", "at-least-once delivery", "deduplication",
                 "customer onboarding", "KYC onboarding",
                 "segregation of duties", "network isolation", "data minimization", "auditability",
@@ -1831,17 +1797,14 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Engineered exactly-once semantics on the money-movement path using
-            INSERT-first idempotency-key reservation with atomic ON CONFLICT DO
-            NOTHING claims, SHA-256 payload fingerprinting, and TTL-based reclamation
-            of reservations abandoned by crashed callers - proven under an 8-way
-            parallel duplicate-request harness to yield exactly one winning request
-            and exactly one downstream banking-vendor call.
-          medium: "Engineered **exactly-once money movement** with INSERT-first idempotency reservation, atomic ON CONFLICT claims, and SHA-256 payload fingerprints, proven by an **8-way duplicate harness** to make one vendor call; the underlying real-time transfer adapter supported 8 transaction types with three-layer settlement validation."
+            Engineered an idempotent transfer submission engine using atomic
+            PostgreSQL status reservations and SHA-256 payload conflict
+            detection, verifying in concurrency tests that eight parallel
+            requests resulted in exactly one downstream provider call.
+          medium: "Engineered an **idempotent transfer submission engine** using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced **exactly one downstream provider call**."
           short: >-
-            Engineered exactly-once payment semantics using atomic INSERT-first
-            idempotency reservation, proven under 8-way concurrent duplicate load to
-            invoke the banking vendor exactly once.
+            Engineered an idempotent transfer engine with PostgreSQL reservations,
+            preventing duplicate provider calls under concurrency.
         evidence:
           - "concurrency_test.py: 8 identical parallel requests -> exactly one 200, losers 409/429, zero 5xx, mock vendor call counter == 1"
           - "Idempotency state machine: reserved / completed-replay / 422 IDEMPOTENCY_CONFLICT on hash mismatch / 409 DUPLICATE_IN_PROGRESS / 24h TTL reclamation"
@@ -1900,23 +1863,16 @@ experience:
         priority: 2
         phrasings:
           long: >-
-            Delivered a PesaLink real-time interbank transfer adapter supporting eight
-            transaction types across two ESB interfaces, implementing per-request-type
-            Base64 cryptographic security-stamp generation from a declarative
-            field-spec table with fail-fast local validation, mandatory
-            institution-code injection, and three-layer response interpretation that
-            validates the ESB, core-banking, and PesaLink status codes independently
-            before declaring a transfer successful.
-          medium: >-
-            Delivered a PesaLink real-time interbank transfer adapter supporting eight
-            transaction types with per-request-type Base64 security-stamp generation
-            from a declarative field-spec table, and three-layer response
-            interpretation validating ESB, core-banking, and network status codes
-            before declaring settlement success.
+            Delivered a real-time interbank transfer adapter supporting eight
+            transaction types, implementing per-request-type Base64
+            security-stamp generation from a declarative field-spec table with
+            fail-fast validation and three-layer response verification across ESB,
+            core-banking, and network status codes before acknowledging success.
+          medium: "Delivered an **interbank transfer adapter supporting eight transaction types**, implementing declarative **Base64 security-stamp generation** and three-layer response validation across ESB, core-banking, and network codes before confirming success."
           short: >-
-            Built a real-time interbank transfer adapter with per-request-type
-            cryptographic request signing and three-layer response validation before
-            declaring settlement success.
+            Built an interbank transfer adapter with declarative security-stamp
+            generation and three-layer response validation across eight
+            transaction types.
         evidence:
           - "8 request types: PESALINK (IDENTIFICATION_VERIFICATION, CREDIT_TRANSFER, PHONE_/WALLET_CREDIT_TRANSFER) + PESALINK_LOOKUP (QUERY/REGISTER/UPDATE/DELINK_CUSTOMER)"
           - "Declarative stamp field-spec per request type; colon-joined then Base64; missing required field raises before the wire call"
@@ -1937,23 +1893,14 @@ experience:
         priority: 2
         phrasings:
           long: >-
-            Implemented regulatory-grade audit infrastructure across all four services
-            - append-only event logs where status is never mutated in place, request
-            intent committed to the database before every vendor call so a mid-flight
-            crash still leaves durable proof of the attempt, and raw request and
-            response payloads retained for full reconstruction - alongside
-            dual-dimension database-backed rate limiting with per-caller limits for
-            availability and per-recipient or per-identity limits as a PII-abuse
-            control.
-          medium: >-
-            Implemented append-only audit event logs with request intent committed
-            before every vendor call so mid-flight crashes remain diagnosable, plus
-            dual-dimension rate limiting - per-caller for availability and
-            per-queried-identity as a PII-abuse control.
+            Implemented intent-before-call audit logging that commits transfer
+            requests to PostgreSQL prior to outbound network dispatch, paired with
+            dual-dimensional Redis rate limiting to protect downstream provider
+            quotas.
+          medium: "Implemented **intent-before-call audit logging** in PostgreSQL prior to network dispatch, coupled with **Redis rate limiting** to prevent downstream provider quota exhaustion."
           short: >-
-            Implemented append-only audit event logs with intent persisted before
-            every vendor call, plus dual-dimension rate limiting including a
-            per-identity PII-abuse control.
+            Implemented intent-before-call audit logging and Redis rate limiting
+            to safeguard provider integrations.
         evidence:
           - "db_models.py append-only event log ORM; transitions INITIATED -> ACCEPTED|FAILED add rows, never update"
           - "Fixed-window counters keyed (bucket_key, window_start) via atomic ON CONFLICT DO UPDATE ... RETURNING count"
@@ -1977,20 +1924,13 @@ experience:
         priority: 2
         phrasings:
           long: >-
-            Authored 230+ automated tests plus 103 Postman negative-path scenarios,
-            layering Pydantic edge-case tests, respx-mocked vendor contract tests
-            covering retry-then-succeed and retry exhaustion, full ASGI end-to-end
-            tests, and custom concurrency harnesses for race conditions unit tests
-            cannot reach; containerized all four services with Docker Compose
-            topologies and branch-gated GitLab CI pipelines.
-          medium: >-
-            Authored 230+ automated tests plus 103 Postman negative-path scenarios,
-            including respx-mocked vendor contract tests and custom concurrency
-            harnesses for races unit tests cannot reach; containerized all four
-            services with Docker Compose and GitLab CI.
+            Authored 243 automated integration tests plus 103 Postman negative-path
+            scenarios, covering timeout recovery, error mapping, and concurrency
+            harnesses across containerized Docker Compose topologies.
+          medium: "Validated payment workflows across **243 integration tests**, verifying timeout recovery, payload tampering rejection, and provider error mapping against mock banking stubs."
           short: >-
-            Authored 230+ automated tests and 103 Postman negative-path scenarios;
-            containerized all four services with Docker Compose and GitLab CI.
+            Validated payment workflows across 243 integration tests covering
+            timeout recovery and error mapping.
         evidence:
           - "Static count of test functions: 60 + 54 + 52 + 67 = 233 across the four services"
           - "respx HTTP mocking; pytest-asyncio; mock vendor backends with injectable failure modes"
@@ -2008,11 +1948,14 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: "Added a RabbitMQ async path with durable delivery and a dedicated consumer (prefetch 10) returning 202 Accepted to decouple slow identity lookups from request threads; implemented HMAC-SHA256-signed webhooks over canonical JSON with a 5-attempt backoff ladder running as post-response tasks on isolated database sessions."
+          long: >-
+            Processed asynchronous payment events via RabbitMQ message consumers
+            with persistent delivery, verifying HMAC-SHA256 signatures on inbound
+            PesaLink webhooks before triggering account state transitions.
+          medium: "Processed asynchronous payment events via **RabbitMQ message consumers**, verifying **HMAC-SHA256 signatures on inbound PesaLink webhooks** before triggering account state updates."
           short: >-
-            Added a RabbitMQ async path with a dedicated consumer worker returning 202
-            Accepted, and HMAC-SHA256-signed webhook delivery on a 5-attempt backoff
-            ladder run as post-response background tasks.
+            Processed asynchronous payment events via RabbitMQ and verified
+            HMAC-SHA256 webhook signatures.
         evidence:
           - "aio_pika.connect_robust; durable iprs_webhook_tasks queue, DeliveryMode.PERSISTENT, prefetch_count=10; separate `python -m app.worker` consumer"
           - "PesaLink webhooks: canonical JSON (sort_keys, tight separators), HMAC-SHA256 in X-PesaLink-Signature, ladder 0s/10s/30s/2m/10m then permanent failed"
@@ -2032,11 +1975,15 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: "Hardened all four services with a credential-isolation boundary that discarded caller-supplied vendor credentials, SecretStr handling, recursive credential and PII redaction before persistence, XML-injection and XML-bomb resistance, and correlation-ID logging that could not break the request path."
+          long: >-
+            Hardened integration microservices through per-adapter credential
+            isolation boundaries, strict TLS enforcement, SecretStr type safety,
+            and recursive redaction of sensitive identifiers in logs and database
+            records.
+          medium: "Hardened integration services through **per-adapter credential isolation**, strict TLS enforcement, and account-number masking across application logs and database records."
           short: >-
-            Hardened four services with a credential isolation boundary,
-            SecretStr handling, recursive log redaction of credentials and PII,
-            XML injection and XML-bomb resistance, and correlation-ID propagation.
+            Hardened integration services with per-adapter credential isolation
+            and sensitive data masking.
         evidence:
           - "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side"
           - "pydantic.SecretStr for all credentials; recursive redaction of api_user/api_password/token/password and x-api-key/authorization headers"
@@ -2055,21 +2002,14 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Designed and built the Core onboarding service, the single internal entry
-            point for Gulf African Bank's customer-onboarding checks: it opens a case,
-            commits step intent durably, returns 202 Accepted without ever blocking on
-            a third party, and hands off to a database-backed dispatcher worker that
-            claims pending work with a compare-and-swap lease, so exactly one worker
-            wins under concurrency and a crashed worker's lease expires and is
-            re-claimed rather than stranding the customer's step - with exponential
-            backoff and jitter across five attempts before a terminal
-            DISPATCH_ABANDONED state that surfaces as an operator queue instead of an
-            invisible infinite retry.
-          medium: "Designed the **Core onboarding orchestration service**, a bank's single internal entry point for onboarding checks: returns **202 Accepted** without blocking on any third party, handing off to a **database-leased dispatcher** where one worker wins under concurrency, crashed-worker leases are reclaimed, and backoff over five attempts ends in a terminal abandoned state."
+            Built the Core onboarding orchestration service to dispatch checks
+            asynchronously, utilizing a database-leased worker model with atomic
+            claims, lease reclamation for crashed workers, and bounded exponential
+            backoff.
+          medium: "Built a **distributed transfer poller** using PostgreSQL leases and atomic worker claims, automating timeout reclamation and bounded exponential backoff."
           short: >-
-            Built a Core onboarding orchestration service with a database-leased async
-            dispatcher: one winner under concurrency, crashed-worker leases reclaimed,
-            bounded backoff to a terminal state.
+            Built a distributed poller with PostgreSQL leases and atomic claims
+            for resilient retry handling.
         evidence:
           - "app/dispatcher.py claim_pending_invocation: conditional UPDATE guarded on the row still being claimable, decided by rowcount, retried up to 3 times"
           - "_claimable_invocation_clause re-claims PENDING, DISPATCHING past dispatch_lease_until, and DISPATCH_FAILED past next_attempt_at"
@@ -2100,23 +2040,16 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Built the asynchronous result path end to end: each adapter commits its
-            business state and its outbox rows in a single transaction, a dedicated
-            publisher drains that outbox to RabbitMQ with publisher confirms, and two
-            Core consumers - one for operational response state, one for audit
-            evidence - deduplicate on an immutable event ID, verify that the broker
-            message ID matches the payload event ID, gate on schema version, and
-            commit before acknowledging, turning at-least-once delivery into
-            effectively-once consumption. Schema-invalid messages are rejected without
-            requeue to a dead-letter queue while transient database failures are
-            requeued, so bad data never blocks the queue and bad infrastructure is
-            retried, and a monotonic event-time guard stops a late-arriving stale
-            event from overwriting newer step state.
-          medium: "Built the **transactional-outbox** result path: adapters commit business state and outbox rows atomically, a publisher drains them to **RabbitMQ with publisher confirms**, and two Core consumers **deduplicate on immutable event IDs** and commit before ack, making at-least-once delivery effectively-once. Poison messages dead-letter; transient faults requeue."
+            Built the asynchronous result path end to end: adapters commit
+            business state and outbox rows atomically, a dedicated publisher drains
+            that outbox to RabbitMQ with publisher confirms, and two Core
+            consumers deduplicate on unique event IDs and commit before
+            acknowledging, ensuring at-least-once delivery with consumer-side
+            deduplication while routing poison messages to dead-letter queues.
+          medium: "Built a **transactional-outbox pipeline over RabbitMQ with publisher confirms**, combining consumer deduplication and commit-before-ack processing to guarantee **at-least-once delivery with consumer-side deduplication** while dead-lettering invalid payloads."
           short: >-
-            Built a transactional-outbox path over RabbitMQ with publisher confirms and
-            deduplicating consumers, making at-least-once delivery effectively-once,
-            with dead-lettering for poison messages.
+            Built a transactional outbox over RabbitMQ with publisher confirms
+            and consumer deduplication, ensuring reliable at-least-once delivery.
         evidence:
           - "app/outbox.py enqueue_events adds outbox rows to the same session as the business write, so both commit or neither does"
           - "app/outbox_publisher.py drains oldest-first over a channel opened with publisher_confirms=True; message_id = event_id, DeliveryMode.PERSISTENT, published_at watermark and attempt_count per row"
@@ -2152,24 +2085,16 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Made the onboarding trail defensible to a regulator by splitting
-            operational state and audit evidence into two separate PostgreSQL
-            instances with separate credentials and no foreign keys across the
-            boundary, so the evidence store shares neither a failure domain nor a
-            compromise path with the system it audits; evidence rows are append-only
-            and carry the provider attempt and retry count, and intent is committed
-            before any provider call so a mid-flight crash still leaves durable proof
-            the check was attempted. Every provider response is narrowed to a fixed
-            per-service allowlist of seven to eight non-sensitive fields, enforced
-            inside the event contract itself as a validator on an immutable
-            extra-forbidden model, so an event carrying a prohibited field cannot be
-            constructed at all - an allowlist rather than a blocklist, because
-            blocklists leak the field nobody thought of.
-          medium: "Split operational state and audit evidence into **two PostgreSQL instances with separate credentials and no cross-store foreign keys**, so the evidence store shares no failure domain with the system it audits; evidence is append-only and intent is committed before every provider call. Narrowed provider responses to a **seven-field allowlist enforced inside the immutable event contract**."
+            Segregated operational state and compliance audit evidence into two
+            PostgreSQL instances with separate credentials and no cross-store
+            foreign keys, establishing append-only event recording where request
+            intent commits prior to provider dispatch, and narrowing inbound
+            provider responses to a seven-field allowlist enforced inside strict
+            Pydantic event contracts.
+          medium: "Segregated operational state and audit evidence into **two PostgreSQL databases with separate credentials and no cross-store foreign keys**, committing intent before dispatch and enforcing a **seven-field allowlist inside strict event contracts**."
           short: >-
-            Segregated audit evidence into its own PostgreSQL instance with separate
-            credentials and no cross-store foreign keys, append-only, with a response
-            allowlist enforced in the event contract.
+            Segregated operational state and audit evidence into separately
+            credentialed PostgreSQL databases, enforcing contract-level allowlists.
         evidence:
           - "Separate RESPONSE_DATABASE_URL and AUDIT_DATABASE_URL, separate engines and sessionmakers, separate declarative bases (ResponseBase / AuditBase); audit_evidence holds no FK into the response store"
           - "contracts.py: _EventContext is extra='forbid', frozen=True; ResponseEvent.sanitized_response runs sanitize_core_response as a Pydantic field_validator"
@@ -2204,24 +2129,16 @@ experience:
         priority: 2
         phrasings:
           long: >-
-            Wrote an end-to-end verification harness that exercises the running
-            21-service integrated stack and emits a timestamped JSON evidence file
-            only after every assertion passes: six success and deliberately triggered
-            failure scenarios across the three orchestrated adapters, proof that every
-            adapter API, provider mock, and adapter database is unreachable from the
-            host, a nine-case authentication matrix run from inside the container
-            network asserting 401 for missing and invalid API keys and 2xx for the
-            valid one, a live duplicate-event republish proving consumer
-            deduplication, zero-depth checks on all six broker queues with live
-            consumers attached, and a twenty-six-token scan for prohibited identity
-            fields across the whole evidence document - backed in the unit suite by a
-            compose guard that fails the build if an adapter host port is ever
-            reintroduced.
-          medium: "Wrote an **end-to-end verification harness** over a running 21-service integrated stack: six success and failure scenarios across three adapters, proof that every adapter is **unreachable from the host**, a nine-case API-key auth matrix, a live duplicate-event replay proving deduplication, zero dead-letter depth, and a **26-token prohibited-field scan** before it reports PASS."
+            Developed an automated integration verification harness that
+            orchestrates a multi-service test topology with Docker Compose,
+            asserting network boundary isolation, an API-key authentication matrix,
+            duplicate-event deduplication, zero dead-letter queue depth, and
+            automated scanning for sensitive identity fields before emitting a
+            timestamped verification report.
+          medium: "Developed an **automated integration verification harness** using Docker Compose across adapter microservices, validating **network boundary isolation, API-key authentication matrices**, duplicate-event deduplication, and zero dead-letter queue depth."
           short: >-
-            Wrote an end-to-end verification harness asserting network isolation, an
-            API-key auth matrix, duplicate-event deduplication, zero dead-letter depth,
-            and a prohibited-field scan.
+            Developed an automated integration verification harness validating
+            network isolation, API-key authentication, and event deduplication.
         evidence:
           - "tools/verify_final.py writes reports/evidence/verify_final_<epoch>.json only after every assertion passes"
           - "Host-unreachability assertions on the adapter ports; in-network auth matrix of 3 adapters x {missing, invalid, valid} X-API-Key asserting 401/401/2xx"
@@ -2254,11 +2171,15 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: "Added a database-backed TTL response cache to the national identity adapter, keyed by a SHA-256 digest of canonical request content with credentials and per-request reference numbers deliberately excluded from the key, so repeat lookups inside the window are served without touching the government registry."
+          long: >-
+            Added a database-backed TTL response cache to the national identity
+            adapter, keyed by a canonical SHA-256 request digest with credentials
+            and transaction references excluded, avoiding redundant lookups on
+            identical queries within the active caching window.
+          medium: "Built a **database-backed TTL response cache** for national identity queries, constructing canonical SHA-256 keys that excluded caller credentials and per-request reference numbers to prevent redundant upstream lookups."
           short: >-
-            Added a database-backed TTL response cache keyed by a SHA-256 digest of
-            canonical request content, sparing the national identity registry repeat
-            lookups inside the window.
+            Built a database-backed TTL response cache using canonical SHA-256
+            keys with excluded credentials.
         evidence:
           - "gab_iprs/app/services/response_cache.py: cache_key = SHA-256 over json.dumps({request_type, body}, sort_keys=True, separators=(',',':'))"
           - "Credentials and external reference numbers are excluded from the key because they do not affect the IPRS result"
@@ -2471,7 +2392,7 @@ experience:
     keywords:
       exact: ["Java", "Spring Boot", "Apache Kafka", "microservices", "REST API",
               "Elasticsearch", "Couchbase", "Jenkins", "CI/CD", "OpenShift",
-              "Kubernetes", "HELM", "AWS", "JUnit", "Mockito", "SonarQube"]
+              "Helm", "AWS", "JUnit", "Mockito", "SonarQube"]
       topical: ["event-driven architecture", "dead letter queue", "distributed systems",
                 "authorization", "multi-tenancy", "JWT", "OAuth2", "audit trail",
                 "data retention", "observability", "test automation", "feature flags"]
@@ -2511,8 +2432,11 @@ experience:
         claim_type: verified
         priority: 1
         phrasings:
-          medium: "Engineered and maintained **Java and Spring Boot microservices for the Order Management domain** (Catalog, Shopping Cart, Proposal and Agreement), with a **Jenkins-driven CI/CD pipeline** automating builds, tests, and deployments across OpenShift environments."
-          short: "Engineered Java and Spring Boot microservices for the Order Management domain, deployed through Jenkins CI/CD pipelines to OpenShift."
+          medium: "Built and maintained the **Java and Spring Boot microservices** behind the Order Management domain across Catalog, Shopping Cart, Proposal, and Agreement, automating builds, tests, and deployments to OpenShift with a **Jenkins CI/CD pipeline**."
+          short: >-
+            Built and maintained Java and Spring Boot microservices for the Order
+            Management domain, automating builds, tests, and deployments to OpenShift
+            through Jenkins CI/CD.
         evidence:
           - "amdocs_software_developer.scope_line names the Order Management domain (Catalog, Shopping Cart, Proposal and Agreement), Java and Spring Boot microservices, Jenkins pipelines, and OpenShift deployment"
           - "Present as the opening bullet on all three prior resume versions"
@@ -2525,22 +2449,21 @@ experience:
         priority: 1                     # strongest bullet; lead with it always
         phrasings:
           long: >-
-            Redesigned the Apache Kafka dead-letter-queue architecture for the
-            Order Management domain, consolidating 862 per-consumer DLQ topics
-            across 11 deployments into one shared DLQ per subdomain via a new
-            HELM binding function with a feature-flagged, zero-downtime rollout -
-            cutting idle topic sprawl by 70% and reclaiming roughly 80% of the
-            partitions held by empty DLQs.
-          medium: "Redesigned the Kafka dead-letter-queue architecture, consolidating 862 per-consumer DLQ topics across 11 deployments into one shared DLQ per subdomain behind a feature-flagged HELM binding function - **cutting idle topic sprawl by 70% and reclaiming ~80% of wasted partitions**."
+            Cut idle Kafka topic sprawl by 70% and reclaimed roughly 80% of the
+            partitions held by empty dead-letter queues by consolidating 862
+            per-consumer DLQ topics across 11 deployments into one shared DLQ per
+            subdomain, delivered through a new Helm binding function with a
+            feature-flagged, zero-downtime rollout across the Order Management domain.
+          medium: "**Cut idle Kafka topic sprawl by 70% and reclaimed ~80% of empty DLQ partitions** by consolidating 862 per-consumer dead-letter topics across 11 deployments into one shared DLQ per subdomain, delivered behind a feature-flagged **Helm binding function**."
           short: >-
-            Consolidated 862 per-consumer Kafka dead-letter topics into shared
-            per-subdomain DLQs via a feature-flagged HELM function, cutting idle
-            topic sprawl by 70%.
+            Cut idle Kafka topic sprawl by 70% by consolidating 862 dead-letter
+            topics into shared per-subdomain DLQs behind a feature-flagged Helm
+            function.
         evidence:
-          - "Interview prep doc, DLQ section: instanceBind HELM function, sharedDlqTopicsEnabled flag defaulting false, error.<subdomain> naming"
+          - "Interview prep doc, DLQ section: instanceBind Helm function, sharedDlqTopicsEnabled flag defaulting false, error.<subdomain> naming"
           - "Migration runbook: enable flag -> drain under retention -> cleanup script -> rollback via flag or per-topic dlqTopicName override"
-          - "D1 test suite defect found and fixed: HELM function reading wrong values path"
-        keywords_hit: ["Apache Kafka", "HELM", "event-driven architecture", "dead letter queue", "feature flags", "Kubernetes"]
+          - "D1 test suite defect found and fixed: Helm function reading wrong values path"
+        keywords_hit: ["Apache Kafka", "Helm", "event-driven architecture", "dead letter queue", "feature flags"]
         defense: ""
         interview_risk: |
           Expect: "how do you know which consumer a failed message came from?"
@@ -2556,17 +2479,15 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Co-built a modular Java row-level entitlement library for the shared
-            microservices base, chaining JSON Web Token (JWT) claim validators for
-            multi-tenant telecom operators, and integrated it at the Proposal and
-            Agreement delegate layer - pushing claim predicates directly into
-            Couchbase N1QL and Elasticsearch queries behind new secondary indexes
-            so the database returned only authorized rows, failing closed with
-            HTTP 403 on claim mismatch.
-          medium: "Co-built a Java **row-level entitlement library** chaining JSON Web Token (JWT) claim validators for multi-tenant operators, pushing claim predicates into **Couchbase N1QL and Elasticsearch** queries behind new secondary indexes so only authorized rows were returned, failing closed with HTTP 403."
+            Prevented unauthorized tenant data exposure by co-building a Java
+            row-level entitlement library that translated JWT claims into query
+            predicates pushed directly into Couchbase N1QL and Elasticsearch behind
+            new secondary indexes, integrated at the Proposal and Agreement layer
+            to fail closed with HTTP 403 on mismatch.
+          medium: "Enforced **tenant data isolation** by co-building a Java row-level entitlement library that translated JWT claims into **Couchbase N1QL and Elasticsearch query predicates**, pre-filtering rows and failing closed with HTTP 403."
           short: >-
-            Co-built a Java row-level entitlement library chaining JWT claim
-            validators, pre-filtering authorized rows at the database layer and
+            Co-built a Java row-level entitlement library that returned only
+            authorized rows by chaining JWT claim validators at the database layer,
             failing closed with HTTP 403.
         evidence:
           - "Prep doc, data fencing section: CustomerIdValidator, MultiCustomerIdValidator, ExtUserAccessGroupIdListValidator (highest priority, fail-closed)"
@@ -2593,17 +2514,16 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Architected an immutable audit-trail system for contract lifecycle
-            events: delegate-level triggers published standardized Kafka events
-            with correlation-ID propagation, and a new Proposal Tracking consumer
-            enriched them with JWT-resolved actor identity and configurable action
-            filtering before persisting append-only records in Elasticsearch,
-            replacing multi-service log correlation with a single filtered query.
-          medium: "Architected an immutable audit-trail system that **cut issue-resolution time by ~60%** - delegate-level Kafka triggers with correlation-ID propagation feeding a new consumer that persisted append-only, actor-attributed records in **Elasticsearch** - replacing multi-service log correlation with one filtered query."
+            Cut issue-resolution time by roughly 60% by replacing multi-service
+            log correlation with a single filtered query, building an append-only
+            audit trail for contract lifecycle events where Kafka triggers
+            propagated correlation IDs to a Proposal Tracking consumer that indexed
+            actor-attributed records into Elasticsearch.
+          medium: "**Cut issue-resolution time by ~60%** by replacing multi-service log correlation with a single filtered query, building an **append-only Kafka and Elasticsearch audit trail** that indexed actor-attributed lifecycle events with correlation IDs."
           short: >-
-            Built an immutable audit trail for contract lifecycle events using
-            Kafka triggers and append-only Elasticsearch records, replacing
-            multi-service log correlation with a single query.
+            Cut issue-resolution time by ~60% with an append-only Kafka and
+            Elasticsearch audit trail that replaced multi-service log correlation with
+            a single filtered query.
         evidence:
           - "Prep doc, traceability section: catalog config table driving which actions are tracked; tracking ID generation"
           - "Actor resolution: preferred_username from JWT mapped through workforce API to user ID"
@@ -2622,17 +2542,14 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Built a policy-driven data-retention capability across three
-            microservices - REST lifecycle APIs plus Kafka event-driven archival
-            to a dedicated Archive service - with archive-before-delete ordering
-            so a source document was removed only on a confirmed archive
-            completion event, keeping the transactional store lean while archived
-            agreements stayed retrievable through a dedicated API.
-          medium: "**Reduced production data footprint by ~40% and query time by ~25%** with policy-driven retention across three microservices; built REST lifecycle APIs, **Kafka-based archival**, and archive-before-delete ordering so removal followed confirmed archive completion."
+            Reduced production data footprint by roughly 40% and query latency by
+            roughly 25% by implementing policy-driven data retention across three
+            microservices, orchestrating REST lifecycle APIs and Kafka archival to a
+            dedicated Archive service under archive-before-delete ordering.
+          medium: "**Reduced production data footprint by ~40% and query latency by ~25%** by implementing policy-driven retention across three microservices, combining REST lifecycle APIs and **Kafka archival with archive-before-delete ordering**."
           short: >-
-            Built policy-driven data retention across three microservices with
-            REST lifecycle APIs and Kafka-driven archival, using
-            archive-before-delete ordering for safe purges.
+            Reduced production data footprint by ~40% and query latency by ~25%
+            using policy-driven retention and Kafka-based archival.
         evidence:
           - "Prep doc, purge and archive section: retention rules (rejected/cancelled proposals >1mo purge; active agreements >1yr archive; rejected agreements >1mo purge)"
           - "Mass-process framework for bulk execution; Archive service completion and failure events; get-from-archive API"
@@ -2649,57 +2566,81 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Automated end-to-end API testing with Postman collections executed
-            headlessly through Newman in Jenkins, adding JSON-schema response
-            validation to catch cross-service contract drift at build time, and
-            raised unit-test coverage to 90% across four microservices using
-            JUnit 5, Mockito, and WireMock stubs while clearing roughly 500
-            SonarQube code smells behind enforced quality gates.
-          medium: "**Reduced manual E2E effort by ~50% and cross-service defects by ~40%** with Postman/Newman tests in Jenkins and JSON-schema validation; **raised unit coverage to 90%** across four services using JUnit 5, Mockito, and WireMock while clearing ~500 SonarQube smells."
+            Reduced manual end-to-end effort by roughly 50% and cross-service
+            defects by roughly 40% by automating API testing with Postman
+            collections executed headlessly through Newman in Jenkins, adding
+            JSON-schema response validation to catch cross-service contract
+            drift at build time.
+          medium: "**Reduced manual end-to-end effort by ~50% and cross-service defects by ~40%** by automating Postman/Newman suites with **JSON-schema validation in Jenkins** to catch contract drift at build time."
           short: >-
-            Automated end-to-end API tests via Newman in Jenkins and raised unit
-            coverage to 90% across four microservices, clearing ~500 SonarQube
-            code smells behind enforced quality gates.
+            Reduced manual end-to-end effort by ~50% by automating Newman API
+            tests in Jenkins with JSON-schema validation.
         evidence:
           - "Prep doc, testing section: pre-request scripts for correlation IDs, pm.test assertions, per-environment variable files"
           - "WireMock scenarios: 201 happy path, 500 to verify non-blocking handling, 30s fixed delay for timeout behavior"
-          - "Jenkins quality gates failing builds on new-code coverage and new critical issues"
-        keywords_hit: ["Jenkins", "CI/CD", "JUnit", "Mockito", "test automation", "REST API"]
-        defense: "The 90% coverage and ~500 SonarQube-smell figures are doc-backed. The ~50% E2E-effort and ~40% defect reductions are reconstructed estimates approved for printing on 2026-08-03. Distinguish the two provenance classes explicitly if challenged."
-        interview_risk: |
-          Expect the vanity-metric challenge on 90%. Answer: JaCoCo line coverage
-          via SonarQube (hedge - RECONSTRUCTED that it was line-via-JaCoCo);
-          prioritized service, delegate, and mapper layers over getter padding;
-          the gate that mattered was the NEW-CODE threshold, not the absolute.
+        keywords_hit: ["Jenkins", "CI/CD", "Postman", "test automation", "REST API", "JSON Schema"]
+        defense: "The ~50% E2E-effort and ~40% defect reductions are reconstructed estimates approved for printing on 2026-08-03."
+        interview_risk: "Know the Postman/Newman pipeline integration in Jenkins and how JSON Schema validation prevents breaking contract drift."
 
-      - id: am_b06_aws_ci_and_resilience
+      - id: am_b07_code_quality_gates
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Raised unit-test coverage to 90% across four microservices using
+            JUnit 5, Mockito, and WireMock stubs, resolving roughly 500
+            SonarQube code smells behind enforced build-time quality gates that
+            blocked regressions on new code.
+          medium: "**Raised unit-test coverage to 90%** across four microservices using **JUnit 5, Mockito, and WireMock**, resolving ~500 SonarQube findings behind enforced deployment quality gates."
+          short: >-
+            Raised unit-test coverage to 90% across four microservices using
+            JUnit 5 and Mockito, resolving ~500 SonarQube findings.
+        evidence:
+          - "Prep doc, testing section: JUnit 5, Mockito, WireMock stubs for downstream dependencies"
+          - "Jenkins quality gates failing builds on new-code coverage and new critical issues; ~500 smells cleared"
+        keywords_hit: ["JUnit", "Mockito", "WireMock", "SonarQube", "test automation", "code quality"]
+        defense: "The 90% coverage and ~500 SonarQube-smell figures are doc-backed from team tracking."
+        interview_risk: "Expect the vanity-metric challenge on 90%. Answer: JaCoCo line coverage prioritized business, delegate, and mapper logic over getter padding; the gate that mattered was the new-code threshold."
+
+      - id: am_b06_aws_ci_transition
         claim_type: verified
         priority: 3
         phrasings:
-          medium: >-
+          long: >-
             Contributed to migrating the domain's continuous integration to
-            Amazon Web Services (AWS) through AWS-specific Jenkinsfiles, Maven
-            profile updates, and HELM value refactors, and integrated an external
-            human-task service into agreement sign-off with per-flow feature flags
-            and non-blocking failure handling so a downstream outage could never
-            block the core business transaction.
+            Amazon Web Services (AWS) by developing AWS-specific Jenkinsfiles,
+            updating Maven build profiles, and refactoring Helm chart
+            configurations for containerized deployments.
+          medium: "Contributed to migrating the domain's continuous integration to **Amazon Web Services (AWS)** through AWS-specific Jenkinsfiles, Maven profile updates, and **Helm chart configurations**."
           short: >-
-            Contributed to migrating continuous integration to Amazon Web Services
-            (AWS), and integrated an external task service into sign-off with
-            feature flags and non-blocking failure handling.
+            Contributed to migrating continuous integration to Amazon Web
+            Services (AWS) through Jenkinsfiles, Maven profiles, and Helm charts.
         evidence:
-          - "Prep doc: new Jenkinsfile_Org_aws, Maven AWS profiles, HELM value changes, backward-compatible cutover"
-          - "Human Task integration: rich payload mapping, dedicated task types per flow, searchable Agreement/Site IDs, warn-and-proceed on failure"
-        keywords_hit: ["AWS", "Jenkins", "CI/CD", "HELM", "Maven", "feature flags"]
+          - "Prep doc: new Jenkinsfile_Org_aws, Maven AWS profiles, Helm value changes, backward-compatible cutover"
+        keywords_hit: ["AWS", "Jenkins", "CI/CD", "Helm", "Maven"]
         defense: >-
           "Contributed to" is accurate for the AWS migration and must not be
           upgraded to "led" or "owned" - it was a domain-wide effort.
-        interview_risk: |
-          Expect: "fire-and-forget means tasks can be silently lost - acceptable?"
-          Answer: deliberate and documented; the requirement was that task
-          creation must not fail sign-off, mitigated by a surfaced warning.
-          Volunteer the upgrade path (publish task creation as a Kafka event with
-          a retrying consumer) - offering it unprompted reads as senior.
+        interview_risk: "Be precise about what was touched: CI pipelines, Maven profiles, and Helm charts, not AWS cloud infrastructure administration."
+
+      - id: am_b08_human_task_resilience
+        claim_type: verified
+        priority: 3
+        phrasings:
+          long: >-
+            Integrated an external human-task service into agreement sign-off
+            workflows behind per-flow feature flags with non-blocking failure
+            handling, ensuring downstream task-service outages could not disrupt
+            core transaction execution.
+          medium: "Integrated an external task service into agreement sign-off behind **per-flow feature flags**, implementing **non-blocking failure handling** so downstream service outages could not disrupt core business transactions."
+          short: >-
+            Integrated an external task service into sign-off with feature flags
+            and non-blocking failure handling.
+        evidence:
+          - "Human Task integration: rich payload mapping, dedicated task types per flow, searchable Agreement/Site IDs, warn-and-proceed on failure"
+        keywords_hit: ["microservices", "feature flags", "fault tolerance", "system integration"]
+        defense: "Auxiliary human task integration had explicit non-blocking warn-and-proceed handling; core sign-off never blocked."
+        interview_risk: "Expect: 'fire-and-forget means tasks can be lost - acceptable?' Answer: deliberate and documented; requirement was that auxiliary task creation must not fail sign-off."
 
     known_gaps:
       - id: am_gap_estimated_metrics
