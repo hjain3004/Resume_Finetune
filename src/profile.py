@@ -263,6 +263,7 @@ class Experience:
     metric_ledger: dict[str, "MetricEntry"]
     metric_scope: dict[str, str]
     known_gaps: tuple["KnownGap", ...]
+    tech_line: str = ""
 
 
 def _build_bullets(raw: dict[Any, Any], path: str) -> tuple[Bullet, ...]:
@@ -310,6 +311,7 @@ def _build_project(value: Any, path: str) -> Project:
 def _build_experience(value: Any, path: str) -> Experience:
     raw = _require_mapping(value, path)
     exact, topical = _build_keywords(raw, path)
+    tech = _require_mapping(raw.get("tech", {}), f"{path}.tech")
     return Experience(
         id=_required_field(raw, "id", path),
         employer=_required_field(raw, "employer", path),
@@ -323,6 +325,7 @@ def _build_experience(value: Any, path: str) -> Experience:
         metric_ledger=_build_metric_ledger(raw, path),
         metric_scope=_build_metric_scope(raw, path),
         known_gaps=_build_known_gaps(raw, path),
+        tech_line=tech.get("tech_line", ""),
     )
 
 

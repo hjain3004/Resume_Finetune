@@ -1,17 +1,13 @@
 import json
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 from src.profile import MasterProfile, load_profile
-from src.profile_lint import MEDIUM_MAX, SHORT_MAX, lint_profile
+from src.profile_lint import MEDIUM_MAX, SHORT_MAX, VARIANT_BUDGET, lint_profile
 from scripts.validate_profile import _load_banned_terms
 from src.render.emphasis import parse_emphasis
-
-# backend dropped 3141 -> 3129 when the "17,000-line" phrase was removed from the
-# campus_marketplace cm_b1 medium phrasing (source-line-count claims purged from the
-# master profile at the user's instruction, 2026-09-03).
-_EXPECTED_REAL_TOTALS = {"backend": 3129, "ml": 3341}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."
@@ -112,13 +108,40 @@ def test_real_profile_passes_the_lint():
     assert lint_profile(profile, _load_banned_terms()) == []
 
 
-def test_real_variants_have_exact_shape_and_budget():
+def test_real_variants_match_the_approved_blueprint():
+    """2026-09-15 blueprint (docs/superpowers/specs/...): Amdocs is always the
+    largest entry, MalyTech is capped at 3, backend shows three projects with
+    campus_marketplace holding exactly one bullet, and every variant stays
+    inside the deterministic character budget. This encodes the approved
+    shape rules, not a snapshot of magic numbers -- tailoring still varies
+    which bullets/projects appear per company, never these proportions."""
     profile = load_profile("config/master_profile.yaml")
-    assert set(profile.base_variants) == set(_EXPECTED_REAL_TOTALS)
-    for name, expected_total in _EXPECTED_REAL_TOTALS.items():
-        assert len(profile.base_variants[name].bullet_order) == 12
-        assert _real_variant_total(profile, name) == expected_total
-        # Heuristic ceiling derived from what actually fits on one page (ml is 3341 chars).
-        # This character ceiling is a heuristic guard, not a page-fit proof; the authoritative
-        # check is rendering and running L7 layout/size checks (see docs/superpowers/specs/2026-08-23-m8p-3-s3-static-g1-design.md §9.1).
-        assert expected_total <= 3400
+    assert set(profile.base_variants) == {"backend", "ml"}
+
+    by_source = {
+        bullet.id: source.id
+        for source in (*profile.projects, *profile.experience)
+        for bullet in source.bullets
+    }
+
+    for name, variant in profile.base_variants.items():
+        counts = Counter(by_source[bullet_id] for bullet_id in variant.bullet_order)
+        amdocs = counts["amdocs_software_developer"]
+        other_counts = {k: v for k, v in counts.items() if k != "amdocs_software_developer"}
+        assert other_counts, f"{name} has no non-Amdocs entries"
+        assert amdocs > max(other_counts.values()), (
+            f"{name}: Amdocs ({amdocs}) is not strictly the largest entry: {counts}"
+        )
+        assert counts.get("bank_integration_internship", 0) <= 3, (
+            f"{name}: MalyTech exceeds the 3-bullet cap: {counts}"
+        )
+        assert _real_variant_total(profile, name) <= VARIANT_BUDGET, (
+            f"{name} exceeds VARIANT_BUDGET ({VARIANT_BUDGET})"
+        )
+
+    backend = profile.base_variants["backend"]
+    assert len(backend.projects) == 3, backend.projects
+    backend_counts = Counter(
+        by_source[bullet_id] for bullet_id in backend.bullet_order
+    )
+    assert backend_counts.get("campus_marketplace") == 1, backend_counts

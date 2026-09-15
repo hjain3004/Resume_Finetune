@@ -147,6 +147,7 @@ def render_doc_from_draft(profile: MasterProfile, draft: TailoredDraft) -> Rende
             subheading=exp.title,
             date_range=exp.display_date,
             bullets=_entry_bullets(exp.id),
+            tech_line=exp.tech_line,
         )
         for exp in profile.experience
         if exp.id in selected_experiences

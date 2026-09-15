@@ -1,4 +1,4 @@
-from src.render.latex import emit_latex_body, escape_latex
+from src.render.latex import _humanize_skill_category, emit_latex_body, escape_latex
 from src.render.model import RenderBullet, RenderDoc, RenderEntry
 
 
@@ -78,3 +78,57 @@ def test_body_contains_bullet_text_but_not_bullet_ids():
 def test_body_emits_sections_in_order():
     body = emit_latex_body(_doc())
     assert body.index("Projects") < body.index("Skills")
+
+
+def test_experience_heading_leads_with_title_and_tech_then_employer():
+    from dataclasses import replace
+    doc = replace(
+        _doc(),
+        projects=(),
+        experience=(RenderEntry(
+            entry_id="e1", heading="Acme Ltd.", subheading="Software Developer",
+            date_range="2023 - 2025", tech_line="Java, Spring Boot",
+        ),),
+        section_order=("Experience",),
+    )
+    body = emit_latex_body(doc)
+    assert (
+        r"\resumeSubheading{Software Developer\textnormal{ $|$ \emph{\small Java, Spring Boot}}}"
+        r"{2023 - 2025}{Acme Ltd.}{}"
+    ) in body
+
+
+def test_experience_heading_without_tech_line_has_no_separator():
+    from dataclasses import replace
+    doc = replace(
+        _doc(),
+        projects=(),
+        experience=(RenderEntry(entry_id="e1", heading="Acme", subheading="Engineer"),),
+        section_order=("Experience",),
+    )
+    assert r"\resumeSubheading{Engineer}{}{Acme}{}" in emit_latex_body(doc)
+
+
+def test_humanize_skill_category_maps_known_keys():
+    assert _humanize_skill_category("ai_and_machine_learning") == "AI and Machine Learning"
+    assert _humanize_skill_category("languages") == "Languages"
+    assert _humanize_skill_category("frameworks") == "Frameworks"
+    assert _humanize_skill_category("libraries") == "Libraries"
+    assert _humanize_skill_category("apis_and_standards") == "APIs and Standards"
+    assert _humanize_skill_category("developer_tools") == "Developer Tools"
+    assert _humanize_skill_category("databases") == "Databases"
+
+
+def test_skills_block_emits_human_label_not_raw_key():
+    from dataclasses import replace
+    doc = replace(
+        _doc(),
+        projects=(),
+        skills={"ai_and_machine_learning": ("PyTorch",), "developer_tools": ("Git",)},
+        section_order=("Skills",),
+    )
+    body = emit_latex_body(doc)
+    assert r"\textbf{AI and Machine Learning}: PyTorch" in body
+    assert r"\textbf{Developer Tools}: Git" in body
+    assert "ai_and_machine_learning" not in body
+    assert "developer_tools" not in body

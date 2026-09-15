@@ -100,20 +100,23 @@ do_not_claim:
 
 base_variants:
   backend:
-    projects: [peerchat_peer_discovery, campus_marketplace]
+    projects: [peerchat_peer_discovery, fake_review_detection, campus_marketplace]
     bullet_order:
       - int_b1
       - int_b2
       - int_b3
       - am_b01_dlq_consolidation
-      - am_b02_row_level_entitlement
       - am_b03_audit_trail
       - am_b04_data_retention
       - am_b05_test_automation
+      - am_b02_row_level_entitlement
+      - am_b00_order_management_domain
+      - am_b07_code_quality_gates
       - pc_b01_event_sourcing
       - pc_b04_transport_consolidation
+      - frd_b1
+      - frd_b2
       - cm_b1
-      - cm_b2
   ml:
     projects: [sepsis_early_warning, fake_review_detection]
     bullet_order:
@@ -126,9 +129,13 @@ base_variants:
       - am_b04_data_retention
       - am_b05_test_automation
       - am_b00_order_management_domain
+      - sepsis_b1
       - sepsis_b2
+      - sepsis_b3
+      - sepsis_b4
       - frd_b1
       - frd_b2
+      - frd_b3
 
 
 # -----------------------------------------------------------------------------
@@ -1684,7 +1691,9 @@ experience:
       primary: ["Python 3.12", "FastAPI", "async SQLAlchemy 2.0", "Pydantic v2", "PostgreSQL"]
       secondary: ["HTTPX", "RabbitMQ (aio-pika)", "asyncpg", "lxml", "structlog", "pytest",
                   "respx", "Docker", "Docker Compose", "GitLab CI", "uv"]
-      tech_line: "Python, FastAPI, SQLAlchemy 2.0, Pydantic v2, PostgreSQL, RabbitMQ, Docker, GitLab CI"
+      # Printed right of the job title on the heading row; must fit one line
+      # beside the dates, so it names the core stack only.
+      tech_line: "Python, FastAPI, SQLAlchemy, PostgreSQL, RabbitMQ"
 
     keywords:
       exact: ["Python", "FastAPI", "SQLAlchemy", "Pydantic", "PostgreSQL", "REST API",
@@ -1757,16 +1766,15 @@ experience:
             and four external providers - a telecom messaging gateway, the PesaLink
             real-time interbank transfer network, Kenya's IPRS national identity
             registry, and an AML sanctions-screening service - then designed the Core
-            onboarding service above it: a single internal front door that opens a
-            case, accepts a step invocation, returns 202 Accepted without blocking on
-            any third party, and dispatches the selected adapter out of band, making
-            one service the system of record for every check the bank runs on a new
-            customer. Five asynchronous Python services in all (FastAPI, async
+            onboarding service orchestrating three of those four adapters, opening a
+            case, accepting a step invocation, returning 202 Accepted without
+            blocking on any third party, and dispatching the selected adapter out of
+            band. Five asynchronous Python services in all (FastAPI, async
             SQLAlchemy 2.0, Pydantic v2, PostgreSQL, RabbitMQ) sharing one
             standardized adapter architecture that isolates every third-party quirk
             behind a single client boundary.
-          medium: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, identity verification, and AML sanctions screening - then the **Core onboarding service** above those four as the single front door and system of record: **five asynchronous Python microservices** (FastAPI, SQLAlchemy 2.0, PostgreSQL)."
-          short: "Built a commercial bank's customer-onboarding integration layer and the Core orchestration service above it, as five asynchronous Python microservices."
+          medium: "Built the **anti-corruption layer** of four adapter services between a commercial bank's core and providers for telecom messaging, real-time transfers, identity verification, and AML screening, then the **Core onboarding service** orchestrating three of those four through one non-blocking API, five asynchronous Python microservices in all."
+          short: "Built a commercial bank's four-adapter onboarding integration layer and the Core service orchestrating three of the adapters, as five asynchronous Python microservices."
         evidence:
           - "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML); one Core onboarding service orchestrating three of them"
           - "Core ingress: POST /v1/onboarding/cases then POST /v1/onboarding/cases/{id}/steps -> 202 Accepted; a database-backed dispatcher worker calls the adapter out of band"
@@ -2374,6 +2382,8 @@ experience:
     employer: "Amdocs Ltd."             # entity suffix: Greenhouse parse rule
     title: "Software Developer"         # NEVER altered. Target-title seeding
                                         # happens in the summary line only.
+    tech:
+      tech_line: "Java, Spring Boot, Kafka, Elasticsearch, OpenShift"
     location: "Gurugram, India"
     start: "2023-07"
     end: "2025-06"
@@ -2402,7 +2412,7 @@ experience:
       # that surfaces the mapped term.
       domain_translation:
         "data fencing": "row-level entitlement / multi-tenant authorization"
-        "proposal tracking": "immutable audit trail / books-and-records"
+        "proposal tracking": "append-only audit trail / books-and-records"
         "purge and archive": "data retention and records management policy"
         "DLQ consolidation": "event-driven reliability and failure handling"
 

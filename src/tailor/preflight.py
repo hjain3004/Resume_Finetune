@@ -62,6 +62,9 @@ def check_profile_do_not_claim(profile: MasterProfile) -> tuple[PreflightFinding
         _scan(project.tech_line, "tech_line", project.id)
         _scan(project.name, "project_name", project.id)
 
+    for exp in profile.experience:
+        _scan(exp.tech_line, "tech_line", exp.id)
+
     for source in (*profile.projects, *profile.experience):
         for bullet in source.bullets:
             for phrasing in (bullet.phrasings.short, bullet.phrasings.medium, bullet.phrasings.long):

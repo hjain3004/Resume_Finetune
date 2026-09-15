@@ -78,14 +78,20 @@ def _education_block(entries) -> str:
 
 
 def _experience_block(entries) -> str:
-    """\\resumeSubheading{employer}{dates}{title}{location} -- slots 2 and 4 are
-    swapped relative to Education. This asymmetry is the template's, not a bug."""
+    r"""\resumeSubheading{title $|$ \emph{tech}}{dates}{employer}{location}
+
+    Title leads in the large bold slot; the employer drops to the small italic
+    row. The tech line mirrors a project heading and is set in \textnormal so
+    the slot's \textbf does not bold it."""
     lines = [r"\resumeSubHeadingListStart"]
     for entry in entries:
+        title = escape_latex(entry.subheading)
+        if entry.tech_line:
+            title += rf"\textnormal{{ $|$ \emph{{\small {escape_latex(entry.tech_line)}}}}}"
         lines.append(
-            rf"\resumeSubheading{{{escape_latex(entry.heading)}}}"
+            rf"\resumeSubheading{{{title}}}"
             rf"{{{escape_latex(entry.date_range)}}}"
-            rf"{{{escape_latex(entry.subheading)}}}"
+            rf"{{{escape_latex(entry.heading)}}}"
             rf"{{{escape_latex(entry.location)}}}"
         )
         lines.extend(_bullets(entry))
@@ -108,11 +114,32 @@ def _projects_block(entries) -> str:
     return "\n".join(lines)
 
 
+_SKILL_CATEGORY_WORD_OVERRIDES = {"ai": "AI", "apis": "APIs"}
+
+
+def _humanize_skill_category(key: str) -> str:
+    """Pure: 'ai_and_machine_learning' -> 'AI and Machine Learning'.
+
+    Splits the YAML key on '_', title-cases each word, keeps 'and' lowercase,
+    and applies acronym overrides. Does not touch the YAML key itself -- other
+    code keys off the raw string.
+    """
+    words = []
+    for token in key.split("_"):
+        if token in _SKILL_CATEGORY_WORD_OVERRIDES:
+            words.append(_SKILL_CATEGORY_WORD_OVERRIDES[token])
+        elif token == "and":
+            words.append("and")
+        else:
+            words.append(token.capitalize())
+    return " ".join(words)
+
+
 def _skills_block(skills) -> str:
     r"""Free-form inline text, NOT a list:
     \textbf{Category}: term, term \textbar\ \textbf{Category}: ..."""
     chunks = [
-        rf"\textbf{{{escape_latex(category)}}}: {escape_latex(', '.join(terms))}"
+        rf"\textbf{{{escape_latex(_humanize_skill_category(category))}}}: {escape_latex(', '.join(terms))}"
         for category, terms in skills.items()
     ]
     return "\\small\n" + " \\textbar\\ ".join(chunks)

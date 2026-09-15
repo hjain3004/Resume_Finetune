@@ -32,6 +32,7 @@ class RenderEntry:
     date_range: str = ""
     location: str = ""
     bullets: tuple[RenderBullet, ...] = ()
+    tech_line: str = ""
 
 
 @dataclass(frozen=True)

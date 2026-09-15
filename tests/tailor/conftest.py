@@ -23,14 +23,17 @@ from src.tailor.s3_pipeline import S3Bundle
 from tests.tailor.test_s2 import _request, _valid
 
 #: The one bullet this fixture edits. Its accepted "after" text is a
-#: shortening edit already proven valid elsewhere in the M8P-3 suite:
-#: preserves the leading verb, every metric (incl. "2.0"), and shrinks
-#: rather than grows the canonical text.
+#: shortening edit of the CURRENT int_b1 medium phrasing (read from the
+#: profile, not hardcoded facts): preserves the leading verb "Built" and the
+#: numeric-token multiset (int_b1 has no digits, so neither does this), uses
+#: only words already present in the canonical text (plus the cited
+#: motivating term "Python" and ordinary function words), keeps two
+#: **emphasis** spans, and shrinks rather than grows the canonical text.
 EDITED_BULLET_ID = "int_b1"
 EDITED_BULLET_AFTER = (
-    "Built the **anti-corruption layer** between a commercial bank's core systems and "
-    "four external providers as **four asynchronous Python microservices "
-    "(FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    "Built the **anti-corruption layer** and **Core onboarding service** "
+    "orchestrating three of four adapter services, five asynchronous Python "
+    "microservices in all."
 )
 #: A bullet this fixture never touches -- used by tests asserting that a
 #: finding may not target an unchanged bullet.

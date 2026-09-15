@@ -111,6 +111,7 @@ def build_render_doc(
             subheading=exp.title,
             date_range=exp.display_date,
             bullets=_entry_bullets(exp.bullets),
+            tech_line=exp.tech_line,
         )
         for exp in profile.experience
     )
