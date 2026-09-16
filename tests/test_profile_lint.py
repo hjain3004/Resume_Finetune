@@ -11,7 +11,8 @@ from src.render.emphasis import parse_emphasis
 # backend dropped 3141 -> 3129 when the "17,000-line" phrase was removed from the
 # campus_marketplace cm_b1 medium phrasing (source-line-count claims purged from the
 # master profile at the user's instruction, 2026-09-03).
-_EXPECTED_REAL_TOTALS = {"backend": 3129, "ml": 3341}
+_EXPECTED_BULLET_COUNTS = {"backend": 13, "ml": 12}
+_EXPECTED_REAL_TOTALS = {"backend": 3398, "ml": 3328}
 
 FIXTURE = Path("tests/fixtures/profile_lint_minimal.yaml")
 _CLEAN_MEDIUM = "Built **an event store** on PostgreSQL for the ordering domain."
@@ -116,9 +117,11 @@ def test_real_variants_have_exact_shape_and_budget():
     profile = load_profile("config/master_profile.yaml")
     assert set(profile.base_variants) == set(_EXPECTED_REAL_TOTALS)
     for name, expected_total in _EXPECTED_REAL_TOTALS.items():
-        assert len(profile.base_variants[name].bullet_order) == 12
+        assert len(profile.base_variants[name].bullet_order) == _EXPECTED_BULLET_COUNTS[name]
         assert _real_variant_total(profile, name) == expected_total
         # Heuristic ceiling derived from what actually fits on one page (ml is 3341 chars).
         # This character ceiling is a heuristic guard, not a page-fit proof; the authoritative
         # check is rendering and running L7 layout/size checks (see docs/superpowers/specs/2026-08-23-m8p-3-s3-static-g1-design.md §9.1).
+        # heuristic guard only -- NOT a page-fit proof; the real check is rendering
+        # and running L7 (see 2026-08-23-m8p-3-s3-static-g1-design.md 9.1).
         assert expected_total <= 3400

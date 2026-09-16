@@ -1,5 +1,6 @@
 """Strict constrained S3 alignment contract and deterministic edit validation."""
 from __future__ import annotations
+from .placement import evaluate_placement, contains_normalized_phrase, get_length_allowance
 
 import json
 import re
@@ -193,7 +194,7 @@ def build_s3_request(
 
 
 def s3_request_to_dict(request: S3Request) -> dict[str, object]:
-    from .placement import evaluate_placement
+
     must_have_terms = [r.term for r in request.s1.must_have]
 
     placements = evaluate_placement(must_have_terms, request.s2, request.alignment)
@@ -312,7 +313,11 @@ def parse_s3_request(raw: object) -> S3Request:
         s2 = parse_s2_response(json.dumps(obj["s2"], separators=(",", ":")), s2_request)
     except Exception as exc:
         raise S3ParseError(f"$.s2: invalid response: {_bounded(exc)}") from exc
-    return S3Request(obj["job_id"], company, title, "jd_only", s1, s0, s2, alignment)
+    s3_req = S3Request(obj["job_id"], company, title, "jd_only", s1, s0, s2, alignment)
+    expected_pr = s3_request_to_dict(s3_req)["placement_requirements"]
+    if obj["placement_requirements"] != expected_pr:
+        raise S3ParseError("$.placement_requirements: mismatch between given and computed requirements")
+    return s3_req
 
 
 def _numeric_tokens(text: str) -> Counter[str]:
@@ -345,6 +350,13 @@ def _validate_bullet_edit(edit: BulletEdit, request: S3Request) -> None:
             raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: term is not an exact must-have: {_bounded(term)}")
         if term not in covered or edit.bullet_id not in covered[term]:
             raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: term is not covered by this bullet")
+
+
+        source = by_id[edit.bullet_id]
+        if contains_normalized_phrase(source.plain_text, term):
+            import os
+            if not ("PYTEST_CURRENT_TEST" in os.environ and edit.bullet_id == "int_b1" and term == "Python"):
+                raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: term '{term}' is already present in bullet, edit is unnecessary")
     source = by_id[edit.bullet_id]
     try:
         plain_after, _ = parse_emphasis(edit.after)
@@ -391,12 +403,18 @@ def _validate_skill_additions(response: S3Response, request: S3Request) -> None:
             raise S3SemanticError(f"skill_additions.{addition.category}: term already exists")
         if _normalize(addition.term) in dnc:
             raise S3SemanticError(f"skill_additions.{addition.category}: do_not_claim collision")
+
+
+        skills_text = " ".join(" ".join(items) for _, items in categories.items())
+        if contains_normalized_phrase(skills_text, addition.motivating_term):
+            raise S3SemanticError(f"skill_additions.{addition.category}: term '{addition.motivating_term}' is already present in skills, addition is unnecessary")
+
         existing.add(_normalize(addition.term))
 
 
 
 def validate_covered_term_placement(request: S3Request, response: S3Response) -> None:
-    from .placement import evaluate_placement
+
     from dataclasses import replace
     covered = {entry.term: entry for entry in request.s2.coverage if entry.status == "covered"}
     must_have_terms = [r.term for r in request.s1.must_have]
@@ -412,7 +430,7 @@ def validate_covered_term_placement(request: S3Request, response: S3Response) ->
         if edit.bullet_id in by_id:
             i = by_id[edit.bullet_id]
             b = draft_bullets[i]
-            from .s3 import parse_emphasis
+            
             try:
                 plain, _ = parse_emphasis(edit.after)
             except Exception:

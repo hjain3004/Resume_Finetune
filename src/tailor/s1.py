@@ -169,8 +169,19 @@ def _parse_requirement(raw: object, path: str) -> Requirement:
 
 
 def _parse_requirement_list(raw: object, path: str) -> tuple[Requirement, ...]:
+    from .requirement_terms import split_term, RequirementSplitError
     items = _require_list(raw, path)
-    return tuple(_parse_requirement(item, f"{path}[{i}]") for i, item in enumerate(items))
+    expanded = []
+    for i, item in enumerate(items):
+        req = _parse_requirement(item, f"{path}[{i}]")
+        try:
+            split_parts = split_term(req.term)
+        except RequirementSplitError as e:
+            raise S1ParseError(f"{path}[{i}].term: {e}")
+
+        for part in split_parts:
+            expanded.append(Requirement(part, req.quote))
+    return tuple(expanded)
 
 
 def _check_no_duplicate_terms(

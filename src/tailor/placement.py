@@ -1,23 +1,20 @@
-import re
 from typing import Iterable, Set, Tuple, List
 from dataclasses import dataclass
 from src.tailor.s2 import S2Response
 from src.tailor.alignment_view import AlignmentView
-
-def _norm(v: str) -> str:
-    """Phrase normalization: lowercase and collapse whitespace."""
-    return " ".join(v.casefold().split())
-
-def contains_normalized_phrase(text: str, phrase: str) -> bool:
-    """Mapped-bullet and Skills placement check."""
-    return _norm(phrase) in _norm(text)
+from src.tailor.lint import normalize_tokens, contains_normalized_phrase
 
 def document_occurrences(text: str, phrase: str) -> int:
-    """Document occurrence counts."""
-    n_phrase = _norm(phrase)
-    if not n_phrase:
+    """Document occurrence counts using token-window phrase matching."""
+    haystack = normalize_tokens(text)
+    needle = normalize_tokens(phrase)
+    if not needle or len(needle) > len(haystack):
         return 0
-    return _norm(text).count(n_phrase)
+    count = 0
+    for index in range(len(haystack) - len(needle) + 1):
+        if haystack[index:index + len(needle)] == needle:
+            count += 1
+    return count
 
 def get_length_allowance(motivating_terms: Iterable[str]) -> int:
     """Returns max(len(term) for term in motivating_terms), default=0."""
@@ -51,7 +48,7 @@ def evaluate_placement(must_have_terms: Iterable[str], s2: S2Response,
 
     results = []
     for term in ordered:
-        bullet_ids = covered_dict[term]
+        bullet_ids = covered_dict.get(term, ())
         mapped_bullets = [by_id[bid].plain_text for bid in bullet_ids if bid in by_id]
 
         results.append(TermPlacement(

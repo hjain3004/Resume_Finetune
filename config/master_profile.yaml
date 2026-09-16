@@ -109,6 +109,7 @@ base_variants:
       - am_b05_test_automation
       - am_b03_audit_trail
       - am_b01_dlq_consolidation
+      - am_b02_row_level_entitlement
       - ct_b1
       - ct_b2
       - cm_b1
@@ -1228,15 +1229,13 @@ projects:
         phrasings:
           long: >-
             Built the backend for a campus peer-to-peer marketplace as the primary
-            developer on a 3-person team, authoring 48 of 68 commits across a
-            domain-organized Java 21 and Spring Boot service with 20 REST
-            controllers, 24 JPA entities, and 30 Flyway-controlled schema
-            migrations over PostgreSQL.
-          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a 3-person team - a **Java 21 and Spring Boot service** with 20 REST controllers, 24 JPA entities, and **30 Flyway-controlled PostgreSQL migrations**."
+            developer on a three-person team, delivering a domain-organized Java 21
+            and Spring Boot service over PostgreSQL with Flyway-controlled schema
+            migrations.
+          medium: "Built the backend for a campus peer-to-peer marketplace as primary developer on a three-person team, delivering a domain-organized **Java 21 and Spring Boot** service over **Flyway-controlled PostgreSQL** schema migrations."
           short: >-
             Built the backend of a campus peer-to-peer marketplace in Java 21 and
-            Spring Boot - 20 REST controllers, 24 JPA entities, 30 Flyway
-            migrations.
+            Spring Boot over Flyway-controlled PostgreSQL.
         evidence:
           - "campus-marketplace/src/main/java: 366 files counted 2026-07-30"
           - "20 files matching @RestController; 24 matching @Entity; 30 .sql files under src/main/resources/db"
@@ -2511,8 +2510,11 @@ experience:
         claim_type: verified
         priority: 1
         phrasings:
-          medium: "Engineered and maintained **Java and Spring Boot microservices for the Order Management domain** (Catalog, Shopping Cart, Proposal and Agreement), with a **Jenkins-driven CI/CD pipeline** automating builds, tests, and deployments across OpenShift environments."
-          short: "Engineered Java and Spring Boot microservices for the Order Management domain, deployed through Jenkins CI/CD pipelines to OpenShift."
+          medium: "Built and maintained the **Java and Spring Boot microservices** behind the Order Management domain across Catalog, Shopping Cart, Proposal, and Agreement, automating builds, tests, and deployments to OpenShift with a **Jenkins CI/CD pipeline**."
+          short: >-
+            Built and maintained Java and Spring Boot microservices for the Order
+            Management domain, automating builds, tests, and deployments to OpenShift
+            through Jenkins CI/CD.
         evidence:
           - "amdocs_software_developer.scope_line names the Order Management domain (Catalog, Shopping Cart, Proposal and Agreement), Java and Spring Boot microservices, Jenkins pipelines, and OpenShift deployment"
           - "Present as the opening bullet on all three prior resume versions"
@@ -2525,17 +2527,16 @@ experience:
         priority: 1                     # strongest bullet; lead with it always
         phrasings:
           long: >-
-            Redesigned the Apache Kafka dead-letter-queue architecture for the
-            Order Management domain, consolidating 862 per-consumer DLQ topics
-            across 11 deployments into one shared DLQ per subdomain via a new
-            HELM binding function with a feature-flagged, zero-downtime rollout -
-            cutting idle topic sprawl by 70% and reclaiming roughly 80% of the
-            partitions held by empty DLQs.
-          medium: "Redesigned the Kafka dead-letter-queue architecture, consolidating 862 per-consumer DLQ topics across 11 deployments into one shared DLQ per subdomain behind a feature-flagged HELM binding function - **cutting idle topic sprawl by 70% and reclaiming ~80% of wasted partitions**."
+            Cut idle Kafka topic sprawl by 70% and reclaimed roughly 80% of the
+            partitions held by empty dead-letter queues by consolidating 862 per-
+            consumer DLQ topics across 11 deployments into one shared DLQ per
+            subdomain, delivered through a new HELM binding function with a feature-
+            flagged, zero-downtime rollout across the Order Management domain.
+          medium: "**Cut idle Kafka topic sprawl by 70% and reclaimed ~80% of wasted partitions** by consolidating 862 per-consumer dead-letter topics across 11 deployments into one shared DLQ per subdomain, delivered behind a feature-flagged HELM binding function."
           short: >-
-            Consolidated 862 per-consumer Kafka dead-letter topics into shared
-            per-subdomain DLQs via a feature-flagged HELM function, cutting idle
-            topic sprawl by 70%.
+            Cut idle Kafka topic sprawl by 70% by consolidating 862 per-consumer dead-
+            letter topics into shared per-subdomain DLQs behind a feature-flagged HELM
+            function.
         evidence:
           - "Interview prep doc, DLQ section: instanceBind HELM function, sharedDlqTopicsEnabled flag defaulting false, error.<subdomain> naming"
           - "Migration runbook: enable flag -> drain under retention -> cleanup script -> rollback via flag or per-topic dlqTopicName override"
@@ -2557,16 +2558,16 @@ experience:
         phrasings:
           long: >-
             Co-built a modular Java row-level entitlement library for the shared
-            microservices base, chaining JSON Web Token (JWT) claim validators for
-            multi-tenant telecom operators, and integrated it at the Proposal and
-            Agreement delegate layer - pushing claim predicates directly into
-            Couchbase N1QL and Elasticsearch queries behind new secondary indexes
-            so the database returned only authorized rows, failing closed with
-            HTTP 403 on claim mismatch.
-          medium: "Co-built a Java **row-level entitlement library** chaining JSON Web Token (JWT) claim validators for multi-tenant operators, pushing claim predicates into **Couchbase N1QL and Elasticsearch** queries behind new secondary indexes so only authorized rows were returned, failing closed with HTTP 403."
+            microservices base that returned only authorized rows to multi-tenant
+            telecom operators, chaining JSON Web Token (JWT) claim validators and
+            pushing claim predicates directly into Couchbase N1QL and Elasticsearch
+            queries behind new secondary indexes, integrated at the Proposal and
+            Agreement delegate layer and failing closed with HTTP 403 on claim
+            mismatch.
+          medium: "Co-built a Java **row-level entitlement library** that returned only authorized rows to multi-tenant operators by chaining JSON Web Token (JWT) claim validators and pushing claim predicates into **Couchbase N1QL and Elasticsearch** queries behind new secondary indexes, failing closed with HTTP 403."
           short: >-
-            Co-built a Java row-level entitlement library chaining JWT claim
-            validators, pre-filtering authorized rows at the database layer and
+            Co-built a Java row-level entitlement library that returned only
+            authorized rows by chaining JWT claim validators at the database layer,
             failing closed with HTTP 403.
         evidence:
           - "Prep doc, data fencing section: CustomerIdValidator, MultiCustomerIdValidator, ExtUserAccessGroupIdListValidator (highest priority, fail-closed)"
@@ -2593,17 +2594,18 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Architected an immutable audit-trail system for contract lifecycle
-            events: delegate-level triggers published standardized Kafka events
-            with correlation-ID propagation, and a new Proposal Tracking consumer
-            enriched them with JWT-resolved actor identity and configurable action
-            filtering before persisting append-only records in Elasticsearch,
-            replacing multi-service log correlation with a single filtered query.
-          medium: "Architected an immutable audit-trail system that **cut issue-resolution time by ~60%** - delegate-level Kafka triggers with correlation-ID propagation feeding a new consumer that persisted append-only, actor-attributed records in **Elasticsearch** - replacing multi-service log correlation with one filtered query."
+            Cut issue-resolution time by roughly 60% by replacing multi-service log
+            correlation with a single filtered query, architecting an immutable audit
+            trail for contract lifecycle events in which delegate-level triggers
+            published standardized Kafka events with correlation-ID propagation and a
+            new Proposal Tracking consumer enriched them with JWT-resolved actor
+            identity and configurable action filtering before persisting append-only
+            records in Elasticsearch.
+          medium: "**Cut issue-resolution time by ~60%** by replacing multi-service log correlation with one filtered query, building an immutable audit trail in which delegate-level Kafka triggers propagated correlation IDs to a new consumer that persisted append-only, actor-attributed records in **Elasticsearch**."
           short: >-
-            Built an immutable audit trail for contract lifecycle events using
-            Kafka triggers and append-only Elasticsearch records, replacing
-            multi-service log correlation with a single query.
+            Cut issue-resolution time by ~60% with an immutable Kafka and
+            Elasticsearch audit trail that replaced multi-service log correlation with
+            a single filtered query.
         evidence:
           - "Prep doc, traceability section: catalog config table driving which actions are tracked; tracking ID generation"
           - "Actor resolution: preferred_username from JWT mapped through workforce API to user ID"
@@ -2622,17 +2624,18 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Built a policy-driven data-retention capability across three
-            microservices - REST lifecycle APIs plus Kafka event-driven archival
-            to a dedicated Archive service - with archive-before-delete ordering
-            so a source document was removed only on a confirmed archive
-            completion event, keeping the transactional store lean while archived
-            agreements stayed retrievable through a dedicated API.
-          medium: "**Reduced production data footprint by ~40% and query time by ~25%** with policy-driven retention across three microservices; built REST lifecycle APIs, **Kafka-based archival**, and archive-before-delete ordering so removal followed confirmed archive completion."
+            Reduced production data footprint by roughly 40% and query time by roughly
+            25% by building a policy-driven data-retention capability across three
+            microservices, combining REST lifecycle APIs with Kafka event-driven
+            archival to a dedicated Archive service under archive-before-delete
+            ordering, so a source document was removed only on a confirmed archive
+            completion event while archived agreements stayed retrievable through a
+            dedicated API.
+          medium: "**Reduced production data footprint by ~40% and query time by ~25%** by introducing policy-driven retention across three microservices, backed by REST lifecycle APIs and **Kafka-based archival** with archive-before-delete ordering so records were removed only after archival was confirmed."
           short: >-
-            Built policy-driven data retention across three microservices with
-            REST lifecycle APIs and Kafka-driven archival, using
-            archive-before-delete ordering for safe purges.
+            Reduced production data footprint by ~40% and query time by ~25% with
+            policy-driven retention across three microservices, using REST lifecycle
+            APIs and Kafka-driven archival.
         evidence:
           - "Prep doc, purge and archive section: retention rules (rejected/cancelled proposals >1mo purge; active agreements >1yr archive; rejected agreements >1mo purge)"
           - "Mass-process framework for bulk execution; Archive service completion and failure events; get-from-archive API"
@@ -2649,17 +2652,18 @@ experience:
         priority: 1
         phrasings:
           long: >-
-            Automated end-to-end API testing with Postman collections executed
-            headlessly through Newman in Jenkins, adding JSON-schema response
-            validation to catch cross-service contract drift at build time, and
-            raised unit-test coverage to 90% across four microservices using
-            JUnit 5, Mockito, and WireMock stubs while clearing roughly 500
-            SonarQube code smells behind enforced quality gates.
-          medium: "**Reduced manual E2E effort by ~50% and cross-service defects by ~40%** with Postman/Newman tests in Jenkins and JSON-schema validation; **raised unit coverage to 90%** across four services using JUnit 5, Mockito, and WireMock while clearing ~500 SonarQube smells."
+            Reduced manual end-to-end effort by roughly 50% and cross-service defects
+            by roughly 40% by automating API testing with Postman collections executed
+            headlessly through Newman in Jenkins and adding JSON-schema response
+            validation to catch cross-service contract drift at build time, and raised
+            unit-test coverage to 90% across four microservices with JUnit 5, Mockito,
+            and WireMock while clearing roughly 500 SonarQube findings behind enforced
+            quality gates.
+          medium: "**Reduced manual end-to-end effort by ~50% and cross-service defects by ~40%** by automating Postman/Newman suites with JSON-schema validation in Jenkins, and **raised unit coverage to 90%** across four services with JUnit 5, Mockito, and WireMock while clearing ~500 SonarQube findings."
           short: >-
-            Automated end-to-end API tests via Newman in Jenkins and raised unit
-            coverage to 90% across four microservices, clearing ~500 SonarQube
-            code smells behind enforced quality gates.
+            Reduced manual end-to-end effort by ~50% by automating Newman API tests in
+            Jenkins, and raised unit coverage to 90% across four microservices while
+            clearing ~500 SonarQube findings.
         evidence:
           - "Prep doc, testing section: pre-request scripts for correlation IDs, pm.test assertions, per-environment variable files"
           - "WireMock scenarios: 201 happy path, 500 to verify non-blocking handling, 30s fixed delay for timeout behavior"
@@ -2676,13 +2680,7 @@ experience:
         claim_type: verified
         priority: 3
         phrasings:
-          medium: >-
-            Contributed to migrating the domain's continuous integration to
-            Amazon Web Services (AWS) through AWS-specific Jenkinsfiles, Maven
-            profile updates, and HELM value refactors, and integrated an external
-            human-task service into agreement sign-off with per-flow feature flags
-            and non-blocking failure handling so a downstream outage could never
-            block the core business transaction.
+          medium: "Contributed to migrating the domain's continuous integration to **Amazon Web Services (AWS)** through AWS-specific Jenkinsfiles, Maven profile updates, and HELM value refactors, and integrated an external human-task service into agreement sign-off behind per-flow feature flags with non-blocking failure handling so a downstream outage could never block the core business transaction."
           short: >-
             Contributed to migrating continuous integration to Amazon Web Services
             (AWS), and integrated an external task service into sign-off with

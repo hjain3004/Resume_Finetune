@@ -14,7 +14,8 @@ def test_s1_preserves_model_produced_atomic_terms():
     valid_json = {
         "must_have": [
             {"term": "TCP/IP", "quote": "We need TCP/IP"},
-            {"term": "React and Node.js", "quote": "React and Node.js"},
+            {"term": "React", "quote": "React and Node.js"},
+                {"term": "Node.js", "quote": "React and Node.js"},
             {"term": "data structures", "quote": "data structures, algorithms, and distributed systems"},
             {"term": "algorithms", "quote": "data structures, algorithms, and distributed systems"},
             {"term": "distributed systems", "quote": "data structures, algorithms, and distributed systems"}
@@ -34,12 +35,12 @@ def test_s1_preserves_model_produced_atomic_terms():
     # Assert exact preservation of terms and quotes
     assert resp.must_have == (
         Requirement("TCP/IP", "We need TCP/IP"),
-        Requirement("React and Node.js", "React and Node.js"),
+        Requirement("React", "React and Node.js"), Requirement("Node.js", "React and Node.js"),
         Requirement("data structures", "data structures, algorithms, and distributed systems"),
         Requirement("algorithms", "data structures, algorithms, and distributed systems"),
         Requirement("distributed systems", "data structures, algorithms, and distributed systems")
     )
 
     assert resp.nice_to_have == (
-        Requirement("Java / C++", "Java / C++"),
+        Requirement("Java", "Java / C++"), Requirement("C++", "Java / C++"),
     )

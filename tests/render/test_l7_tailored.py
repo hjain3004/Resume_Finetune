@@ -206,7 +206,7 @@ def real_resume_doc():
     s0 = parse_s0_response(context.NOTION_S0_RESPONSE_RAW, s0_request)
     catalog = profile.for_selection("backend")
     s2_request = build_s2_request(s1_request.job_id, s1_request.company, s1_request.title, s1, s0, catalog)
-    s2 = parse_s2_response(context.NOTION_S2_RESPONSE_RAW, s2_request)
+    import sys; print('S1 MUST HAVE:', s1.must_have, file=sys.stderr); print('S2 COVERAGE:', context.NOTION_S2_RESPONSE_RAW, file=sys.stderr); s2 = parse_s2_response(context.NOTION_S2_RESPONSE_RAW, s2_request)
     alignment = alignment_from_profile(profile, s2_request, s2)
     s3_request = build_s3_request(s1_request.job_id, s1_request.company, s1_request.title, s1, s0, s2, alignment)
 
