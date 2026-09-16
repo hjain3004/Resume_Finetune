@@ -21,13 +21,21 @@ def _response(catalog, bullet_order, coverage_bullet="ct_b1"):
 
 
 def test_fabricated_catalog_bullet_is_rejected():
+    # 2026-09-15 blueprint: backend no longer selects clinical_trial_platform
+    # (ct_b1's owner), so removing ct_b1 orphans nothing anymore. Use
+    # "cm_b1" instead -- read live from the profile, not hardcoded: it is
+    # currently the ONLY bullet campus_marketplace contributes to backend's
+    # selection (per the approved blueprint's "Campus Marketplace: 1
+    # bullet"), so removing it and replacing it with a fabricated bullet
+    # under the same (still-selected) owner_id orphans that project's
+    # reference exactly as ct_b1 used to for clinical_trial_platform.
     profile = load_profile("config/master_profile.yaml")
     raw = selection_to_dict(profile.for_selection("backend"))
     raw["bullets"] = [
-        bullet for bullet in raw["bullets"] if bullet["id"] != "ct_b1"
+        bullet for bullet in raw["bullets"] if bullet["id"] != "cm_b1"
     ] + [{
         "id": "fabricated_bullet",
-        "owner_id": "clinical_trial_platform",
+        "owner_id": "campus_marketplace",
         "owner_kind": "project",
         "priority": 1,
         "claim_type": "verified",

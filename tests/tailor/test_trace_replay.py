@@ -4,7 +4,6 @@ raw_output, extracted once via scripts/record_trace_fixture.py and
 committed. Self-authored synthetic fixtures could never have caught the
 two live S1 failures this file replays."""
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -16,62 +15,14 @@ from src.tailor.s1 import S1ParseError, S1SemanticError, parse_s1_request, parse
 from src.tailor.s2 import ProjectChoice, S2Response, build_s2_request, parse_s2_response
 from src.tailor.s3 import S3ParseError, S3SemanticError, build_s3_request, parse_s3_response
 from tests.fixtures.tailor.traces import context
+from tests.fixtures.tailor.traces.context import recording_time_catalog
 
 FIXTURES = Path("tests/fixtures/tailor/traces")
 
-# ---------------------------------------------------------------------------
-# 2026-09-15 blueprint shape shim.
-#
-# The frozen traces below were recorded against the base_variants shape that
-# existed immediately before commit ca73a01 introduced the approved resume
-# blueprint (7 Amdocs / 3 MalyTech / 2+2+1 project bullets). They are real
-# model I/O, captured once and committed -- never edited to match a shape
-# change. Read from `git show aaefb15:config/master_profile.yaml` (the
-# commit right before the blueprint), not invented, not copied from a
-# prompt: aaefb15's "ml" variant selected (sepsis_early_warning,
-# fake_review_detection) across 12 bullets; its "backend" variant selected
-# (clinical_trial_platform, campus_marketplace) across 12 bullets. Both
-# projects and every bullet id below still exist, unblocked, in the current
-# profile -- only the CURRENT base_variants' proportions moved on. This
-# helper overrides just the named variant's shape inside an already-built
-# SelectionCatalog so S2's shape validator sees the shape the trace was
-# actually recorded against; config/master_profile.yaml is never touched.
-# ---------------------------------------------------------------------------
-
-_RECORDING_TIME_VARIANT_SHAPES = {
-    "ml": dict(
-        projects=("sepsis_early_warning", "fake_review_detection"),
-        bullet_order=(
-            "int_b1", "int_b2", "int_b3", "am_b00_order_management_domain",
-            "am_b04_data_retention", "am_b05_test_automation", "am_b03_audit_trail",
-            "am_b01_dlq_consolidation", "am_b02_row_level_entitlement",
-            "sepsis_b3", "frd_b1", "frd_b3",
-        ),
-        experience_order=("bank_integration_internship", "amdocs_software_developer"),
-        experience_bullet_counts=(("bank_integration_internship", 3), ("amdocs_software_developer", 6)),
-    ),
-    "backend": dict(
-        projects=("clinical_trial_platform", "campus_marketplace"),
-        bullet_order=(
-            "int_b1", "int_b2", "int_b3", "am_b00_order_management_domain",
-            "am_b04_data_retention", "am_b05_test_automation", "am_b03_audit_trail",
-            "am_b01_dlq_consolidation", "ct_b1", "ct_b2", "cm_b1", "cm_b2",
-        ),
-        experience_order=("bank_integration_internship", "amdocs_software_developer"),
-        experience_bullet_counts=(("bank_integration_internship", 3), ("amdocs_software_developer", 5)),
-    ),
-}
-
-
-def recording_time_catalog(catalog, variant_name: str):
-    """Return `catalog` with `variant_name`'s shape replaced by the shape it
-    was actually recorded against (see module docstring above)."""
-    shape = _RECORDING_TIME_VARIANT_SHAPES[variant_name]
-    variants = tuple(
-        replace(v, **shape) if v.name == variant_name else v
-        for v in catalog.variants
-    )
-    return replace(catalog, variants=variants)
+# The recording-time base_variants shape shim (`recording_time_catalog`) that
+# these frozen traces need lives in tests/fixtures/tailor/traces/context.py,
+# shared with tests/render/test_l7_tailored.py -- see that module's
+# docstring for the full rationale. Do not duplicate the literal here.
 
 from scripts.record_trace_fixture import record_trace_fixture  # noqa: E402
 

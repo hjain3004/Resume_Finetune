@@ -198,13 +198,17 @@ def real_resume_doc():
     from src.tailor.s2 import build_s2_request, parse_s2_response
     from src.tailor.s3 import build_s3_request, hydrate_s3, parse_s3_response
     from tests.fixtures.tailor.traces import context
+    from tests.fixtures.tailor.traces.context import recording_time_catalog
 
     profile = load_profile("config/master_profile.yaml")
     s1_request = parse_s1_request(context.NOTION_S1_REQUEST)
     s1 = parse_s1_response(context.NOTION_S1_RESPONSE_RAW, s1_request.jd_text)
     s0_request = build_s0_request(s1_request.job_id, s1_request.company, s1_request.title, s1, profile.for_positioning())
     s0 = parse_s0_response(context.NOTION_S0_RESPONSE_RAW, s0_request)
-    catalog = profile.for_selection("backend")
+    # This trace was recorded against the pre-2026-09-15-blueprint backend
+    # shape (2 projects / 12 bullets, not the current 3/15) -- see
+    # tests/fixtures/tailor/traces/context.py's module docstring.
+    catalog = recording_time_catalog(profile.for_selection("backend"), "backend")
     s2_request = build_s2_request(s1_request.job_id, s1_request.company, s1_request.title, s1, s0, catalog)
     s2 = parse_s2_response(context.NOTION_S2_RESPONSE_RAW, s2_request)
     alignment = alignment_from_profile(profile, s2_request, s2)
@@ -253,7 +257,10 @@ def doc_claiming_false_emphasis(real_resume_doc):
     Proves the line-wrap stitch does not blind check_emphasis_rendered to
     a real missing-bold defect."""
     target_bullet = next(b for b in real_resume_doc.all_bullets() if b.bullet_id == "sepsis_b2")
-    fragment = "the best single model at 0.400 normalized utility"
+    # Genuinely unbolded tail of the current sepsis_b2 text (outside both of
+    # its real emphasis spans: "PyTorch GRU-D network" and "0.400 normalized
+    # utility") -- read from the live profile, not hardcoded from a prompt.
+    fragment = "the study's top individual model"
     assert fragment in target_bullet.text
     start = target_bullet.text.index(fragment)
     fabricated_bullet = dataclasses.replace(
