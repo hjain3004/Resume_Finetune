@@ -96,9 +96,9 @@ def _valid_bundle():
 
     request = _clean(_request_fixture())
     after = (
-        "Built the **anti-corruption layer** between a commercial bank's core systems and "
-        "four external providers as **four asynchronous Python microservices "
-        "(FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+        "Built the **anti-corruption layer** and **Core onboarding service** "
+        "orchestrating three of four adapter services, five asynchronous Python "
+        "microservices in all."
     )
     raw = {
         "bullet_edits": [{"bullet_id": "int_b1", "after": after, "motivating_terms": ["Python"], "rule": "terminology_mirroring"}],
@@ -213,9 +213,12 @@ def _case_alignment_fingerprint(request, response, draft):
 
 
 def _case_metric(request, response, draft):
-    # "four"/"five" are words, not digits -- _numeric_tokens only matches
-    # digit-based tokens, so mutate the one real numeric token ("2.0").
-    edited_after = draft.bullets[0].text.replace("2.0", "3.0", 1)
+    # 2026-09-15 blueprint: int_b1's medium spells every count out ("three",
+    # "four", "five") and has ZERO digit-based tokens, so there is no "2.0"
+    # left to mutate. Exercise the same L4 numeric-token-multiset check the
+    # other direction: introduce a digit ("3") where the canonical text has
+    # none.
+    edited_after = draft.bullets[0].text.replace("three", "3", 1)
     from src.render.emphasis import parse_emphasis as _pe
 
     plain, emphasis = _pe(edited_after)

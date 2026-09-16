@@ -40,13 +40,13 @@ from tests.test_tailor_g2_cli import _g2_chain, _g2_invoke_args, _g2_prepare_arg
 
 EDITED_BULLET_ID = "int_b1"
 EDITED_BULLET_AFTER = (
-    "Built the **anti-corruption layer** between a commercial bank's core systems and "
-    "four external providers as **four asynchronous Python microservices "
-    "(FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    "Built the **anti-corruption layer** and **Core onboarding service** "
+    "orchestrating three of four adapter services, five asynchronous Python "
+    "microservices in all."
 )
 #: Present verbatim in EDITED_BULLET_AFTER; used as a finding's quoted_line
 #: and as the clause a further-shortening revision removes.
-_REMOVED_CLAUSE = "between a commercial bank's core systems"
+_REMOVED_CLAUSE = "orchestrating three of four adapter services"
 
 
 class _ScriptedInvoke:
@@ -160,7 +160,7 @@ def _s3_revision_response(after_text, *, motivating_terms=("Python",)):
 
 def _shorten_further(bundle) -> str:
     current = next(b for b in bundle.draft.bullets if b.bullet_id == EDITED_BULLET_ID)
-    return current.text.replace(_REMOVED_CLAUSE + " and four external providers ", "and four external providers ")
+    return current.text.replace(" " + _REMOVED_CLAUSE + ",", ",")
 
 
 def test_critic_cannot_smuggle_replacement_text(tmp_path, monkeypatch):
@@ -215,8 +215,17 @@ def test_revision_reintroducing_banned_word_is_rejected(tmp_path, monkeypatch):
 
 
 def test_revision_dropping_a_metric_is_rejected(tmp_path, monkeypatch):
-    """A revision that drops the bullet's sole numeric token ("2.0") is
+    """A revision that changes the bullet's numeric-token multiset is
     rejected.
+
+    2026-09-15 blueprint substitution: the original scenario dropped the
+    bullet's sole numeric token ("2.0"); the approved blueprint's int_b1
+    medium spells every count out ("three", "four", "five") and now has
+    ZERO numeric tokens, so there is nothing left to drop. The rule under
+    test -- numeric-token-multiset preservation -- is exercised the other
+    direction instead: the revision spells "three of four" as "3 of 4",
+    introducing digits where the canonical text has none. Same check
+    (S3SemanticError: "numeric-token multiset changed"), same outcome.
 
     Deviation from the plan: the plan's Task 7 pseudocode asserts
     G2OutcomeKind.REVISION_G1_FAILURE for this scenario. In the merged
@@ -241,7 +250,7 @@ def test_revision_dropping_a_metric_is_rejected(tmp_path, monkeypatch):
         "explanation": "impact is below the fold",
     }
     revise_raw = json.dumps({"scores": {"C1": 3, "C2": 3, "C3": 3, "C4": 1, "C5": 3}, "findings": [finding]})
-    dropped_metric_after = EDITED_BULLET_AFTER.replace("SQLAlchemy 2.0, ", "")
+    dropped_metric_after = EDITED_BULLET_AFTER.replace("three of four", "3 of 4")
     scripted = _ScriptedInvoke([revise_raw, _s3_revision_response(dropped_metric_after)])
     monkeypatch.setattr("src.tailor.g2_pipeline.invoke_text_model", scripted)
     monkeypatch.setattr("src.tailor.s3_pipeline.invoke_text_model", scripted)
@@ -276,11 +285,11 @@ def test_revision_adding_do_not_claim_term_is_rejected(tmp_path, monkeypatch):
     request, bundle = _build_real_pair()
     finding = {
         "dimension": "C3", "rule_id": "C3.keyword_chasing", "target_kind": "bullet",
-        "target_id": EDITED_BULLET_ID, "quoted_line": "PostgreSQL",
+        "target_id": EDITED_BULLET_ID, "quoted_line": "adapter",
         "explanation": "keyword coverage could be stronger",
     }
     revise_raw = json.dumps({"scores": {"C1": 3, "C2": 3, "C3": 1, "C4": 3, "C5": 3}, "findings": [finding]})
-    smuggled_after = EDITED_BULLET_AFTER.replace("PostgreSQL", "Kubernetes")
+    smuggled_after = EDITED_BULLET_AFTER.replace("adapter", "Kubernetes")
     # Cites only "Python" -- "Kubernetes" is never a legitimate motivating
     # term (see docstring), so this is an uncited addition.
     scripted = _ScriptedInvoke([revise_raw, _s3_revision_response(smuggled_after, motivating_terms=("Python",))])

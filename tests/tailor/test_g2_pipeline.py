@@ -89,19 +89,20 @@ def _s3_revision_response(after_text: str, *, motivating_terms=("Python",)):
 
 #: The clause this fixture's second-round edit removes -- also used as the
 #: round-1 finding's quoted_line so unresolved_findings() correctly detects
-#: the revision actually changed the text the finding named (not the
-#: metric-bearing parenthetical, which must survive unedited).
-_REMOVED_CLAUSE = "between a commercial bank's core systems"
+#: the revision actually changed the text the finding named. 2026-09-15
+#: blueprint: int_b1's medium now has no numeric tokens at all (every count
+#: is spelled out), so there is no "metric-bearing parenthetical" to
+#: preserve; the invariant this fixture exercises -- the edit changes the
+#: named clause while the rest of the bullet survives -- still holds.
+_REMOVED_CLAUSE = "orchestrating three of four adapter services"
 
 
 def _shorten_further(bundle) -> str:
     """A second, further-shortened edit of the already-edited bullet: drop
-    the middle clause (which has no digits), preserving the leading verb
-    and the sole numeric token "2.0" in the trailing parenthetical."""
+    the middle clause, preserving the leading verb and the (empty)
+    numeric-token multiset."""
     current = next(b for b in bundle.draft.bullets if b.bullet_id == EDITED_BULLET_ID)
-    return current.text.replace(
-        "between a commercial bank's core systems and four external providers ", ""
-    )
+    return current.text.replace(" " + _REMOVED_CLAUSE + ",", ",")
 
 
 def _reordered_edit(request) -> str:
@@ -164,7 +165,7 @@ def test_open_flags_after_two_failing_rounds(loop_kwargs, monkeypatch, s3_pair_w
 
 def test_noop_revision_short_circuits(loop_kwargs, monkeypatch, s3_pair_with_bundle):
     _, bundle = s3_pair_with_bundle
-    quote = "four asynchronous Python microservices"
+    quote = "five asynchronous Python microservices"
     current_after = next(b.text for b in bundle.draft.bullets if b.bullet_id == EDITED_BULLET_ID)
     scripted = _ScriptedInvoke([
         _revise_response(quote),
@@ -244,7 +245,7 @@ def test_invocation_failure_without_raw_output_writes_no_trace(loop_kwargs, monk
 
 def test_revision_invocation_failure_maps_correctly(loop_kwargs, monkeypatch):
     scripted = _ScriptedInvoke([
-        _revise_response("four asynchronous Python microservices"),
+        _revise_response("five asynchronous Python microservices"),
         InvocationError("revision model down", raw_stdout="", model="fake"),
     ])
     monkeypatch.setattr("src.tailor.g2_pipeline.invoke_text_model", scripted)
@@ -257,7 +258,7 @@ def test_revision_invocation_failure_maps_correctly(loop_kwargs, monkeypatch):
 
 def test_revision_parse_failure_maps_correctly(loop_kwargs, monkeypatch):
     scripted = _ScriptedInvoke([
-        _revise_response("four asynchronous Python microservices"),
+        _revise_response("five asynchronous Python microservices"),
         "not json at all",
     ])
     monkeypatch.setattr("src.tailor.g2_pipeline.invoke_text_model", scripted)
@@ -278,7 +279,7 @@ def test_revision_semantic_failure_when_out_of_scope_bullet_edited(loop_kwargs, 
         "skill_additions": [],
     })
     scripted = _ScriptedInvoke([
-        _revise_response("four asynchronous Python microservices"),
+        _revise_response("five asynchronous Python microservices"),
         out_of_scope,
     ])
     monkeypatch.setattr("src.tailor.g2_pipeline.invoke_text_model", scripted)

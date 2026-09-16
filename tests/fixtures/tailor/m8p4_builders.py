@@ -10,13 +10,13 @@ def valid_scores(**overrides) -> dict[str, int]:
 def finding_dict(**overrides) -> dict[str, str]:
     # "target_id" and "quoted_line" match the fixture edited bullet's
     # after-emphasis-stripped text in tests/tailor/conftest.py's
-    # s3_pair_with_bundle: "...four asynchronous Python microservices...".
+    # s3_pair_with_bundle: "...five asynchronous Python microservices...".
     base = {
         "dimension": "C5",
         "rule_id": "C5.template_phrasing",
         "target_kind": "bullet",
         "target_id": "int_b1",
-        "quoted_line": "four asynchronous Python microservices",
+        "quoted_line": "five asynchronous Python microservices",
         "explanation": "reads as template output",
     }
     base.update(overrides)

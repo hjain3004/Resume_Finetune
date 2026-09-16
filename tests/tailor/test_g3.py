@@ -26,9 +26,9 @@ from src.tailor.s3_pipeline import S3Bundle
 
 EDITED_BULLET_ID = "int_b1"
 EDITED_BULLET_AFTER = (
-    "Built the **anti-corruption layer** between commercial bank core systems and "
-    "four external providers as **four asynchronous Python microservices "
-    "(FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    "Built the **anti-corruption layer** and **Core onboarding service** "
+    "orchestrating three of four adapter services, five asynchronous Python "
+    "microservices in all."
 )
 
 
@@ -154,7 +154,7 @@ def many_requirements_inputs():
 def gap_and_flag_inputs():
     finding = G2Finding(
         dimension=G2Dimension.C5, rule_id="C5.template_phrasing", target_kind=G2TargetKind.BULLET,
-        target_id=EDITED_BULLET_ID, quoted_line="four asynchronous Python microservices",
+        target_id=EDITED_BULLET_ID, quoted_line="five asynchronous Python microservices",
         explanation="reads as template output",
     )
     return _build_chain(

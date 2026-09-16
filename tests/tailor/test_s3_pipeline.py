@@ -167,9 +167,9 @@ def test_s3_bundle_to_dict_produces_json_serializable_primitives_for_nontrivial_
     request = build_s3_request(1, "Example", "Engineer", s2_request.s1, s2_request.s0, s2_response, _replace(alignment, do_not_claim=()))
 
     after = (
-        "Built the **anti-corruption layer** between a commercial bank's core systems and "
-        "four external providers as **four asynchronous Python microservices "
-        "(FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+        "Built the **anti-corruption layer** and **Core onboarding service** "
+        "orchestrating three of four adapter services, five asynchronous Python "
+        "microservices in all."
     )
     edit_raw = _json.dumps({
         "bullet_edits": [{"bullet_id": "int_b1", "after": after, "motivating_terms": ["Python"], "rule": "terminology_mirroring"}],

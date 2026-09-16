@@ -2674,3 +2674,33 @@ The user explicitly approved targeted prompt and methodology changes for M8N-0c 
 2. `docs/prompts/tailoring_s2.md`: Updated to use `gap` for terms with no exact keyword hit in a selected bullet, including baseline terms, unless actual evidence exists.
 3. `docs/prompts/tailoring_s3.md`: Added instructions specifying the deterministic `placement_requirements` list derived from S2-covered terms, requiring missing placements using minimal substitutions without rephrasing unrelated text or hallucinating.
 4. `docs/TAILORING_METHODOLOGY.md`: Updated S1 definition to describe atomic terms, and G1 L3 definition to clarify that placement bounds apply to *S2-covered atomic* must-have terms only, not all S1 terms (exempting gaps).
+
+## 2026-09-15 — Resume blueprint: taste.md reformat, D2 deferred, S2 shape contract kept
+
+The user approved a one-page resume layout blueprint on 2026-09-15 (commit `ee6b25e`; test
+repair in a follow-up commit). Three items for the record:
+
+1. **`config/taste.md` reformatted to the loadable dated-line format.** `config/taste.md` is a
+   PROTECTED prompt input. Its `2026-09-09` and `2026-09-13` sections were a bare date header
+   followed by `- item` bullet lines; `src/tailor/g2.py::load_taste_lessons` only ever matched
+   a single `YYYY-MM-DD: <lesson>` line per lesson, so those two entire sessions' feedback
+   silently reached zero prompts (`load_taste_lessons` returned two empty strings for them,
+   both discarded). Every item was rewritten as its own `YYYY-MM-DD: <item>` line, verbatim, no
+   merging or dropping; the loader now returns 27 real lessons (7 + 12 + 8) where it returned
+   only the 8 `2026-09-15` ones before.
+2. **The required D2 drift re-run is deferred, not skipped.** Per `docs/TAILORING_METHODOLOGY.md`
+   §5, changing a PROTECTED prompt input requires an immediate D2 drift regression (re-run G1+G2
+   on 5 sampled golden applications; any golden failing lint, or any critic dimension dropping
+   ≥1 vs. its archived verdict, is a drift FAIL). This could not be performed: neither the D2
+   harness script nor the `applications/_golden/` corpus it samples from has ever been built
+   (`docs/TAILORING_METHODOLOGY.md` §7 lists "golden-set harness + D2 monthly script" as build
+   item 6 of the M8 milestone, not yet done). D2 stays owed against `config/taste.md` until both
+   exist; do not treat the taste.md reformat as drift-checked.
+3. **`src/tailor/s2.py`'s exact-count contract (`build_variant.projects`/`bullet_order` length
+   must match the response exactly) is kept deliberately, not loosened.** It is the mechanism
+   that enforces the blueprint's fixed proportions (Amdocs always largest, MalyTech ≤3, backend
+   3 projects / 15 bullets, ml 2 projects / 16 bullets) — tailoring is only ever allowed to
+   change WHICH bullets and projects are selected per company, never how many. The test-repair
+   pass following this blueprint change touched only test fixtures (stale hardcoded pre-blueprint
+   `int_b1` text, and two frozen recorded traces replayed against their recording-time variant
+   shape via a test-local `dataclasses.replace` shim); `src/tailor/s2.py` itself was not modified.

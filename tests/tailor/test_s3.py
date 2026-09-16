@@ -132,7 +132,11 @@ def test_s3_accepts_exact_covered_skill_addition_and_rejects_duplicates():
 def test_s3_hydration_preserves_structure_skills_and_derives_change_log():
     request = _request_fixture()
     source = next(item.source_text for item in request.alignment.bullets if item.bullet_id == "int_b1")
-    after = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
+    after = (
+        "Built the **anti-corruption layer** and **Core onboarding service** "
+        "orchestrating three of four adapter services, five asynchronous Python "
+        "microservices in all."
+    )
     response = parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after)], "skill_additions": []}), request)
     draft = hydrate_s3(request, response)
     assert tuple(item.bullet_id for item in draft.bullets) == request.s2.bullet_order
@@ -149,14 +153,15 @@ def test_s3_length_growth_bound():
     s2 = replace(request.s2, coverage=(CoverageEntry("Distributed Systems", "covered", ("int_b1",)),))
     request = replace(request, s1=s1, s2=s2)
 
-    # original int_b1 length: 173 chars. Motivating term "Distributed Systems" length: 19. Budget: 19.
-    # Base text: "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)**."
-
-    base_after = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers - telecom messaging, real-time interbank transfers, identity verification, and AML sanctions screening - then the **Core onboarding service** above those four as the single front door and system of record: **five asynchronous Python microservices** (FastAPI, SQLAlchemy 2.0, PostgreSQL)."
-
-    # We want +19 exact. Motivating term "Distributed Systems" is 19 chars.
-    after_over_budget = base_after.replace("microservices** (FastAPI", "microservices** Distributed Systems (FastAPI") # +20
-    after_exactly_budget = after_over_budget.replace("four external", "the external") # -1 => +19
+    source = next(item.source_text for item in request.alignment.bullets if item.bullet_id == "int_b1")
+    # 2026-09-15 blueprint substitution: int_b1's canonical medium is now 333
+    # chars (the pre-blueprint text this test hardcoded was 173). Motivating
+    # term "Distributed Systems" is still 19 chars, so the budget is still 19.
+    # Insert the term with its leading space (+20) after "AML screening,",
+    # then drop one comma elsewhere (-1 -- commas aren't word tokens, so
+    # removing one is free) for a net +19: exactly at budget.
+    after_over_budget = source.replace("AML screening, then", "AML screening Distributed Systems, then")  # +20
+    after_exactly_budget = after_over_budget.replace("messaging, real-time", "messaging real-time")  # -1 => +19
 
     # accepted
     parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_exactly_budget, terms=["Distributed Systems"])], "skill_additions": [{"category": "languages", "term": "Distributed Systems", "motivating_term": "Distributed Systems"}]}), request)
@@ -166,7 +171,7 @@ def test_s3_length_growth_bound():
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_over_budget, terms=["Distributed Systems"])], "skill_additions": []}), request)
 
     # rejected (uncited word within budget)
-    after_uncited = "Built the **anti-corruption layer** between a commercial bank's core systems and four external providers as **four asynchronous Python microservices (FastAPI, SQLAlchemy 2.0, PostgreSQL)** uncited"
+    after_uncited = source + " uncited"
     with pytest.raises(S3SemanticError, match="uncited vocabulary"):
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_uncited, terms=["Distributed Systems"])], "skill_additions": []}), request)
 
