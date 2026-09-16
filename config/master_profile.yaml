@@ -2292,18 +2292,15 @@ experience:
 
       - id: int_gap_core_ownership
         severity: medium
-        status: open
+        status: resolved
         detail: >-
-          The Core onboarding service (audit repo) is attributed to Himanshu on the
-          strength of git history: 20 commits, sole author hjain3004, 2026-08-07 to
-          2026-08-11, with design specs and plans in the same repo. That is strong
-          attribution evidence but it has not been confirmed by Himanshu the way the
-          adapter-layer scope was on 2026-07-30.
+          RESOLVED 2026-09-16: Himanshu confirms Core was his own design, not a team
+          assignment he merely implemented -- consistent with the git history (20
+          commits, sole author hjain3004, 2026-08-07 to 2026-08-11, with design specs
+          and plans in the same repo). "Designed and built" in int_b9 is accurate.
         fix: >-
-          Confirm with Himanshu whether Core was his own design or a team assignment
-          he implemented. If it was a team design, soften "designed and built" to
-          "built" in int_b9 and adjust the ownership_boundary. Until confirmed, the
-          bullets claim only what the repository demonstrably shows.
+          No further action. Keep the ownership_boundary as-is; the repository
+          evidence and the user's confirmation now agree.
 
       - id: int_gap_core_not_production
         severity: high

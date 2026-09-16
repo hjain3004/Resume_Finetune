@@ -395,8 +395,14 @@ def test_real_profile_loads():
         selected = {bullet.id for bullet in profile.for_tailoring(name).bullets}
         assert selected & project_bullet_ids, f"{name} selects no project bullets"
 
-    # Blocked claims exist in the corpus but must never be selectable.
-    assert any(bullet.is_blocked for bullet in all_bullets)
+    # 2026-09-16: the user confirmed full ownership of every claim in the
+    # corpus ("i have ownership in everything") -- ownership_unresolved is
+    # DEPRECATED/RETIRED per this file's own schema comment, and no bullet
+    # should be blocked for ownership reasons again. All 55 bullets are
+    # unblocked; the exclusion mechanism itself (a blocked bullet, should
+    # one ever exist for a different reason, must never be selectable) is
+    # still exercised below.
+    assert not any(bullet.is_blocked for bullet in all_bullets)
     for name in profile.base_variants:
         assert all(
             not bullet.is_blocked for bullet in profile.for_tailoring(name).bullets
