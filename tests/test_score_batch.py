@@ -184,14 +184,14 @@ def test_score_chunk_invokes_claude_k_times_with_tools_disabled_and_no_permissio
     assert mock_run.call_count == score_batch.SELF_CONSISTENCY_K
     for call in mock_run.call_args_list:
         invoked_cmd = call.args[0]
-        assert invoked_cmd[:6] == ["claude", "-p", "--tools", "", "--no-session-persistence", "--"]
+        assert invoked_cmd[:7] == ["claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--"]
         assert invoked_cmd[-1].startswith("## Prompt")
         assert not any(flag.startswith("--permission") or flag.startswith("--allowed") for flag in invoked_cmd)
         assert call.kwargs["timeout"] == score_batch._CLAUDE_TIMEOUT_SECONDS
 
 
 def test_default_claude_command_disables_tools_and_session_persistence():
-    assert score_batch.DEFAULT_CLAUDE_CMD == ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+    assert score_batch.DEFAULT_CLAUDE_CMD == ("claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
 
 
 def test_default_claude_command_never_leaves_prompt_adjacent_to_variadic_tools():

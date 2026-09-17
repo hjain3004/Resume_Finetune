@@ -807,7 +807,7 @@ def test_run_stages_threads_claude_cmd_to_every_runner(tmp_repo, monkeypatch):
     monkeypatch.setattr("src.tailor.pilot.run_s2_invocation", fake_s2)
     monkeypatch.setattr("src.tailor.pilot.run_s3_invocation", fake_s3)
     monkeypatch.setattr("src.tailor.pilot.run_g2_loop", fake_g2)
-    cmd = ("claude", "-p", "--model", "sonnet", "--tools", "", "--no-session-persistence", "--")
+    cmd = ("claude", "-p", "--model", "sonnet", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
     run_stages(_lane_request(), "ml", directory=tmp_repo.root / "app", profile_path=tmp_repo.profile,
                root=tmp_repo.root, claude_cmd=cmd, stop_after=Stage.G2)
     assert seen == {"s1": cmd, "s0": cmd, "s2": cmd, "s3": cmd, "g2": cmd}

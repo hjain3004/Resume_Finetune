@@ -64,9 +64,9 @@ def build_model_command(provider: Provider | str, model: str | None = None) -> M
 
     if provider is Provider.CLAUDE:
         if clean_model is None:
-            argv = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+            argv = ("claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
         else:
-            argv = ("claude", "-p", "--model", clean_model, "--tools", "", "--no-session-persistence", "--")
+            argv = ("claude", "-p", "--model", clean_model, "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
         cmd = ModelCommand(
             provider=provider,
             model=clean_model,

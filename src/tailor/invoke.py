@@ -31,7 +31,7 @@ from src.tailor.providers import (
 # `--tools` is variadic and greedily consumes following non-flag argv, so
 # `--tools ""` must never be last; the trailing "--" keeps the prompt
 # positional even if it starts with a dash.
-DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
 DEFAULT_S1_CLAUDE_CMD = DEFAULT_CLAUDE_CMD
 DEFAULT_TIMEOUT_SECONDS = 300
 _DIAGNOSTIC_MAX_CHARS = 1000

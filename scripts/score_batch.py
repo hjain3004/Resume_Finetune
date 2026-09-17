@@ -69,7 +69,7 @@ _CLAUDE_TIMEOUT_SECONDS = 300
 # sit last: it would swallow the appended prompt as a tool name, and the CLI would
 # exit 1 with "Input must be provided ... when using --print". The trailing "--"
 # keeps the prompt positional even if it ever begins with a dash.
-DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+DEFAULT_CLAUDE_CMD: tuple[str, ...] = ("claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
 SCORER_DIAGNOSTIC_MAX_CHARS = 1000
 _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?|\n?```\s*$", re.MULTILINE)
 
