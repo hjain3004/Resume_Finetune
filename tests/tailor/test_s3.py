@@ -176,23 +176,43 @@ def test_s3_length_growth_bound():
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_uncited, terms=["Distributed Systems"])], "skill_additions": []}), request)
 
 
-@pytest.mark.xfail(strict=True, reason="S3 _WORD_RE treats hyphenated words as atomic, causing unhyphenated edits to fail uncited vocabulary check")
 def test_hyphenated_source_words_unhyphenated_in_edit_considered_cited():
     request = _request_fixture()
     bullet = request.alignment.bullets[0]
     hyphenated_text = bullet.plain_text + " logistic-regression"
-    hyphenated_bullet = replace(bullet, plain_text=hyphenated_text, text=hyphenated_text)
+    hyphenated_bullet = replace(bullet, plain_text=hyphenated_text, source_text=hyphenated_text)
     bullets = (hyphenated_bullet, *request.alignment.bullets[1:])
     req = replace(request, alignment=replace(request.alignment, bullets=bullets))
     # Edit replaces hyphen with space: "logistic regression"
     after_text = bullet.plain_text + " logistic regression"
-    # Currently fails with S3SemanticError: uncited vocabulary: ['logistic', 'regression']
-    parse_s3_response(json.dumps({"bullet_edits": [_edit(req, after=after_text, terms=["Distributed Systems"])], "skill_additions": []}), req)
+    parse_s3_response(json.dumps({"bullet_edits": [_edit(req, after=after_text)], "skill_additions": []}), req)
 
 
+def test_two_source_words_hyphenated_in_edit_accepted():
+    request = _request_fixture()
+    bullet = request.alignment.bullets[0]
+    # Source has two unhyphenated words: "logistic regression"
+    source_text = bullet.plain_text + " logistic regression"
+    source_bullet = replace(bullet, plain_text=source_text, source_text=source_text)
+    bullets = (source_bullet, *request.alignment.bullets[1:])
+    req = replace(request, alignment=replace(request.alignment, bullets=bullets))
+    # Edit uses the hyphenated form: "logistic-regression"
+    after_text = bullet.plain_text + " logistic-regression"
+    parse_s3_response(json.dumps({"bullet_edits": [_edit(req, after=after_text)], "skill_additions": []}), req)
 
 
-
+def test_genuinely_new_word_adjacent_to_hyphen_still_rejected():
+    request = _request_fixture()
+    bullet = request.alignment.bullets[0]
+    # Source has "logistic" and "systems" (not "quantum"), same length as "logistic-quantum"
+    source_text = bullet.plain_text.replace("microservices", "logistic systems")
+    source_bullet = replace(bullet, plain_text=source_text, source_text=source_text)
+    bullets = (source_bullet, *request.alignment.bullets[1:])
+    req = replace(request, alignment=replace(request.alignment, bullets=bullets))
+    # Edit introduces "logistic-quantum" where "quantum" is genuinely new and uncited
+    after_text = bullet.plain_text.replace("microservices", "logistic-quantum")
+    with pytest.raises(S3SemanticError, match=r"uncited vocabulary: \['logistic-quantum'\]"):
+        parse_s3_response(json.dumps({"bullet_edits": [_edit(req, after=after_text)], "skill_additions": []}), req)
 def test_s3_edit_budget_exactly_exposes_tokens_and_ratio():
     request = _request_fixture()
     # This pure synthetic boundary checks the calculation independently of S2 ordering.

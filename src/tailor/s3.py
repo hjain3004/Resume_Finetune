@@ -361,10 +361,31 @@ def _validate_bullet_edit(edit: BulletEdit, request: S3Request) -> None:
     if len(plain_after) > len(source.plain_text) + budget:
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: plain-text length grew beyond the mirrored term")
     before_counts = Counter(_words(source.plain_text))
+    for word, count in list(before_counts.items()):
+        if "-" in word:
+            for part in word.split("-"):
+                if part:
+                    before_counts[part] += count
     after_counts = Counter(_words(plain_after))
     motivating_words = set(_words(" ".join(edit.motivating_terms)))
+    for word in list(motivating_words):
+        if "-" in word:
+            for part in word.split("-"):
+                if part:
+                    motivating_words.add(part)
     additions = after_counts - before_counts
-    uncited = {word for word, count in additions.items() if word not in motivating_words and word not in _FUNCTION_WORDS and not word.isdigit()}
+    uncited = set()
+    for word in additions:
+        if word in motivating_words or word in _FUNCTION_WORDS or word.isdigit():
+            continue
+        if "-" in word:
+            parts = [p for p in word.split("-") if p]
+            if parts and all(
+                p in before_counts or p in motivating_words or p in _FUNCTION_WORDS or p.isdigit()
+                for p in parts
+            ):
+                continue
+        uncited.add(word)
     if uncited:
         raise S3SemanticError(f"bullet_edits.{edit.bullet_id}: uncited vocabulary: {_bounded(sorted(uncited))}")
 
