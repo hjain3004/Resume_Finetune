@@ -16,6 +16,7 @@ from src.tailor.lane import (
     LaneError,
     build_claude_cmd,
     check_gemini_credentials,
+    check_openai_credentials,
     lane_directory,
     lane_job_id,
     lane_manifest_to_dict,
@@ -44,6 +45,7 @@ def passing_preflight(monkeypatch):
     monkeypatch.setattr("src.tailor.lane.run_preflight",
                         lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
+    monkeypatch.setattr("src.tailor.lane.check_openai_credentials", lambda *a, **k: None)
 
 
 @pytest.fixture
@@ -177,39 +179,29 @@ def test_old_manifest_without_provider_defaults_to_claude():
     assert manifest.provider == "claude"
 
 
-def test_check_gemini_credentials_oauth_without_project_fails(tmp_path):
-    settings = tmp_path / "settings.json"
-    settings.write_text('{"security": {"auth": {"selectedType": "oauth-personal"}}}', encoding="utf-8")
-    err = check_gemini_credentials(env={}, settings_path=settings)
-    assert err is not None
-    assert "GOOGLE_CLOUD_PROJECT" in err
-
-
-def test_check_gemini_credentials_oauth_with_project_passes(tmp_path):
-    settings = tmp_path / "settings.json"
-    settings.write_text('{"security": {"auth": {"selectedType": "oauth-personal"}}}', encoding="utf-8")
-    assert check_gemini_credentials(env={"GOOGLE_CLOUD_PROJECT": "proj-123"}, settings_path=settings) is None
-    assert check_gemini_credentials(env={"GOOGLE_CLOUD_PROJECT_ID": "proj-123"}, settings_path=settings) is None
-
-
-def test_check_gemini_credentials_api_key_mode(tmp_path):
-    settings = tmp_path / "settings.json"
-    settings.write_text('{"security": {"auth": {"selectedType": "gemini-api-key"}}}', encoding="utf-8")
+def test_check_gemini_credentials():
     # Missing key fails
-    err = check_gemini_credentials(env={}, settings_path=settings)
+    err = check_gemini_credentials(env={})
     assert err is not None
     assert "GEMINI_API_KEY" in err
     # Present key passes
-    assert check_gemini_credentials(env={"GEMINI_API_KEY": "AIzaSy..."}, settings_path=settings) is None
+    assert check_gemini_credentials(env={"GEMINI_API_KEY": "AIzaSy..."}) is None
+
+
+def test_check_openai_credentials():
+    # Missing key fails
+    err = check_openai_credentials(env={})
+    assert err is not None
+    assert "OPENAI_API_KEY" in err
+    # Present key passes
+    assert check_openai_credentials(env={"OPENAI_API_KEY": "sk-proj-..."}) is None
 
 
 def test_gemini_preflight_credential_check_fails_run_before_model_call(tmp_path, jd_file, monkeypatch):
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
-    monkeypatch.setattr("shutil.which", lambda exe: "/usr/bin/" + exe)
-    # Simulate unconfigured credentials
     monkeypatch.setattr(
         "src.tailor.lane.check_gemini_credentials",
-        lambda *a, **k: "Missing GOOGLE_CLOUD_PROJECT in environment",
+        lambda *a, **k: "GEMINI_API_KEY environment variable is not set.",
     )
     outcome = run_manual_application(
         jd_file, company="Example", title="Engineer", variant="backend",
@@ -217,7 +209,22 @@ def test_gemini_preflight_credential_check_fails_run_before_model_call(tmp_path,
     )
     assert outcome.failed_stage is Stage.PREPARE
     assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
-    assert outcome.manifest.stages[0].error == "Missing GOOGLE_CLOUD_PROJECT in environment"
+    assert "GEMINI_API_KEY" in outcome.manifest.stages[0].error
+
+
+def test_openai_preflight_credential_check_fails_run_before_model_call(tmp_path, jd_file, monkeypatch):
+    monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
+    monkeypatch.setattr(
+        "src.tailor.lane.check_openai_credentials",
+        lambda *a, **k: "OPENAI_API_KEY environment variable is not set.",
+    )
+    outcome = run_manual_application(
+        jd_file, company="Example", title="Engineer", variant="backend",
+        provider="openai", root=tmp_path / "apps", profile_path=PROFILE,
+    )
+    assert outcome.failed_stage is Stage.PREPARE
+    assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
+    assert "OPENAI_API_KEY" in outcome.manifest.stages[0].error
 
 
 # --- composer ---------------------------------------------------------------

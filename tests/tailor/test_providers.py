@@ -30,11 +30,15 @@ from src.tailor.lane import (
 from src.tailor.pilot import Stage
 from src.tailor.preflight import PreflightReport
 from src.tailor.providers import (
+    DEFAULT_GEMINI_MODEL,
+    DEFAULT_OPENAI_MODEL,
     FORBIDDEN_FLAG_PATTERNS,
     ModelCommand,
     Provider,
     build_authority_canary_prompt,
     build_model_command,
+    check_gemini_credentials,
+    check_openai_credentials,
     evaluate_authority_canary,
     extract_model_text,
     trace_model_label,
@@ -89,42 +93,36 @@ def test_every_claude_argv_contains_mcp_isolation_flag():
         assert cmd[-1] == "--", f"Expected trailing '--' in {cmd}"
 
 
-def test_argv_construction_gemini():
+def test_model_command_construction_gemini():
     cmd_default = build_model_command(Provider.GEMINI, None)
     assert cmd_default.provider == Provider.GEMINI
-    assert cmd_default.model is None
-    assert cmd_default.argv == ("gemini", "--approval-mode", "default", "--output-format", "json")
-    assert cmd_default.prompt_via == "argv"
+    assert cmd_default.model == DEFAULT_GEMINI_MODEL
+    assert cmd_default.argv == ()
+    assert cmd_default.prompt_via == "http"
     assert cmd_default.output_file is False
 
     cmd_model = build_model_command(Provider.GEMINI, "gemini-2.5-pro")
     assert cmd_model.provider == Provider.GEMINI
     assert cmd_model.model == "gemini-2.5-pro"
-    assert cmd_model.argv == ("gemini", "--approval-mode", "default", "--output-format", "json", "-m", "gemini-2.5-pro")
-    assert cmd_model.prompt_via == "argv"
+    assert cmd_model.argv == ()
+    assert cmd_model.prompt_via == "http"
     assert cmd_model.output_file is False
 
 
-def test_argv_construction_codex():
-    cmd_default = build_model_command(Provider.CODEX, None)
-    assert cmd_default.provider == Provider.CODEX
-    assert cmd_default.model is None
-    assert cmd_default.argv == (
-        "codex", "exec", "--sandbox", "read-only", "--ephemeral",
-        "--skip-git-repo-check", "--color", "never", "-",
-    )
-    assert cmd_default.prompt_via == "stdin"
-    assert cmd_default.output_file is True
+def test_model_command_construction_openai():
+    cmd_default = build_model_command(Provider.OPENAI, None)
+    assert cmd_default.provider == Provider.OPENAI
+    assert cmd_default.model == DEFAULT_OPENAI_MODEL
+    assert cmd_default.argv == ()
+    assert cmd_default.prompt_via == "http"
+    assert cmd_default.output_file is False
 
-    cmd_model = build_model_command(Provider.CODEX, "o3")
-    assert cmd_model.provider == Provider.CODEX
-    assert cmd_model.model == "o3"
-    assert cmd_model.argv == (
-        "codex", "exec", "--sandbox", "read-only", "--ephemeral",
-        "--skip-git-repo-check", "--color", "never", "-m", "o3", "-",
-    )
-    assert cmd_model.prompt_via == "stdin"
-    assert cmd_model.output_file is True
+    cmd_model = build_model_command(Provider.OPENAI, "gpt-4o")
+    assert cmd_model.provider == Provider.OPENAI
+    assert cmd_model.model == "gpt-4o"
+    assert cmd_model.argv == ()
+    assert cmd_model.prompt_via == "http"
+    assert cmd_model.output_file is False
 
 
 # ---------------------------------------------------------------------------
@@ -162,14 +160,14 @@ def test_invalid_model_names_rejected_for_every_provider(provider, bad_name):
 def test_trace_model_label_per_provider():
     assert trace_model_label(build_model_command(Provider.CLAUDE, None)) == "claude:default"
     assert trace_model_label(build_model_command(Provider.CLAUDE, "sonnet")) == "claude:sonnet"
-    assert trace_model_label(build_model_command(Provider.GEMINI, None)) == "gemini:default"
+    assert trace_model_label(build_model_command(Provider.GEMINI, None)) == f"gemini:{DEFAULT_GEMINI_MODEL}"
     assert trace_model_label(build_model_command(Provider.GEMINI, "gemini-2.5-pro")) == "gemini:gemini-2.5-pro"
-    assert trace_model_label(build_model_command(Provider.CODEX, None)) == "codex:default"
-    assert trace_model_label(build_model_command(Provider.CODEX, "o3")) == "codex:o3"
+    assert trace_model_label(build_model_command(Provider.OPENAI, None)) == f"openai:{DEFAULT_OPENAI_MODEL}"
+    assert trace_model_label(build_model_command(Provider.OPENAI, "gpt-4o")) == "openai:gpt-4o"
 
 
 # ---------------------------------------------------------------------------
-# 5. Text extraction: gemini JSON, codex output-file, noisy stdout
+# 5. Text extraction
 # ---------------------------------------------------------------------------
 
 
@@ -178,31 +176,16 @@ def test_text_extraction_claude():
     assert extract_model_text(cmd, "claude response text", "") == "claude response text"
 
 
-def test_text_extraction_gemini_json_and_noisy_stdout():
-    cmd = build_model_command(Provider.GEMINI, None)
-    valid_json = json.dumps({"response": "tailored resume content", "stats": {"tokens": 123}})
-    assert extract_model_text(cmd, valid_json, "") == "tailored resume content"
+def test_text_extraction_gemini_and_openai():
+    cmd_g = build_model_command(Provider.GEMINI, None)
+    assert extract_model_text(cmd_g, "gemini response text") == "gemini response text"
 
-    # Non-json fallback
-    assert extract_model_text(cmd, "plain text response", "") == "plain text response"
-
-    # Error json extracts to empty string
-    err_json = json.dumps({"error": {"message": "quota exceeded"}})
-    assert extract_model_text(cmd, err_json, "") == ""
-
-
-def test_text_extraction_codex_output_file_ignores_noisy_stdout():
-    cmd = build_model_command(Provider.CODEX, None)
-    noisy_stdout = "2026-09-17 [INFO] starting codex\nTurn 1: thinking\nProgress: 100%\n"
-    output_file_content = "final agent message only"
-    extracted = extract_model_text(cmd, noisy_stdout, output_file_content)
-    assert extracted == "final agent message only"
-    assert "Progress" not in extracted
-    assert "INFO" not in extracted
+    cmd_o = build_model_command(Provider.OPENAI, None)
+    assert extract_model_text(cmd_o, "openai response text") == "openai response text"
 
 
 # ---------------------------------------------------------------------------
-# 6. Prompt delivery via argv vs stdin, and temp cwd for gemini/codex
+# 6. HTTP invocation via requests (mocked) for OpenAI and Gemini
 # ---------------------------------------------------------------------------
 
 
@@ -221,102 +204,157 @@ def test_invoke_claude_prompt_via_argv():
     assert result.model == "claude:default"
 
 
-def test_invoke_gemini_prompt_via_argv_and_cwd_in_tempdir():
-    cmd = build_model_command(Provider.GEMINI, "gemini-2.5-pro")
-    captured_cwd = []
+def test_invoke_openai_http_success(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret-key-12345")
+    cmd = build_model_command(Provider.OPENAI, "gpt-4o-mini")
 
-    def fake_run(args, **kwargs):
-        captured_cwd.append(kwargs.get("cwd"))
-        return MagicMock(returncode=0, stdout=json.dumps({"response": "gemini ok"}), stderr="")
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "choices": [
+            {"message": {"content": "tailored resume response", "role": "assistant"}}
+        ]
+    }
 
-    with patch.object(subprocess, "run", side_effect=fake_run) as mock_run:
-        result = invoke_text_model("MY GEMINI PROMPT", command=cmd)
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        result = invoke_text_model("My Tailoring Prompt", command=cmd)
 
-    args, kwargs = mock_run.call_args
-    exec_argv = args[0]
-    assert exec_argv[-1] == "MY GEMINI PROMPT"
-    assert exec_argv[:-1] == list(cmd.argv)
-    assert result.raw_stdout == "gemini ok"
-    assert result.model == "gemini:gemini-2.5-pro"
-
-    # cwd is a temp dir that was created and is not repo
-    assert captured_cwd[0] is not None
-    assert str(captured_cwd[0]) != str(Path.cwd())
-    assert "tailor-invoke-" in str(captured_cwd[0])
-
-
-def test_invoke_codex_prompt_via_stdin_and_output_last_message():
-    cmd = build_model_command(Provider.CODEX, "o3")
-    captured_kwargs = []
-
-    def fake_run(args, **kwargs):
-        captured_kwargs.append((args, kwargs))
-        # Find --output-last-message path and simulate codex writing it
-        assert "--output-last-message" in args
-        idx = args.index("--output-last-message")
-        out_file = Path(args[idx + 1])
-        out_file.write_text("codex message from file", encoding="utf-8")
-        return MagicMock(returncode=0, stdout="progress logging\n", stderr="")
-
-    with patch.object(subprocess, "run", side_effect=fake_run):
-        result = invoke_text_model("MY CODEX PROMPT", command=cmd)
-
-    exec_argv, kwargs = captured_kwargs[0]
-    assert kwargs.get("input") == "MY CODEX PROMPT"
-    assert kwargs.get("cwd") is not None
-    assert "tailor-invoke-" in str(kwargs.get("cwd"))
-    assert exec_argv[-1] == "-"
-    assert "--output-last-message" in exec_argv
-    assert result.raw_stdout == "codex message from file"
-    assert result.model == "codex:o3"
+    assert result.raw_stdout == "tailored resume response"
+    assert result.model == "openai:gpt-4o-mini"
+    mock_post.assert_called_once()
+    call_args, call_kwargs = mock_post.call_args
+    assert call_args[0] == "https://api.openai.com/v1/chat/completions"
+    assert call_kwargs["headers"]["Authorization"] == "Bearer sk-secret-key-12345"
+    assert call_kwargs["json"]["model"] == "gpt-4o-mini"
+    assert call_kwargs["json"]["messages"] == [{"role": "user", "content": "My Tailoring Prompt"}]
 
 
-# ---------------------------------------------------------------------------
-# 7. InvocationError handling: timeout, nonzero exit, empty extracted text
-# ---------------------------------------------------------------------------
+def test_invoke_openai_http_missing_key_raises_invocation_error(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    cmd = build_model_command(Provider.OPENAI, None)
+
+    with pytest.raises(InvocationError) as exc_info:
+        invoke_text_model("prompt", command=cmd)
+    assert "OPENAI_API_KEY" in str(exc_info.value)
+    assert "sk-" not in str(exc_info.value)
 
 
-def test_invoke_nonzero_exit_carries_raw_stdout():
+def test_invoke_openai_http_non_200_raises_invocation_error(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret-key-12345")
+    cmd = build_model_command(Provider.OPENAI, None)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 429
+    mock_resp.text = '{"error": {"message": "Rate limit reached"}}'
+
+    with patch("requests.post", return_value=mock_resp):
+        with pytest.raises(InvocationError) as exc_info:
+            invoke_text_model("prompt", command=cmd)
+    assert "HTTP 429" in str(exc_info.value)
+    assert "Rate limit" in str(exc_info.value)
+    assert "sk-" not in str(exc_info.value)
+
+
+def test_invoke_openai_http_timeout_raises_invocation_error(monkeypatch):
+    import requests
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret-key-12345")
+    cmd = build_model_command(Provider.OPENAI, None)
+
+    with patch("requests.post", side_effect=requests.exceptions.Timeout("Connection timed out")):
+        with pytest.raises(InvocationError) as exc_info:
+            invoke_text_model("prompt", command=cmd, timeout=5)
+    assert "timed out after 5s" in str(exc_info.value)
+
+
+def test_invoke_openai_http_empty_choices_raises_invocation_error(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret-key-12345")
+    cmd = build_model_command(Provider.OPENAI, None)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"choices": []}
+
+    with patch("requests.post", return_value=mock_resp):
+        with pytest.raises(InvocationError) as exc_info:
+            invoke_text_model("prompt", command=cmd)
+    assert "no choices" in str(exc_info.value)
+
+
+def test_invoke_gemini_http_success(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSy-gemini-key")
+    cmd = build_model_command(Provider.GEMINI, "gemini-2.5-flash")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [{"text": "gemini resume response"}]
+                }
+            }
+        ]
+    }
+
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        result = invoke_text_model("Gemini Tailoring Prompt", command=cmd)
+
+    assert result.raw_stdout == "gemini resume response"
+    assert result.model == "gemini:gemini-2.5-flash"
+    mock_post.assert_called_once()
+    call_args, call_kwargs = mock_post.call_args
+    assert "models/gemini-2.5-flash:generateContent" in call_args[0]
+    assert call_kwargs["headers"]["x-goog-api-key"] == "AIzaSy-gemini-key"
+    assert call_kwargs["json"]["contents"][0]["parts"][0]["text"] == "Gemini Tailoring Prompt"
+
+
+def test_invoke_gemini_http_missing_key_raises_invocation_error(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     cmd = build_model_command(Provider.GEMINI, None)
-    with patch.object(
-        subprocess, "run", return_value=MagicMock(returncode=1, stdout="raw error body", stderr="err")
-    ):
-        with pytest.raises(InvocationError) as exc_info:
-            invoke_text_model("prompt", command=cmd)
-    assert exc_info.value.raw_stdout == "raw error body"
-    assert exc_info.value.model == "gemini:default"
+
+    with pytest.raises(InvocationError) as exc_info:
+        invoke_text_model("prompt", command=cmd)
+    assert "GEMINI_API_KEY" in str(exc_info.value)
 
 
-def test_invoke_empty_extracted_text_carries_raw_stdout():
+def test_invoke_gemini_http_non_200_raises_invocation_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSy-gemini-key")
     cmd = build_model_command(Provider.GEMINI, None)
-    # Gemini stdout has valid json with empty response
-    with patch.object(
-        subprocess, "run", return_value=MagicMock(returncode=0, stdout=json.dumps({"response": "   "}), stderr="")
-    ):
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 400
+    mock_resp.text = '{"error": {"message": "Invalid argument"}}'
+
+    with patch("requests.post", return_value=mock_resp):
         with pytest.raises(InvocationError) as exc_info:
             invoke_text_model("prompt", command=cmd)
-    assert "response" in exc_info.value.raw_stdout
-    assert exc_info.value.model == "gemini:default"
+    assert "HTTP 400" in str(exc_info.value)
+    assert "AIzaSy" not in str(exc_info.value)
 
 
-def test_invoke_codex_missing_output_file_raises_invocation_error():
-    cmd = build_model_command(Provider.CODEX, None)
-    with patch.object(
-        subprocess, "run", return_value=MagicMock(returncode=0, stdout="noisy stdout but no file written", stderr="")
-    ):
-        with pytest.raises(InvocationError) as exc_info:
-            invoke_text_model("prompt", command=cmd)
-    assert exc_info.value.raw_stdout == "noisy stdout but no file written"
-    assert exc_info.value.model == "codex:default"
+def test_invoke_gemini_http_timeout_raises_invocation_error(monkeypatch):
+    import requests
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSy-gemini-key")
+    cmd = build_model_command(Provider.GEMINI, None)
 
-
-def test_invoke_timeout_carries_empty_raw_stdout():
-    cmd = build_model_command(Provider.CODEX, None)
-    with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="codex", timeout=10)):
+    with patch("requests.post", side_effect=requests.exceptions.Timeout("Connection timed out")):
         with pytest.raises(InvocationError) as exc_info:
             invoke_text_model("prompt", command=cmd, timeout=10)
-    assert exc_info.value.raw_stdout == ""
-    assert exc_info.value.model == "codex:default"
+    assert "timed out after 10s" in str(exc_info.value)
+
+
+def test_invoke_gemini_http_empty_candidates_raises_invocation_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSy-gemini-key")
+    cmd = build_model_command(Provider.GEMINI, None)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"candidates": []}
+
+    with patch("requests.post", return_value=mock_resp):
+        with pytest.raises(InvocationError) as exc_info:
+            invoke_text_model("prompt", command=cmd)
+    assert "no candidates" in str(exc_info.value)
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +363,7 @@ def test_invoke_timeout_carries_empty_raw_stdout():
 
 
 def test_manifest_round_trip_with_provider():
-    for p in ("claude", "gemini", "codex"):
+    for p in ("claude", "gemini", "openai"):
         raw = {
             "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -10, "jd_sha256": "b" * 64,
             "jd_path": "inbox/jd/y.txt", "company": "Co", "title": "Dev", "variant": "backend",
@@ -357,35 +395,68 @@ def test_lane_directory_suffixing(tmp_path):
     root = tmp_path / "apps"
     d_claude = lane_directory(root, "Stripe", "Backend Engineer", suffix=None, provider="claude")
     d_gemini = lane_directory(root, "Stripe", "Backend Engineer", suffix=None, provider="gemini")
-    d_codex = lane_directory(root, "Stripe", "Backend Engineer", suffix=None, provider="codex")
+    d_openai = lane_directory(root, "Stripe", "Backend Engineer", suffix=None, provider="openai")
 
     assert d_claude.name == "stripe-backend_engineer"
     assert d_gemini.name == "stripe-backend_engineer-gemini"
-    assert d_codex.name == "stripe-backend_engineer-codex"
-    assert len({d_claude, d_gemini, d_codex}) == 3
+    assert d_openai.name == "stripe-backend_engineer-openai"
+    assert len({d_claude, d_gemini, d_openai}) == 3
 
     # With user-provided suffix
     d_claude_s = lane_directory(root, "Stripe", "Backend Engineer", suffix="team_a", provider="claude")
     d_gemini_s = lane_directory(root, "Stripe", "Backend Engineer", suffix="team_a", provider="gemini")
-    d_codex_s = lane_directory(root, "Stripe", "Backend Engineer", suffix="team_a", provider="codex")
+    d_openai_s = lane_directory(root, "Stripe", "Backend Engineer", suffix="team_a", provider="openai")
 
     assert d_claude_s.name == "stripe-backend_engineer-team_a"
     assert d_gemini_s.name == "stripe-backend_engineer-team_a-gemini"
-    assert d_codex_s.name == "stripe-backend_engineer-team_a-codex"
-    assert len({d_claude_s, d_gemini_s, d_codex_s}) == 3
+    assert d_openai_s.name == "stripe-backend_engineer-team_a-openai"
+    assert len({d_claude_s, d_gemini_s, d_openai_s}) == 3
 
 
 # ---------------------------------------------------------------------------
-# 10. Preflight failure when provider executable is not on PATH
+# 10. Preflight checks per provider
 # ---------------------------------------------------------------------------
 
 
-def test_preflight_fails_when_provider_executable_not_on_path(tmp_path, monkeypatch):
+def test_preflight_fails_when_claude_executable_not_on_path(tmp_path, monkeypatch):
     jd_file = tmp_path / "jd.txt"
     jd_file.write_text(JD_TEXT, encoding="utf-8")
 
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
-    monkeypatch.setattr("shutil.which", lambda exe: None if exe == "gemini" else "/usr/bin/" + exe)
+    monkeypatch.setattr("shutil.which", lambda exe: None if exe == "claude" else "/usr/bin/" + exe)
+
+    outcome = run_manual_application(
+        jd_file, company="Example", title="Engineer", variant="ml",
+        root=tmp_path / "apps", profile_path=PROFILE, provider="claude",
+    )
+    assert outcome.failed_stage is Stage.PREPARE
+    assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
+    assert "claude" in outcome.manifest.stages[0].error
+    assert not (tmp_path / "apps").exists()
+
+
+def test_preflight_fails_when_openai_key_missing(tmp_path, monkeypatch):
+    jd_file = tmp_path / "jd.txt"
+    jd_file.write_text(JD_TEXT, encoding="utf-8")
+
+    monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    outcome = run_manual_application(
+        jd_file, company="Example", title="Engineer", variant="ml",
+        root=tmp_path / "apps", profile_path=PROFILE, provider="openai",
+    )
+    assert outcome.failed_stage is Stage.PREPARE
+    assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
+    assert "OPENAI_API_KEY" in outcome.manifest.stages[0].error
+
+
+def test_preflight_fails_when_gemini_key_missing(tmp_path, monkeypatch):
+    jd_file = tmp_path / "jd.txt"
+    jd_file.write_text(JD_TEXT, encoding="utf-8")
+
+    monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
     outcome = run_manual_application(
         jd_file, company="Example", title="Engineer", variant="ml",
@@ -393,8 +464,7 @@ def test_preflight_fails_when_provider_executable_not_on_path(tmp_path, monkeypa
     )
     assert outcome.failed_stage is Stage.PREPARE
     assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
-    assert "gemini" in outcome.manifest.stages[0].error
-    assert not (tmp_path / "apps").exists()
+    assert "GEMINI_API_KEY" in outcome.manifest.stages[0].error
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +477,7 @@ def passing_preflight(monkeypatch):
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.setattr("shutil.which", lambda exe: f"/fake/bin/{exe}")
     monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
+    monkeypatch.setattr("src.tailor.lane.check_openai_credentials", lambda *a, **k: None)
 
 
 @pytest.fixture
@@ -478,7 +549,7 @@ def fake_chain(monkeypatch):
     return spy
 
 
-@pytest.mark.parametrize("provider", ["claude", "gemini", "codex"])
+@pytest.mark.parametrize("provider", ["claude", "gemini", "openai"])
 def test_full_run_and_identical_rerun_zero_calls_per_provider(
     tmp_path, fake_chain, passing_preflight, pinned_job_id, provider
 ):

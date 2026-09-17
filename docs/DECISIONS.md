@@ -2758,3 +2758,22 @@ Added Gemini and Codex CLI support alongside Claude for the Apply-Now tailoring 
   Per specification safety criteria, `--provider gemini` is disabled in `src/tailor/lane.py` with a clear error
   until a valid project/key is configured in the environment.
 
+## 2026-09-17 — HTTP providers for OpenAI and Gemini replacing CLI providers
+
+- **HTTP providers tool-free by construction:** The CLI invocation approach for Codex and Gemini was
+  replaced with direct HTTPS calls via `requests` (`OPENAI_API_KEY` for OpenAI, `GEMINI_API_KEY` for Gemini).
+  HTTP providers are tool-free by construction: pure text-in/text-out over standard JSON endpoints with no
+  filesystem, process, or tool authority whatsoever.
+- **Rationale for rejecting the CLI approach:** The CLI approach was rejected because Codex exposes
+  `browser_use`, `computer_use`, apps, and 8 user-configured MCP servers (including `node_repl` allowing
+  arbitrary local JavaScript execution) that `--sandbox read-only` does not remove. Similarly, the Gemini
+  CLI carried brittle OAuth account and GCP project dependencies. Direct HTTPS requests eliminate subprocess
+  spawning, shell exposure, and external tool inheritance entirely.
+- **Provider renaming:** `codex` renamed to `openai`; `gemini` retained.
+- **Credential safety:** API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`) are never logged, traced, or written
+  to disk. They are passed strictly in request headers (`Authorization: Bearer <key>` for OpenAI,
+  `x-goog-api-key: <key>` for Gemini).
+- **Fast preflight validation:** The Apply-Now lane validates that the requisite environment variable is set
+  before executing any stage, failing immediately with an actionable error message if missing.
+- **Claude MCP isolation:** Claude CLI remains the default provider, hardened with `--strict-mcp-config`
+  to guarantee zero user or project MCP servers are loaded into the process.

@@ -24,7 +24,12 @@ from src.tailor.pilot import (
     run_stages,
 )
 from src.tailor.preflight import PreflightFinding, run_preflight
-from src.tailor.providers import Provider, build_model_command
+from src.tailor.providers import (
+    Provider,
+    build_model_command,
+    check_gemini_credentials,
+    check_openai_credentials,
+)
 from src.tailor.publish import application_dir, slugify
 from src.tailor.s1 import S1Request
 
@@ -166,47 +171,6 @@ def _manifest_mismatch(
     return None
 
 
-def check_gemini_credentials(
-    env: dict[str, str] | None = None,
-    settings_path: Path | None = None,
-) -> str | None:
-    """Preflight check for Gemini CLI credentials before invoking model.
-
-    Returns an actionable error message if credentials are not configured, else None.
-    """
-    if env is None:
-        import os
-        env = dict(os.environ)
-    if settings_path is None:
-        settings_path = Path.home() / ".gemini" / "settings.json"
-
-    auth_type = "oauth-personal"
-    if settings_path.is_file():
-        try:
-            data = json.loads(settings_path.read_text(encoding="utf-8"))
-            auth_type = data.get("security", {}).get("auth", {}).get("selectedType", "oauth-personal")
-        except Exception:
-            pass
-
-    has_project = bool(env.get("GOOGLE_CLOUD_PROJECT") or env.get("GOOGLE_CLOUD_PROJECT_ID"))
-    has_api_key = bool(env.get("GEMINI_API_KEY") or env.get("GOOGLE_API_KEY"))
-
-    if auth_type == "gemini-api-key":
-        if not has_api_key:
-            return (
-                "Gemini CLI is configured for API key auth in ~/.gemini/settings.json, "
-                "but GEMINI_API_KEY is not set in the environment. Export GEMINI_API_KEY=<key>."
-            )
-        return None
-
-    if not has_project:
-        return (
-            "Gemini CLI is configured for Google OAuth account auth (~/.gemini/settings.json), "
-            "which requires GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_PROJECT_ID set in the environment "
-            "(see https://goo.gle/gemini-cli-auth-docs#workspace-gca). Alternatively, set "
-            "security.auth.selectedType to 'gemini-api-key' in ~/.gemini/settings.json and export GEMINI_API_KEY."
-        )
-    return None
 
 
 def run_manual_application(
@@ -268,15 +232,19 @@ def run_manual_application(
             )
         job_id = existing.job_id
 
-    # Fail before any model call if the provider's executable is not on PATH
-    exe = model_command.argv[0]
-    if shutil.which(exe) is None:
-        return _prepare_failure(
-            job_id, "preflight_failure",
-            f"provider executable {exe!r} not found on PATH", started,
-        )
-
-    if prov_enum is Provider.GEMINI:
+    # Preflight provider requirements before any model call
+    if prov_enum is Provider.CLAUDE:
+        exe = model_command.argv[0] if model_command.argv else "claude"
+        if shutil.which(exe) is None:
+            return _prepare_failure(
+                job_id, "preflight_failure",
+                f"provider executable {exe!r} not found on PATH", started,
+            )
+    elif prov_enum is Provider.OPENAI:
+        cred_err = check_openai_credentials()
+        if cred_err is not None:
+            return _prepare_failure(job_id, "preflight_failure", cred_err, started)
+    elif prov_enum is Provider.GEMINI:
         cred_err = check_gemini_credentials()
         if cred_err is not None:
             return _prepare_failure(job_id, "preflight_failure", cred_err, started)
