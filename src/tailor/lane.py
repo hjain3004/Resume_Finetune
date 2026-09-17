@@ -193,6 +193,12 @@ def run_manual_application(
     else:
         prov_enum = provider
 
+    if prov_enum is Provider.GEMINI:
+        raise LaneError(
+            "Provider 'gemini' is disabled: failed live smoke check (requires a configured "
+            "GOOGLE_CLOUD_PROJECT with active Gemini Code Assist license or a valid GEMINI_API_KEY)."
+        )
+
     try:
         model_command = build_model_command(prov_enum, model)
     except ValueError as exc:

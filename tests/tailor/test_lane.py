@@ -175,6 +175,12 @@ def test_old_manifest_without_provider_defaults_to_claude():
     assert manifest.provider == "claude"
 
 
+def test_gemini_provider_is_disabled_due_to_smoke_failure(tmp_path, jd_file):
+    with pytest.raises(LaneError, match="Provider 'gemini' is disabled"):
+        run_manual_application(jd_file, company="Example", title="Engineer", variant="backend",
+                               provider="gemini", root=tmp_path / "apps", profile_path=PROFILE)
+
+
 # --- composer ---------------------------------------------------------------
 
 def test_unknown_variant_is_refused_before_any_write(tmp_path, jd_file, passing_preflight):

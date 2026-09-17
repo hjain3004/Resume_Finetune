@@ -2750,3 +2750,11 @@ Added Gemini and Codex CLI support alongside Claude for the Apply-Now tailoring 
   unless explicitly suffixed).
 - Lane `manifest.json` schema v1 records `provider: "claude"|"gemini"|"codex"` and `model: str|null`.
   Existing manifests without `provider` deserialize with `provider="claude"` for backwards compatibility.
+
+### 4. Live smoke results (2026-09-17)
+- **Claude:** PASS on echo (`OK`); PASS on authority check (no tools exposed; zero files read or written).
+- **Codex:** PASS on echo (`OK`); PASS on authority check (`workspace is read-only`; zero files read or written).
+- **Gemini:** FAIL on echo due to missing Google Cloud project / Gemini Code Assist license (`ProjectIdRequiredError`).
+  Per specification safety criteria, `--provider gemini` is disabled in `src/tailor/lane.py` with a clear error
+  until a valid project/key is configured in the environment.
+
