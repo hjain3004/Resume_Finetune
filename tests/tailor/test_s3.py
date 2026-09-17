@@ -176,6 +176,21 @@ def test_s3_length_growth_bound():
         parse_s3_response(json.dumps({"bullet_edits": [_edit(request, after=after_uncited, terms=["Distributed Systems"])], "skill_additions": []}), request)
 
 
+@pytest.mark.xfail(strict=True, reason="S3 _WORD_RE treats hyphenated words as atomic, causing unhyphenated edits to fail uncited vocabulary check")
+def test_hyphenated_source_words_unhyphenated_in_edit_considered_cited():
+    request = _request_fixture()
+    bullet = request.alignment.bullets[0]
+    hyphenated_text = bullet.plain_text + " logistic-regression"
+    hyphenated_bullet = replace(bullet, plain_text=hyphenated_text, text=hyphenated_text)
+    bullets = (hyphenated_bullet, *request.alignment.bullets[1:])
+    req = replace(request, alignment=replace(request.alignment, bullets=bullets))
+    # Edit replaces hyphen with space: "logistic regression"
+    after_text = bullet.plain_text + " logistic regression"
+    # Currently fails with S3SemanticError: uncited vocabulary: ['logistic', 'regression']
+    parse_s3_response(json.dumps({"bullet_edits": [_edit(req, after=after_text, terms=["Distributed Systems"])], "skill_additions": []}), req)
+
+
+
 
 
 def test_s3_edit_budget_exactly_exposes_tokens_and_ratio():
