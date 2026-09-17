@@ -101,3 +101,38 @@ def test_status_lists_lane_applications(tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "acme-engineer" in out and "sonnet" in out and "s2" in out
+
+
+def test_attest_cli_success(tmp_path, capsys):
+    jd_file = tmp_path / "custom_jd.txt"
+    jd_file.write_text(JD, encoding="utf-8")
+    rc = cli.main([
+        "attest",
+        "--jd", str(jd_file),
+        "--company", "Acme",
+        "--title", "Staff Engineer",
+        "--source-url", "https://jobs.lever.co/acme/123",
+        "--notes", "Verified official page",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "wrote provenance sidecar" in out
+    assert "user_attested" in out
+    sidecar = tmp_path / "custom_jd.txt.provenance.json"
+    assert sidecar.exists()
+
+
+def test_attest_cli_fails_on_aggregator_url(tmp_path, capsys):
+    jd_file = tmp_path / "custom_jd.txt"
+    jd_file.write_text(JD, encoding="utf-8")
+    rc = cli.main([
+        "attest",
+        "--jd", str(jd_file),
+        "--company", "Acme",
+        "--title", "Staff Engineer",
+        "--source-url", "https://www.linkedin.com/jobs/view/123",
+    ])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "cannot attest an aggregator URL" in err
+    assert not (tmp_path / "custom_jd.txt.provenance.json").exists()

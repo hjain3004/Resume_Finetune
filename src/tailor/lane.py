@@ -158,7 +158,8 @@ def _preflight_findings(profile_path: Path, template_path: Path, prompt_dir: Pat
 
 
 def _manifest_mismatch(
-    existing: LaneManifest, *, jd_sha256: str, company: str, title: str, variant: str, provider: str = "claude"
+    existing: LaneManifest, *, jd_sha256: str, company: str, title: str, variant: str, provider: str = "claude",
+    jd_quality: str = "ats",
 ) -> str | None:
     if existing.jd_sha256 != jd_sha256:
         return "jd text differs from the JD this directory was created from"
@@ -168,6 +169,8 @@ def _manifest_mismatch(
         return f"variant {variant!r} differs from this directory's variant {existing.variant!r}"
     if existing.provider != provider:
         return f"provider {provider!r} differs from this directory's provider {existing.provider!r}"
+    if existing.jd_quality != jd_quality:
+        return f"jd_quality {jd_quality!r} differs from this directory's jd_quality {existing.jd_quality!r}"
     return None
 
 
@@ -187,9 +190,47 @@ def run_manual_application(
     trace_dir: Path = Path("data/traces"),
     prompt_dir: Path = DEFAULT_PROMPT_DIR,
     stop_after: Stage | None = None, only: Stage | None = None, dry_run: bool = False,
+    db_path: Path | str | None = None,
+    sidecar_path: Path | str | None = None,
 ) -> RunOutcome:
     started = _now()
     jd_path = Path(jd_path)
+    if not jd_path.is_file():
+        raise LaneError(f"JD file not found: {jd_path}")
+
+    # Validate provenance boundary: strict sidecar or manifest contract
+    from src.tailor.provenance import (
+        ProvenanceError,
+        validate_provenance_for_tailoring,
+    )
+
+    db_conn = None
+    if db_path is not None:
+        db_p = Path(db_path)
+        if db_p.is_file():
+            from src import db as db_module
+            db_conn = db_module.get_readonly_connection(db_p)
+    elif Path("data/jobs.db").is_file():
+        from src import db as db_module
+        try:
+            db_conn = db_module.get_readonly_connection("data/jobs.db")
+        except Exception:
+            db_conn = None
+
+    try:
+        provenance = validate_provenance_for_tailoring(
+            jd_path,
+            company=company,
+            title=title,
+            db_conn=db_conn,
+            sidecar_path=sidecar_path,
+        )
+    except ProvenanceError as exc:
+        raise LaneError(str(exc)) from exc
+    finally:
+        if db_conn is not None:
+            db_conn.close()
+
     jd_text = normalize_jd(jd_path.read_text(encoding="utf-8"))
 
     if isinstance(provider, str):
@@ -224,7 +265,15 @@ def run_manual_application(
             existing = parse_lane_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
         except (OSError, ValueError) as exc:
             return _prepare_failure(job_id, "lane_manifest_unreadable", str(exc), started)
-        reason = _manifest_mismatch(existing, jd_sha256=jd_sha256, company=company, title=title, variant=variant, provider=prov_enum.value)
+        reason = _manifest_mismatch(
+            existing,
+            jd_sha256=jd_sha256,
+            company=company,
+            title=title,
+            variant=variant,
+            provider=prov_enum.value,
+            jd_quality=provenance.jd_quality,
+        )
         if reason is not None:
             return _prepare_failure(
                 job_id, "lane_manifest_mismatch",
@@ -254,18 +303,27 @@ def run_manual_application(
         joined = "; ".join(f"{f.surface}: {f.message}" for f in findings)
         return _prepare_failure(job_id, "preflight_failure", joined, started)
 
-    s1_request = S1Request(job_id=job_id, company=company, title=title, jd_text=jd_text, jd_quality="ats")
+    s1_request = S1Request(
+        job_id=job_id,
+        company=company,
+        title=title,
+        jd_text=jd_text,
+        jd_quality=provenance.jd_quality,
+    )
 
     if not dry_run:
         directory.mkdir(parents=True, exist_ok=True)
         snapshot = directory / JD_SNAPSHOT_NAME
         if not snapshot.exists():
             snapshot.write_text(jd_text, encoding="utf-8")
+        sidecar_snapshot = directory / "jd.provenance.json"
+        if not sidecar_snapshot.exists():
+            write_json_atomic(sidecar_snapshot, provenance.to_dict())
         if not manifest_path.exists():
             write_json_atomic(manifest_path, lane_manifest_to_dict(LaneManifest(
                 schema_version=LANE_MANIFEST_SCHEMA, job_id=job_id, jd_sha256=jd_sha256, jd_path=str(jd_path),
                 company=company, title=title, variant=variant, model=model, claude_cmd=model_command.argv,
-                jd_quality="ats", created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                jd_quality=provenance.jd_quality, created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 provider=prov_enum.value,
             )))
         log.info("apply-now lane: job %d (%s / %s) -> %s", job_id, company, title, directory)

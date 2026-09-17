@@ -37,6 +37,20 @@ JD_TEXT = "Python " * 60  # 420 chars, above JD_MIN_CHARS
 def jd_file(tmp_path):
     path = tmp_path / "jd.txt"
     path.write_text(JD_TEXT, encoding="utf-8")
+    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
+    sidecar = tmp_path / "jd.txt.provenance.json"
+    sidecar.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.example.com/123",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": compute_jd_sha256(path.read_bytes()),
+        "job_id": None,
+        "ats_url": "https://jobs.example.com/123",
+        "attestation": None,
+    }), encoding="utf-8")
     return path
 
 
@@ -282,6 +296,19 @@ def test_mismatched_jd_for_same_directory_is_refused(tmp_path, jd_file, fake_cha
                            root=tmp_path / "apps", profile_path=PROFILE)
     other = tmp_path / "jd2.txt"
     other.write_text(JD_TEXT + " Go", encoding="utf-8")
+    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
+    (tmp_path / "jd2.txt.provenance.json").write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.example.com/123",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": compute_jd_sha256(other.read_bytes()),
+        "job_id": None,
+        "ats_url": "https://jobs.example.com/123",
+        "attestation": None,
+    }), encoding="utf-8")
     fake_chain.calls.clear()
     outcome = run_manual_application(other, company="Example", title="Engineer", variant="ml",
                                      root=tmp_path / "apps", profile_path=PROFILE)

@@ -418,9 +418,28 @@ def test_lane_directory_suffixing(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def _write_jd_with_provenance(tmp_path: Path) -> Path:
+    path = tmp_path / "jd.txt"
+    path.write_text(JD_TEXT, encoding="utf-8")
+    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
+    sidecar = tmp_path / "jd.txt.provenance.json"
+    sidecar.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.example.com/123",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": compute_jd_sha256(path.read_bytes()),
+        "job_id": None,
+        "ats_url": "https://jobs.example.com/123",
+        "attestation": None,
+    }), encoding="utf-8")
+    return path
+
+
 def test_preflight_fails_when_claude_executable_not_on_path(tmp_path, monkeypatch):
-    jd_file = tmp_path / "jd.txt"
-    jd_file.write_text(JD_TEXT, encoding="utf-8")
+    jd_file = _write_jd_with_provenance(tmp_path)
 
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.setattr("shutil.which", lambda exe: None if exe == "claude" else "/usr/bin/" + exe)
@@ -436,8 +455,7 @@ def test_preflight_fails_when_claude_executable_not_on_path(tmp_path, monkeypatc
 
 
 def test_preflight_fails_when_openai_key_missing(tmp_path, monkeypatch):
-    jd_file = tmp_path / "jd.txt"
-    jd_file.write_text(JD_TEXT, encoding="utf-8")
+    jd_file = _write_jd_with_provenance(tmp_path)
 
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -452,8 +470,7 @@ def test_preflight_fails_when_openai_key_missing(tmp_path, monkeypatch):
 
 
 def test_preflight_fails_when_gemini_key_missing(tmp_path, monkeypatch):
-    jd_file = tmp_path / "jd.txt"
-    jd_file.write_text(JD_TEXT, encoding="utf-8")
+    jd_file = _write_jd_with_provenance(tmp_path)
 
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
@@ -553,8 +570,7 @@ def fake_chain(monkeypatch):
 def test_full_run_and_identical_rerun_zero_calls_per_provider(
     tmp_path, fake_chain, passing_preflight, pinned_job_id, provider
 ):
-    jd_file = tmp_path / "jd.txt"
-    jd_file.write_text(JD_TEXT, encoding="utf-8")
+    jd_file = _write_jd_with_provenance(tmp_path)
     root = tmp_path / "apps"
 
     # First run

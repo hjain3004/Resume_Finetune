@@ -57,6 +57,8 @@ def cmd_run(args) -> int:
             trace_dir=Path(args.trace_dir) if args.trace_dir else Path("data/traces"),
             prompt_dir=Path(args.prompt_dir or DEFAULT_PROMPT_DIR),
             stop_after=stop_after, only=only, dry_run=args.dry_run,
+            db_path=Path(args.db) if args.db else None,
+            sidecar_path=Path(args.sidecar) if args.sidecar else None,
         )
     except LaneError as exc:
         return _fail("run", exc)
@@ -135,6 +137,27 @@ def cmd_export_jd(args) -> int:
             conn.close()
 
 
+def cmd_attest(args) -> int:
+    try:
+        from src.tailor.provenance import create_user_attestation
+        out_path = create_user_attestation(
+            args.jd,
+            company=args.company,
+            title=args.title,
+            source_url=args.source_url,
+            notes=args.notes,
+            out_path=args.out,
+        )
+        print(f"wrote provenance sidecar: {out_path}")
+        print(f"company: {args.company}")
+        print(f"title: {args.title}")
+        print(f"source_url: {args.source_url}")
+        print("jd_quality: user_attested")
+        return 0
+    except Exception as exc:
+        return _fail("attest", exc)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m scripts.tailor_now")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -163,7 +186,18 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--stop-after", choices=stage_choices)
     run.add_argument("--only", choices=stage_choices)
     run.add_argument("--dry-run", action="store_true")
+    run.add_argument("--db", help="Path to database for metadata verification")
+    run.add_argument("--sidecar", help="Explicit path to provenance sidecar")
     run.set_defaults(func=cmd_run)
+
+    attest = sub.add_parser("attest", help="Record a user-attested official copy of a JD")
+    attest.add_argument("--jd", required=True, help="Path to JD text file")
+    attest.add_argument("--company", required=True, help="Employer company name")
+    attest.add_argument("--title", required=True, help="Job title")
+    attest.add_argument("--source-url", required=True, help="Official employer page or ATS URL")
+    attest.add_argument("--notes", help="Optional notes")
+    attest.add_argument("--out", help="Optional explicit path for provenance sidecar")
+    attest.set_defaults(func=cmd_attest)
 
     status = sub.add_parser("status")
     status.add_argument("--root")

@@ -1034,3 +1034,72 @@ def rows_needing_liveness_check(conn: sqlite3.Connection, cutoff_iso: str) -> li
         """,
         (Status.SHORTLISTED, Status.TAILORED, cutoff_iso),
     ).fetchall()
+
+
+def shortlisted_jobs_by_fit(
+    conn: sqlite3.Connection,
+    limit: int | None = None,
+) -> list[sqlite3.Row]:
+    """Return shortlisted jobs ordered by fit_score DESC, id DESC."""
+    if limit is not None:
+        return conn.execute(
+            """
+            SELECT * FROM jobs
+            WHERE status = 'SHORTLISTED'
+            ORDER BY fit_score DESC, id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return conn.execute(
+        """
+        SELECT * FROM jobs
+        WHERE status = 'SHORTLISTED'
+        ORDER BY fit_score DESC, id DESC
+        """
+    ).fetchall()
+
+
+def table_schema_statements(
+    conn: sqlite3.Connection,
+    table_names: tuple[str, ...] = ("jobs", "runs", "run_sources"),
+) -> list[str]:
+    """Return CREATE TABLE statements for the requested tables."""
+    placeholders = ", ".join(["?"] * len(table_names))
+    rows = conn.execute(
+        f"SELECT sql FROM sqlite_master WHERE type='table' AND name IN ({placeholders})",
+        table_names,
+    ).fetchall()
+    return [r[0] for r in rows if r[0]]
+
+
+def table_columns(conn: sqlite3.Connection, table_name: str) -> list[str]:
+    """Return column names for a table using PRAGMA table_info."""
+    if not re.match(r"^[a-zA-Z0-9_]+$", table_name):
+        raise ValueError(f"invalid table name: {table_name!r}")
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return [row[1] for row in rows]
+
+
+def latest_run_row(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    """Return the most recent run record."""
+    return conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+
+
+def insert_rows_into_table(
+    conn: sqlite3.Connection,
+    table_name: str,
+    columns: list[str],
+    rows: list[sqlite3.Row | tuple],
+) -> None:
+    """Insert rows into a table by column names."""
+    if not re.match(r"^[a-zA-Z0-9_]+$", table_name):
+        raise ValueError(f"invalid table name: {table_name!r}")
+    if not rows:
+        return
+    cols_str = ", ".join(columns)
+    placeholders = ", ".join(["?"] * len(columns))
+    conn.executemany(
+        f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})",
+        [tuple(r) for r in rows],
+    )
