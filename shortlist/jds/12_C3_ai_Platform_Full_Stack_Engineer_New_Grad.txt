@@ -1,0 +1,33 @@
+Platform Full-Stack Engineer, New Grad 2027
+C3 AI (NYSE: AI), is the Enterprise AI application software company. C3 AI delivers a family of fully integrated products including the C3 Agentic AI Platform, an end-to-end platform for developing, deploying, and operating enterprise AI applications, C3 AI applications, a portfolio of industry-specific SaaS enterprise AI applications that enable the digital transformation of organizations globally, and C3 Generative AI, a suite of domain-specific generative AI offerings for the enterprise. Learn more at: C3 AI
+We are hiring early professional Platform Full-Stack Engineers to help build and evolve the C3 AI Platform. Our platform enables developers and customers to rapidly build, deploy, and scale data-rich AI applications across industries. You will have the opportunity to work across the technology stack and solve challenging engineering problems that directly impact the capabilities, performance, and usability of the C3 AI Platform.
+This role is open to candidates graduating in December 2025 or Summer/Fall 2027.
+Responsibilities:
+- Design, develop, test, and maintain scalable full-stack capabilities for the C3 AI Platform.
+- Build reliable and reusable platform services, APIs, developer tools, and application capabilities.
+- Write clean, efficient, maintainable, and reusable code.
+- Contribute to solutions that enable AI applications to efficiently process and scale to large volumes of data.
+- Collaborate with product managers, designers, and engineers to translate requirements into high-quality technical solutions.
+- Troubleshoot and resolve technical issues across the full technology stack.
+- Participate in code reviews, testing, and continuous improvements to platform quality, performance, and reliability.
+- Learn and adopt new technologies and engineering practices to continuously improve the C3 AI Platform.
+Qualifications:
+- Currently pursuing a Bachelor's degree in Computer Science, Computer Engineering, or a related technical field, with an expected graduation date of Summer or Fall 2027.
+- Strong programming fundamentals and experience developing software in at least one programming language, such as Python, Java, JavaScript, or TypeScript.
+- Basic understanding of full-stack application development, including APIs, databases, and distributed systems.
+- Familiarity with modern software development frameworks and tools through coursework, internships, personal projects, or prior work experience.
+- Strong problem-solving and analytical skills, with attention to detail.
+- Demonstrated ability to learn new concepts and technologies quickly.
+- Excellent communication and collaboration skills.
+- Ability to work effectively in a fast-paced, agile engineering environment.
+Preferred Qualifications:
+- Experience building full-stack applications or platform services through internships, projects, open source, or professional experience.
+- Experience with technologies such as React, TypeScript, Python, Java, or similar modern technologies.
+- Familiarity with cloud platforms, microservices, distributed systems, or scalable application architectures.
+- Experience building or working with platform services, APIs, data storage, CI/CD pipelines, or other software development infrastructure.
+- Experience building developer tools or platforms that improve engineering productivity.
+- Experience integrating AI/ML capabilities or working with AI-powered applications.
+- Strong understanding of software architecture, performance, and reliability principles.
+- Ability to clearly articulate technical concepts to both technical and non-technical audiences.
+C3 AI provides excellent benefits, a competitive compensation package and generous equity plan.
+C3 AI is proud to be an Equal Opportunity and Affirmative Action Employer. We do not discriminate on the basis of any legally protected characteristics, including disabled and veteran status.

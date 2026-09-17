@@ -1,0 +1,22 @@
+Infosys is a global digital services and consulting company that helps organizations advance their digital transformation. The Java Backend Developer will develop, test, integrate, monitor, and troubleshoot software applications using Java, Spring Boot, REST web services, microservices, and cloud technologies while supporting the software development lifecycle.
+
+Responsibilities:
+- Assist in conducting targeted interviews and workshops to capture user needs, and ensure accurate documentation of stakeholder requirements
+- Participate in design discussions to capture software specifications, and aid in creation of process documentation
+- Develop, refine, and document code for new software applications, following detailed design specifications to meet user requirements
+- Execute test plans, analyse outcomes, and report defects to the development team, to facilitate enhancement of software performance
+- Support the integration of new software features, facilitating smooth transitions within the existing system infrastructure
+- Monitor and troubleshoot live applications, ensuring prompt resolution of issues and creation of comprehensive documentation for ongoing system maintenance
+- Systematically document coding practices, testing methodologies, and technical solutions, thereby enriching team's knowledge repository
+
+Qualifications:
+Must have:
+- Experience in software development using Java, Spring Boot
+- and Rest Webservices
+- • Bachelor's degree or foreign equivalent required from an accredited institution
+- Will also consider three years of progressive experience in the specialty in lieu of every year of education
+- • This position may require relocation and/or travel to work/project location
+- • All applicants authorized to work in the United States are encouraged to apply
+Preferred:
+- Experience in Java 8, REST, Spring boot, Microservices, Kafka or MQ, OpenShift deployments, Spring Security, JPA, XML, XSLT, JAXB, JAXP, MVC, Junit, test framework, various design patterns
+- Experience in SQL Server or Oracle or Mongo DB is desired

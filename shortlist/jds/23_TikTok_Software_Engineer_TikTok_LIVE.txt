@@ -1,0 +1,19 @@
+TikTok is a short-form mobile video platform focused on inspiring creativity and bringing joy. The Software Engineer will build and improve backend systems for TikTok LIVE governance, moderation, penalty, and permission tools while collaborating with product managers, data scientists, designers, engineers, and trust and safety teams.
+
+Responsibilities:
+- Work closely with product manager, data scientist, UI designer, and other engineers to iterate on data driven product ideas
+- Improve system design and architecture to ensure service reliability, performance, and extensibility
+- Learn and understand how TikTok products work and help build end-to-end solutions
+- Learn and grow from working with great colleagues and taking on challenges
+- Help our team grow from your expertise, experience, and perspectives
+
+Qualifications:
+Must have:
+- Strong knowledge of data structures and algorithms, proficient in at least one coding language, including but not limited to Go, Java, Python, C++
+- Curiosity towards new technology and outstanding ability to analyze and solve problems
+- Good grasp of software engineering and how to build a system in scalable and extensive manner
+Preferred:
+- BA/BS Degree in Computer Science or related major
+- Industry experience in a software development environment
+- Understanding of concurrency, database, and message queue
+- Experience in content moderation system

@@ -1,0 +1,17 @@
+Giga is a voice AI startup that has raised a $61M Series A and is building the next generation of customer experience through real-time AI agents. They are seeking software engineers to help build the systems that power these AI agents, working on backend solutions and contributing to impactful projects from day one.
+
+Responsibilities:
+- You'll contribute to projects across our stack. Some examples:
+- Atlas: Building features for our AI assistant: charts and alerts in Slack, natural language queries, and expanding Atlas to manage platform resources
+- Activity Stream: Log visualization with filters, timestamps, and frequency charts to give visibility into agent behavior
+- Dynamic knowledge: Adding time-based knowledge (like ongoing incidents) that auto-updates from sources like status pages
+- Agent memory: Conversation awareness and recent interaction lookups so agents remember context across sessions
+- As an early-career engineer, you'll be paired with senior engineers on larger initiatives while also owning smaller projects end-to-end as you ramp up
+
+Qualifications:
+Must have:
+- Have 1-3 years of professional software engineering experience
+- Are curious and ask good questions—you want to understand why things work, not just how
+- Can take feedback well and iterate quickly
+- Prefer shipping over perfection but still care about quality
+- Want to grow at a startup where you'll have real responsibility early

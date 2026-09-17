@@ -1,0 +1,15 @@
+Roblox is a platform for creating and experiencing immersive 3D digital experiences, powered by a global community of developers and creators. The Software Engineer on the Creator Business team will build scalable, secure, and reliable systems supporting the creator economy, including monetization analytics, revenue reporting, payouts, and taxes, while partnering across teams to deliver end-to-end projects.
+
+Responsibilities:
+- Develop remarkable products and systems that will delight our users
+- Work with the product, data science, and design to help refine requirements
+- Contribute to or drive the overall end to end system design
+- Have the opportunity to push the boundaries of what’s next for the company
+- Help recruit future talent for the team
+
+Qualifications:
+Must have:
+- 1-3 years of experience in Software Engineering/Computer Science
+- Proficiency in building and scaling data pipelines
+- Experience with distributed systems, API design, and microservices architecture
+- Bachelor's degree in Computer Science, Computer Engineering, or a similar technical field

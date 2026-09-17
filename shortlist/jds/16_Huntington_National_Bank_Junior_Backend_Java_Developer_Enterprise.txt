@@ -1,0 +1,33 @@
+Huntington National Bank is seeking a Junior Backend Java Developer to help build and support enterprise APIs and production infrastructure for performance, scale, and reliability. The role involves Java and Spring Boot development, API integration, DevOps, cloud and container transitions, Kafka adoption, software design, testing, and collaboration with engineers, architects, vendors, and business owners.
+
+Responsibilities:
+- Collaborate with other engineers and architects to create a common API layer between a variety of different data sources and applications via an agile product model working in 2 week sprints
+- Develop software in an agile environment leveraging DevOps for environment setup, automated builds, continuous deployment, continuous integration and automated testing
+- Play a key role implementing enterprise services and APIs under the guidance of the architectural team and engineering leadership
+- Deliver rapid, scalable, and quality solutions that meet business needs. Develop and implement unit test code and automated test scripts as a routine part of development activities
+- Work closely with other engineers, vendor partners and business owners to ensure that the finished solution meets the needs of the business and our customers
+- Follow industry standard agile software design methodologies. Embrace new technologies and methods Introduce
+- Maintain and evolve existing integration assets and systems
+- Introduce and evolve existing processes and methods required for maturing Huntington’s integration development, implementation and operation of our key platforms
+
+Qualifications:
+Must have:
+- Bachelor's Degree in Computer Science, MIS, or a related Field
+- 1-3+ year of related experience in software development including creating and maintaining application interfaces between various data sources and applications. Or qualified candidates who successfully complete Huntington's Technical Youth training or a part of the apprenticeship training program, in lieu of related experience
+- 1+ years of experience with DevOps
+- 1-3+ years Strong Java development experience including experience with the Spring Framework, Eclipse, Maven and Gradle
+- 1-3+ years of experience developing application interfaces (API) with Java or similar object-oriented languages
+- Applicants must be currently authorized to work in the United States on a full-time basis
+Preferred:
+- Strong experience with the SDLC process
+- Adept in building team relationships and partnering across organizational lines
+- Excellent collaboration skills, a positive attitude, high energy, strong interpersonal skills, and highly motivated
+- Expert in conceptual and analytical skills, demonstrating out-of-the-box problem solving skills
+- Able to see and articulate patterns and relationships between technologies, processes, business models and people
+- Self-starter with the ability to appropriately prioritize and plan complex tasks in rapidly changing environment
+- Thrives in a dynamic work environment, does whatever it takes to deliver successfully, exhibits flexibility, and is recognized as being a strong team player
+- Experience with REST, JSON, or SOAP web interfaces
+- Experience with Continuous Integration, Continuous Deployment (CICD) methodologies
+- Experience with Chef, Puppet or other similar deployment automation products
+- Experience with Git source control management and web interfaces such as GitHub
+- Experience with Jenkins build management systems and automated testing frameworks such as Junit

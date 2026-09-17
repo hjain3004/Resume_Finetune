@@ -1,0 +1,25 @@
+Yext is an enterprise agentic marketing platform that builds technology for products and services used by brands and digital marketing partners. The Software Engineer will join Team Hedwig to develop and maintain shared, high-traffic customer-platform systems, contributing across the software development lifecycle and using AI-assisted development tools responsibly.
+
+Responsibilities:
+- Participate in the full software development lifecycle, from design and implementation through testing, deployment, and ongoing operation
+- Contribute to the design, implementation, and deployment of highly scalable and reliable systems
+- Develop storage systems, libraries, and frameworks
+- Proactively contribute ideas for new features and identify opportunities to improve our products, systems, and engineering practices
+- Collaborate effectively with colleagues across engineering and with partners throughout the company
+- Write clean, tested, and well-documented code
+- Use AI-assisted development tools thoughtfully to accelerate engineering work, explore solutions, improve code quality, and reduce repetitive tasks
+- Critically evaluate, test, and validate AI-generated output rather than treating it as inherently correct
+- Maintain ownership of all work produced with AI assistance, including its correctness, security, maintainability, and alignment with our engineering standards
+
+Qualifications:
+Must have:
+- A BA/BS in Computer Science or a related field or equivalent college-level education
+- 1+ years of professional software engineering experience
+- A strong foundation in data structures, algorithms, and software design
+- Fluency with Java, C++, Python, or a similar programming language (we code primarily in Java and Go)
+- Openness to new technologies, new ways of working, and creative solutions
+- Comfort working in a fast-paced environment
+- The ability to evaluate technical solutions critically, including code and recommendations produced by AI tools
+- Experience using—or a demonstrated interest in learning—AI-assisted development tools as part of a responsible engineering workflow
+- Sound judgment regarding data privacy, intellectual property, security, and the appropriate use of confidential information when working with AI tools
+- This role is based in our New York City office, where in-person collaboration plays an important part in how our teams work, learn, and build relationships. We're looking for people who genuinely value that environment and are comfortable coming into the office at least three days per week

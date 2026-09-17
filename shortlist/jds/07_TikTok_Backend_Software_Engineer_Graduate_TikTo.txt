@@ -1,0 +1,17 @@
+TikTok is a short-form mobile video platform with a Privacy and Security Data Lifecycle Management team that builds data privacy compliance control systems. The Backend Software Engineer Graduate will design, implement, and optimize scalable backend microservices for runtime data governance, policy enforcement, compliance monitoring, and auditable data lifecycle management.
+
+Responsibilities:
+- Design, implement, and optimize high-throughput backend microservices for the client data privacy control mid-platform to manage runtime data behaviors across millions of concurrent client instances
+- Build and maintain scalable backend systems for real-time tracking, policy enforcement, and auditable control of data collection, transmission, storage, processing, and retention
+- Translate global data protection mandates into automated backend services to establish measurable metrics and audit logs that strengthen the company’s overall compliance framework
+- Author clean, high-performance core code while tuning low-latency, high-availability distributed systems that handle high-volume data streams without impacting user experience
+- Partner with Security Researchers, Privacy Architects, Product Managers, and the PDPO team to embed privacy-by-design standards directly into core technical architectures from day one
+
+Qualifications:
+Must have:
+- - Individuals who are completing or have recently completed a Bachelor's/ Master's degree in Computer Science, Computer Engineering, Software Engineering, or a related discipline
+- - Core Programming Mastery: Strong software engineering foundation with proficiency in at least one backend language (Golang, Java, C++, or Python)
+- - Computer Science Fundamentals: Solid grounding in data structures, algorithms, operating systems, networking protocols, and database fundamentals
+- - System Design & Abstraction: Excellent logical problem-solving abilities, with a capacity to abstract complex compliance requirements into clean, scalable technical designs
+Preferred:
+- - Domain Exposure: Academic projects, open-source contributions, or internship experience in distributed systems, data governance, API gateways, access controls, or privacy-enhancing technologies (PETs)

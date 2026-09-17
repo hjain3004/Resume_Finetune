@@ -1,0 +1,28 @@
+NetApp is a company focused on cloud technologies, specifically building innovative cloud-based solutions. They are seeking highly motivated engineers to develop and operate cloud-scale distributed systems that support enterprise workloads in Microsoft Azure.
+
+Responsibilities:
+- Own the functional, performance and scalability of data plane rich with data management
+- Own features through the entire software lifecycle including design, implementation, testing, deployment, monitoring, and production support
+- Design, develop, and operate cloud-native services leveraging containers, microservices, distributed systems principles, and modern CI/CD practices
+- Drive engineering excellence through automated testing, code reviews, operational readiness, and continuous improvement initiatives
+- Collaborate across engineering teams to deliver end-to-end solutions spanning storage, networking, cloud infrastructure, security, observability, and customer-facing experiences
+- Participate in architecture discussions, design reviews, and code reviews to help drive technical excellence and engineering best practices
+- Troubleshoot complex production issues, perform root cause analysis, and implement long-term reliability, scalability, and operational improvements
+- Work closely with product management, architects, and partner teams to translate customer and business requirements into high-quality technical solutions
+- Effectively communicate technical concepts, design tradeoffs, and project status to stakeholders across the organization
+- Contribute to the technical growth of the team through knowledge sharing, code reviews, design discussions, and mentorship opportunities
+
+Qualifications:
+Must have:
+- Experience with Python for test automation, validation frameworks, tooling, CI/CD integration, or operational automation
+- Experience developing RESTful APIs or service-to-service integrations
+- Experience designing, deploying, and operating microservices-based applications using Kubernetes, containers, and modern CI/CD practices
+- Experience with software quality practices including automated testing, performance optimization, and security best practices
+- Experience with observability, monitoring, telemetry, and operational excellence practices
+- Knowledge building and operating cloud-native distributed systems in Azure, AWS, or GCP
+- Strong aptitude for learning new technologies
+- Possess excellent written and verbal communication skills
+- Creative and analytical approach to problem solving
+- Typically requires a Bachelor of Science in Computer Science or Electrical Engineering
+Preferred:
+- Familiarity with C/C++, GO, React, TypeScript, or C# is desirable for engineers to work across existing service components and user-facing workflows

@@ -1,0 +1,19 @@
+TikTok is a short-form mobile video platform focused on inspiring creativity and bringing joy. The Creation Platform team is seeking a graduate backend software engineer to design and develop user-facing features, collaborate on innovative product and infrastructure solutions, and evolve large-scale distributed backend systems.
+
+Responsibilities:
+- Directly design and develop features touching global users, and bring real-world impact
+- Collaborate closely with cross-functional teams to explore innovative product ideas and cutting-edge technologies
+- Work with experts in different technical domains to identify and solve challenging issues in the world-leading multimedia infrastructure
+- Evolve the architecture of global large-scale distributed backend systems to better support TikTok's future
+
+Qualifications:
+Must have:
+- Individuals who are completing or have recently completed a Bachelor's degree in Computer Science, Computer Engineering or a related discipline
+- Proficient in at least one programming language such as Golang, Java, C++, Python
+- Solid understanding of computer architectures, data structures, and algorithms
+- Hands-on experience in commonly-used technical stacks such as databases, caches, message queues
+- Responsible, self-motivated, and have a growth mindset
+Preferred:
+- Experience in building large scale distributed backend services for consumer-facing applications
+- Knowledge of multimedia technologies such as video codecs, media containers
+- Good team communication and collaboration skills

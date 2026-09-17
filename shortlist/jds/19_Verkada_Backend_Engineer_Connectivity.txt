@@ -1,0 +1,22 @@
+Verkada is transforming how organizations protect their people and places with an integrated, privacy-sensitive AI-powered platform. The Backend Engineer - Connectivity will be responsible for building scalable distributed systems, working with various databases and technologies, and developing features for Verkada's connectivity products.
+
+Responsibilities:
+- Build scalable distributed systems capable of handling high traffic from 100s of thousands of devices deployed around the world
+- Work with high concurrency key-value storage systems (Redis, DynamoDB)
+- Work with Postgres relational databases
+- Work with logging and message passing technologies like Kafka and SQS
+- Deploy services via Terraform and Kubernetes
+- Develop large scale systems to interact with and configure products remotely
+- Define and improve low-latency, high-throughput, high-reliability microservice architectures
+- Design and develop features incorporating cutting edge computer vision
+- Design clean APIs and implement them using Python and/or Go
+
+Qualifications:
+Must have:
+- 1+ years backend engineering experience in a production environment
+- BS/MS in Computer Science or similar technical field of study
+- Experience developing and launching products
+- Working knowledge of Python and/or Go
+- Comfortable working in an agile team software development environment
+Preferred:
+- Familiarity with REST APIs, ability to read python server code a plus

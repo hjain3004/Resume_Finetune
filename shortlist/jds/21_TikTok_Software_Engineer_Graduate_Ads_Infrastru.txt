@@ -1,0 +1,17 @@
+TikTok is a short-form mobile video platform whose Global Monetization Product and Technology teams develop advertising and monetization platforms. The Software Engineer Graduate will develop large-scale Ads systems, own targeting components or strategies, and collaborate with product and business teams on product vision.
+
+Responsibilities:
+- Participate in the development of a large-scale Ads system
+- Responsible for the development of state-of-the-art software engineering projects
+- Own key targeting components or strategies in the TikTok ads monetization ecosystem
+- Work with product and business teams on product vision
+
+Qualifications:
+Must have:
+- - Individuals who are completing or have recently completed a Bachelor's/ Master's in Computer Science or a related discipline
+- - Excellent programming, debugging, and optimization skills in one or more general-purpose programming languages, including but not limited to: Go, C/C++, Python, and Java
+- - Ability to think critically and to formulate solutions to problems in a clear and concise way
+- - Deep understanding of computer architectures, data structures, and algorithms
+- - Very strong teamwork skills (e.g. communication, ownership, empathy, honesty)
+Preferred:
+- -Experience in the advertising, e-commerce or gaming industry

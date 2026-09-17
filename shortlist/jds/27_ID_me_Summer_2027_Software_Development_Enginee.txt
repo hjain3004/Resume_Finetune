@@ -1,0 +1,25 @@
+ID.me is a digital identity wallet company that helps individuals securely verify their identities and log in across online services. The Software Development Engineer will contribute to product and platform teams by building user-facing features, developing APIs, strengthening platform capabilities, and collaborating with experienced engineers to deliver high-quality software.
+
+Responsibilities:
+- Design, build, and test software components under the guidance of more experienced engineers
+- Contribute to our platform's evolution by developing API-first services used by internal and external teams
+- Own features end-to-end, from design through launch, as you grow into greater technical ownership
+- Participate in code reviews, design discussions, and agile ceremonies to continuously grow your skills
+- Write clear, maintainable, and well-documented code
+- Help troubleshoot issues in development and production environments
+- Learn best practices for software engineering, security, testing, and observability in a platform company
+- Collaborate with product managers, designers, and fellow engineers to ship impactful features
+
+Qualifications:
+Must have:
+- Graduating May/June 2027 with a Bachelor's or Graduate degree in Computer Science, Software Engineering, or a related technical field
+- Proficiency in at least one programming language (e.g., Java, JavaScript, Go, Python, or Ruby), gained through coursework, internships, or personal projects
+- Strong understanding of basic computer science concepts, including data structures, algorithms, and object-oriented programming
+Preferred:
+- Eagerness to learn and take feedback in a collaborative, fast-paced environment
+- Familiarity with RESTful APIs and client-server communication
+- Exposure to cloud platforms such as AWS, GCP, or Azure through internships or schoolwork
+- Experience with version control systems (e.g., Git)
+- Interest in platform engineering, API design, or building developer tools
+- Experience working with production systems at scale, or building and shipping software used by a large user base
+- Clear communication skills and a team-oriented mindset

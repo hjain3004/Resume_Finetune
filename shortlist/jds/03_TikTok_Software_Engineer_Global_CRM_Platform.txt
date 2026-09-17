@@ -1,0 +1,19 @@
+TikTok is a global technology company focused on short-form mobile video and building products that inspire creativity and bring joy. The Software Engineer will develop and enhance TikTok’s proprietary CRM platform, creating scalable backend solutions and globalized systems for sales, marketing, and analytics. The role also involves improving platform performance, availability, user adoption, and client satisfaction.
+
+Responsibilities:
+- Backend development of TikTok's proprietary CRM platform
+- Turn TikTok's proprietary CRM into an enterprise-ready, market-leading SaaS platform leveraging best practices from the industry
+- Understand users' personalized requests and come up with scalable technical solutions
+- Build a globalized CRM System with high performance and availability across multiple regions
+
+Qualifications:
+Must have:
+- Bachelor's degree or above in computer science or related fields
+- 1+ years of experience building scalable systems
+Preferred:
+- Familiarity with Elastic Search and key/value stores (Redis, Memcached etc) is a plus
+- Familiarity with Message Queue (Kafka, RabbitMQ, RocketMQ etc) is a plus
+- Familiarity with CRM platforms and Ad Sales automated processes is a plus
+- Professional experience with Java is preferred
+- Professional experience with Spring Boot and/or other Microservice frameworks is preferred
+- Professional experience with relational databases (MySQL, Postgres etc) is preferred

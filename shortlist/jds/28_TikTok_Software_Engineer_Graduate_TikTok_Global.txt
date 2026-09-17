@@ -1,0 +1,21 @@
+TikTok is a short-form mobile video platform focused on inspiring creativity and bringing joy. The Software Engineer Graduate will build and operate scalable backend systems for Global Live content moderation, penalty, and governance initiatives, collaborating with product managers, data scientists, designers, and other engineers.
+
+Responsibilities:
+- Partner with product managers, data scientists, UI designers, and other engineers to iterate on data-driven initiatives across content moderation, penalty, and relevant governance systems
+- Design and evolve backend system architecture to ensure service reliability, performance, and scalability at TikTok Global Live traffic scale
+- Own end-to-end delivery of backend features, from requirements analysis and technical design through production rollout, monitoring, and iteration
+- Drive technical decisions on complex, ambiguous problems and continuously raise the engineering bar for code quality, testing, and operational excellence
+- Mentor other engineers and share your expertise, experience, and perspectives to strengthen the team's technical capability
+
+Qualifications:
+Must have:
+- - Individuals who are completing or have recently completed a Bachelor's/ Master's degree in Computer Science or a related discipline
+- - Strong knowledge of data structures and algorithms, proficient in at least one coding language, including but not limited to Go, Java, Python, C++
+- - Curiosity towards new technology and outstanding ability to analyze and solve problems
+- - Solid grasp of software engineering fundamentals and a proven track record of building scalable, extensible, and maintainable backend systems in production
+Preferred:
+- - Experience building or integrating AI/LLM-powered applications, such as agentic workflow, RAG, MCP, and prompt engineering, or model evaluation pipelines
+- - Understanding of concurrency, database, and message queue
+- - Experience with content moderation systems, including human review workflows and machine-based moderation pipelines
+- - Experience working on Trust & Safety, ecosystem governance, or policy enforcement platforms
+- - Familiarity with compliance and regulatory frameworks relevant to online platforms (e.g., DSA, COPPA, GDPR, or regional content policy requirements)

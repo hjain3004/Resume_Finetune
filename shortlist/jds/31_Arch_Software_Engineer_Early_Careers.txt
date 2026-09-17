@@ -1,0 +1,58 @@
+Our Company
+
+Arch is a Series B financial technology company that automates the management of private investments, improving access, understanding, and the human experience of investing across asset classes.
+
+Private investments such as venture capital, hedge funds, and private equity, make up roughly 25% of the investment universe. Traditionally, investors, advisors, banks, families, and managers track hundreds of investments in complicated spreadsheets, file folders, and busy inboxes. Not only is this tedious and time-consuming, but it is rife with opportunity for manual data entry errors, inconsistent reporting, and lost information. Enter, Arch.
+
+Arch delivers standardized data, documents, and insights in a single platform, avoiding the need to chase information across dozens or hundreds of ‘portals’. Our purpose is to save investors’ time while empowering them to make more informed investment decisions, leading to better financial outcomes.
+
+We are a fast-growing, dynamic team of 200+, serving over 400 clients, including several of America’s largest banks, families, and financial institutions. We’ve over doubled the size of the company every year since inception and we are looking to hire in all departments as we scale.
+
+The Role
+
+As a Software Engineer, you'll help develop and scale core components of our platform. Your work will support the automation of complex processes, the launch of new product offerings, and the growth of our infrastructure. This is an important role, as your contributions will directly enable technology that is powering billions in investments and driving meaningful impact for our clients. You'll collaborate closely with fellow engineers, product managers, and other team members to deliver solutions that make a difference in our clients' investment processes.
+
+Eligibility: You currently in the process of obtaining, a Bachelor's or Master's degree in Computer Science, Software Engineering, or an equivalent field, and are graduating between December 2026 and August 2027. We anticipate start dates early 2027 & summer 2027.
+
+Your Responsibilities Will Include:
+
+- Working with cross-functional teams (product, design, operations, infrastructure) to build and improve application features
+- Contributing to both user-facing interfaces and backend services using modern frameworks and technologies
+- Helping develop reusable software components and APIs that connect front-end and back-end systems
+- Writing clean, efficient, and reliable code, and learning how to optimize for performance and scalability
+- Participating in code reviews and learning best practices from peers and senior engineers
+- Assisting in designing and implementing systems that are scalable and maintainable across the stack
+- Troubleshooting and fixing issues across front-end, APIs, and databases
+- Gaining experience working with multiple programming languages, frameworks, and databases
+- Taking responsibility for assigned tasks and features, developing an end-to-end understanding of how they work
+
+Reach Out to Us If You:
+
+- Have experience building and programming, through internships, class projects, or personal work
+- Have strong computer science fundamentals: data structures, algorithms, and object-oriented design
+- Have frontend or backend development experience, full-stack exposure is a plus
+- Have a track record of taking on projects and seeing them through, even in ambiguous or fast-moving settings
+- Communicate and collaborate well across both technical and non-technical people
+
+Bonus Points If You:
+
+- Have contributed to a personal project, open-source work, or something outside a classroom that shows how you actually build
+- Have exposure to the kind of problems we solve here: automation, data-heavy systems, or fintech
+- Enjoy debugging and troubleshooting complex systems, not just building new features
+
+A Note about us:
+
+Most of our full-time roles are based onsite at our New York City office, where our team thrives on in-person collaboration and dynamic teamwork. Being onsite daily enables us to build strong connections, move quickly, and deliver exceptional service to our clients.
+
+For select roles, we are also open to candidates based in Boston. If a role is open to Boston, it will be listed explicitly in the job location.
+
+We encourage applicants who are located in or open to relocating to the listed location to apply and join us in this hands-on, collaborative environment
+
+Some perks of working for Arch include:
+
+- Strong Team - You’ll be backed by a strong team that consistently exceeds client expectations and ships new products quickly.
+- Your work is high impact - Being part of a small team means you have real responsibility and impact from day one. You'll be involved in discussions that drive the growth and direction of our platform from the very beginning.
+- Product Market Fit - We have strong product market fit, exceptionally low churn, and have grown mostly organically through word of mouth.
+- Team community and camaraderie - We have enormous trust in each other and always do what we can do to support one another. We're always ready to step in to help.
+- Great office: Our new home at 199 Water Street gives us a beautiful, energizing space to come together as a team, collaborate more easily, and keep building the next chapter of Arch.
+- Lunch is on Us - We’ll keep the team fueled with lunch in the office, whether you’re catching up with teammates, talking through an idea, or just taking a well-earned break.

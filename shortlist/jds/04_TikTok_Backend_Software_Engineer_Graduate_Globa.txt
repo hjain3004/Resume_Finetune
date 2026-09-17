@@ -1,0 +1,22 @@
+TikTok is a short-form mobile video platform with a global e-commerce business focused on helping users discover and purchase products through video and live commerce. The Backend Software Engineer Graduate will develop scalable, secure backend services, APIs, data services, and platform components while supporting reliable e-commerce and AI-powered product experiences.
+
+Responsibilities:
+- Develop efficient, highly scalable and secure backend services that power E-commerce products and platform capabilities
+- Optimize backend systems and services for reliability, modularity, computational efficiency, scalability, and data security
+- Design and develop APIs, data services, and core platform components that support product innovation and business growth
+- Collaborate closely with cross-functional teams to deliver robust technical solutions for rapidly evolving product needs
+- Apply AI-assisted development practices to improve engineering productivity, code quality, debugging efficiency, and service observability
+- Build backend capabilities that support AI-powered product experiences, intelligent automation, and data-driven decision-making where applicable
+
+Qualifications:
+Must have:
+- Individuals who are completing or have recently completed a Bachelor's degree in Computer Science or a related discipline
+- Familiarity with backend development and proficiency in at least one programming language such as Java, Golang, Python, Scala, or C++
+- Understanding of data structures, algorithms, operating systems, computer networks, and scalable system design
+- Familiarity with common databases, caching systems, or messaging frameworks such as MySQL, Redis, or Kafka
+- Basic understanding of software security, privacy protection, and engineering best practices
+Preferred:
+- Strong problem-solving skills and a solid sense of ownership
+- Demonstrated interest in building reliable platforms and large-scale internet services
+- Familiarity with AI-assisted coding tools, engineering productivity workflows, or backend systems supporting intelligent applications
+- Comfortable working in a fast-moving, collaborative, and globally distributed team environment
