@@ -37,8 +37,8 @@ the current/target boundary is fixed in `docs/ARCHITECTURE.md`, the phase status
 - Tests: `pytest -q`
 - Record a fixture: `python scripts/record_fixture.py <url> <name>`
 - Apply-Now lane: `python -m scripts.tailor_now run --jd inbox/jd/<name>.txt --company "<Co>"
-  --title "<Title>" --variant {backend,ml} [--model NAME] [--suffix TEXT]`; `preflight`,
-  `status`, `export-jd --job-id N --out PATH` (read-only)
+  --title "<Title>" --variant {backend,ml} [--provider {claude,gemini,codex}] [--model NAME]
+  [--suffix TEXT]`; `preflight`, `status`, `export-jd --job-id N --out PATH` (read-only)
 
 ## Code style
 

@@ -155,6 +155,7 @@ def test_lane_manifest_round_trips_strictly():
         "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -5, "jd_sha256": "a" * 64, "jd_path": "inbox/jd/x.txt",
         "company": "Acme", "title": "Engineer", "variant": "backend", "model": None,
         "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00",
+        "provider": "claude",
     }
     manifest = parse_lane_manifest(raw)
     assert lane_manifest_to_dict(manifest) == raw
@@ -162,6 +163,16 @@ def test_lane_manifest_round_trips_strictly():
         parse_lane_manifest({**raw, "extra": 1})
     with pytest.raises(LaneError):
         parse_lane_manifest({k: v for k, v in raw.items() if k != "variant"})
+
+
+def test_old_manifest_without_provider_defaults_to_claude():
+    old_raw = {
+        "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -5, "jd_sha256": "a" * 64, "jd_path": "inbox/jd/x.txt",
+        "company": "Acme", "title": "Engineer", "variant": "backend", "model": None,
+        "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00",
+    }
+    manifest = parse_lane_manifest(old_raw)
+    assert manifest.provider == "claude"
 
 
 # --- composer ---------------------------------------------------------------

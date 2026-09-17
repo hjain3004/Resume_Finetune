@@ -23,6 +23,7 @@ from src.tailor.g2 import load_taste_lessons
 from src.tailor.g2_pipeline import G2OutcomeKind, g2_bundle_to_dict, parse_g2_bundle, run_g2_loop
 from src.tailor.g3 import G3OutcomeKind, build_review_packet, publish_packet
 from src.tailor.invoke import DEFAULT_CLAUDE_CMD
+from src.tailor.providers import ModelCommand, Provider, build_model_command
 from src.tailor.publish import RenderOutcomeKind, application_dir, parse_render_result, render_and_publish
 from src.tailor.s0 import S0Response, build_s0_request, parse_s0_response, s0_response_to_dict
 from src.tailor.s0_pipeline import S0OutcomeKind, run_s0_invocation
@@ -350,10 +351,21 @@ def run_stages(
     trace_dir: Path = Path("data/traces"),
     prompt_dir: Path = DEFAULT_PROMPT_DIR,
     stop_after: Stage | None = None, only: Stage | None = None, dry_run: bool = False,
-    claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
+    claude_cmd: tuple[str, ...] | None = None,
     reject_dir: Path | None = None,
     retry_prefix: str | None = None,
 ) -> RunOutcome:
+    effective_model_cmd = model_command if model_command is not None else command
+    if effective_model_cmd is not None:
+        effective_claude_cmd = effective_model_cmd.argv
+    elif claude_cmd is not None:
+        effective_claude_cmd = claude_cmd
+    else:
+        effective_model_cmd = build_model_command(Provider.CLAUDE, None)
+        effective_claude_cmd = effective_model_cmd.argv
+
     job_id = s1_request.job_id
     company, title = s1_request.company, s1_request.title
     stage_records: list[StageRecord] = []
@@ -429,7 +441,7 @@ def run_stages(
         outcome = run_s1_invocation(
             s1_request, prompt_template_path=prompt_dir / "tailoring_s1.md",
             request_path=artifact_path(directory, Stage.PREPARE), trace_dir=trace_dir,
-            claude_cmd=claude_cmd,
+            model_command=effective_model_cmd, claude_cmd=effective_claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S1OutcomeKind.VALID:
@@ -467,7 +479,7 @@ def run_stages(
         outcome = run_s0_invocation(
             s0_request, prompt_template_path=prompt_dir / "tailoring_s0.md",
             request_path=artifact_path(directory, Stage.S1), trace_dir=trace_dir,
-            claude_cmd=claude_cmd,
+            model_command=effective_model_cmd, claude_cmd=effective_claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S0OutcomeKind.VALID:
@@ -523,7 +535,7 @@ def run_stages(
         outcome = run_s2_invocation(
             s2_request, prompt_template_path=prompt_dir / "tailoring_s2.md",
             request_path=artifact_path(directory, Stage.S0), trace_dir=trace_dir,
-            claude_cmd=claude_cmd,
+            model_command=effective_model_cmd, claude_cmd=effective_claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S2OutcomeKind.VALID:
@@ -578,7 +590,7 @@ def run_stages(
         outcome = run_s3_invocation(
             s3_request, prompt_template_path=prompt_dir / "tailoring_s3.md",
             request_path=artifact_path(directory, Stage.S2), banned_terms=banned_terms, trace_dir=trace_dir,
-            claude_cmd=claude_cmd,
+            model_command=effective_model_cmd, claude_cmd=effective_claude_cmd,
         )
         total_model_calls += 1
         if outcome.kind is not S3OutcomeKind.VALID:
@@ -619,7 +631,7 @@ def run_stages(
             s3_prompt_template_path=prompt_dir / "tailoring_s3.md",
             request_path=artifact_path(directory, Stage.S3), banned_terms=banned_terms,
             taste_lessons=taste_lessons, trace_dir=trace_dir,
-            claude_cmd=claude_cmd,
+            model_command=effective_model_cmd, claude_cmd=effective_claude_cmd,
         )
         calls = outcome.bundle.model_calls if outcome.bundle is not None else 1
         total_model_calls += calls

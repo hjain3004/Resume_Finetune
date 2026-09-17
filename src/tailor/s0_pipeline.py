@@ -5,6 +5,7 @@ from enum import Enum
 from pathlib import Path
 from src.llm_trace import write_trace
 from src.tailor.invoke import DEFAULT_CLAUDE_CMD, DEFAULT_TIMEOUT_SECONDS, InvocationError, invoke_text_model
+from src.tailor.providers import ModelCommand, trace_model_label
 from src.tailor.s0 import S0Request, S0Response, S0ParseError, S0SemanticError, build_s0_prompt, parse_s0_response
 
 TRACE_INVOCATION_TYPE = "tailoring_s0"
@@ -20,15 +21,48 @@ class S0Outcome:
     error: str | None
     trace_path: Path | None
 
-def run_s0_invocation(request: S0Request, *, prompt_template_path: Path, request_path: Path, claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD, timeout: float = DEFAULT_TIMEOUT_SECONDS, trace_dir: Path = Path("data/traces")) -> S0Outcome:
+def run_s0_invocation(
+    request: S0Request,
+    *,
+    prompt_template_path: Path,
+    request_path: Path,
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
+    claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    trace_dir: Path = Path("data/traces"),
+) -> S0Outcome:
+    effective_cmd = model_command if model_command is not None else command
     template = Path(prompt_template_path).read_text()
     prompt = build_s0_prompt(template, request)
-    try: result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
+    try:
+        if effective_cmd is not None:
+            result = invoke_text_model(prompt, command=effective_cmd, timeout=timeout)
+        else:
+            result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
     except InvocationError as exc:
-        trace = write_trace(invocation_type=TRACE_INVOCATION_TYPE, input_paths=[Path(request_path)], raw_output=exc.raw_stdout, prompt_path=Path(prompt_template_path), model=exc.model or (claude_cmd[0] if claude_cmd else ""), trace_dir=trace_dir) if exc.raw_stdout.strip() else None
+        trace_model = exc.model or (trace_model_label(effective_cmd) if effective_cmd else (claude_cmd[0] if claude_cmd else ""))
+        trace = write_trace(
+            invocation_type=TRACE_INVOCATION_TYPE,
+            input_paths=[Path(request_path)],
+            raw_output=exc.raw_stdout,
+            prompt_path=Path(prompt_template_path),
+            model=trace_model,
+            trace_dir=trace_dir,
+        ) if exc.raw_stdout.strip() else None
         return S0Outcome(S0OutcomeKind.INVOCATION_FAILURE, None, str(exc), trace)
-    trace = write_trace(invocation_type=TRACE_INVOCATION_TYPE, input_paths=[Path(request_path)], raw_output=result.raw_stdout, prompt_path=Path(prompt_template_path), model=result.model, trace_dir=trace_dir)
-    try: response = parse_s0_response(result.raw_stdout, request)
-    except S0ParseError as exc: return S0Outcome(S0OutcomeKind.PARSE_FAILURE, None, str(exc), trace)
-    except S0SemanticError as exc: return S0Outcome(S0OutcomeKind.SEMANTIC_FAILURE, None, str(exc), trace)
+    trace = write_trace(
+        invocation_type=TRACE_INVOCATION_TYPE,
+        input_paths=[Path(request_path)],
+        raw_output=result.raw_stdout,
+        prompt_path=Path(prompt_template_path),
+        model=result.model,
+        trace_dir=trace_dir,
+    )
+    try:
+        response = parse_s0_response(result.raw_stdout, request)
+    except S0ParseError as exc:
+        return S0Outcome(S0OutcomeKind.PARSE_FAILURE, None, str(exc), trace)
+    except S0SemanticError as exc:
+        return S0Outcome(S0OutcomeKind.SEMANTIC_FAILURE, None, str(exc), trace)
     return S0Outcome(S0OutcomeKind.VALID, response, None, trace)

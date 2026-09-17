@@ -21,7 +21,7 @@ class _ScriptedInvoke:
         self._responses = list(responses)
         self.call_count = 0
 
-    def __call__(self, prompt, *, claude_cmd=(), timeout=300):
+    def __call__(self, prompt, *, command=None, claude_cmd=(), timeout=300):
         self.call_count += 1
         if not self._responses:
             raise AssertionError("scripted invoke called more times than scripted")

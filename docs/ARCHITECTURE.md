@@ -920,11 +920,13 @@ Include a `scripts/install_schedule.*` helper and document uninstall.
 - **Agentic source scout** (M9D): separate control-plane invocation writes versioned source
   proposals and candidate artifacts. A deterministic importer rejects malformed, untrusted,
   unapproved, or out-of-budget output before any database write.
-- **Apply-Now tailoring lane** (M8N, 2026-09-01): `scripts/tailor_now.py` is a file-fed entry
-  to the same S1→S0→S2→S3→G1→G2→RENDER+L7→G3 chain the DB-fed pilot runs
+- **Apply-Now tailoring lane** (M8N, 2026-09-01; multi-provider 2026-09-17): `scripts/tailor_now.py`
+  is a file-fed entry to the same S1→S0→S2→S3→G1→G2→RENDER+L7→G3 chain the DB-fed pilot runs
   (`src/tailor/pilot.run_stages`). Input is a pasted JD plus company, title, and base
   variant; job ids are negative and content-derived; outputs land under gitignored
-  `applications_manual/`. The lane never reads or writes `data/jobs.db` for tailoring
+  `applications_manual/`. Supports `--provider {claude,gemini,codex}` with tool-free,
+  isolated-cwd model execution (`src/tailor/invoke.py`, `src/tailor/providers.py`), preserving
+  pure text-in/text-out file contracts. The lane never reads or writes `data/jobs.db` for tailoring
   (`export-jd` is a read-only benchmark helper). Design:
   `docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md`.
 

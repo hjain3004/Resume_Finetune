@@ -2704,3 +2704,49 @@ repair in a follow-up commit). Three items for the record:
    pass following this blueprint change touched only test fixtures (stale hardcoded pre-blueprint
    `int_b1` text, and two frozen recorded traces replayed against their recording-time variant
    shape via a test-local `dataclasses.replace` shim); `src/tailor/s2.py` itself was not modified.
+
+## 2026-09-17 — Multi-provider invocation boundary for Apply-Now tailoring lane
+
+Added Gemini and Codex CLI support alongside Claude for the Apply-Now tailoring lane
+(`python -m scripts.tailor_now run ... --provider {claude,gemini,codex} [--model NAME]`).
+`claude` remains the default provider and its invocation behavior is byte-identical.
+
+### 1. Safety invariants & trust boundary
+- **Pure text-in / text-out:** Model invocation is strictly an LLM text transformation step.
+  Models have zero tool authority and cannot edit files, execute commands, or access the SQLite
+  database. The pipeline remains deterministic: inputs are structured prompts built in memory,
+  and outputs are parsed through deterministic schemas and validation gates (G1, G2, render, L7, G3).
+- **Isolated scratch execution directory:** When invoking `gemini` or `codex`, `cwd` is pinned to
+  an empty, isolated `tempfile.TemporaryDirectory()`, preventing any discovery of or interaction
+  with repository files, git state, or local artifacts.
+- **Strict rejection of approval-bypass / yolo flags:** Forbidden flag patterns (`--yolo`,
+  `auto_edit`, `--dangerously-bypass-approvals-and-sandbox`, `--full-auto`) are blocked by
+  deterministic pre-execution checks (`FORBIDDEN_FLAG_PATTERNS`). No agentic execution flags are
+  permitted.
+
+### 2. Provider argv and I/O contracts
+- **Claude (`claude`):**
+  - Argv: `claude -p --tools "" --no-session-persistence [-m <model>] -- <prompt>`
+  - Prompt passed positionally after `--` to avoid any leading-dash flag collision, or via stdin.
+  - Output captured directly from stdout.
+- **Gemini (`gemini`):**
+  - Argv: `gemini [-m <model>] <prompt>`
+  - Discovered `@google/gemini-cli` bug: when reading from stdin with no positional query, the CLI
+    interpolates `${stdinData}\n\nundefined` into the prompt. The prompt is therefore delivered as
+    a positional argument to ensure clean text input without prompt pollution.
+  - Cwd set to isolated temp directory.
+  - Output captured from stdout.
+- **Codex (`codex`):**
+  - Argv: `codex exec --sandbox read-only --ephemeral --skip-git-repo-check --color never [-m <model>] --output-last-message <temp_file> -`
+  - Prompt delivered via stdin (`-`).
+  - Output-file exception: `codex exec` emits event logs, progress spinners, and status banners to
+    stdout that cannot be silenced with CLI flags. The final model response is captured cleanly via
+    `--output-last-message <temp_file>` in the ephemeral temporary directory, bypassing stdout noise.
+  - Cwd set to isolated temp directory.
+
+### 3. Lane isolation & backwards compatibility
+- Lane output directories are namespaced by provider: `{slug}-{provider}` or
+  `{slug}-{suffix}-{provider}` (for `claude`, default naming without provider suffix is retained
+  unless explicitly suffixed).
+- Lane `manifest.json` schema v1 records `provider: "claude"|"gemini"|"codex"` and `model: str|null`.
+  Existing manifests without `provider` deserialize with `provider="claude"` for backwards compatibility.

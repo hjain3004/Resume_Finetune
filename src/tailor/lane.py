@@ -1,13 +1,13 @@
-"""Apply-Now lane (M8N-0): a file-fed entry to the validated tailoring
-chain. Reads a pasted JD, never opens data/jobs.db, and delegates every
-stage to src.tailor.pilot.run_stages. Spec:
-docs/superpowers/specs/2026-09-01-m8n-apply-now-lane-design.md §7."""
+"""Apply-Now lane (M8N-0, multi-provider): a file-fed entry to the validated
+tailoring chain. Reads a pasted JD, never opens data/jobs.db, and delegates every
+stage to src.tailor.pilot.run_stages. Supports claude, gemini, and codex providers."""
 from __future__ import annotations
 
 import datetime
 import hashlib
 import json
 import logging
+import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +24,7 @@ from src.tailor.pilot import (
     run_stages,
 )
 from src.tailor.preflight import PreflightFinding, run_preflight
+from src.tailor.providers import Provider, build_model_command
 from src.tailor.publish import application_dir, slugify
 from src.tailor.s1 import S1Request
 
@@ -64,18 +65,25 @@ def lane_job_id(jd_text: str) -> int:
 def build_claude_cmd(model: str | None) -> tuple[str, ...]:
     """`--tools ""` must never be last and the trailing `--` keeps the prompt
     positional (see src/tailor/invoke.py)."""
-    if model is None:
-        return DEFAULT_CLAUDE_CMD
-    if not model.strip() or model.startswith("-") or any(ch.isspace() for ch in model):
-        raise LaneError(f"model must be a bare model name, got {model!r}")
-    return ("claude", "-p", "--model", model, "--tools", "", "--no-session-persistence", "--")
+    try:
+        return build_model_command(Provider.CLAUDE, model).argv
+    except ValueError as exc:
+        raise LaneError(str(exc)) from exc
 
 
-def lane_directory(root: Path, company: str, title: str, suffix: str | None) -> Path:
+def lane_directory(root: Path, company: str, title: str, suffix: str | None = None, provider: str = "claude") -> Path:
     base = application_dir(root, company, title)
-    if suffix is None or not suffix.strip():
-        return base
-    return base.with_name(f"{base.name}-{slugify(suffix)}")
+    prov_str = provider.value if isinstance(provider, Provider) else str(provider)
+    is_non_claude = bool(prov_str and prov_str.lower() != Provider.CLAUDE.value)
+
+    if suffix is not None and suffix.strip():
+        user_suffix = slugify(suffix)
+        if is_non_claude:
+            return base.with_name(f"{base.name}-{user_suffix}-{prov_str.lower()}")
+        return base.with_name(f"{base.name}-{user_suffix}")
+    if is_non_claude:
+        return base.with_name(f"{base.name}-{prov_str.lower()}")
+    return base
 
 
 @dataclass(frozen=True)
@@ -91,25 +99,30 @@ class LaneManifest:
     claude_cmd: tuple[str, ...]
     jd_quality: str
     created_at: str
+    provider: str = "claude"
 
 
-_LANE_MANIFEST_KEYS = {
+_LANE_MANIFEST_OLD_KEYS = {
     "schema_version", "job_id", "jd_sha256", "jd_path", "company", "title", "variant", "model",
     "claude_cmd", "jd_quality", "created_at",
 }
+_LANE_MANIFEST_KEYS = _LANE_MANIFEST_OLD_KEYS | {"provider"}
 
 
 def lane_manifest_to_dict(m: LaneManifest) -> dict[str, object]:
-    return {
+    d: dict[str, object] = {
         "schema_version": m.schema_version, "job_id": m.job_id, "jd_sha256": m.jd_sha256,
         "jd_path": m.jd_path, "company": m.company, "title": m.title, "variant": m.variant,
         "model": m.model, "claude_cmd": list(m.claude_cmd), "jd_quality": m.jd_quality,
         "created_at": m.created_at,
     }
+    # Include provider in manifest
+    d["provider"] = m.provider
+    return d
 
 
 def parse_lane_manifest(raw: object) -> LaneManifest:
-    if not isinstance(raw, dict) or set(raw) != _LANE_MANIFEST_KEYS:
+    if not isinstance(raw, dict) or set(raw) not in (_LANE_MANIFEST_OLD_KEYS, _LANE_MANIFEST_KEYS):
         raise LaneError("lane_manifest.json: unexpected or missing fields")
     if raw["schema_version"] != LANE_MANIFEST_SCHEMA:
         raise LaneError(f"lane_manifest.json: unsupported schema {raw['schema_version']!r}")
@@ -122,11 +135,14 @@ def parse_lane_manifest(raw: object) -> LaneManifest:
     for key in ("jd_sha256", "jd_path", "company", "title", "variant", "jd_quality", "created_at"):
         if not isinstance(raw[key], str) or not raw[key]:
             raise LaneError(f"lane_manifest.json: {key} must be a nonempty string")
+    provider = raw.get("provider", "claude")
+    if not isinstance(provider, str) or not provider.strip():
+        raise LaneError("lane_manifest.json: provider must be a nonempty string")
     return LaneManifest(
         schema_version=raw["schema_version"], job_id=raw["job_id"], jd_sha256=raw["jd_sha256"],
         jd_path=raw["jd_path"], company=raw["company"], title=raw["title"], variant=raw["variant"],
         model=raw["model"], claude_cmd=tuple(raw["claude_cmd"]), jd_quality=raw["jd_quality"],
-        created_at=raw["created_at"],
+        created_at=raw["created_at"], provider=provider,
     )
 
 
@@ -136,19 +152,26 @@ def _preflight_findings(profile_path: Path, template_path: Path, prompt_dir: Pat
     return report.findings
 
 
-def _manifest_mismatch(existing: LaneManifest, *, jd_sha256: str, company: str, title: str, variant: str) -> str | None:
+def _manifest_mismatch(
+    existing: LaneManifest, *, jd_sha256: str, company: str, title: str, variant: str, provider: str = "claude"
+) -> str | None:
     if existing.jd_sha256 != jd_sha256:
         return "jd text differs from the JD this directory was created from"
     if (existing.company, existing.title) != (company, title):
         return "company/title differ from this directory's lane manifest"
     if existing.variant != variant:
         return f"variant {variant!r} differs from this directory's variant {existing.variant!r}"
+    if existing.provider != provider:
+        return f"provider {provider!r} differs from this directory's provider {existing.provider!r}"
     return None
 
 
 def run_manual_application(
     jd_path: Path, *, company: str, title: str, variant: str,
-    root: Path = APPLICATIONS_MANUAL_ROOT, model: str | None = None, suffix: str | None = None,
+    root: Path = APPLICATIONS_MANUAL_ROOT,
+    provider: str | Provider = Provider.CLAUDE,
+    model: str | None = None,
+    suffix: str | None = None,
     profile_path: Path = Path("config/master_profile.yaml"),
     template_path: Path = Path("profile/template.tex"),
     banned_words_path: Path = Path("config/banned_words.txt"),
@@ -161,16 +184,30 @@ def run_manual_application(
     started = _now()
     jd_path = Path(jd_path)
     jd_text = normalize_jd(jd_path.read_text(encoding="utf-8"))
-    claude_cmd = build_claude_cmd(model)
+
+    if isinstance(provider, str):
+        try:
+            prov_enum = Provider(provider.lower())
+        except ValueError:
+            raise LaneError(f"unknown provider {provider!r}; expected one of {[p.value for p in Provider]}")
+    else:
+        prov_enum = provider
+
+    try:
+        model_command = build_model_command(prov_enum, model)
+    except ValueError as exc:
+        raise LaneError(str(exc)) from exc
+
     profile = load_profile(profile_path)
     if variant not in profile.base_variants:
         raise LaneError(f"unknown base variant {variant!r}; expected one of {sorted(profile.base_variants)}")
 
     job_id = lane_job_id(jd_text)
     jd_sha256 = _jd_sha256(jd_text)
-    directory = lane_directory(Path(root), company, title, suffix)
+    directory = lane_directory(Path(root), company, title, suffix=suffix, provider=prov_enum.value)
     retry_prefix = (
         f"python -m scripts.tailor_now run --jd {jd_path} --company {company!r} --title {title!r} --variant {variant}"
+        + (f" --provider {prov_enum.value}" if prov_enum is not Provider.CLAUDE else "")
         + (f" --suffix {suffix!r}" if suffix else "") + (f" --model {model}" if model else "")
     )
 
@@ -180,13 +217,21 @@ def run_manual_application(
             existing = parse_lane_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
         except (OSError, ValueError) as exc:
             return _prepare_failure(job_id, "lane_manifest_unreadable", str(exc), started)
-        reason = _manifest_mismatch(existing, jd_sha256=jd_sha256, company=company, title=title, variant=variant)
+        reason = _manifest_mismatch(existing, jd_sha256=jd_sha256, company=company, title=title, variant=variant, provider=prov_enum.value)
         if reason is not None:
             return _prepare_failure(
                 job_id, "lane_manifest_mismatch",
                 f"{reason}; use --suffix for a different posting or remove {directory} by hand", started,
             )
         job_id = existing.job_id
+
+    # Fail before any model call if the provider's executable is not on PATH
+    exe = model_command.argv[0]
+    if shutil.which(exe) is None:
+        return _prepare_failure(
+            job_id, "preflight_failure",
+            f"provider executable {exe!r} not found on PATH", started,
+        )
 
     findings = _preflight_findings(profile_path, template_path, prompt_dir)
     if findings:
@@ -203,8 +248,9 @@ def run_manual_application(
         if not manifest_path.exists():
             write_json_atomic(manifest_path, lane_manifest_to_dict(LaneManifest(
                 schema_version=LANE_MANIFEST_SCHEMA, job_id=job_id, jd_sha256=jd_sha256, jd_path=str(jd_path),
-                company=company, title=title, variant=variant, model=model, claude_cmd=claude_cmd,
+                company=company, title=title, variant=variant, model=model, claude_cmd=model_command.argv,
                 jd_quality="ats", created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                provider=prov_enum.value,
             )))
         log.info("apply-now lane: job %d (%s / %s) -> %s", job_id, company, title, directory)
 
@@ -213,5 +259,6 @@ def run_manual_application(
         template_path=template_path, banned_words_path=banned_words_path, taste_path=taste_path,
         assumed_baseline_terms_path=assumed_baseline_terms_path,
         trace_dir=trace_dir, prompt_dir=prompt_dir, stop_after=stop_after, only=only, dry_run=dry_run,
-        claude_cmd=claude_cmd, reject_dir=directory / "rejected", retry_prefix=retry_prefix,
+        model_command=model_command, claude_cmd=model_command.argv,
+        reject_dir=directory / "rejected", retry_prefix=retry_prefix,
     )

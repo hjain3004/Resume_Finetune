@@ -9,6 +9,7 @@ from pathlib import Path
 from src.llm_trace import write_trace
 from src.tailor.g1 import G1Report, G1Status, g1_report_to_dict, parse_g1_report, run_static_g1
 from src.tailor.invoke import DEFAULT_CLAUDE_CMD, DEFAULT_TIMEOUT_SECONDS, InvocationError, invoke_text_model
+from src.tailor.providers import ModelCommand, trace_model_label
 from src.tailor.s3 import (
     ChangeEntry,
     EditBudget,
@@ -91,16 +92,23 @@ def run_s3_invocation(
     prompt_template_path: Path,
     request_path: Path,
     banned_terms: tuple[str, ...],
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
     claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     trace_dir: Path = Path("data/traces"),
 ) -> S3Outcome:
+    effective_cmd = model_command if model_command is not None else command
     template = Path(prompt_template_path).read_text(encoding="utf-8")
     prompt = build_s3_prompt(template, request)
     try:
-        result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
+        if effective_cmd is not None:
+            result = invoke_text_model(prompt, command=effective_cmd, timeout=timeout)
+        else:
+            result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
     except InvocationError as exc:
-        return S3Outcome(S3OutcomeKind.INVOCATION_FAILURE, None, None, str(exc), _trace(Path(request_path), Path(prompt_template_path), exc.raw_stdout, exc.model or (claude_cmd[0] if claude_cmd else ""), trace_dir))
+        trace_model = exc.model or (trace_model_label(effective_cmd) if effective_cmd else (claude_cmd[0] if claude_cmd else ""))
+        return S3Outcome(S3OutcomeKind.INVOCATION_FAILURE, None, None, str(exc), _trace(Path(request_path), Path(prompt_template_path), exc.raw_stdout, trace_model, trace_dir))
     trace_path = _trace(Path(request_path), Path(prompt_template_path), result.raw_stdout, result.model, trace_dir)
     try:
         response = parse_s3_response(result.raw_stdout, request)
@@ -141,16 +149,23 @@ def run_s3_revision(
     prompt_template_path: Path,
     request_path: Path,
     banned_terms: tuple[str, ...],
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
     claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     trace_dir: Path = Path("data/traces"),
 ) -> S3Outcome:
+    effective_cmd = model_command if model_command is not None else command
     template = Path(prompt_template_path).read_text(encoding="utf-8")
     prompt = build_s3_revision_prompt(template, request, context)
     try:
-        result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
+        if effective_cmd is not None:
+            result = invoke_text_model(prompt, command=effective_cmd, timeout=timeout)
+        else:
+            result = invoke_text_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
     except InvocationError as exc:
-        return S3Outcome(S3OutcomeKind.INVOCATION_FAILURE, None, None, str(exc), _trace(Path(request_path), Path(prompt_template_path), exc.raw_stdout, exc.model or (claude_cmd[0] if claude_cmd else ""), trace_dir))
+        trace_model = exc.model or (trace_model_label(effective_cmd) if effective_cmd else (claude_cmd[0] if claude_cmd else ""))
+        return S3Outcome(S3OutcomeKind.INVOCATION_FAILURE, None, None, str(exc), _trace(Path(request_path), Path(prompt_template_path), exc.raw_stdout, trace_model, trace_dir))
     trace_path = _trace(Path(request_path), Path(prompt_template_path), result.raw_stdout, result.model, trace_dir)
     try:
         response = parse_s3_response(result.raw_stdout, request)

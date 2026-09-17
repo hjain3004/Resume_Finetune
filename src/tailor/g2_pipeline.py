@@ -26,6 +26,7 @@ from src.tailor.g2 import (
 )
 from src.tailor.g2 import _finding_to_dict, _object, _parse_finding_list, _parse_scores, _string  # noqa: F401 -- internal reuse, same feature family
 from src.tailor.invoke import DEFAULT_CLAUDE_CMD, DEFAULT_TIMEOUT_SECONDS, InvocationError, invoke_text_model
+from src.tailor.providers import ModelCommand, trace_model_label
 from src.tailor.s3 import (
     BulletEdit,
     S3EditRule,
@@ -127,11 +128,14 @@ def run_g2_loop(
     request_path: Path,
     banned_terms: tuple[str, ...],
     taste_lessons: tuple[str, ...],
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
     claude_cmd: tuple[str, ...] = DEFAULT_CLAUDE_CMD,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     trace_dir: Path = Path("data/traces"),
     max_rounds: int = MAX_ROUNDS,
 ) -> G2Outcome:
+    effective_cmd = model_command if model_command is not None else command
     trace_paths: list[Path] = []
     model_calls = 0
     rounds: tuple[G2Round, ...] = ()
@@ -148,10 +152,14 @@ def run_g2_loop(
         g2_template = Path(prompt_template_path).read_text(encoding="utf-8")
         g2_prompt = build_g2_prompt(g2_template, g2_request)
         try:
-            g2_result = invoke_text_model(g2_prompt, claude_cmd=claude_cmd, timeout=timeout)
+            if effective_cmd is not None:
+                g2_result = invoke_text_model(g2_prompt, command=effective_cmd, timeout=timeout)
+            else:
+                g2_result = invoke_text_model(g2_prompt, claude_cmd=claude_cmd, timeout=timeout)
         except InvocationError as exc:
             model_calls += 1
-            trace_path = _trace(request_path, prompt_template_path, exc.raw_stdout, exc.model or (claude_cmd[0] if claude_cmd else ""), trace_dir)
+            trace_model = exc.model or (trace_model_label(effective_cmd) if effective_cmd else (claude_cmd[0] if claude_cmd else ""))
+            trace_path = _trace(request_path, prompt_template_path, exc.raw_stdout, trace_model, trace_dir)
             if trace_path is not None:
                 trace_paths.append(trace_path)
             return G2Outcome(G2OutcomeKind.INVOCATION_FAILURE, None, str(exc), tuple(trace_paths))
@@ -191,7 +199,7 @@ def run_g2_loop(
         s3_outcome = run_s3_revision(
             s3_request, current_bundle.response, context=revision_context,
             prompt_template_path=s3_prompt_template_path, request_path=request_path,
-            banned_terms=banned_terms, claude_cmd=claude_cmd, timeout=timeout, trace_dir=trace_dir,
+            banned_terms=banned_terms, command=effective_cmd, claude_cmd=claude_cmd, timeout=timeout, trace_dir=trace_dir,
         )
         model_calls += 1
         if s3_outcome.trace_path is not None:

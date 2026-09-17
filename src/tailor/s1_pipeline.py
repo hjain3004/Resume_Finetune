@@ -17,6 +17,7 @@ from pathlib import Path
 
 from src.llm_trace import write_trace
 from src.tailor.invoke import DEFAULT_S1_CLAUDE_CMD, DEFAULT_TIMEOUT_SECONDS, InvocationError, invoke_s1_model
+from src.tailor.providers import ModelCommand, trace_model_label
 from src.tailor.s1 import (
     S1ParseError,
     S1Request,
@@ -50,6 +51,8 @@ def run_s1_invocation(
     *,
     prompt_template_path: Path,
     request_path: Path,
+    command: ModelCommand | None = None,
+    model_command: ModelCommand | None = None,
     claude_cmd: tuple[str, ...] = DEFAULT_S1_CLAUDE_CMD,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     trace_dir: Path = Path("data/traces"),
@@ -58,22 +61,27 @@ def run_s1_invocation(
     failure -- every invocation, parse, or semantic failure is reported as
     a typed S1Outcome instead, so a caller cannot accidentally skip
     tracing or publish on a partial success."""
+    effective_cmd = model_command if model_command is not None else command
     prompt_template_path = Path(prompt_template_path)
     request_path = Path(request_path)
     template_text = prompt_template_path.read_text()
     prompt = build_s1_prompt(template_text, request)
 
     try:
-        result = invoke_s1_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
+        if effective_cmd is not None:
+            result = invoke_s1_model(prompt, command=effective_cmd, timeout=timeout)
+        else:
+            result = invoke_s1_model(prompt, claude_cmd=claude_cmd, timeout=timeout)
     except InvocationError as exc:
         trace_path = None
         if exc.raw_stdout.strip():
+            trace_model = exc.model or (trace_model_label(effective_cmd) if effective_cmd else (claude_cmd[0] if claude_cmd else ""))
             trace_path = write_trace(
                 invocation_type=TRACE_INVOCATION_TYPE,
                 input_paths=[request_path],
                 raw_output=exc.raw_stdout,
                 prompt_path=prompt_template_path,
-                model=exc.model or (claude_cmd[0] if claude_cmd else ""),
+                model=trace_model,
                 trace_dir=trace_dir,
             )
         return S1Outcome(kind=S1OutcomeKind.INVOCATION_FAILURE, response=None, error=str(exc), trace_path=trace_path)

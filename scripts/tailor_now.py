@@ -19,6 +19,7 @@ from src.tailor.lane import (
 )
 from src.tailor.pilot import DEFAULT_PROMPT_DIR, Stage, StageState, _discover_run_manifests
 from src.tailor.preflight import run_preflight
+from src.tailor.providers import Provider
 
 DEFAULT_PROFILE = Path("config/master_profile.yaml")
 DEFAULT_TEMPLATE = Path("profile/template.tex")
@@ -49,6 +50,7 @@ def cmd_run(args) -> int:
         outcome = run_manual_application(
             Path(args.jd), company=args.company, title=args.title, variant=args.variant,
             root=Path(args.root) if args.root else APPLICATIONS_MANUAL_ROOT,
+            provider=args.provider,
             model=args.model, suffix=args.suffix,
             profile_path=Path(args.profile or DEFAULT_PROFILE),
             template_path=Path(args.template or DEFAULT_TEMPLATE),
@@ -93,7 +95,10 @@ def cmd_status(args) -> int:
         lane_path = directory / LANE_MANIFEST_NAME
         if lane_path.exists():
             try:
-                model = parse_lane_manifest(json.loads(lane_path.read_text(encoding="utf-8"))).model or "default"
+                lane_m = parse_lane_manifest(json.loads(lane_path.read_text(encoding="utf-8")))
+                prov = lane_m.provider or "claude"
+                m_val = lane_m.model or "default"
+                model = f"{prov}:{m_val}" if prov != "claude" else m_val
             except (OSError, ValueError):
                 model = "?"
         reached = [r.stage.value for r in manifest.stages
@@ -147,6 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--company", required=True)
     run.add_argument("--title", required=True)
     run.add_argument("--variant", required=True)
+    run.add_argument("--provider", choices=[p.value for p in Provider], default="claude")
     run.add_argument("--model")
     run.add_argument("--suffix")
     run.add_argument("--root")
