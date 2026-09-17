@@ -15,6 +15,7 @@ from src.tailor.lane import (
     LANE_MANIFEST_SCHEMA,
     LaneError,
     build_claude_cmd,
+    check_gemini_credentials,
     lane_directory,
     lane_job_id,
     lane_manifest_to_dict,
@@ -42,6 +43,7 @@ def jd_file(tmp_path):
 def passing_preflight(monkeypatch):
     monkeypatch.setattr("src.tailor.lane.run_preflight",
                         lambda *a, **k: PreflightReport(findings=(), passed=True))
+    monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
 
 
 @pytest.fixture
@@ -137,7 +139,7 @@ def test_lane_job_id_is_negative_deterministic_and_content_bound():
 
 def test_build_claude_cmd_default_and_model():
     assert build_claude_cmd(None) == DEFAULT_CLAUDE_CMD
-    assert build_claude_cmd("sonnet") == ("claude", "-p", "--model", "sonnet", "--tools", "", "--no-session-persistence", "--")
+    assert build_claude_cmd("sonnet") == ("claude", "-p", "--model", "sonnet", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
 
 
 def test_build_claude_cmd_rejects_flag_like_model():
@@ -175,10 +177,47 @@ def test_old_manifest_without_provider_defaults_to_claude():
     assert manifest.provider == "claude"
 
 
-def test_gemini_provider_is_disabled_due_to_smoke_failure(tmp_path, jd_file):
-    with pytest.raises(LaneError, match="Provider 'gemini' is disabled"):
-        run_manual_application(jd_file, company="Example", title="Engineer", variant="backend",
-                               provider="gemini", root=tmp_path / "apps", profile_path=PROFILE)
+def test_check_gemini_credentials_oauth_without_project_fails(tmp_path):
+    settings = tmp_path / "settings.json"
+    settings.write_text('{"security": {"auth": {"selectedType": "oauth-personal"}}}', encoding="utf-8")
+    err = check_gemini_credentials(env={}, settings_path=settings)
+    assert err is not None
+    assert "GOOGLE_CLOUD_PROJECT" in err
+
+
+def test_check_gemini_credentials_oauth_with_project_passes(tmp_path):
+    settings = tmp_path / "settings.json"
+    settings.write_text('{"security": {"auth": {"selectedType": "oauth-personal"}}}', encoding="utf-8")
+    assert check_gemini_credentials(env={"GOOGLE_CLOUD_PROJECT": "proj-123"}, settings_path=settings) is None
+    assert check_gemini_credentials(env={"GOOGLE_CLOUD_PROJECT_ID": "proj-123"}, settings_path=settings) is None
+
+
+def test_check_gemini_credentials_api_key_mode(tmp_path):
+    settings = tmp_path / "settings.json"
+    settings.write_text('{"security": {"auth": {"selectedType": "gemini-api-key"}}}', encoding="utf-8")
+    # Missing key fails
+    err = check_gemini_credentials(env={}, settings_path=settings)
+    assert err is not None
+    assert "GEMINI_API_KEY" in err
+    # Present key passes
+    assert check_gemini_credentials(env={"GEMINI_API_KEY": "AIzaSy..."}, settings_path=settings) is None
+
+
+def test_gemini_preflight_credential_check_fails_run_before_model_call(tmp_path, jd_file, monkeypatch):
+    monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
+    monkeypatch.setattr("shutil.which", lambda exe: "/usr/bin/" + exe)
+    # Simulate unconfigured credentials
+    monkeypatch.setattr(
+        "src.tailor.lane.check_gemini_credentials",
+        lambda *a, **k: "Missing GOOGLE_CLOUD_PROJECT in environment",
+    )
+    outcome = run_manual_application(
+        jd_file, company="Example", title="Engineer", variant="backend",
+        provider="gemini", root=tmp_path / "apps", profile_path=PROFILE,
+    )
+    assert outcome.failed_stage is Stage.PREPARE
+    assert outcome.manifest.stages[0].outcome_kind == "preflight_failure"
+    assert outcome.manifest.stages[0].error == "Missing GOOGLE_CLOUD_PROJECT in environment"
 
 
 # --- composer ---------------------------------------------------------------

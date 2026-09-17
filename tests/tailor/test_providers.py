@@ -49,12 +49,12 @@ JD_TEXT = "Python " * 60  # 420 chars
 # ---------------------------------------------------------------------------
 
 
-def test_argv_construction_claude_byte_identical_to_existing():
+def test_argv_construction_claude_has_mcp_and_tools_disabled():
     cmd_default = build_model_command(Provider.CLAUDE, None)
     assert cmd_default.provider == Provider.CLAUDE
     assert cmd_default.model is None
     assert cmd_default.argv == DEFAULT_CLAUDE_CMD
-    assert cmd_default.argv == ("claude", "-p", "--tools", "", "--no-session-persistence", "--")
+    assert cmd_default.argv == ("claude", "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
     assert cmd_default.prompt_via == "argv"
     assert cmd_default.output_file is False
 
@@ -62,9 +62,29 @@ def test_argv_construction_claude_byte_identical_to_existing():
     assert cmd_model.provider == Provider.CLAUDE
     assert cmd_model.model == "sonnet"
     assert cmd_model.argv == build_claude_cmd("sonnet")
-    assert cmd_model.argv == ("claude", "-p", "--model", "sonnet", "--tools", "", "--no-session-persistence", "--")
+    assert cmd_model.argv == ("claude", "-p", "--model", "sonnet", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--")
     assert cmd_model.prompt_via == "argv"
     assert cmd_model.output_file is False
+
+
+def test_every_claude_argv_contains_mcp_isolation_flag():
+    from scripts import score_batch
+    from src.tailor.lane import build_claude_cmd
+    from src.tailor.invoke import DEFAULT_CLAUDE_CMD as INVOKE_CLAUDE_CMD
+
+    commands_to_check = [
+        INVOKE_CLAUDE_CMD,
+        score_batch.DEFAULT_CLAUDE_CMD,
+        build_claude_cmd(None),
+        build_claude_cmd("sonnet"),
+        build_model_command(Provider.CLAUDE, None).argv,
+        build_model_command(Provider.CLAUDE, "haiku").argv,
+    ]
+    for cmd in commands_to_check:
+        assert "--strict-mcp-config" in cmd, f"Missing --strict-mcp-config in {cmd}"
+        tools_idx = cmd.index("--tools")
+        assert cmd[tools_idx + 1] == "", f"Expected empty string after --tools in {cmd}"
+        assert cmd[-1] == "--", f"Expected trailing '--' in {cmd}"
 
 
 def test_argv_construction_gemini():
@@ -384,6 +404,7 @@ def test_preflight_fails_when_provider_executable_not_on_path(tmp_path, monkeypa
 def passing_preflight(monkeypatch):
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.setattr("shutil.which", lambda exe: f"/fake/bin/{exe}")
+    monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
 
 
 @pytest.fixture
