@@ -87,6 +87,16 @@ projects plus one relational-database project is the stronger three-project set 
 JD than any two-project reduction; three projects fit the page without crowding it (see
 Visual QA).**
 
+> **Superseded in Revision 3.** The user explicitly instructed removing Campus Marketplace
+> and replacing it with PeerChat. This reverses the "Fake Review Detection wins" and
+> "Campus Marketplace kept" verdicts above, which are preserved here as the Revision 1
+> reasoning rather than deleted, since they were the honest analysis at the time and the
+> PostgreSQL/relational-database point they made is still true — it is simply overridden
+> by explicit instruction in Revision 3, not invalidated by new evidence. See Revision 3
+> below for the current project set (ResumeFinetune, Fake Review Detection, PeerChat) and
+> `PROVENANCE.md` for why PeerChat's two bullets were chosen (`pc_b01`/`pc_b02`, the
+> strongest `verified`-claim_type pair).
+
 ## Skills prioritization
 AI and Machine Learning is the first category, using precise demonstrated terms (Agentic
 AI, LLM Orchestration, LLM Evaluation, Prompt Engineering, Structured Outputs,
@@ -203,3 +213,89 @@ judgment ("unified REST/JSON and SOAP/XML" phrasing, and the density of the merg
 ResumeFinetune ingestion bullet) rather than treated as automatic approvals. No further
 revision was made past this point because neither close call rises to a factual or
 structural defect — both are disclosed here for the human reviewer to weigh.
+
+---
+
+## Revision 3 — Adversarial Self-Review (density maximization)
+
+This cycle explicitly overrode the whitespace-preservation stance from Revisions 1-2: the
+instruction was to maximize defensible, recruiter-relevant content rather than stop early.
+Campus Marketplace was removed and replaced with PeerChat; ResumeFinetune grew from 3 to 5
+bullets; Amdocs grew back from 5 to 6 bullets; margins moved from 0.35in to the 0.30in
+floor; one candidate bullet (`rft_b12`) was tried and rejected after it caused visible
+overlap. Final state: 18 bullets, one page, 11pt, zero LaTeX overflow. Re-evaluating all
+nine criteria against this denser version — again as an adversarial self-review by the
+same Claude session, not an independent review.
+
+**Ten-second positioning.** The page is visibly denser than Revision 2's 14-16 bullets, and
+this is the real trade-off of this cycle: a recruiter's 10-second scan now has more to
+process before reaching Skills. Structure is unchanged (Education -> Experience -> Projects
+-> Skills) and each section still opens with its strongest bullet, so the *first* thing
+seen per section is unchanged — but the *scan* takes longer to complete. This is the
+direct, intended consequence of the instruction to maximize content over whitespace.
+Passes, with the trade-off named rather than hidden.
+
+**Technical credibility.** All four newly-added bullets (`rft_b07`, `am_b07`, `rft_b09`,
+plus the two PeerChat bullets) were checked clause-by-clause against their evidence
+strings — see `PROVENANCE.md`. One new phrase earns the same scrutiny as Revision 2's
+"unified": PeerChat's "SWIM-inspired two-phase failure detection" is kept verbatim per
+`pc_b02.interview_risk`'s explicit instruction not to upgrade it to "SWIM-style" or "SWIM
+implementation" (the system broadcasts every heartbeat to every peer rather than using
+SWIM's randomized probing). Passes.
+
+**Naturalness.** The two PeerChat bullets and the `rft_b07` model-authority bullet read as
+clean single sentences. `am_b07`'s restored bullet is nearly the profile's own wording
+verbatim (already natural). The one place naturalness is under real strain is the
+ResumeFinetune section as a whole: five bullets in a row, several of them dense compound
+sentences, reads more like a technical spec than prose by the time a reader reaches bullet
+5. This is a genuine cost of the density-maximization instruction, not an oversight.
+Passes, with this named as the primary readability cost of the revision.
+
+**AI slop.** Re-scanned the full 18-bullet document. None of the filler terms appear
+anywhere, including in the four new bullets. Passes.
+
+**Sentence complexity.** New tally at 0.30in margins: 6 of 9 experience bullets and 2 of 8
+project bullets now render in 3 lines (up from 3 of 8 and 1 of 6 in Revision 2 — expected,
+since the page is denser and the column is narrower than Revision 2's 0.35in). No bullet
+renders in 4+ lines and nothing wraps mid-word. This is the clearest quantitative signal of
+the density trade-off: more 3-line bullets, by design. Passes, but this is the criterion
+most worth a human double-checking against their own tolerance for density.
+
+**ResumeFinetune recruiter value.** Higher than Revision 2: five bullets now demonstrate
+ingestion engineering, evaluation-stability engineering, tailoring-workflow design, a
+security-flavored model-authority boundary, and a provenance/anti-fraud control — five
+materially different engineering skills from one project, which is unusual breadth for a
+new-grad candidate and directly answers the JD's "interest in AI/ML" and "safety and
+reliability" language from multiple angles rather than one. Passes, improved further.
+
+**Is the first MalyTech bullet still understandable?** Yes — unchanged from Revision 2,
+not touched this cycle. Still passes.
+
+**Does the Projects section remain readable at the new margins?** This is the sharpest
+test of this revision, since PeerChat is new *and* margins tightened *and* ResumeFinetune
+grew by two bullets simultaneously. Visual inspection after the final accepted state (18
+bullets) shows every section heading clear of the bullet text above it, no bullet wrapping
+mid-word, and no bullet touching the next heading — confirmed by direct visual comparison
+against the rejected `rft_b12` attempt, which showed exactly this failure mode (AML-gateway
+bullet touching "Software Developer," ResumeFinetune heading touching its first bullet, FRD
+touching PeerChat's heading, the rejected bullet touching Fake Review Detection's heading).
+The accepted state has none of these. Passes, and the rejected-candidate comparison is the
+evidence for the pass rather than a claim taken on faith.
+
+**Does the skills taxonomy still match the JD without unsupported padding?** Unchanged —
+skills section was not touched in rev. 3 either. Still passes.
+
+### On the Amdocs title (not applied)
+
+This is not one of the nine required criteria, but it is the most consequential open item
+in this revision and is recorded here rather than silently resolved either way. The
+canonical profile's own guardrail (`# NEVER altered`, and `known_gaps` calling the change
+"resume fraud, not tailoring") means a self-review cannot responsibly wave this through
+under "maximize content" — a job title is not fill content, it's a verifiable fact. Flagged
+to the user in chat; not applied to the rendered résumé pending their answer.
+
+## Revision 3 overall verdict
+**PASS**, with two named trade-offs (denser scan time, more 3-line bullets) that are the
+direct and disclosed consequence of the density-maximization instruction rather than
+defects, plus one held item (the Amdocs title) that is a fraud-risk question for the human,
+not a résumé-quality question a self-review can resolve alone.
