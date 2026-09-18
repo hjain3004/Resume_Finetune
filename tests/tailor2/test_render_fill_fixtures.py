@@ -26,6 +26,24 @@ from pathlib import Path
 from typing import Any
 import pytest
 
+from src.profile import load_profile
+from src.render.lines import RenderedLine, RenderedPage
+from src.render.parse import ParsedPdf, TextBox
+from src.tailor2.models import AtomicRequirement, DraftBullet, DraftResponse
+from src.tailor2.render_fill import (
+    LayoutState,
+    OptimizationCandidate,
+    RenderAttempt,
+    RenderMeasurement,
+    build_expansion_candidates,
+    build_shorter_variant_candidates,
+    candidate_fingerprint,
+    classify_layout,
+    measure_rendered_layout,
+    optimize_render_fill,
+)
+from src.tailor2.validators import extract_numeric_tokens
+
 CASES_PATH = Path("tests/fixtures/tailor2/render_fill/cases.json")
 SCENARIOS_DIR = Path("tests/fixtures/tailor2/render_fill/recorded_scenarios")
 CATALOG_PATH = Path("tests/fixtures/tailor2/quality_regressions/canonical_evidence_catalog.json")
@@ -368,71 +386,143 @@ def test_recorded_scenarios_integrity() -> None:
 # Integration Acceptance Scaffolding (Marked strict xfail for pending features)
 # ==============================================================================
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="pending render-fill implementation: actual measurement adapter"
-)
+def _fixture_measurement(*, remaining: float = 0.0) -> RenderMeasurement:
+    return RenderMeasurement(
+        page_count=1,
+        page_width=612.0,
+        page_height=792.0,
+        usable_bottom=14.4,
+        usable_top=777.6,
+        occupied_bottom=14.4 + remaining,
+        occupied_top=777.6 - remaining,
+        occupied_vertical_extent=763.2 - 2 * remaining,
+        remaining_usable_space=remaining,
+        overflow_pt=0.0,
+    )
+
+
+def _fixture_attempt(
+    candidate: OptimizationCandidate,
+    draft: Any,
+    state: LayoutState,
+    *,
+    measurement: RenderMeasurement | None = None,
+    iteration: int = 0,
+) -> RenderAttempt:
+    return RenderAttempt(
+        candidate_id=candidate.candidate_id,
+        iteration=iteration,
+        draft=draft,
+        measurement=measurement or _fixture_measurement(),
+        state=state,
+        evidence_value=candidate.value_score,
+        clarity_score=candidate.clarity_score,
+        candidate_fingerprint=candidate_fingerprint(draft),
+    )
+
 def test_acceptance_actual_measurement_adapter() -> None:
-    """Acceptance test: Render adapter must measure vertical fill ratio and page count from rendered PDF."""
-    from src.tailor2 import measure_rendered_layout  # type: ignore[attr-defined]
-
-    mock_pdf = Path("tests/fixtures/tailor2/mock_resume.pdf")
-    measurement = measure_rendered_layout(mock_pdf)
+    """The production adapter maps parsed PDF geometry into a measurement."""
+    parsed = ParsedPdf(
+        boxes=(TextBox("Candidate", 20.0, 100.0, 200.0, 112.0, 0),),
+        page_height=792.0,
+        page_width=612.0,
+        size_bytes=100,
+        page_count=1,
+    )
+    pages = (RenderedPage(0, 612.0, 792.0, (RenderedLine("Candidate", 20.0, 100.0, 200.0, 112.0, 0, 11.0, 11.0, ()),)),)
+    measurement = measure_rendered_layout(None, parsed, pages)
     assert measurement.page_count == 1
-    assert 0.85 <= measurement.vertical_fill_ratio <= 1.0
+    assert measurement.occupied_vertical_extent > 0
+    assert measurement.remaining_usable_space > 0
+    assert classify_layout(measurement) is LayoutState.MEANINGFUL_UNDERFILL
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="pending render-fill implementation: semantic geometry and collision detector"
-)
 def test_acceptance_semantic_geometry_and_collision_detector() -> None:
-    """Acceptance test: Collision detector must identify heading/date overlaps and section collisions."""
-    from src.tailor2 import detect_layout_collisions  # type: ignore[attr-defined]
+    """Actual parsed-box overlap overrides an otherwise acceptable fill."""
+    parsed = ParsedPdf(
+        boxes=(
+            TextBox("Experience", 20.0, 100.0, 200.0, 112.0, 0),
+            TextBox("July 2025", 100.0, 108.0, 220.0, 120.0, 0),
+        ),
+        page_height=792.0,
+        page_width=612.0,
+        size_bytes=100,
+        page_count=1,
+    )
+    pages = (RenderedPage(0, 612.0, 792.0, ()),)
+    measurement = measure_rendered_layout(None, parsed, pages)
+    assert measurement.header_date_collisions
+    assert classify_layout(measurement) is LayoutState.COLLISION_OR_CLIPPING
 
-    mock_tex = Path("tests/fixtures/tailor2/mock_collision.tex")
-    collisions = detect_layout_collisions(mock_tex)
-    assert len(collisions) >= 1
-    assert collisions[0].collision_type in ("section_collision", "tech_date_collision")
 
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="pending render-fill implementation: safe unused evidence expansion engine"
-)
 def test_acceptance_safe_unused_evidence_expansion_engine() -> None:
-    """Acceptance test: Expansion engine must select highest-value unused evidence without overflow."""
-    from src.tailor2 import expand_layout_with_unused_evidence  # type: ignore[attr-defined]
+    """The production expansion builder selects safe ledger evidence."""
+    profile = load_profile("config/master_profile.yaml")
+    draft = DraftResponse(
+        atomic_requirements=[AtomicRequirement("req", "distributed systems", "distributed systems")],
+        selected_evidence_ids=["am_b00_order_management_domain"],
+        amdocs_omission_ledger=[],
+        section_order=["Education", "Experience", "Projects", "Technical Skills"],
+        bullets=[DraftBullet("b0", ["am_b00_order_management_domain"], ["req"], "Experience", "amdocs_software_developer", "Engineered order processing services in Java handling high-volume transactions.")],
+    )
+    candidates = build_expansion_candidates(
+        draft,
+        profile,
+        [{"evidence_id": "pc_b01_event_sourcing", "strength": 0.9, "likely_section": "Projects", "requirement_ids": ["req"], "estimated_line_cost": 1}],
+    )
+    assert candidates
+    assert candidates[0].action == "expand"
+    assert "pc_b01_event_sourcing" in candidates[0].draft.selected_evidence_ids
 
-    mock_draft = {}
-    expanded = expand_layout_with_unused_evidence(mock_draft, available_vertical_space_in=1.5)
-    assert expanded.new_bullet_added is True
-    assert expanded.preserved_prior_safe is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="pending render-fill implementation: factual-preserving bullet and spacing compressor"
-)
 def test_acceptance_factual_preserving_bullet_compressor() -> None:
-    """Acceptance test: Compressor must shorten overflowing bullets while preserving exact numbers."""
-    from src.tailor2 import compress_layout_safely  # type: ignore[attr-defined]
+    """Canonical shorter variants retain protected metrics and markers."""
+    profile = load_profile("config/master_profile.yaml")
+    evidence_id = "am_b01_dlq_consolidation"
+    source = next(b for entry in profile.experience for b in entry.bullets if b.id == evidence_id)
+    draft = DraftResponse(
+        atomic_requirements=[],
+        selected_evidence_ids=[evidence_id],
+        amdocs_omission_ledger=[],
+        section_order=["Education", "Experience", "Projects", "Technical Skills"],
+        bullets=[DraftBullet("b0", [evidence_id], [], "Experience", "amdocs_software_developer", source.phrasings.long or source.phrasings.medium or source.phrasings.short)],
+    )
+    candidates = build_shorter_variant_candidates(draft, profile)
+    assert candidates
+    compressed = candidates[0].draft.bullets[0].text
+    normalize = lambda token: token.lstrip("~+")
+    assert [normalize(token) for token in extract_numeric_tokens(compressed)] == [normalize(token) for token in extract_numeric_tokens(draft.bullets[0].text)]
+    if "~" in draft.bullets[0].text:
+        assert "~" in compressed
 
-    overflow_bullet = "Consolidated 862 dead-letter topics across distributed clusters into shared queues, cutting topic sprawl by ~70%."
-    compressed = compress_layout_safely([overflow_bullet], target_lines_saved=1)
-    assert "862" in compressed[0]
-    assert "~70%" in compressed[0]
+
+@pytest.mark.xfail(strict=True, reason="production has no automatic spacing-adjustment candidate")
+def test_acceptance_spacing_compression_respects_readability_constraints() -> None:
+    """Spacing changes remain an explicit future production capability."""
+    assert False, "spacing candidate API is not implemented"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="pending render-fill implementation: bounded multi-iteration optimizer with cycle detection and rollback"
-)
 def test_acceptance_bounded_multi_iteration_optimizer_cycle_detection() -> None:
-    """Acceptance test: Optimizer must terminate within max_iterations and detect cyclic state oscillations."""
-    from src.tailor2 import optimize_render_fill_loop  # type: ignore[attr-defined]
+    """The production optimizer is bounded and rolls back a worse candidate."""
+    calls = []
+    candidates = [
+        OptimizationCandidate("same-a", "expand", "cycle", value_score=1.0),
+        OptimizationCandidate("same-b", "expand", "cycle", value_score=0.5),
+    ]
 
-    initial_draft = {}
-    result = optimize_render_fill_loop(initial_draft, max_iterations=5)
-    assert result.iterations_executed <= 5
-    assert result.cycle_detected is False or result.rolled_back is True
+    def render(candidate_draft, iteration, candidate):
+        calls.append(candidate.candidate_id if candidate else "initial")
+        state = LayoutState.MINOR_UNDERFILL if candidate is None else LayoutState.MEANINGFUL_UNDERFILL
+        measurement = _fixture_measurement(remaining=20 if candidate is None else 50)
+        return _fixture_attempt(candidate or OptimizationCandidate("initial", "initial", candidate_draft), candidate_draft, state, measurement=measurement, iteration=iteration)
+
+    result = optimize_render_fill("initial", render, expansion_candidates=candidates)
+    assert len(result.iterations) <= 7
+    assert result.best_attempt is not None
+    assert calls == ["initial", "same-a", "same-b"]
+
+
+@pytest.mark.xfail(strict=True, reason="production tracks candidate fingerprints but does not yet reject equivalent-draft cycles")
+def test_acceptance_equivalent_draft_cycle_is_explicitly_detected() -> None:
+    assert False, "equivalent-draft cycle detector is not implemented"

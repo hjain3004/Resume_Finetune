@@ -257,7 +257,7 @@ The twelve recorded scenario traces in `tests/fixtures/tailor2/render_fill/recor
 ## 7. Portability & Non-Brittleness Decisions
 
 1. **No Exact Pixel Assertions:** Bounding box and coordinate assertions are normalized as relative typographic units (e.g. `\textwidth` ratios, vertical fill percentage, point-based font sizes) to avoid platform-dependent font rasterization drift.
-2. **Justified Tolerances:** Measurement policies declare portable tolerances (`fill_ratio_tolerance: 0.03`, `min_font_pt: 9.5`, `min_margin_in: 0.45`).
+2. **Justified Tolerances:** Fixture tolerances such as `min_font_pt: 9.5` and `min_margin_in: 0.45` remain scenario-specific inputs. Production measurement uses the current template's 14.4pt margin baseline, a documented 4pt glyph-bound tolerance, and configurable font/margin limits; fixture values are not silently promoted to universal rules.
 3. **No Mandatory 97% Fill Threshold:** Minor underfill (0.85 – 0.90) is recognized as clean, legible whitespace and accepted with advisory warnings rather than fatal errors.
 4. **Readability Over Maximum Density:** A 0.91 fill layout with clean line spacing strictly outranks a 0.99 fill layout with squished text.
 5. **Zero Factual Corruption:** Prose compression must never round integers (`862`), delete tildes (`~70%`), or remove verified metrics (`AUROC 0.88`).
@@ -275,9 +275,39 @@ Located at `tests/tailor2/test_render_fill_fixtures.py`:
 - Negative rejection of filler, prohibited, and unsupported claims.
 - Rollback and prior-best candidate persistence.
 - Zero PII (emails, phone numbers, street addresses) and zero provider secrets.
-- 5 strict xfail integration tests scaffolding the future production optimizer.
+- 2 strict xfail integration tests for capabilities not exposed by production: automatic spacing candidates and explicit equivalent-draft cycle rejection.
 
 Execution command:
 ```bash
 pytest -q tests/tailor2/test_render_fill_fixtures.py
 ```
+
+## 9. Production Integration Status
+
+The corpus is integrated with the production branch through the real
+`src.tailor2.render_fill` APIs; it does not add a second renderer or a second
+candidate model.
+
+- **Measurement:** `ParsedPdf` and `RenderedPage` map to `RenderMeasurement`,
+  then `classify_layout` produces the production `LayoutState`. Collision and
+  bounds findings outrank fill ratio.
+- **Expansion:** `build_expansion_candidates` consumes the S2 unused-evidence
+  ledger and rejects unknown, blocked, redundant, unsupported, prohibited, and
+  low-strength entries. `build_richer_variant_candidates` handles selected
+  canonical bullets.
+- **Compression:** `build_shorter_variant_candidates` runs before
+  `build_removal_candidates`; deterministic draft validation preserves evidence
+  IDs and normalized numeric tokens. Spacing adjustments and provider rewrites
+  are not automatic production actions.
+- **Optimization:** `optimize_render_fill` records fingerprints, measurements,
+  decisions, budgets, resume skips, and best-safe rollback. Safe underfill is a
+  warning; unresolved usable output maps to human review.
+- **Xfails:** four pre-existing quality-core xfails and one pre-existing
+  selection-ranking xfail remain unchanged. Four render behaviors now pass
+  through production APIs, including factual compression through the passing
+  canonical-variant assertion. Two precise render xfails remain for
+  spacing candidates and explicit equivalent-draft cycle detection.
+
+The recorded JSON scenarios remain an independent evaluation corpus. Their
+`0.80`/`0.85`/`0.97` fill ratios and `9.5pt`/`0.45in` constraints are scenario
+data, not acceptance gates for every rendered résumé.
