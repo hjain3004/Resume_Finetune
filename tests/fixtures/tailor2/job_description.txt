@@ -1,0 +1,13 @@
+We are seeking a Backend Software Engineer to design, implement, and maintain high-throughput distributed services and asynchronous event pipelines.
+
+Responsibilities:
+- Build reliable backend services and APIs in Java and Python handling high transaction volumes.
+- Design resilient event-driven architectures and message processing pipelines using Kafka.
+- Implement robust database access patterns, partitioned data retention, and security access controls.
+- Maintain comprehensive integration test suites and automated deployment quality gates.
+
+Qualifications:
+- Bachelor's degree in Computer Science or related technical discipline.
+- Experience building high-throughput distributed systems and data pipelines.
+- Proficiency in Java, Python, SQL, and event-driven architectures.
+- Experience with unit testing, integration testing, and CI/CD pipelines.

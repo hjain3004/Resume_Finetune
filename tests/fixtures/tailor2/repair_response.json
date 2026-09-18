@@ -1,0 +1,8 @@
+{
+  "repaired_bullets": [
+    {
+      "bullet_id": "b05",
+      "text": "Partitioned SQL tables to automate data retention, reducing storage footprint by ~40%."
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "evaluations": [
+    {
+      "bullet_id": "b01",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Accurately reflects Java order processing service."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics cited, none claimed."},
+        "technology_fidelity": {"score": 3, "findings": "Java is explicitly in profile."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Order processing domain matches."},
+        "relevance": {"score": 3, "findings": "High relevance to distributed backend."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clean STAR structure."},
+        "readability": {"score": 3, "findings": "Single clear sentence."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Strong initial verb."},
+        "ai_slop_risk": {"score": 3, "findings": "Concrete technical description."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b02",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Accurate to DLQ consolidation."},
+        "metric_fidelity": {"score": 3, "findings": "70% and 862 dead-letter topics match profile."},
+        "technology_fidelity": {"score": 3, "findings": "Distributed queues match."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "DLQ consolidation verified."},
+        "relevance": {"score": 3, "findings": "Strong Kafka/queue relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear metric result."},
+        "readability": {"score": 3, "findings": "Clean flow."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Strong metrics."},
+        "ai_slop_risk": {"score": 3, "findings": "Factual and concise."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b03",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Row level entitlement accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Security filters accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Enforces security boundaries."},
+        "relevance": {"score": 3, "findings": "Access control relevant to backend."},
+        "star_xyz_coherence": {"score": 3, "findings": "Solid XYZ framing."},
+        "readability": {"score": 3, "findings": "Good phrasing."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Clear impact."},
+        "ai_slop_risk": {"score": 3, "findings": "No buzzwords."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b04",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Asynchronous audit trail accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metric invention."},
+        "technology_fidelity": {"score": 3, "findings": "Async logging accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Captures state transitions."},
+        "relevance": {"score": 3, "findings": "High relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear mechanism."},
+        "readability": {"score": 3, "findings": "Readable."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Concise."},
+        "ai_slop_risk": {"score": 3, "findings": "Direct."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b05",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Data retention accurate."},
+        "metric_fidelity": {"score": 3, "findings": "~40% matches 40% in profile."},
+        "technology_fidelity": {"score": 3, "findings": "SQL partitioning accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Automates data retention."},
+        "relevance": {"score": 3, "findings": "Matches SQL requirement."},
+        "star_xyz_coherence": {"score": 3, "findings": "Result first."},
+        "readability": {"score": 3, "findings": "Clear."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Strong metric."},
+        "ai_slop_risk": {"score": 3, "findings": "Concrete."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b06",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Test automation accurate."},
+        "metric_fidelity": {"score": 3, "findings": "~500 matches 500 regression cases."},
+        "technology_fidelity": {"score": 3, "findings": "Integration test suites accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Regression coverage."},
+        "relevance": {"score": 3, "findings": "Matches testing requirement."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear action."},
+        "readability": {"score": 3, "findings": "Crisp."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Good quantification."},
+        "ai_slop_risk": {"score": 3, "findings": "Clean."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b07",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Static analysis gates accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metric invention."},
+        "technology_fidelity": {"score": 3, "findings": "Static analysis tools accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Quality gates enforced."},
+        "relevance": {"score": 3, "findings": "CI/CD relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear outcome."},
+        "readability": {"score": 3, "findings": "Readable."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Engineering rigor."},
+        "ai_slop_risk": {"score": 3, "findings": "No buzzwords."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b08",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Anti-corruption layer accurate."},
+        "metric_fidelity": {"score": 3, "findings": "HTTP 202 is status code, not metric."},
+        "technology_fidelity": {"score": 3, "findings": "FastAPI and SQLAlchemy 2.0 accurate."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Returns 202 out of band guarantee preserved."},
+        "relevance": {"score": 3, "findings": "Python API relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "High technical density."},
+        "readability": {"score": 3, "findings": "Coherent."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Strong system design."},
+        "ai_slop_risk": {"score": 3, "findings": "Deeply technical."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b09",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Idempotent payment processing accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Idempotency mechanisms match."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Safe under faults guarantee preserved."},
+        "relevance": {"score": 3, "findings": "High relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear goal and outcome."},
+        "readability": {"score": 3, "findings": "Direct."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Impressive technical claim."},
+        "ai_slop_risk": {"score": 3, "findings": "Rigorous."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b10",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Fail closed AML gateway accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "AML gateway matches."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Fail-closed guarantee preserved."},
+        "relevance": {"score": 3, "findings": "High relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Focused."},
+        "readability": {"score": 3, "findings": "Direct."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Security relevance."},
+        "ai_slop_risk": {"score": 3, "findings": "Crisp."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b11",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Peer discovery accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Event-sourcing matches."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Presence updates verified."},
+        "relevance": {"score": 3, "findings": "Distributed systems relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Action and outcome."},
+        "readability": {"score": 3, "findings": "Clear."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Good signal."},
+        "ai_slop_risk": {"score": 3, "findings": "Concrete."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b12",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Transport consolidation accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Transport layers match."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Latency optimization verified."},
+        "relevance": {"score": 3, "findings": "Distributed networking relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Concise."},
+        "readability": {"score": 3, "findings": "Smooth."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Good impact."},
+        "ai_slop_risk": {"score": 3, "findings": "No fluff."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b13",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Feature extraction pipelines accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Data pipelines match."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Textual pattern analysis verified."},
+        "relevance": {"score": 3, "findings": "Pipeline relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Good action."},
+        "readability": {"score": 3, "findings": "Readable."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Solid."},
+        "ai_slop_risk": {"score": 3, "findings": "Factual."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b14",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Classification model accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No invented percentages."},
+        "technology_fidelity": {"score": 3, "findings": "Classification matches."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Fraud detection verified."},
+        "relevance": {"score": 3, "findings": "Python/data relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clear."},
+        "readability": {"score": 3, "findings": "Crisp."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Good signal."},
+        "ai_slop_risk": {"score": 3, "findings": "Direct."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    },
+    {
+      "bullet_id": "b15",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Database schema accurate."},
+        "metric_fidelity": {"score": 3, "findings": "No metrics invented."},
+        "technology_fidelity": {"score": 3, "findings": "Relational DB matches."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Concurrent transactions verified."},
+        "relevance": {"score": 3, "findings": "SQL and backend relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Complete."},
+        "readability": {"score": 3, "findings": "Clean."},
+        "recruiter_scan_quality": {"score": 3, "findings": "Solid entry."},
+        "ai_slop_risk": {"score": 3, "findings": "Grounded."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    }
+  ],
+  "overall_verdict": "PASS"
+}

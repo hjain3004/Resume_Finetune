@@ -1,0 +1,281 @@
+"""Data models and JSON contracts for the LLM-first tailoring lane (Tailor2)."""
+
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import asdict, dataclass, field
+from typing import Any, Literal
+
+REQUIRED_AUDIT_DIMENSIONS: tuple[str, ...] = (
+    "factual_fidelity",
+    "metric_fidelity",
+    "technology_fidelity",
+    "technical_guarantee_fidelity",
+    "relevance",
+    "star_xyz_coherence",
+    "readability",
+    "recruiter_scan_quality",
+    "ai_slop_risk",
+)
+
+
+class ModelContractError(ValueError):
+    """Raised when a model response fails schema or contract validation."""
+
+
+def strip_markdown_fences(text: str) -> str:
+    """Strip markdown code block fences (e.g. ```json ... ```) if present."""
+    text = text.strip()
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1:]
+        if text.endswith("```"):
+            text = text[:-3]
+    return text.strip()
+
+
+@dataclass(frozen=True)
+class AtomicRequirement:
+    id: str
+    term: str
+    quote: str
+    importance: Literal["must_have", "nice_to_have"] = "must_have"
+
+
+@dataclass(frozen=True)
+class DraftBullet:
+    bullet_id: str
+    evidence_ids: list[str]
+    supported_requirement_ids: list[str]
+    section: Literal["Experience", "Projects"]
+    entry_id: str
+    text: str
+
+
+@dataclass(frozen=True)
+class AmdocsOmission:
+    evidence_id: str
+    category: Literal["relevance", "space"]
+    reason: str
+
+
+@dataclass(frozen=True)
+class DraftResponse:
+    atomic_requirements: list[AtomicRequirement]
+    selected_evidence_ids: list[str]
+    amdocs_omission_ledger: list[AmdocsOmission]
+    section_order: list[str]
+    bullets: list[DraftBullet]
+
+
+@dataclass(frozen=True)
+class DimensionScore:
+    score: int  # 1, 2, or 3
+    findings: str
+
+
+@dataclass(frozen=True)
+class BulletAuditEvaluation:
+    bullet_id: str
+    dimensions: dict[str, DimensionScore]
+    verdict: Literal["ACCEPT", "REJECT"]
+    rejection_reasons: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AuditResponse:
+    evaluations: list[BulletAuditEvaluation]
+    overall_verdict: Literal["PASS", "REPAIR_REQUIRED"]
+
+
+@dataclass(frozen=True)
+class RepairedBullet:
+    bullet_id: str
+    text: str
+
+
+@dataclass(frozen=True)
+class RepairResponse:
+    repaired_bullets: list[RepairedBullet]
+
+
+@dataclass(frozen=True)
+class Tailor2Manifest:
+    run_id: str
+    created_at: str
+    provider: str
+    model: str
+    company: str
+    title: str
+    variant: str
+    call_count: int
+    repair_performed: bool
+    status: str
+    rejection_details: list[str] = field(default_factory=list)
+
+
+def parse_draft_response(raw_text: str) -> DraftResponse:
+    clean_text = strip_markdown_fences(raw_text)
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError as exc:
+        raise ModelContractError(f"Draft response is not valid JSON: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ModelContractError("Draft response must be a JSON object")
+
+    for key in ("atomic_requirements", "selected_evidence_ids", "amdocs_omission_ledger", "section_order", "bullets"):
+        if key not in data:
+            raise ModelContractError(f"Draft response missing required key: {key!r}")
+
+    atomic_requirements = []
+    for idx, item in enumerate(data["atomic_requirements"]):
+        if not isinstance(item, dict):
+            raise ModelContractError(f"atomic_requirements[{idx}] must be an object")
+        for req_key in ("id", "term", "quote"):
+            if req_key not in item:
+                raise ModelContractError(f"atomic_requirements[{idx}] missing required key: {req_key!r}")
+        atomic_requirements.append(
+            AtomicRequirement(
+                id=str(item["id"]),
+                term=str(item["term"]),
+                quote=str(item["quote"]),
+                importance=item.get("importance", "must_have"),
+            )
+        )
+
+    amdocs_omission_ledger = []
+    for idx, item in enumerate(data["amdocs_omission_ledger"]):
+        if not isinstance(item, dict):
+            raise ModelContractError(f"amdocs_omission_ledger[{idx}] must be an object")
+        for om_key in ("evidence_id", "category", "reason"):
+            if om_key not in item:
+                raise ModelContractError(f"amdocs_omission_ledger[{idx}] missing required key: {om_key!r}")
+        amdocs_omission_ledger.append(
+            AmdocsOmission(
+                evidence_id=str(item["evidence_id"]),
+                category=item["category"],
+                reason=str(item["reason"]),
+            )
+        )
+
+    bullets = []
+    for idx, item in enumerate(data["bullets"]):
+        if not isinstance(item, dict):
+            raise ModelContractError(f"bullets[{idx}] must be an object")
+        for b_key in ("bullet_id", "evidence_ids", "supported_requirement_ids", "section", "entry_id", "text"):
+            if b_key not in item:
+                raise ModelContractError(f"bullets[{idx}] missing required key: {b_key!r}")
+        bullets.append(
+            DraftBullet(
+                bullet_id=str(item["bullet_id"]),
+                evidence_ids=[str(eid) for eid in item["evidence_ids"]],
+                supported_requirement_ids=[str(rid) for rid in item["supported_requirement_ids"]],
+                section=item["section"],
+                entry_id=str(item["entry_id"]),
+                text=str(item["text"]),
+            )
+        )
+
+    return DraftResponse(
+        atomic_requirements=atomic_requirements,
+        selected_evidence_ids=[str(eid) for eid in data["selected_evidence_ids"]],
+        amdocs_omission_ledger=amdocs_omission_ledger,
+        section_order=[str(sec) for sec in data["section_order"]],
+        bullets=bullets,
+    )
+
+
+def parse_audit_response(raw_text: str) -> AuditResponse:
+    clean_text = strip_markdown_fences(raw_text)
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError as exc:
+        raise ModelContractError(f"Audit response is not valid JSON: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ModelContractError("Audit response must be a JSON object")
+
+    if "evaluations" not in data or "overall_verdict" not in data:
+        raise ModelContractError("Audit response missing 'evaluations' or 'overall_verdict'")
+
+    evaluations = []
+    for idx, item in enumerate(data["evaluations"]):
+        if not isinstance(item, dict):
+            raise ModelContractError(f"evaluations[{idx}] must be an object")
+        for key in ("bullet_id", "dimensions", "verdict"):
+            if key not in item:
+                raise ModelContractError(f"evaluations[{idx}] missing required key: {key!r}")
+
+        dims_data = item["dimensions"]
+        if not isinstance(dims_data, dict):
+            raise ModelContractError(f"evaluations[{idx}].dimensions must be an object")
+
+        dimensions = {}
+        for dim in REQUIRED_AUDIT_DIMENSIONS:
+            if dim not in dims_data:
+                raise ModelContractError(f"evaluations[{idx}] missing dimension: {dim!r}")
+            dim_val = dims_data[dim]
+            if not isinstance(dim_val, dict) or "score" not in dim_val or "findings" not in dim_val:
+                raise ModelContractError(f"evaluations[{idx}].dimensions[{dim}] must have score and findings")
+            dimensions[dim] = DimensionScore(score=int(dim_val["score"]), findings=str(dim_val["findings"]))
+
+        evaluations.append(
+            BulletAuditEvaluation(
+                bullet_id=str(item["bullet_id"]),
+                dimensions=dimensions,
+                verdict=item["verdict"],
+                rejection_reasons=[str(r) for r in item.get("rejection_reasons", [])],
+            )
+        )
+
+    return AuditResponse(
+        evaluations=evaluations,
+        overall_verdict=data["overall_verdict"],
+    )
+
+
+def parse_repair_response(raw_text: str) -> RepairResponse:
+    clean_text = strip_markdown_fences(raw_text)
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError as exc:
+        raise ModelContractError(f"Repair response is not valid JSON: {exc}") from exc
+
+    if not isinstance(data, dict) or "repaired_bullets" not in data:
+        raise ModelContractError("Repair response must have 'repaired_bullets'")
+
+    repaired_bullets = []
+    for idx, item in enumerate(data["repaired_bullets"]):
+        if not isinstance(item, dict) or "bullet_id" not in item or "text" not in item:
+            raise ModelContractError(f"repaired_bullets[{idx}] must contain bullet_id and text")
+        repaired_bullets.append(
+            RepairedBullet(
+                bullet_id=str(item["bullet_id"]),
+                text=str(item["text"]),
+            )
+        )
+
+    return RepairResponse(repaired_bullets=repaired_bullets)
+
+
+def draft_response_to_dict(draft: DraftResponse) -> dict[str, Any]:
+    return asdict(draft)
+
+
+def audit_response_to_dict(audit: AuditResponse) -> dict[str, Any]:
+    return asdict(audit)
+
+
+def repair_response_to_dict(repair: RepairResponse) -> dict[str, Any]:
+    return asdict(repair)
+
+
+def manifest_to_dict(manifest: Tailor2Manifest) -> dict[str, Any]:
+    return asdict(manifest)
+
+
+# Re-audit response uses the same schema as audit response
+parse_re_audit_response = parse_audit_response

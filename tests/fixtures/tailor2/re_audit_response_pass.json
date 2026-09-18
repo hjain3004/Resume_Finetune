@@ -1,0 +1,21 @@
+{
+  "evaluations": [
+    {
+      "bullet_id": "b05",
+      "dimensions": {
+        "factual_fidelity": {"score": 3, "findings": "Partitioned data retention matches."},
+        "metric_fidelity": {"score": 3, "findings": "~40% matches profile 40%."},
+        "technology_fidelity": {"score": 3, "findings": "SQL partitioning matches."},
+        "technical_guarantee_fidelity": {"score": 3, "findings": "Automates data retention verified."},
+        "relevance": {"score": 3, "findings": "High relevance."},
+        "star_xyz_coherence": {"score": 3, "findings": "Clean punchy verb."},
+        "readability": {"score": 3, "findings": "Readable and crisp."},
+        "recruiter_scan_quality": {"score": 3, "findings": "High scan quality."},
+        "ai_slop_risk": {"score": 3, "findings": "Direct and concrete."}
+      },
+      "verdict": "ACCEPT",
+      "rejection_reasons": []
+    }
+  ],
+  "overall_verdict": "PASS"
+}
