@@ -13,19 +13,19 @@
   "baseline_pipeline_id": "openai-4949-manual",
   "drafter": {
     "provider": "openai",
-    "model": "gpt-4o"
+    "model": "${OPENAI_DRAFTER_MODEL}"
   },
   "auditor": {
     "provider": "openai",
-    "model": "gpt-4o"
+    "model": "${OPENAI_AUDITOR_MODEL}"
   },
   "repair": {
     "provider": "openai",
-    "model": "gpt-4o"
+    "model": "${OPENAI_REPAIR_MODEL}"
   },
   "re_audit": {
     "provider": "openai",
-    "model": "gpt-4o"
+    "model": "${OPENAI_RE_AUDIT_MODEL}"
   },
   "deterministic_config": {
     "temperature": 0.0

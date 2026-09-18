@@ -24,7 +24,8 @@ from pathlib import Path
 import pytest
 
 from src.tailor2_eval.checksums import sha256_file
-from src.tailor2_eval.orchestrator import run_evaluation_plan
+from src.tailor2_eval.baseline_registry import VALID_BASELINE_KINDS, load_baseline_registry
+from src.tailor2_eval.orchestrator import LiveModeNotAuthorizedError, run_evaluation_plan
 from src.tailor2_eval.plan import validate_plan_file
 from src.tailor2_eval.redact import find_credential_like_keys
 from src.tailor2_eval.schemas import (
@@ -71,7 +72,7 @@ def test_openai_smoke_live_template_validates() -> None:
     assert plan.plan_id == "openai_smoke_live"
     assert plan.target_ids == ("openai_4949",)
     assert plan.drafter.provider == "openai"
-    assert plan.drafter.model == "gpt-4o"
+    assert plan.drafter.model == "${OPENAI_DRAFTER_MODEL}"
     assert plan.resume_policy == "skip_completed"
     assert plan.max_cost_usd > 0
     assert plan.max_calls > 0
@@ -98,8 +99,35 @@ def test_top10_live_template_validates() -> None:
     assert plan.target_ids == expected_ids
     assert len(plan.target_ids) == 10
     assert plan.drafter.provider == "openai"
-    assert plan.drafter.model == "gpt-4o"
+    assert plan.drafter.model == "${OPENAI_DRAFTER_MODEL}"
     assert plan.resume_policy == "skip_completed"
+
+
+@pytest.mark.parametrize("template_path", [OPENAI_SMOKE_LIVE_TEMPLATE_PATH, TOP10_LIVE_TEMPLATE_PATH])
+def test_live_templates_distinguish_unresolved_stage_identities(template_path: Path) -> None:
+    plan = validate_plan_file(template_path)
+    models = {
+        "drafter": plan.drafter.model,
+        "auditor": plan.auditor.model,
+        "repair": plan.repair.model,
+        "re_audit": plan.re_audit.model,
+    }
+    assert set(models.values()) == {
+        "${OPENAI_DRAFTER_MODEL}",
+        "${OPENAI_AUDITOR_MODEL}",
+        "${OPENAI_REPAIR_MODEL}",
+        "${OPENAI_RE_AUDIT_MODEL}",
+    }
+
+
+def test_live_execution_rejects_unresolved_template_before_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = validate_plan_file(OPENAI_SMOKE_LIVE_TEMPLATE_PATH)
+    plan = replace(plan, artifact_root=str(tmp_path / "live"))
+    monkeypatch.setenv("OPENAI_API_KEY", "test-only-not-a-provider-call")
+    with pytest.raises(LiveModeNotAuthorizedError, match="unresolved model placeholders"):
+        run_evaluation_plan(plan, mode="live", live_authorized=True)
 
 
 def test_all_plans_profile_checksum_fresh() -> None:
@@ -149,35 +177,16 @@ def test_plans_and_templates_contain_no_pii() -> None:
 def test_reference_registry_schema_and_integrity() -> None:
     assert REFERENCE_REGISTRY_PATH.exists()
     registry = json.loads(REFERENCE_REGISTRY_PATH.read_text(encoding="utf-8"))
-    assert registry["schema_version"] == "1.0"
-    baselines = registry["baselines"]
-    for required_baseline in ("manual_reference", "tailor1_legacy", "future_render_fill"):
-        assert required_baseline in baselines, f"Missing baseline {required_baseline} in registry"
-
     top10_targets = load_top10_targets()
     expected_target_ids = {t.target_id for t in top10_targets}
-
-    for baseline_name, baseline_data in baselines.items():
-        targets_dict = baseline_data["targets"]
-        assert set(targets_dict.keys()) == expected_target_ids, (
-            f"Baseline {baseline_name} does not cover all 10 targets"
-        )
-
-    # openai_4949 under manual_reference is available
-    manual_openai = baselines["manual_reference"]["targets"]["openai_4949"]
-    assert manual_openai["is_available"] is True
-    assert manual_openai["git_ref"] == "origin/resume/openai-4949-manual"
-    assert manual_openai["commit_prefix"] == "a4dd50b"
-    assert "tex_path" in manual_openai["artifacts"]
-
-    # all other targets under manual_reference are unavailable
-    for target_id in expected_target_ids - {"openai_4949"}:
-        assert baselines["manual_reference"]["targets"][target_id]["is_available"] is False
-
-    # all targets under tailor1_legacy and future_render_fill are currently unavailable
-    for target_id in expected_target_ids:
-        assert baselines["tailor1_legacy"]["targets"][target_id]["is_available"] is False
-        assert baselines["future_render_fill"]["targets"][target_id]["is_available"] is False
+    assert set(registry) == expected_target_ids
+    loaded = load_baseline_registry(REFERENCE_REGISTRY_PATH)
+    assert set(loaded.entries) == expected_target_ids
+    assert all(set(kinds) <= set(VALID_BASELINE_KINDS) for kinds in loaded.entries.values())
+    openai_manual = loaded.get("openai_4949", "manual")
+    assert openai_manual is not None
+    assert Path(openai_manual.resume_text_path).exists()
+    assert loaded.resolve("zoom_4766") is None
 
 
 def test_human_review_response_template_validates() -> None:
@@ -239,6 +248,20 @@ def test_dry_run_execution_with_recorded_plans(tmp_path: Path) -> None:
             assert result.status == "DRY_RUN_OK"
             assert result.provider_call_count == 0
             assert result.estimated_cost_usd == 0.0
+
+
+def test_openai_smoke_recorded_fixture_replays_without_provider_calls(tmp_path: Path) -> None:
+    plan = replace(validate_plan_file(OPENAI_SMOKE_RECORDED_PATH), artifact_root=str(tmp_path / "recorded"))
+    summary = run_evaluation_plan(
+        plan,
+        mode="recorded",
+        recorded_dir=Path("tests/fixtures/tailor2_eval/recorded"),
+    )
+    assert summary.provider_calls_made == 0
+    assert summary.total_cost_usd == 0.0
+    assert summary.results[0].status == "ACCEPTED"
+    assert summary.results[0].jd_checksum == plan.target_jd_checksums["openai_4949"]
+    assert summary.results[0].profile_checksum == plan.profile_checksum
 
 
 def test_artifact_paths_portable_and_relative() -> None:

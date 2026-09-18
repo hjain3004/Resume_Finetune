@@ -1,0 +1,5 @@
+REDACTED OFFLINE BASELINE — OpenAI Applied Emerging Talent
+
+Summary: Redacted manual-reference text retained only for offline pairing tests.
+Experience: Canonical profile evidence is represented by redacted placeholders.
+Skills: Java, Python, Spring Boot, Kafka, PostgreSQL.

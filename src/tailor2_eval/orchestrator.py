@@ -38,6 +38,7 @@ from src.tailor2_eval.schemas import (
 from src.tailor2_eval.targets import Top10Target, load_top10_targets
 
 LIVE_CREDENTIAL_ENV_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY")
+_LIVE_IDENTITY_FIELDS = ("drafter", "auditor", "repair", "re_audit")
 
 _FAILED_OR_INTERRUPTED_STATUSES = ("REJECTED_FATAL", "INTERRUPTED", "SKIPPED_BUDGET")
 
@@ -151,6 +152,15 @@ def _run_recorded_target(target: Top10Target, recorded_dir: Path) -> TargetResul
 
 
 def _run_live_target(plan: EvaluationPlan, target: Top10Target, *, live_authorized: bool) -> TargetResult:
+    unresolved = [
+        f"{field}.model={getattr(plan, field).model}"
+        for field in _LIVE_IDENTITY_FIELDS
+        if "${" in getattr(plan, field).model
+    ]
+    if unresolved:
+        raise LiveModeNotAuthorizedError(
+            "live plan contains unresolved model placeholders: " + ", ".join(unresolved)
+        )
     if not live_authorized:
         raise LiveModeNotAuthorizedError(
             "live mode requires the orchestrator to be called with live_authorized=True "

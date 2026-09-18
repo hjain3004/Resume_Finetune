@@ -7,7 +7,7 @@ This document specifies the offline evaluation architecture, plan assets, baseli
 In accordance with pipeline invariants:
 - **Plans are credential-free and deterministic:** Evaluation plans record pinned SHA-256 checksums of the profile and target job descriptions (JDs) to ensure byte-for-byte input reproducibility before any run or comparison is trusted.
 - **Evaluation assets are decoupled from model execution:** Plans, baseline registries, templates, and human review rubrics are checked into source control without requiring active network calls, API keys, or live model execution.
-- **Strict safety gating:** Live provider execution is isolated behind an explicit `--live` CLI flag, an authorizing runtime argument, and required environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.). All tests and automated workflows run in `--dry-run` or `--recorded` replay modes.
+- **Strict safety gating:** Live provider execution is isolated behind an explicit `--live` CLI flag, an authorizing runtime argument, required credentials, and four resolved stage identities. The checked-in live templates contain distinct unresolved model placeholders and are rejected until explicitly configured. All tests and automated workflows run in `--dry-run` or `--recorded` replay modes.
 
 ---
 
@@ -35,39 +35,30 @@ All evaluation plans pin exact input checksums for the canonical Top-10 tailorin
 
 ## 3. Evaluation Plans & Live Templates
 
-Four plan assets are maintained under [evaluation/tailor2/plans/](file:///Users/himanshu_jain/aero/Resume_Finetune/job-pipeline-tailor2-evaluation-plans/evaluation/tailor2/plans/):
+Four plan assets are maintained under `evaluation/tailor2/plans/`:
 
 ### 3.1. Single-Target OpenAI Smoke Testing
 - **`openai_smoke_recorded.json`**:
   - Validated offline plan configuring a single target (`openai_4949`) with mock provider identities for recorded replay or dry-run validation.
   - Budget: Max 10 calls, $1.00 USD, 300s timeout.
 - **`openai_smoke_live.template.json`**:
-  - Live configuration template for OpenAI provider execution. Configured with model `gpt-4o`, deterministic temperature `0.0`, and budget bounds (max 20 calls, $2.00 USD, 600s timeout).
+  - Live configuration template for OpenAI provider execution. Drafter, auditor, repair, and re-audit models are distinct `${OPENAI_*_MODEL}` placeholders; deterministic temperature is `0.0`, with budget bounds (max 20 calls, $2.00 USD, 600s timeout).
 
 ### 3.2. Full Top-10 Evaluation Plans
 - **`top10_recorded.json`**:
   - Full 10-target evaluation plan covering all canonical Top-10 targets in rank order. Uses mock provider identities for replay against pre-recorded fixtures.
   - Budget: Max 100 calls, $10.00 USD, 1800s timeout.
 - **`top10_live.template.json`**:
-  - Live execution template for running all 10 targets with active LLM providers.
+  - Live execution template for running all 10 targets with active LLM providers after all four model placeholders are resolved.
   - Budget: Max 120 calls, $15.00 USD, 3600s timeout.
 
 ---
 
 ## 4. Baseline & Reference Registry
 
-The reference registry at [reference_registry.json](file:///Users/himanshu_jain/aero/Resume_Finetune/job-pipeline-tailor2-evaluation-plans/evaluation/tailor2/registry/reference_registry.json) tracks candidate and baseline resume variants across three categories:
+The reference registry uses the corrected runtime schema: `target_id -> {old_pipeline | manual | accepted_historical | alternate_config}`. Asset labels map explicitly as `tailor1_legacy -> old_pipeline`, `manual_reference -> manual`, and alternate model/configuration outputs -> `alternate_config`. The `future_render_fill` label describes a candidate under evaluation, not an automatic baseline. Unavailable targets have empty kind maps and are never fabricated.
 
-1. **`manual_reference` (Human Ground Truth):**
-   - Hand-crafted, recruiter-reviewed resumes built directly from canonical master profile facts.
-   - Available target: **`openai_4949`** (referenced on branch `origin/resume/openai-4949-manual` at commit prefix `a4dd50b`, including `.tex`, `.pdf`, `PROVENANCE.md`, and `RECRUITER_REVIEW.md`).
-   - Other 9 targets are marked `is_available: false` pending future human crafting.
-2. **`tailor1_legacy` (Historical Pipeline):**
-   - Single-stage LLM output without audit-repair loop, multi-candidate ranking, or render-fill balancing.
-   - All targets are currently marked `is_available: false` pending structured ingestion into the evaluation store.
-3. **`future_render_fill` (Phase 4 Layout Optimizer):**
-   - Render-measure-expand-compress candidate resumes.
-   - All targets are marked `is_available: false` until Phase 4 implementation is integrated.
+The `openai_4949` manual entry points only to the redacted offline smoke fixture checked into `tests/fixtures/tailor2_eval/baselines/`. The real manual branch/ref (`origin/resume/openai-4949-manual`, commit `a4dd50b`) is provenance only; it is not materialized or claimed as an available runtime artifact here.
 
 ---
 
@@ -138,7 +129,7 @@ python -m scripts.evaluate_tailor2 run evaluation/tailor2/plans/top10_recorded.j
 ### 7.3. Recorded Replay Execution
 Executes the evaluation loop using pre-recorded provider responses:
 ```bash
-python -m scripts.evaluate_tailor2 run evaluation/tailor2/plans/top10_recorded.json --recorded tests/fixtures/tailor2_eval/
+python -m scripts.evaluate_tailor2 run evaluation/tailor2/plans/top10_recorded.json --recorded tests/fixtures/tailor2_eval/recorded/
 ```
 
 ### 7.4. Building Blind Comparison Pairs
@@ -156,8 +147,7 @@ python -m scripts.evaluate_tailor2 aggregate artifacts/evaluation/tailor2/top10_
 ### 7.6. Live Execution Safety Guardrail
 Live execution is strictly guarded:
 ```bash
-# This command will deliberately raise LiveModeNotAuthorizedError or NotImplementedError unless
-# live execution is explicitly implemented and credentials are provided via environment variables.
+# Resolve all four model placeholders in a private copy and provide the required credential first.
 python -m scripts.evaluate_tailor2 run evaluation/tailor2/plans/top10_live.template.json --live
 ```
 

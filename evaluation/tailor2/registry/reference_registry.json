@@ -1,186 +1,21 @@
 {
-  "schema_version": "1.0",
-  "registry_version": "1.0.0",
-  "description": "Baseline and reference resume registry for comparative evaluation of Tailor2 candidates against legacy and human-crafted baselines.",
-  "baselines": {
-    "manual_reference": {
-      "baseline_id": "manual_reference",
-      "display_name": "Human-Crafted Manual Baseline",
-      "description": "Gold-standard hand-crafted and recruiter-reviewed resumes produced from canonical profile evidence.",
-      "targets": {
-        "openai_4949": {
-          "is_available": true,
-          "reference_type": "manual_crafted",
-          "git_ref": "origin/resume/openai-4949-manual",
-          "commit_prefix": "a4dd50b",
-          "target_company": "OpenAI",
-          "target_role": "Software Engineer - Applied Emerging Talent",
-          "artifacts": {
-            "tex_path": "output/openai-4949/Himanshu_Jain_OpenAI_Applied_Emerging_Talent.tex",
-            "pdf_path": "output/openai-4949/Himanshu_Jain_OpenAI_Applied_Emerging_Talent.pdf",
-            "provenance_path": "output/openai-4949/PROVENANCE.md",
-            "recruiter_review_path": "output/openai-4949/RECRUITER_REVIEW.md"
-          },
-          "notes": "Verified 16 bullets, 1 page, comfortable line spacing, complete evidence tracing against master profile."
-        },
-        "zoom_4766": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "Zoom",
-          "target_role": "Software Engineer - AI Platform",
-          "notes": "Pending human manual reference crafting."
-        },
-        "doordash_4608": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "DoorDash",
-          "target_role": "Software Engineer - Backend Infrastructure",
-          "notes": "Pending human manual reference crafting."
-        },
-        "idme_3981": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "ID.me",
-          "target_role": "Senior Software Engineer - Identity Verification",
-          "notes": "Pending human manual reference crafting."
-        },
-        "tiktok_4164": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "TikTok",
-          "target_role": "Software Engineer - Recommendation Architecture",
-          "notes": "Pending human manual reference crafting."
-        },
-        "roadrunner_5027": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "Roadrunner",
-          "target_role": "Full Stack / Backend Engineer",
-          "notes": "Pending human manual reference crafting."
-        },
-        "lexisnexislegalprofessional_4987": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "LexisNexis Legal & Professional",
-          "target_role": "Software Engineer III - Platform",
-          "notes": "Pending human manual reference crafting."
-        },
-        "c3ai_4894": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "C3 AI",
-          "target_role": "Software Engineer - Core Platform",
-          "notes": "Pending human manual reference crafting."
-        },
-        "commure_4839": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "Commure",
-          "target_role": "Senior Software Engineer - Healthcare Data Platform",
-          "notes": "Pending human manual reference crafting."
-        },
-        "twitch_4182": {
-          "is_available": false,
-          "reference_type": "manual_crafted",
-          "target_company": "Twitch",
-          "target_role": "Software Engineer - Video Systems",
-          "notes": "Pending human manual reference crafting."
-        }
-      }
-    },
-    "tailor1_legacy": {
-      "baseline_id": "tailor1_legacy",
-      "display_name": "Tailor1 Legacy Pipeline",
-      "description": "Historical single-stage LLM tailor pipeline outputs without multi-candidate ranking or render optimization.",
-      "targets": {
-        "zoom_4766": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "doordash_4608": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "idme_3981": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "tiktok_4164": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "roadrunner_5027": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "lexisnexislegalprofessional_4987": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "openai_4949": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "c3ai_4894": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "commure_4839": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        },
-        "twitch_4182": {
-          "is_available": false,
-          "notes": "Historical legacy outputs pending structured ingestion into evaluation store."
-        }
-      }
-    },
-    "future_render_fill": {
-      "baseline_id": "future_render_fill",
-      "display_name": "Tailor2 Render-Fill Optimizer",
-      "description": "Render-measure-expand-compress candidate resumes optimized for visual balance and page budget.",
-      "targets": {
-        "zoom_4766": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "doordash_4608": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "idme_3981": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "tiktok_4164": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "roadrunner_5027": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "lexisnexislegalprofessional_4987": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "openai_4949": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "c3ai_4894": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "commure_4839": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        },
-        "twitch_4182": {
-          "is_available": false,
-          "notes": "Awaits integration of render-fill optimization phase."
-        }
-      }
+  "c3ai_4894": {},
+  "commure_4839": {},
+  "doordash_4608": {},
+  "idme_3981": {},
+  "lexisnexislegalprofessional_4987": {},
+  "openai_4949": {
+    "manual": {
+      "artifact_id": "recorded-openai-manual-redacted-001",
+      "pipeline_id": "manual",
+      "resume_checksum": "cc6edfc9a17427ed2ba9759020b9c30de9d46f5b820181fc595adf06254125cd",
+      "resume_text_path": "tests/fixtures/tailor2_eval/baselines/openai_4949_manual.txt",
+      "model_identities": {},
+      "provenance": "Redacted offline smoke fixture only; the manual branch artifact is not materialized here. Source ref origin/resume/openai-4949-manual at a4dd50b."
     }
-  }
+  },
+  "roadrunner_5027": {},
+  "tiktok_4164": {},
+  "twitch_4182": {},
+  "zoom_4766": {}
 }
