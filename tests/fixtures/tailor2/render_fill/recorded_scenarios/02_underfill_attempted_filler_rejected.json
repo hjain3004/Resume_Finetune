@@ -1,0 +1,46 @@
+{
+  "scenario_id": "scen_02_underfill_filler_rejected",
+  "target_id": "doordash_4608",
+  "description": "Underfilled layout evaluates low-value coursework filler and rejects it in favor of clean whitespace.",
+  "initial_state": {
+    "candidate_id": "cand_doordash_underfill",
+    "vertical_fill_ratio": 0.82,
+    "page_count": 1,
+    "bullet_count": 9,
+    "layout_state": "MINOR_UNDERFILL"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "evaluate_filler_candidate",
+      "proposed_addition": {
+        "evidence_id": "cm_b5",
+        "text": "Configured local SQLite database for development testing.",
+        "value_score": 0.2
+      },
+      "measurement_after": {
+        "vertical_fill_ratio": 0.91,
+        "page_count": 1,
+        "has_collision": false,
+        "has_overflow": false,
+        "readability_density_score": 0.78,
+        "layout_state": "CLEAN_FIT"
+      },
+      "decision": "REJECT_FILLER",
+      "is_safe": false,
+      "rejection_reason": "Value score 0.20 is below quality threshold 0.50; dilutes engineering impact."
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_doordash_underfill",
+    "vertical_fill_ratio": 0.82,
+    "page_count": 1,
+    "layout_state": "MINOR_UNDERFILL",
+    "runtime_outcome": "ACCEPTED_WITH_WARNING"
+  },
+  "trace_ledger": [
+    "Underfill at 0.82 fill ratio.",
+    "Available reserve candidate cm_b5 has low value (0.20).",
+    "Rejected filler addition to preserve signal-to-noise ratio. Emitted accepted with warning."
+  ]
+}

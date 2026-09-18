@@ -1,0 +1,53 @@
+{
+  "scenario_id": "scen_09_budget_exhausted",
+  "target_id": "roadrunner_5027",
+  "description": "Optimizer hits maximum iteration budget (5) and terminates cleanly without looping.",
+  "initial_state": {
+    "candidate_id": "cand_roadrunner_stubborn",
+    "vertical_fill_ratio": 0.87,
+    "page_count": 1
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "attempt_expansion_1",
+      "fill": 1.03,
+      "safe": false
+    },
+    {
+      "iteration_index": 2,
+      "action": "rollback_1",
+      "fill": 0.87,
+      "safe": true
+    },
+    {
+      "iteration_index": 3,
+      "action": "attempt_expansion_2",
+      "fill": 1.02,
+      "safe": false
+    },
+    {
+      "iteration_index": 4,
+      "action": "rollback_2",
+      "fill": 0.87,
+      "safe": true
+    },
+    {
+      "iteration_index": 5,
+      "action": "budget_check",
+      "max_iterations_reached": 5,
+      "decision": "HALT_BUDGET"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_roadrunner_stubborn",
+    "vertical_fill_ratio": 0.87,
+    "page_count": 1,
+    "layout_state": "MINOR_UNDERFILL",
+    "runtime_outcome": "ACCEPTED_WITH_WARNING"
+  },
+  "trace_ledger": [
+    "Iterations reached max budget of 5.",
+    "Returned best safe 1-page candidate with minor underfill warning."
+  ]
+}

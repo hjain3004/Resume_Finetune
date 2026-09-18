@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scen_10_human_review_with_preview",
+  "target_id": "commure_4839",
+  "description": "Complex layout tension cannot be resolved automatically; exports usable preview PDF and routes to human review.",
+  "initial_state": {
+    "candidate_id": "cand_commure_stubborn_overflow",
+    "vertical_fill_ratio": 1.03,
+    "page_count": 2,
+    "bullet_count": 11,
+    "layout_state": "SLIGHT_OVERFLOW"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "evaluate_compression_options",
+      "findings": "All automated compressions either drop protected metrics (AUROC 0.88) or tighten spacing past 0.85 limit."
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_commure_preview",
+    "vertical_fill_ratio": 1.03,
+    "page_count": 2,
+    "has_preview_pdf": true,
+    "layout_state": "SLIGHT_OVERFLOW",
+    "runtime_outcome": "NEEDS_HUMAN_REVIEW"
+  },
+  "trace_ledger": [
+    "Automated compression exhausted without violating protected metrics.",
+    "Generated preview PDF artifact for recruiter/human inspection.",
+    "Routed cleanly to NEEDS_HUMAN_REVIEW without fatal crash."
+  ]
+}

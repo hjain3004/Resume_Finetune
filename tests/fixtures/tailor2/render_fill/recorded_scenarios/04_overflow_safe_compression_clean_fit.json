@@ -1,0 +1,54 @@
+{
+  "scenario_id": "scen_04_overflow_safe_compression",
+  "target_id": "twitch_4182",
+  "description": "Multi-line overflow resolved via combination of variant shortening and subtle spacing adjustment.",
+  "initial_state": {
+    "candidate_id": "cand_twitch_overflow_2",
+    "vertical_fill_ratio": 1.06,
+    "page_count": 2,
+    "bullet_count": 12,
+    "layout_state": "SLIGHT_OVERFLOW"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "swap_shorter_variant",
+      "target_bullet_id": "b01",
+      "lines_saved": 1,
+      "measurement_after": {
+        "vertical_fill_ratio": 1.01,
+        "page_count": 2,
+        "has_overflow": true
+      }
+    },
+    {
+      "iteration_index": 2,
+      "action": "tighten_vertical_spacing",
+      "spacing_tightness": 0.4,
+      "lines_saved": 1,
+      "measurement_after": {
+        "vertical_fill_ratio": 0.97,
+        "page_count": 1,
+        "has_collision": false,
+        "has_overflow": false,
+        "readability_density_score": 0.91,
+        "layout_state": "CLEAN_FIT"
+      },
+      "decision": "ACCEPT_COMPRESSION",
+      "is_safe": true
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_twitch_compressed_clean",
+    "vertical_fill_ratio": 0.97,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "runtime_outcome": "ACCEPTED"
+  },
+  "trace_ledger": [
+    "Initial overflow at 1.06 (2 lines on page 2).",
+    "Step 1: shortened bullet b01 (reduced to 1.01).",
+    "Step 2: tightened itemsep within safe limits (reduced to 0.97).",
+    "Achieved clean 1-page fit. Accepted."
+  ]
+}

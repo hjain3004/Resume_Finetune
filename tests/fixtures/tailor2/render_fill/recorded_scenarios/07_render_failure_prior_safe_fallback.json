@@ -1,0 +1,34 @@
+{
+  "scenario_id": "scen_07_render_failure_fallback",
+  "target_id": "zoom_4766",
+  "description": "Compiler crash on iteration 2 triggers graceful fallback to iteration 1 safe PDF artifact.",
+  "initial_state": {
+    "candidate_id": "cand_zoom_safe_iter1",
+    "vertical_fill_ratio": 0.96,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "has_artifact": true
+  },
+  "iterations": [
+    {
+      "iteration_index": 2,
+      "action": "experimental_macro_tweak",
+      "renderer_status": "FAILED_CRASH",
+      "error_log": "Undefined control sequence \\customtighten",
+      "decision": "FALLBACK_TO_PRIOR_SAFE",
+      "fallback_candidate_id": "cand_zoom_safe_iter1"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_zoom_safe_iter1",
+    "vertical_fill_ratio": 0.96,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "runtime_outcome": "ACCEPTED_WITH_WARNING"
+  },
+  "trace_ledger": [
+    "Iteration 1 produced valid safe artifact (0.96 fill).",
+    "Iteration 2 crashed LaTeX compiler.",
+    "Optimizer caught crash, restored Iteration 1 artifact, and emitted warning."
+  ]
+}
