@@ -342,3 +342,51 @@ def test_real_preflight_passes_on_the_repo(tmp_path):
     """The lane's PREPARE gate against the real prompts and profile, no render."""
     from src.tailor.lane import _preflight_findings
     assert _preflight_findings(PROFILE, Path("profile/template.tex"), Path("docs/prompts")) == ()
+
+
+def test_mismatched_job_id_for_same_directory_is_refused(tmp_path, jd_file, fake_chain, passing_preflight, monkeypatch):
+    monkeypatch.setattr("src.tailor.lane.lane_job_id", lambda jd_text: 225)
+    run_manual_application(jd_file, company="Example", title="Engineer", variant="ml",
+                           root=tmp_path / "apps", profile_path=PROFILE)
+
+    monkeypatch.setattr("src.tailor.lane.lane_job_id", lambda jd_text: 999)
+    outcome = run_manual_application(jd_file, company="Example", title="Engineer", variant="ml",
+                                     root=tmp_path / "apps", profile_path=PROFILE)
+    assert outcome.failed_stage is Stage.PREPARE
+    assert outcome.manifest.stages[0].outcome_kind == "lane_manifest_mismatch"
+    assert "job_id 999 differs from this directory's job_id 225" in outcome.manifest.stages[0].error
+
+
+def test_retry_prefix_preserves_custom_arguments(tmp_path, jd_file, fake_chain, passing_preflight, pinned_job_id, monkeypatch):
+    def failing_render(profile, draft, *, root, directory=None, reject_dir=None, **kwargs):
+        Path(reject_dir).mkdir(parents=True, exist_ok=True)
+        (Path(reject_dir) / "l7_report.json").write_text('["L7 bullet failed"]', encoding="utf-8")
+        return RenderOutcome(kind=RenderOutcomeKind.L7_FAILURE, result=None,
+                             violations=("L7 bullet failed",), error=None)
+
+    monkeypatch.setattr("src.tailor.pilot.render_and_publish", failing_render)
+    custom_db = tmp_path / "custom.db"
+    custom_db.touch()
+    custom_sidecar = jd_file.parent / f"{jd_file.name}.provenance.json"
+    outcome = run_manual_application(
+        jd_file,
+        company="Example",
+        title="Engineer",
+        variant="ml",
+        provider="gemini",
+        model="gemini-2.0-flash",
+        suffix="req-z",
+        root=tmp_path / "apps",
+        profile_path=PROFILE,
+        db_path=custom_db,
+        sidecar_path=custom_sidecar,
+    )
+    assert outcome.failed_stage is Stage.RENDER
+    cmd = outcome.retry_command
+    assert "--provider gemini" in cmd
+    assert "--model gemini-2.0-flash" in cmd
+    assert "--suffix req-z" in cmd
+    assert f"--db {custom_db}" in cmd
+    assert f"--sidecar {custom_sidecar}" in cmd
+    assert f"--root {tmp_path / 'apps'}" in cmd
+    assert cmd.endswith("--only render")

@@ -1,12 +1,14 @@
 """Apply-Now lane (M8N-0, multi-provider): a file-fed entry to the validated
-tailoring chain. Reads a pasted JD, never opens data/jobs.db, and delegates every
-stage to src.tailor.pilot.run_stages. Supports claude, gemini, and codex providers."""
+tailoring chain. Reads a JD with strict provenance sidecar (State A database verification or State B
+user attestation), never mutates data/jobs.db, and delegates every stage to
+src.tailor.pilot.run_stages. Supports claude, gemini, and openai providers."""
 from __future__ import annotations
 
 import datetime
 import hashlib
 import json
 import logging
+import shlex
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -326,11 +328,34 @@ def run_manual_application(
     job_id = lane_job_id(jd_text)
     jd_sha256 = _jd_sha256(jd_text)
     directory = lane_directory(Path(root), company, title, suffix=suffix, provider=prov_enum.value)
-    retry_prefix = (
-        f"python -m scripts.tailor_now run --jd {jd_path} --company {company!r} --title {title!r} --variant {variant}"
-        + (f" --provider {prov_enum.value}" if prov_enum is not Provider.CLAUDE else "")
-        + (f" --suffix {suffix!r}" if suffix else "") + (f" --model {model}" if model else "")
-    )
+    argv = [
+        "python", "-m", "scripts.tailor_now", "run",
+        "--jd", str(jd_path),
+        "--company", company,
+        "--title", title,
+        "--variant", variant,
+    ]
+    if prov_enum is not Provider.CLAUDE:
+        argv.extend(["--provider", prov_enum.value])
+    if model:
+        argv.extend(["--model", model])
+    if suffix:
+        argv.extend(["--suffix", suffix])
+    if db_path is not None:
+        argv.extend(["--db", str(db_path)])
+    if sidecar_path is not None:
+        argv.extend(["--sidecar", str(sidecar_path)])
+    if Path(root) != APPLICATIONS_MANUAL_ROOT:
+        argv.extend(["--root", str(root)])
+    if Path(profile_path) != Path("config/master_profile.yaml"):
+        argv.extend(["--profile", str(profile_path)])
+    if Path(template_path) != Path("profile/template.tex"):
+        argv.extend(["--template", str(template_path)])
+    if Path(prompt_dir) != DEFAULT_PROMPT_DIR:
+        argv.extend(["--prompt-dir", str(prompt_dir)])
+    if Path(trace_dir) != Path("data/traces"):
+        argv.extend(["--trace-dir", str(trace_dir)])
+    retry_prefix = shlex.join(argv)
 
     from src.tailor.provenance import (
         compute_provenance_fingerprint,
@@ -358,7 +383,7 @@ def run_manual_application(
             variant=variant,
             provider=prov_enum.value,
             jd_quality=provenance.jd_quality,
-            job_id=existing.job_id,
+            job_id=job_id,
             source_url=provenance.source_url,
             ats_url=provenance.ats_url,
             attestation_digest=att_digest,

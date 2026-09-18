@@ -1175,10 +1175,69 @@ def test_adversarial_15_unknown_quality_source_type_combinations_are_rejected(tm
         validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
 
 
-def test_export_shortlist_failure_injection_preserves_previous_export(tmp_path, monkeypatch):
+def test_export_shortlist_excludes_user_attested_db_row(tmp_path):
     db_path = tmp_path / "jobs.db"
     _seed_shortlist_db(db_path)
+    conn = db.get_connection(db_path)
+    now = "2026-09-01T00:00:00+00:00"
+    conn.execute(
+        """
+        INSERT INTO jobs (
+            dedup_key, company, title, url, source, discovered_at, status, jd_text,
+            resolver, jd_quality, ats_url, fit_score, base_variant
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("k5", "UserAttestedCo", "Lead SWE", "https://example.com/job/5", "manual", now, "SHORTLISTED", JD_TEXT, None, "user_attested", None, 9.5, "backend"),
+    )
+    conn.commit()
+    conn.close()
+
     out_dir = tmp_path / "shortlist_export"
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+
+    exported_json = json.loads((out_dir / "jobs_top10.json").read_text(encoding="utf-8"))
+    excluded = {ex["company"]: ex["reason"] for ex in exported_json["excluded"]}
+    assert "UserAttestedCo" in excluded
+    assert excluded["UserAttestedCo"] == "user_attested row lacks persisted attestation metadata in database"
+
+    included_qualities = [j["jd_quality"] for j in exported_json["jobs"]]
+    assert len(included_qualities) == 2
+    assert all(q == "ats" for q in included_qualities)
+
+    compact_db = out_dir / "jobs_top10.db"
+    compact_conn = db.get_readonly_connection(compact_db)
+    try:
+        for p in (out_dir / "jds").glob("*.txt"):
+            prov_file = p.parent / f"{p.name}.provenance.json"
+            assert prov_file.exists()
+            prov_data = json.loads(prov_file.read_text(encoding="utf-8"))
+            validate_provenance_for_tailoring(
+                p,
+                company=prov_data["company"],
+                title=prov_data["title"],
+                db_conn=compact_conn,
+                sidecar_path=prov_file,
+            )
+    finally:
+        compact_conn.close()
+
+
+@pytest.mark.parametrize("hook_stage", [
+    "before_db",
+    "before_jds",
+    "before_validation",
+    "before_json",
+    "before_readme",
+    "before_current_json",
+    "before_pointer_swap",
+    "during_pointer_swap",
+])
+def test_export_shortlist_failure_injection_all_steps(tmp_path, monkeypatch, hook_stage):
+    import scripts.export_shortlist as exporter
+
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    out_dir = tmp_path / f"export_{hook_stage}"
 
     # 1. Complete successful initial export
     export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
@@ -1186,29 +1245,69 @@ def test_export_shortlist_failure_injection_preserves_previous_export(tmp_path, 
     assert current_json.exists()
     initial_current_data = json.loads(current_json.read_text(encoding="utf-8"))
     initial_gen_id = initial_current_data["generation_id"]
-    initial_files = {p.name: p.read_bytes() for p in out_dir.glob("jds/*")}
-    initial_readme = (out_dir / "README.md").read_text(encoding="utf-8")
-    initial_db_bytes = (out_dir / "jobs_top10.db").read_bytes()
+    initial_gen_dir = out_dir / "generations" / initial_gen_id
+    assert initial_gen_dir.is_dir()
+    assert (out_dir / "current").resolve() == initial_gen_dir
+    assert (out_dir / "jds").resolve() == initial_gen_dir / "jds"
+    assert (out_dir / "jobs_top10.db").resolve() == initial_gen_dir / "jobs_top10.db"
 
-    # 2. Inject failure during the next export's artifact creation
-    original_dump = json.dump
+    # 2. Inject failure at hook_stage during next export
+    def failing_hook(stage: str) -> None:
+        if stage == hook_stage:
+            raise OSError(f"Injected failure at {stage}")
 
-    def failing_dump(obj, fp, **kwargs):
-        if isinstance(obj, dict) and obj.get("mode") == "tailoring_ready":
-            raise OSError("Disk full simulation during export")
-        return original_dump(obj, fp, **kwargs)
+    monkeypatch.setattr(exporter, "_PUBLICATION_HOOK", failing_hook)
 
-    monkeypatch.setattr("json.dump", failing_dump)
+    with pytest.raises(OSError, match=f"Injected failure at {hook_stage}"):
+        export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
 
-    with pytest.raises(OSError, match="Disk full simulation"):
-        export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=1, mode=ExportMode.TAILORING_READY)
+    # 3. Verify previous export is completely unchanged, pointer is untouched, no dangling links
+    assert (out_dir / "current").resolve() == initial_gen_dir
+    assert (out_dir / "jds").resolve() == initial_gen_dir / "jds"
+    assert (out_dir / "jobs_top10.db").resolve() == initial_gen_dir / "jobs_top10.db"
+    assert (out_dir / "current.json").resolve() == initial_gen_dir / "current.json"
+    post_data = json.loads(current_json.read_text(encoding="utf-8"))
+    assert post_data["generation_id"] == initial_gen_id
 
-    # 3. Verify previous export is completely unchanged and readable
-    assert current_json.exists()
-    post_failure_current_data = json.loads(current_json.read_text(encoding="utf-8"))
-    assert post_failure_current_data["generation_id"] == initial_gen_id
+    # Verify no uncommitted generation directories remain
+    gen_dirs = [p for p in (out_dir / "generations").iterdir() if p.name.startswith("gen_")]
+    assert len(gen_dirs) == 1
+    assert gen_dirs[0].name == initial_gen_id
 
-    post_failure_files = {p.name: p.read_bytes() for p in out_dir.glob("jds/*")}
-    assert post_failure_files == initial_files
-    assert (out_dir / "README.md").read_text(encoding="utf-8") == initial_readme
-    assert (out_dir / "jobs_top10.db").read_bytes() == initial_db_bytes
+
+def test_export_shortlist_legacy_migration_preserves_data(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    out_dir = tmp_path / "legacy_export"
+    out_dir.mkdir(parents=True)
+
+    # Create real, non-symlink legacy directory structure
+    legacy_jds = out_dir / "jds"
+    legacy_jds.mkdir()
+    legacy_file = legacy_jds / "legacy_job.txt"
+    legacy_file.write_text("Legacy job content that must not be lost", encoding="utf-8")
+    legacy_db = out_dir / "jobs_top10.db"
+    legacy_db.write_bytes(b"SQLite format 3\x00legacy_db")
+    legacy_readme = out_dir / "README.md"
+    legacy_readme.write_text("# Legacy Readme", encoding="utf-8")
+
+    # Run export_shortlist on this legacy directory
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+
+    # Check that legacy files were preserved in generations/gen_legacy_initial
+    legacy_gen_dir = out_dir / "generations" / "gen_legacy_initial"
+    assert legacy_gen_dir.exists()
+    assert (legacy_gen_dir / "jds" / "legacy_job.txt").read_text(encoding="utf-8") == "Legacy job content that must not be lost"
+    assert (legacy_gen_dir / "jobs_top10.db").read_bytes() == b"SQLite format 3\x00legacy_db"
+    assert (legacy_gen_dir / "README.md").read_text(encoding="utf-8") == "# Legacy Readme"
+
+    # Public paths are now symlinks pointing to current/... which resolves to the new generation
+    assert (out_dir / "current").is_symlink()
+    assert (out_dir / "jds").is_symlink()
+    assert (out_dir / "jobs_top10.db").is_symlink()
+    assert (out_dir / "current.json").is_symlink()
+
+    new_gen_dir = (out_dir / "current").resolve()
+    assert new_gen_dir != legacy_gen_dir
+    assert (out_dir / "jds").resolve() == new_gen_dir / "jds"
+    assert (out_dir / "jobs_top10.db").resolve() == new_gen_dir / "jobs_top10.db"

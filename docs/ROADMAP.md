@@ -128,7 +128,7 @@ incomplete and require their own scoped milestone.
 
 **M8N — Apply-Now lane.** A file-fed entry to the
 same S1→S0→S2→S3→G1→G2→RENDER+L7→G3 chain for live postings while the DB-fed pilot is
-completed. Never reads or writes `data/jobs.db` for tailoring; outputs under gitignored
+completed. Never mutates `data/jobs.db` for tailoring (uses read-only DB verification for State A ATS provenance); outputs under gitignored
 `applications_manual/`. M8N-0 (file-fed lane) COMPLETE 2026-09-01 (c065756); M8N-0b (S2/S3 gate corrections) COMPLETE 2026-09-03 (3a2ae25) — corrections landed and verified, §11 bar NOT met, S3↔G1 keyword placement is the next milestone; M8N-1 / M8N-2 not started.
 M8N-1 adds an anchored screen brief before S0, the typed company view
 into S0, and an anchored hiring-manager read after render using the M8Q §9 editorial rubric.

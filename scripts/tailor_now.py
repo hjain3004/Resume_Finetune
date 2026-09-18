@@ -1,16 +1,21 @@
-"""Apply-Now lane operator CLI (M8N-0): preflight, run, status, export-jd.
+"""Apply-Now lane operator CLI (M8N-0): preflight, run, status, attest, export-jd.
 A thin argparse shell around src/tailor/lane.py; it parses, validates,
-and hydrates nothing itself. The only DB access in this file is the
-read-only export-jd helper used for the spec §11 benchmark."""
+and hydrates nothing itself. Database access is strictly read-only:
+read-only metadata verification for State A provenance (via --db) and
+the read-only export-jd helper."""
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import json
 import os
 import shlex
 import sys
 import urllib.parse
+import uuid
 from pathlib import Path
+
+_EXPORT_JD_HOOK: Callable[[str], None] | None = None
 
 from src import db
 from src.tailor.provenance import (
@@ -183,18 +188,104 @@ def cmd_export_jd(args) -> int:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         sidecar_path = out.parent / f"{out.name}.provenance.json"
-        tmp_out = out.with_name(f"{out.name}.tmp.{os.getpid()}")
-        tmp_sidecar = out.with_name(f"{out.name}.provenance.json.tmp.{os.getpid()}")
+
+        out_exists = out.exists()
+        sidecar_exists = sidecar_path.exists()
+        if (out_exists or sidecar_exists) and not getattr(args, "overwrite", False):
+            raise LaneError(
+                f"destination {out if out_exists else sidecar_path} already exists; "
+                "use --overwrite to replace existing export"
+            )
+
+        tmp_out = out.with_name(f"{out.name}.tmp.{uuid.uuid4().hex}")
+        tmp_sidecar = out.with_name(f"{out.name}.provenance.json.tmp.{uuid.uuid4().hex}")
+
+        if _EXPORT_JD_HOOK is not None:
+            _EXPORT_JD_HOOK("write_jd_temp")
+        tmp_out.write_text(text, encoding="utf-8")
+
+        if _EXPORT_JD_HOOK is not None:
+            _EXPORT_JD_HOOK("write_sidecar_temp")
+        tmp_sidecar.write_text(json.dumps(prov.to_dict(), indent=2), encoding="utf-8")
+
+        from src.tailor.provenance import validate_provenance_for_tailoring
+        validate_provenance_for_tailoring(
+            tmp_out,
+            company=company,
+            title=title,
+            db_conn=conn,
+            sidecar_path=tmp_sidecar,
+        )
+
+        bak_out = out.with_name(f"{out.name}.bak.{uuid.uuid4().hex}") if out_exists else None
+        bak_sidecar = sidecar_path.with_name(f"{sidecar_path.name}.bak.{uuid.uuid4().hex}") if sidecar_exists else None
+        installed_out = False
+        installed_sidecar = False
+
         try:
-            tmp_out.write_text(text, encoding="utf-8")
-            tmp_sidecar.write_text(json.dumps(prov.to_dict(), indent=2), encoding="utf-8")
+            if out_exists and bak_out is not None:
+                out.replace(bak_out)
+            if sidecar_exists and bak_sidecar is not None:
+                sidecar_path.replace(bak_sidecar)
+
+            if _EXPORT_JD_HOOK is not None:
+                _EXPORT_JD_HOOK("replace_jd")
             tmp_out.replace(out)
+            installed_out = True
+
+            if _EXPORT_JD_HOOK is not None:
+                _EXPORT_JD_HOOK("replace_sidecar")
             tmp_sidecar.replace(sidecar_path)
+            installed_sidecar = True
+
+            # Validate installed pair in-place
+            validate_provenance_for_tailoring(
+                out,
+                company=company,
+                title=title,
+                db_conn=conn,
+                sidecar_path=sidecar_path,
+            )
+
+            # Success: unlink backups
+            if bak_out is not None and bak_out.exists():
+                bak_out.unlink()
+            if bak_sidecar is not None and bak_sidecar.exists():
+                bak_sidecar.unlink()
+        except Exception:
+            # Rollback: remove partially installed files, restore backups
+            if installed_sidecar and sidecar_path.exists():
+                try:
+                    sidecar_path.unlink()
+                except OSError:
+                    pass
+            if installed_out and out.exists():
+                try:
+                    out.unlink()
+                except OSError:
+                    pass
+            if bak_sidecar is not None and bak_sidecar.exists():
+                try:
+                    bak_sidecar.replace(sidecar_path)
+                except OSError:
+                    pass
+            if bak_out is not None and bak_out.exists():
+                try:
+                    bak_out.replace(out)
+                except OSError:
+                    pass
+            raise
         finally:
             if tmp_out.exists():
-                tmp_out.unlink()
+                try:
+                    tmp_out.unlink()
+                except OSError:
+                    pass
             if tmp_sidecar.exists():
-                tmp_sidecar.unlink()
+                try:
+                    tmp_sidecar.unlink()
+                except OSError:
+                    pass
 
         print(f"wrote {out} ({len(text)} chars)")
         print(f"wrote provenance sidecar: {sidecar_path}")
@@ -287,6 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--db", default="data/jobs.db")
     export.add_argument("--job-id", type=int, required=True)
     export.add_argument("--out", required=True)
+    export.add_argument("--overwrite", action="store_true", help="Overwrite existing destination files")
     export.set_defaults(func=cmd_export_jd)
 
     return parser

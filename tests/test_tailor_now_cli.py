@@ -16,6 +16,7 @@ JD = "Python " * 60
 
 import sqlite3
 
+from src import db
 from src.tailor.provenance import JD_PROVENANCE_SCHEMA, parse_provenance_dict
 
 
@@ -202,3 +203,96 @@ def test_attest_cli_fails_on_aggregator_url(tmp_path, capsys):
     err = capsys.readouterr().err
     assert "cannot attest an aggregator URL" in err
     assert not (tmp_path / "custom_jd.txt.provenance.json").exists()
+
+
+def test_export_jd_refuses_overwrite_without_flag(tmp_path, capsys):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 0
+    assert out.exists()
+
+    # Rerun without --overwrite
+    rc2 = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc2 == 1
+    err = capsys.readouterr().err
+    assert "already exists" in err
+    assert "--overwrite" in err
+
+
+def test_export_jd_allows_overwrite_with_flag(tmp_path, capsys):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 0
+
+    # Overwrite with --overwrite flag
+    rc2 = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out), "--overwrite"])
+    assert rc2 == 0
+    assert out.exists()
+
+
+@pytest.mark.parametrize("stage", [
+    "write_jd_temp",
+    "write_sidecar_temp",
+    "replace_jd",
+    "replace_sidecar",
+])
+def test_export_jd_failure_injection_all_stages(tmp_path, monkeypatch, stage):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+
+    # 1. Fresh destination test: failure leaves NO files
+    out_fresh = tmp_path / f"fresh_{stage}" / "225.txt"
+    sidecar_fresh = out_fresh.parent / f"{out_fresh.name}.provenance.json"
+
+    def fail_at_stage(s: str) -> None:
+        if s == stage:
+            raise OSError(f"Simulated error at stage {s}")
+
+    monkeypatch.setattr(cli, "_EXPORT_JD_HOOK", fail_at_stage)
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out_fresh)])
+    assert rc == 1
+    assert not out_fresh.exists()
+    assert not sidecar_fresh.exists()
+
+    # 2. Existing destination test: failure restores COMPLETE OLD PAIR intact
+    out_existing = tmp_path / f"existing_{stage}" / "225.txt"
+    sidecar_existing = out_existing.parent / f"{out_existing.name}.provenance.json"
+    out_existing.parent.mkdir(parents=True)
+    old_jd_bytes = b"OLD JD CONTENT"
+    old_sidecar_bytes = b'{"old": "sidecar"}'
+    out_existing.write_bytes(old_jd_bytes)
+    sidecar_existing.write_bytes(old_sidecar_bytes)
+
+    rc_over = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out_existing), "--overwrite"])
+    assert rc_over == 1
+    assert out_existing.read_bytes() == old_jd_bytes
+    assert sidecar_existing.read_bytes() == old_sidecar_bytes
+
+
+def test_export_jd_validates_pair_with_state_a_validator(tmp_path):
+    from src.tailor.provenance import validate_provenance_for_tailoring
+
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 0
+
+    sidecar_path = tmp_path / "jd" / "225.txt.provenance.json"
+    conn = db.get_readonly_connection(db_path)
+    try:
+        prov = validate_provenance_for_tailoring(
+            out,
+            company="Notion",
+            title="SWE",
+            db_conn=conn,
+            sidecar_path=sidecar_path,
+        )
+        assert prov.jd_quality == "ats"
+        assert prov.job_id == 225
+    finally:
+        conn.close()
