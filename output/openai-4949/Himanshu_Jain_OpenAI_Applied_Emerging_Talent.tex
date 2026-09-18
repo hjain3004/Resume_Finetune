@@ -12,8 +12,8 @@
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
 \usepackage[letterpaper,
-  left=0.20in, right=0.20in,
-  top=0.20in, bottom=0.20in
+  left=0.35in, right=0.35in,
+  top=0.35in, bottom=0.35in
 ]{geometry}
 \usepackage{titlesec}
 \usepackage{marvosym}
@@ -114,9 +114,9 @@
       {Software Engineering Intern\textnormal{ $|$ \emph{\small Python, FastAPI, SQLAlchemy, PostgreSQL, RabbitMQ}}}{June 2026 - August 2026}
       {MalyTech}{}
       \resumeItemListStart
-        \resumeItem{Built the \textbf{anti-corruption layer} of four adapter services between a commercial bank\textquotesingle{}s core and providers for telecom messaging, real-time transfers, identity verification, and AML screening, then the \textbf{Core onboarding service} orchestrating three of those four through one non-blocking API, five asynchronous Python microservices in all.}
+        \resumeItem{Built \textbf{four asynchronous Python adapters} and a \textbf{non-blocking onboarding orchestrator} that connected a commercial bank\textquotesingle{}s core to messaging, payments, identity-verification, and AML providers across five services.}
         \resumeItem{Engineered an \textbf{idempotent transfer submission engine} using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced \textbf{exactly one downstream provider call}.}
-        \resumeItem{Designed a \textbf{fail-closed AML sanctions gateway} that returns a typed error instead of a false clear on any backend fault, serving both REST/JSON and legacy SOAP/XML through shared orchestration and hardened with \textbf{credential isolation, PII redaction, and XML-injection defenses}.}
+        \resumeItem{Delivered a \textbf{fail-closed AML gateway} that returned typed errors on provider faults, unified REST/JSON and SOAP/XML integrations, and enforced \textbf{credential isolation, PII redaction, and XML-injection defenses}.}
       \resumeItemListEnd
 
     \resumeSubheading
@@ -138,9 +138,9 @@
     \resumeProjectHeading
       {\textbf{ResumeFinetune - Agentic Job Intelligence Platform} $|$ \emph{Python, Agentic AI, LLM Orchestration}}{Jul. 2026 - Present}
       \resumeItemListStart
-        \resumeItem{Discovered 3,212 postings and resolved \textbf{2,019 job descriptions} in a 1-hour-43-minute run through a deterministic Python pipeline, surfacing 164 qualifying early-career roles from a seven-day discovery window.}
-        \resumeItem{\textbf{Cut mean LLM scoring drift from 0.67 to 0.20} by running three-pass self-consistency scoring with median aggregation, then validating output schemas before importing results into the production database.}
-        \resumeItem{Engineered a resumable agentic workflow that turns a job description into an \textbf{evidence-grounded resume draft} through typed stage contracts, deterministic claim validation, an independent LLM review pass, and a human approval gate.}
+        \resumeItem{Engineered a deterministic Python job-intelligence pipeline with \textbf{ATS-specific resolvers} and typed eligibility gates, discovering 3,212 listings and resolving \textbf{2,019 job descriptions} to surface 164 qualifying roles from a seven-day discovery window.}
+        \resumeItem{\textbf{Cut mean LLM scoring movement from 0.67 to 0.20} using three-pass self-consistency and median aggregation, then enforced schema and row-coverage validation before \textbf{transactional score import}.}
+        \resumeItem{Orchestrated a resumable, evidence-grounded tailoring workflow that constrained generated claims to \textbf{approved profile evidence} and routed drafts through deterministic validation, a separate LLM review, and human approval.}
       \resumeItemListEnd
 
     \resumeProjectHeading

@@ -184,15 +184,18 @@ projects:
 
     keywords:
       exact: ["Python", "SQLite", "SQL", "REST API", "HTTP", "JSON", "PyYAML",
-              "pytest", "large language models", "LLM", "Claude", "Gemini",
+              "pytest", "large language models", "LLM", "agentic AI", "AI agents",
+              "agentic workflows", "LLM orchestration", "LLMOps", "AI evaluation",
+              "LLM evaluation", "LLM-as-a-judge", "prompt engineering",
+              "structured outputs", "human-in-the-loop", "Claude", "Gemini",
               "OpenAI", "LaTeX", "Crawl4AI", "Firecrawl"]
       topical: ["data pipeline", "workflow orchestration", "job search automation",
                 "ATS integration", "state machine", "idempotency", "schema validation",
                 "data provenance", "content hashing", "deduplication",
                 "Jaccard similarity", "circuit breaker", "retry with backoff",
-                "rate limiting", "LLM orchestration", "structured output",
-                "prompt injection defense", "human in the loop", "fault tolerance",
-                "observability", "transactional publication", "agentic AI"]
+                "rate limiting", "model orchestration", "AI infrastructure",
+                "AI safety", "guardrails", "prompt injection defense", "fault tolerance",
+                "observability", "transactional publication"]
 
     scale:
       live_run_discovered: 3212
@@ -471,23 +474,23 @@ projects:
         priority: 2
         phrasings:
           long: >-
-            Implemented a resumable resume-tailoring workflow spanning requirement
-            extraction, company positioning, evidence selection, bounded terminology
-            alignment, deterministic lint, independent LLM critique, one-page LaTeX
-            rendering, and a fingerprint-bound human review packet.
+            Implemented a resumable agentic AI workflow for resume tailoring,
+            orchestrating requirement extraction, company positioning, evidence
+            selection, bounded terminology alignment, deterministic lint, independent
+            LLM critique, one-page LaTeX rendering, and fingerprint-bound human review.
           medium: >-
-            Implemented a **resumable, fingerprint-bound tailoring workflow** across
-            requirement extraction, evidence selection, bounded alignment,
-            deterministic lint, independent critique, **one-page LaTeX rendering**,
-            and human review.
+            Implemented a **resumable agentic AI workflow** for resume tailoring
+            across requirement extraction, evidence selection, bounded alignment,
+            deterministic lint, independent LLM evaluation, **one-page LaTeX
+            rendering**, and human review.
           short: >-
-            Implemented a resumable tailoring workflow with evidence selection,
-            bounded edits, independent critique, one-page rendering, and review.
+            Implemented an agentic AI tailoring workflow with evidence selection,
+            bounded edits, independent LLM evaluation, one-page rendering, and review.
         evidence:
           - "src/tailor/pilot.py: resumable S1, S0, S2, S3, G2, render, and G3 orchestration with per-stage manifests"
           - "src/tailor/alignment_view.py and src/tailor/artifacts.py: canonical projections, SHA-256 fingerprints, and atomic JSON artifacts"
           - "src/render/tailored.py, src/render/latex.py, and src/render/l7.py: deterministic projection, PDF generation, and post-render checks"
-        keywords_hit: ["workflow orchestration", "LLM orchestration", "LaTeX", "human in the loop", "idempotency"]
+        keywords_hit: ["agentic AI", "agentic workflows", "LLM orchestration", "LLM evaluation", "human-in-the-loop", "LaTeX", "idempotency"]
         defense: ""
         interview_risk: |
           The committed lane is technically implemented, but its constrained
@@ -642,16 +645,16 @@ projects:
         priority: 4
         phrasings:
           long: >-
-            Designed a hybrid discovery control plane that confines agentic scouts
-            and bounded crawlers to versioned proposal artifacts, requiring
+            Designed an agentic AI discovery control plane that confines scouts and
+            bounded crawlers to versioned proposal artifacts, requiring
             deterministic provenance, URL policy, content-quality, deduplication,
             budget, and human-promotion gates before any candidate can reach SQLite.
           medium: >-
-            Designed a **staged agentic discovery control plane** in which LLM and
+            Designed a **staged agentic AI discovery control plane** in which LLM and
             crawler outputs remain proposals until deterministic provenance,
             policy, quality, deduplication, budget, and **human-promotion gates** pass.
           short: >-
-            Designed a staged agentic discovery plane with deterministic provenance,
+            Designed an agentic AI discovery plane with deterministic provenance,
             policy, quality, budget, deduplication, and human approval gates.
         evidence:
           - "docs/ARCHITECTURE.md sections 4.5 and 5.4: approved hybrid discovery records, staging boundary, and acceptance gateway"

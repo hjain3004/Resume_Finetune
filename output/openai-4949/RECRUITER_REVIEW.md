@@ -1,7 +1,13 @@
-# Senior Technical Recruiter Review — OpenAI, Software Engineer (Applied Emerging Talent)
+# Recruiter-Style Résumé Review — OpenAI, Software Engineer (Applied Emerging Talent)
 
-Reviewer stance: independent pass, performed after drafting, evaluating the résumé as a
-first-time reader at OpenAI would (10-second scan, then a closer read).
+Reviewer stance: this is an **adversarial self-review performed by the same Claude
+session** that drafted the résumé, not an independent review by a separate reviewer. It is
+labeled that way throughout this document, including the "Revision 1" section below (its
+original "independent pass" framing was inaccurate and is corrected here). The review
+evaluates the résumé as a skeptical first-time reader at OpenAI would (10-second scan,
+then a closer read), actively looking for reasons to reject rather than reasons to approve.
+
+## Revision 1 (initial draft, commit `faa29c1`)
 
 ## Ten-second positioning
 Reading order is Education -> Experience -> Projects -> Skills. Within the first
@@ -109,5 +115,91 @@ to run his own job search, and the human-approval-gate bullet gestures at user t
 inventing one would violate the instruction to draw only from evidence. This is flagged
 as a real, disclosed gap rather than patched with unverifiable language.
 
-## Overall verdict
-**PASS.** No revision cycle was required beyond the drafting choices documented above.
+## Revision 1 overall verdict
+**PASS**, with a revision cycle applied before publishing — see below. The three MalyTech
+bullets and the eight-bullet Amdocs-to-five trim were accepted as drafted; the criteria
+above reflect the state of the résumé at commit `faa29c1`, before the corrections in
+Revision 2.
+
+---
+
+## Revision 2 — Adversarial Self-Review (canonical profile `2bf6c44e...`)
+
+This cycle revised five bullets (two in MalyTech, three in ResumeFinetune) to fix an
+awkward ending, a broken-parallelism sentence, a still-counters-only bullet, an inaccurate
+"production database" claim, and a still-partially-jargon bullet, per explicit instruction.
+Margins widened from 0.20in to 0.35in. The review below re-evaluates the **entire** résumé,
+not just the five changed bullets, since a wider margin changes line wrapping everywhere.
+
+**Ten-second positioning.** Unchanged structurally from Revision 1 (Education ->
+Experience -> Projects -> Skills); the five-bullet rewrite made individual bullets easier
+to parse but did not change section order or which signals appear first. Still passes.
+
+**Technical credibility.** All five rewritten bullets were checked clause-by-clause against
+their source evidence strings (see `PROVENANCE.md`). One phrase required real scrutiny:
+"unified REST/JSON and SOAP/XML integrations" in the MalyTech AML bullet. The evidence says
+"one orchestration layer" serves both ingress paths, not that the two protocols were
+literally merged into a single interface — "unified" is defensible as "served through one
+shared orchestration layer" but a skeptical reader could momentarily misread it as claiming
+the two wire protocols became one. Judged acceptable because the very next reader who asks
+"unified how?" gets a correct answer from the interview_risk-backed evidence, and the word
+is common résumé shorthand for "handled by one component," not a technical protocol claim.
+Passes, flagged as a close call rather than a clean pass.
+
+**Naturalness.** Read each of the five rewritten bullets aloud as a sentence. The MalyTech
+lead bullet and the AML gateway bullet both read as single natural sentences with no
+stitched-together clauses. The ResumeFinetune ingestion bullet (now merging three evidence
+ids) is the densest sentence on the page — it is grammatically natural but is doing three
+jobs at once (pipeline description, resolver detail, eligibility detail). This is a
+knowing trade-off: the instruction explicitly asked for this merge. Passes, with the same
+noted density trade-off called out in Sentence complexity below.
+
+**AI slop.** Re-scanned the full revised document for filler language ("leverage,"
+"utilize," "synergy," "cutting-edge," "innovative," "seamless," "robust,"
+"state-of-the-art," "game-changing," "revolutionize"). None present anywhere, including in
+the five new bullets. Passes.
+
+**Sentence complexity.** Re-measured every bullet's rendered line count at the new 0.35in
+margins: 3 of 8 experience bullets and 1 of 6 project bullets now render in 3 lines
+(MalyTech's idempotent-engine bullet and Amdocs' data-retention and test-automation
+bullets, all unchanged from Revision 1 and already metric-dense; the merged ResumeFinetune
+ingestion bullet, new in Revision 2). The MalyTech lead bullet that was the whole point of
+this revision now renders in exactly 2 lines, down from 3 — the intended fix worked. The
+one 3-line project bullet is an accepted, instructed trade-off (see Naturalness). Passes.
+
+**ResumeFinetune recruiter value.** If anything, stronger than Revision 1: "transactional
+score import" and "a separate LLM review" read as more precise and more defensible under
+interview questioning than Revision 1's "importing results into the production database"
+(which invited an "wait, whose production database?" question this project doesn't have a
+good answer to) and its more jargon-adjacent stage description. Passes, improved.
+
+**Is the first MalyTech bullet now understandable?** Yes, and this is the clearest win of
+the revision. Revision 1's version buried two distinct accomplishments (the four-adapter
+layer and the Core orchestrator) inside one 43-word run-on that trailed off on a bare
+service count. Revision 2 leads with the two concrete deliverables ("four asynchronous
+Python adapters" and "a non-blocking onboarding orchestrator"), states what they connect in
+one clean list, and closes with the count as a natural appositive ("across five services")
+instead of a dangling fragment. A reader gets the shape of the accomplishment on first pass
+without re-reading. Passes.
+
+**Does the Projects section remain readable at 0.35in margins?** Yes. The narrower text
+column (about 4% less width than the 0.20in version) pushed exactly one bullet (the merged
+ResumeFinetune ingestion bullet) to a third line; nothing wraps mid-word, nothing collides
+with a date field, and the page still renders with visible whitespace below the last skills
+line (confirmed by the rendered PNG and by `pdfinfo` reporting 1 page with zero
+Overfull/Underfull warnings in the LaTeX log). Passes.
+
+**Does the skills taxonomy match the JD without unsupported padding?** Unchanged from
+Revision 1's pass verdict — the skills section was explicitly out of scope for this
+revision cycle and was not touched. The canonical profile's own updated `keywords.exact`
+list for ResumeFinetune (now including "LLMOps," "LLM-as-a-judge," "AI evaluation," "AI
+agents," "agentic workflows") independently corroborates that the six terms already on the
+résumé are the profile's own recognized vocabulary for this project, not an invented list.
+Passes.
+
+## Revision 2 overall verdict
+**PASS.** All nine criteria above pass; two are flagged as close calls worth a human's own
+judgment ("unified REST/JSON and SOAP/XML" phrasing, and the density of the merged
+ResumeFinetune ingestion bullet) rather than treated as automatic approvals. No further
+revision was made past this point because neither close call rises to a factual or
+structural defect — both are disclosed here for the human reviewer to weigh.
