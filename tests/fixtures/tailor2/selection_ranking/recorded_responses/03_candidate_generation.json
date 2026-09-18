@@ -6,43 +6,43 @@
   "canonical_facts": {
     "technology": "PostgreSQL",
     "guarantee": "atomic reservations, idempotency",
-    "metric": "~40% lock contention reduction",
+    "metric": "eight concurrent requests produced exactly one downstream provider call",
     "domain": "banking integration transfers"
   },
   "variants": [
     {
       "variant_id": "v1_xyz",
-      "structure": "XYZ",
-      "text": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing concurrent lock contention by ~40% across banking integration services.",
+      "structure": "CANONICAL_SHORT",
+      "text": "Engineered an idempotent transfer engine with PostgreSQL reservations, preventing duplicate provider calls under concurrency.",
       "evidence_ids": [
         "int_b2"
       ],
       "preserved_metrics": [
-        "~40%"
+        "eight concurrent requests produced exactly one downstream provider call"
       ],
       "is_factually_valid": true
     },
     {
-      "variant_id": "v2_star",
-      "structure": "STAR",
-      "text": "Resolved high-concurrency race conditions in banking integration by designing atomic reservations in PostgreSQL, achieving ~40% reduction in lock contention.",
+      "variant_id": "v2_medium",
+      "structure": "CANONICAL_MEDIUM",
+      "text": "Engineered an **idempotent transfer submission engine** using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced **exactly one downstream provider call**.",
       "evidence_ids": [
         "int_b2"
       ],
       "preserved_metrics": [
-        "~40%"
+        "eight concurrent requests produced exactly one downstream provider call"
       ],
       "is_factually_valid": true
     },
     {
-      "variant_id": "v3_active",
-      "structure": "ACTIVE_VERB",
-      "text": "Built PostgreSQL-backed idempotent transfer engine with atomic reservation logic, cutting concurrent transaction lock contention by ~40%.",
+      "variant_id": "v3_long",
+      "structure": "CANONICAL_LONG",
+      "text": "Engineered an **idempotent transfer submission engine** with atomic PostgreSQL reservations and payload hashing; eight parallel requests resulted in exactly one downstream provider call.",
       "evidence_ids": [
         "int_b2"
       ],
       "preserved_metrics": [
-        "~40%"
+        "eight concurrent requests produced exactly one downstream provider call"
       ],
       "is_factually_valid": true
     }

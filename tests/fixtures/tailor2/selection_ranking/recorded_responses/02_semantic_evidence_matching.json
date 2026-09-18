@@ -11,7 +11,7 @@
       "confidence": 1.0,
       "is_grounded": true,
       "metrics_preserved": [
-        "~40% lock contention reduction"
+        "eight concurrent requests produced exactly one downstream provider call"
       ]
     },
     {

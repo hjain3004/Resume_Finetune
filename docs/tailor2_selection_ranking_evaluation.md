@@ -111,7 +111,7 @@ Evaluates whether raw JD requirements are accurately parsed without introducing 
 ### 3.2 Semantic Matching (7 cases: `sel_06` – `sel_12`)
 Evaluates semantic understanding of engineering concepts and technologies:
 6. **`sel_06_postgres_postgresql_equivalence` (DoorDash 4608):** `Postgres` and `PostgreSQL` match bi-directionally as canonical synonyms.
-7. **`sel_07_react_canonical_support_boundary` (C3.ai 4894):** `React`, `React.js`, and `ReactJS` match only when canonically supported. Unsupported framework aliases (e.g. Vue) are not injected.
+7. **`sel_07_react_canonical_support_boundary` (C3.ai 4894):** The current profile has no canonical React or Vue support; the frontend gap remains disclosed and unsupported framework aliases are not injected.
 8. **`sel_08_ai_ml_interest_vs_research` (OpenAI 4949):** Applied ML and LLM prompt engineering evidence is matched to AI interest requirements without exaggerating the candidate into a foundational AI research scientist.
 9. **`sel_09_backend_systems_adjacent_to_product` (OpenAI 4949):** Backend systems evidence is recognized as adjacent and transferable to applied-product requirements without masquerading as direct UI/UX design.
 10. **`sel_10_unrelated_technologies_rejected` (Zoom 4766):** Unrelated technologies (Kafka distributed queues vs WebRTC real-time media streaming) do not match merely because both are backend systems.
@@ -196,7 +196,7 @@ Ten recorded structured response files are maintained in `tests/fixtures/tailor2
 
 1. **`01_requirement_interpretation.json`:** Structured output parsing raw JD text into atomic requirements, tagging importance, identifying alternative OR groups, and recording disclosed gaps.
 2. **`02_semantic_evidence_matching.json`:** Grounded matching of profile evidence to requirements, demonstrating synonym normalization, applied AI bounding, and explicit rejection of disjoint technologies.
-3. **`03_candidate_generation.json`:** Multi-candidate generator output yielding 3 structurally distinct variants (XYZ, STAR, Active) for `int_b2`, preserving identical evidence IDs and protected metrics.
+3. **`03_candidate_generation.json`:** Multi-candidate generator output yielding 3 canonical phrasing tiers for `int_b2`, preserving identical evidence IDs and the profile-backed concurrency guarantee.
 4. **`04_local_ranking.json`:** Local bullet evaluator scoring, demonstrating how outcome-oriented architectural statements (0.96) outrank component catalogues (0.58).
 5. **`05_resume_level_ranking.json`:** Global résumé evaluator assessing narrative coherence, flagging repeated sentence syntax, and evaluating requirement coverage.
 6. **`06_malformed_recoverable_output.json`:** Provider output wrapped in markdown fences with leading text and trailing commas; demonstrates robust parser recovery without unhandled exceptions.
@@ -223,7 +223,7 @@ To prevent test brittleness and premature coupling to unsettled implementation d
 
 During construction and verification of this evaluation corpus, several domain ambiguities were identified and documented:
 
-1. **React vs React Native vs React.js:** The candidate master profile supports `React` under frameworks. In JD requirements (e.g. C3.ai), terms like `React.js` or `ReactJS` frequently appear. These are canonical synonyms, but must not be extended to match `React Native` or unevidenced alternatives like `Vue` or `Angular`.
+1. **Frontend framework gap:** The current candidate master profile does not list `React`, `React.js`, Vue, or another frontend framework. The C3.ai case therefore records the API/storage evidence as a non-match and keeps the frontend gap explicit rather than importing the earlier corpus assumption.
 2. **Postgres vs PostgreSQL:** JDs regularly alternate between `Postgres` and `PostgreSQL`. While the profile lists `PostgreSQL`, the pipeline must normalize both as identical relational database concepts without penalizing discrepancies.
 3. **Banking Ledger vs Certified Payment Gateway:** Candidate evidence `int_b2` details atomic reservations and double-entry ledgers at MalyTech. This is highly relevant, transferable financial systems engineering, but should not be inflated to claim direct compliance with PCI DSS or direct Visa/Mastercard payment gateway integration.
 4. **Applied ML vs Foundational Research:** Projects such as Sepsis Early Warning (`sepsis_b1`) and Fake Review Detection (`frd_b1`) demonstrate applied ML classification and feature engineering. They satisfy "interest in AI/ML", but should not be mischaracterized as foundational AI research or LLM pretraining.
@@ -248,3 +248,9 @@ Execution command:
 ```bash
 pytest -q tests/tailor2/test_selection_ranking_fixtures.py
 ```
+
+## 9. Integration Reconciliation
+
+The production branch was integrated at the exact committed selection implementation, then the independent corpus was exercised through deterministic compatibility adapters. Four strict acceptance xfails now pass: semantic OR-group parsing, profile-backed skill alias selection, bounded canonical candidate generation, and whole-résumé redundancy detection. The unused-evidence ledger is covered normally; measured rendered blank-space expansion remains one strict xfail because static selection cannot prove page geometry.
+
+The recorded `int_b2` examples previously claimed an unsupported `~40%` lock-contention metric. They now use the canonical profile fact that eight concurrent requests produced exactly one downstream provider call. No target company or target ID was removed.

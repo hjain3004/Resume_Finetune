@@ -266,7 +266,7 @@
     ],
     "protected_facts": [
       "PostgreSQL atomic reservations",
-      "~40% lock contention reduction"
+      "eight concurrent requests produced exactly one downstream provider call"
     ],
     "expected_matches": [
       "int_b2",
@@ -282,7 +282,7 @@
     "forbidden_inferences": [
       "Treating 'Postgres' and 'PostgreSQL' as distinct or incompatible database engines",
       "Penalizing candidate bullet because JD said 'PostgreSQL' and evidence cited 'Postgres'",
-      "Altering, dropping, or rounding the ~40% lock contention reduction metric"
+      "Altering, dropping, or misrepresenting the exactly-one-provider-call concurrency guarantee"
     ],
     "acceptable_variation": [
       "Rendering as 'PostgreSQL' or 'Postgres' in final text",
@@ -310,17 +310,17 @@
       {
         "evidence_id": "cm_b2",
         "entry_id": "campus_marketplace",
-        "summary": "Built dynamic UI components and client-side state handling"
+        "summary": "Implemented marketplace listing and user-management endpoints with S3 image storage and Spring Security JWT authentication"
       }
     ],
     "protected_facts": [
-      "React supported in master profile frameworks",
+      "React is not present in the current master profile",
       "Vue is NOT supported in master profile"
     ],
-    "expected_matches": [
+    "expected_matches": [],
+    "expected_non_matches": [
       "cm_b2"
     ],
-    "expected_non_matches": [],
     "expected_selection_properties": [
       "alias_match_conditioned_on_canonical_support",
       "unsupported_framework_remains_unselected"
@@ -328,14 +328,14 @@
     "expected_ranking_properties": [],
     "expected_runtime_severity": "CLEAN_PASS",
     "forbidden_inferences": [
-      "Injecting Vue.js into profile or résumé merely because it appears in the JD prompt",
-      "Treating React.js as an unevidenced framework when React is canonically supported"
+      "Injecting React.js or Vue.js into profile or résumé merely because it appears in the JD prompt",
+      "Treating API, storage, or authentication work as canonical React evidence"
     ],
     "acceptable_variation": [
-      "Using 'React' or 'React.js' based on stylistic conciseness",
-      "Emphasizing frontend state management and API integration"
+      "Disclosing the frontend framework gap",
+      "Emphasizing the supported API, storage, and authentication evidence separately"
     ],
-    "notes": "Target C3.ai Platform Full-Stack: React/React.js match only when canonically supported; unsupported Vue rejected."
+    "notes": "Target C3.ai Platform Full-Stack: current profile has no canonical React or Vue support, so the frontend gap remains disclosed."
   },
   {
     "case_id": "sel_08_ai_ml_interest_vs_research",
@@ -659,7 +659,7 @@
       {
         "evidence_id": "int_b2",
         "entry_id": "bank_integration_internship",
-        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing lock contention by ~40%"
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, preventing duplicate provider calls under concurrency"
       },
       {
         "evidence_id": "int_b5",
@@ -669,7 +669,7 @@
     ],
     "protected_facts": [
       "PostgreSQL atomic reservations",
-      "~40% lock contention reduction"
+      "eight concurrent requests produced exactly one downstream provider call"
     ],
     "expected_matches": [
       "int_b2"
@@ -686,7 +686,7 @@
     ],
     "expected_runtime_severity": "CLEAN_PASS",
     "forbidden_inferences": [
-      "Ranking configuration tuning above architectural outcome that produced ~40% lock contention reduction"
+      "Ranking configuration tuning above the architectural outcome that prevented duplicate provider calls under concurrency"
     ],
     "acceptable_variation": [
       "Highlighting atomic reservation pattern or race condition mitigation",
@@ -1518,13 +1518,13 @@
       {
         "evidence_id": "int_b2",
         "entry_id": "bank_integration_internship",
-        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing concurrent lock contention by ~40%"
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, preventing duplicate provider calls under concurrency"
       }
     ],
     "protected_facts": [
       "PostgreSQL atomic reservations",
       "Idempotent transfer engine",
-      "~40% lock contention reduction",
+      "eight concurrent requests produced exactly one downstream provider call",
       "MalyTech Software Engineering Intern"
     ],
     "expected_matches": [
@@ -1537,9 +1537,9 @@
     "expected_ranking_properties": [],
     "expected_runtime_severity": "CLEAN_PASS",
     "forbidden_inferences": [
-      "Altering technical guarantees (idempotency, atomic reservations) between variants",
+      "Altering technical guarantees (idempotency, atomic reservations, exactly one downstream provider call) between variants",
       "Inventing new database engines (Redis, DynamoDB) in one of the variants",
-      "Altering or stripping approximation marker (~) across variants or metrics"
+      "Altering or stripping the exactly-one downstream provider-call guarantee across variants"
     ],
     "acceptable_variation": [
       "XYZ structure vs STAR structure",
@@ -1548,7 +1548,7 @@
     "candidate_variants": [
       {
         "variant_id": "v1_xyz",
-        "text": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing concurrent lock contention by ~40% across banking integration services.",
+        "text": "Engineered an idempotent transfer engine with PostgreSQL reservations, preventing duplicate provider calls under concurrency.",
         "evidence_ids": [
           "int_b2"
         ],
@@ -1557,7 +1557,7 @@
       },
       {
         "variant_id": "v2_star",
-        "text": "Resolved high-concurrency race conditions in banking integration by designing atomic reservations in PostgreSQL, achieving ~40% reduction in lock contention.",
+        "text": "Engineered an **idempotent transfer submission engine** using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced **exactly one downstream provider call**.",
         "evidence_ids": [
           "int_b2"
         ],
