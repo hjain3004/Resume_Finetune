@@ -1,0 +1,1106 @@
+[
+  {
+    "id": "int_b1",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Built a commercial bank's four-adapter onboarding integration layer and the Core service orchestrating three of the adapters, as five asynchronous Python microservices.",
+    "medium": "Built the **anti-corruption layer** of four adapter services between a commercial bank's core and providers for telecom messaging, real-time transfers, identity verification, and AML screening, then the **Core onboarding service** orchestrating three of those four through one non-blocking API, five asynchronous Python microservices in all.",
+    "evidence": [
+      "Four adapter services: gab_sms (telecom), pesalink (PesaLink network), gab_iprs (IPRS registry), OMNI/CIP (Infrasoft AML); one Core onboarding service orchestrating three of them",
+      "Core ingress: POST /v1/onboarding/cases then POST /v1/onboarding/cases/{id}/steps -> 202 Accepted; a database-backed dispatcher worker calls the adapter out of band",
+      "Shared layered architecture: HTTP middleware onion -> service layer -> domain (Pydantic/errors/config) -> data (async engine, append-only event log ORM)",
+      "Each service isolates vendor quirks behind a single client class (ACL pattern) across the five services"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b2",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Engineered an idempotent transfer engine with PostgreSQL reservations, preventing duplicate provider calls under concurrency.",
+    "medium": "Engineered an **idempotent transfer submission engine** using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced **exactly one downstream provider call**.",
+    "evidence": [
+      "concurrency_test.py: 8 identical parallel requests -> exactly one 200, losers 409/429, zero 5xx, mock vendor call counter == 1",
+      "Idempotency state machine: reserved / completed-replay / 422 IDEMPOTENCY_CONFLICT on hash mismatch / 409 DUPLICATE_IN_PROGRESS / 24h TTL reclamation",
+      "Payload hash = SHA-256 over canonical JSON with message_validation stripped",
+      "8 request types: PESALINK (IDENTIFICATION_VERIFICATION, CREDIT_TRANSFER, PHONE_/WALLET_CREDIT_TRANSFER) + PESALINK_LOOKUP (QUERY/REGISTER/UPDATE/DELINK_CUSTOMER)",
+      "Success requires all three: general_data.error_code 00 AND core_response.olErrorCode 0 AND pesalinkDetails.err_code 000"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b3",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Designed a fail-closed AML sanctions screening gateway serving REST and legacy SOAP consumers, with credential isolation and PII redaction.",
+    "medium": "Designed a **fail-closed AML sanctions gateway** that errors on backend faults or invalid responses instead of returning a false clear, serving REST/JSON and legacy SOAP/XML from shared orchestration; hardened all four services with **credential isolation, recursive PII redaction, and XML-injection resistance**.",
+    "evidence": [
+      "Typed error map: AML_UNAVAILABLE / AML_FAULT / AML_BAD_RESPONSE -> 502; DATABASE_UNAVAILABLE -> 503 with session rollback",
+      "Dual ingress: POST /api/v1/screening (JSON) and POST /services/NameScreening (SOAP getCIPMatch) over one orchestration layer",
+      "lxml for XML-bomb resistance; xml.sax.saxutils.escape on all outbound interpolation",
+      "Mock AML trigger keywords TRIGGER_503 / TRIGGER_FAULT / TRIGGER_MALFORMED / TRIGGER_TIMEOUT, themselves unit-tested",
+      "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side",
+      "pydantic.SecretStr for all credentials; recursive redaction of api_user/api_password/token/password and x-api-key/authorization headers",
+      "redact_pii() preserves last 4 chars only, applied across JSON and XML name/passport/dob/nationality fields"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b4",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Built an interbank transfer adapter with declarative security-stamp generation and three-layer response validation across eight transaction types.",
+    "medium": "Delivered an **interbank transfer adapter supporting eight transaction types**, implementing declarative **Base64 security-stamp generation** and three-layer response validation across ESB, core-banking, and network codes before confirming success.",
+    "evidence": [
+      "8 request types: PESALINK (IDENTIFICATION_VERIFICATION, CREDIT_TRANSFER, PHONE_/WALLET_CREDIT_TRANSFER) + PESALINK_LOOKUP (QUERY/REGISTER/UPDATE/DELINK_CUSTOMER)",
+      "Declarative stamp field-spec per request type; colon-joined then Base64; missing required field raises before the wire call",
+      "Success requires all three: general_data.error_code 00 AND core_response.olErrorCode 0 AND pesalinkDetails.err_code 000",
+      "Money validated as ^\\d+\\.\\d{2}$ (no floating-point currency); phone as ^\\+254-\\d{9}$"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b5",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Implemented intent-before-call audit logging and Redis rate limiting to safeguard provider integrations.",
+    "medium": "Implemented **intent-before-call audit logging** in PostgreSQL prior to network dispatch, coupled with **Redis rate limiting** to prevent downstream provider quota exhaustion.",
+    "evidence": [
+      "db_models.py append-only event log ORM; transitions INITIATED -> ACCEPTED|FAILED add rows, never update",
+      "Fixed-window counters keyed (bucket_key, window_start) via atomic ON CONFLICT DO UPDATE ... RETURNING count",
+      "IPRS second dimension is id:{id_number} at 20/min - the individual looked up, not the caller"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b6",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Validated payment workflows across 243 integration tests covering timeout recovery and error mapping.",
+    "medium": "Validated payment workflows across **243 integration tests**, verifying timeout recovery, payload tampering rejection, and provider error mapping against mock banking stubs.",
+    "evidence": [
+      "Static count of test functions: 60 + 54 + 52 + 67 = 233 across the four services",
+      "respx HTTP mocking; pytest-asyncio; mock vendor backends with injectable failure modes"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b7",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Processed asynchronous payment events via RabbitMQ and verified HMAC-SHA256 webhook signatures.",
+    "medium": "Processed asynchronous payment events via **RabbitMQ message consumers**, verifying **HMAC-SHA256 signatures on inbound PesaLink webhooks** before triggering account state updates.",
+    "evidence": [
+      "aio_pika.connect_robust; durable iprs_webhook_tasks queue, DeliveryMode.PERSISTENT, prefetch_count=10; separate `python -m app.worker` consumer",
+      "PesaLink webhooks: canonical JSON (sort_keys, tight separators), HMAC-SHA256 in X-PesaLink-Signature, ladder 0s/10s/30s/2m/10m then permanent failed"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b8",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Hardened integration services with per-adapter credential isolation and sensitive data masking.",
+    "medium": "Hardened integration services through **per-adapter credential isolation**, strict TLS enforcement, and account-number masking across application logs and database records.",
+    "evidence": [
+      "Inbound message_validation block (api_user/api_password/token) parsed then discarded; service injects its own vendor credentials server-side",
+      "pydantic.SecretStr for all credentials; recursive redaction of api_user/api_password/token/password and x-api-key/authorization headers",
+      "redact_pii() preserves last 4 chars only, applied across JSON and XML name/passport/dob/nationality fields",
+      "Vendor client: asyncio.Lock with double-checked locking on the token cache; 401 -> flush, re-auth, replay exactly once; second 401 -> 502"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b9",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Built a distributed poller with PostgreSQL leases and atomic claims for resilient retry handling.",
+    "medium": "Built a **distributed transfer poller** using PostgreSQL leases and atomic worker claims, automating timeout reclamation and bounded exponential backoff.",
+    "evidence": [
+      "app/dispatcher.py claim_pending_invocation: conditional UPDATE guarded on the row still being claimable, decided by rowcount, retried up to 3 times",
+      "_claimable_invocation_clause re-claims PENDING, DISPATCHING past dispatch_lease_until, and DISPATCH_FAILED past next_attempt_at",
+      "MAX_DISPATCH_ATTEMPTS = 5; backoff = base * 2**attempt + uniform(0, jitter); terminal state DISPATCH_ABANDONED",
+      "tests/test_dispatcher.py: test_concurrent_dispatch_pending_once_claims_only_one_invocation, test_dispatch_pending_once_reclaims_expired_lease, test_full_retry_lifecycle_pending_to_abandoned, test_retry_reuses_idempotency_key",
+      "request_payload cleared at DISPATCHED and DISPATCH_ABANDONED, bounding inbound-PII retention to the dispatch lifecycle (4 dedicated tests)",
+      "Step idempotency at ingress: UNIQUE(onboarding_case_id, idempotency_key) with an IntegrityError fallback that returns the original invocation"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b10",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Built a transactional outbox over RabbitMQ with publisher confirms and consumer deduplication, ensuring reliable at-least-once delivery.",
+    "medium": "Built a **transactional-outbox pipeline over RabbitMQ with publisher confirms**, combining consumer deduplication and commit-before-ack processing to guarantee **at-least-once delivery with consumer-side deduplication** while dead-lettering invalid payloads.",
+    "evidence": [
+      "app/outbox.py enqueue_events adds outbox rows to the same session as the business write, so both commit or neither does",
+      "app/outbox_publisher.py drains oldest-first over a channel opened with publisher_confirms=True; message_id = event_id, DeliveryMode.PERSISTENT, published_at watermark and attempt_count per row",
+      "repositories.py _commit_idempotently: fetch-existing, insert, catch IntegrityError and re-read, backed by unique consumed_response_event / consumed_audit_event tables",
+      "Consumers reject with requeue=False on JSON, validation, schema-version, or message_id mismatch (-> DLQ); requeue=True on SQLAlchemyError",
+      "_upsert_step_state guards with WHERE current_event_at < event.occurred_at, so out-of-order delivery cannot regress state",
+      "app/rabbitmq.py: one durable topic exchange onboarding.events with 6 queues - core.response.v1 and core.audit.v1, each with a .retry (x-message-ttl 5000, dead-letter return) and a .dlq - bound by wildcard so a new service needs no new binding",
+      "tools/verify_final.py republishes a real response event twice against the live stack and asserts the response_delivery row count for that event_id stays 1"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b11",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Segregated operational state and audit evidence into separately credentialed PostgreSQL databases, enforcing contract-level allowlists.",
+    "medium": "Segregated operational state and audit evidence into **two PostgreSQL databases with separate credentials and no cross-store foreign keys**, committing intent before dispatch and enforcing a **seven-field allowlist inside strict event contracts**.",
+    "evidence": [
+      "Separate RESPONSE_DATABASE_URL and AUDIT_DATABASE_URL, separate engines and sessionmakers, separate declarative bases (ResponseBase / AuditBase); audit_evidence holds no FK into the response store",
+      "contracts.py: _EventContext is extra='forbid', frozen=True; ResponseEvent.sanitized_response runs sanitize_core_response as a Pydantic field_validator",
+      "_CORE_RESPONSE_ALLOWLISTS: iprs 7 fields, omni_screening 8, pesalink 7; a 31-token plus 11-compound heuristic scrubber with camelCase-boundary splitting is a second, independent layer",
+      "Audit evidence retains audit_action, provider_attempt, retry_count and an external payload_reference - never the raw provider payload",
+      "Allowlist re-applied on read in the case and activity APIs, so sanitization happens on write and again on read",
+      "tests/test_audit_extensions.py::test_endpoints_never_leak_pii_or_request_payload; tests/test_contracts.py covers nested, list, financial and birthdate redaction"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b12",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Developed an automated integration verification harness validating network isolation, API-key authentication, and event deduplication.",
+    "medium": "Developed an **automated integration verification harness** using Docker Compose across adapter microservices, validating **network boundary isolation, API-key authentication matrices**, duplicate-event deduplication, and zero dead-letter queue depth.",
+    "evidence": [
+      "tools/verify_final.py writes reports/evidence/verify_final_<epoch>.json only after every assertion passes",
+      "Host-unreachability assertions on the adapter ports; in-network auth matrix of 3 adapters x {missing, invalid, valid} X-API-Key asserting 401/401/2xx",
+      "SELECT count(*) FROM response_delivery WHERE external_reference LIKE 'direct-%' must be 0 - a direct adapter call must never produce a Core record",
+      "Duplicate republish of a real event with message_id preserved, twice, then asserts the row count for that event_id is still 1",
+      "All 6 queues present; .retry and .dlq depth 0; core.response.v1 and core.audit.v1 each with at least one live consumer",
+      "FORBIDDEN_STRINGS: 26 provider-shaped field names and literal probe values scanned across the serialized evidence blob",
+      "tests/test_compose_isolation.py fails if any service in docker-compose.integrated.yml declares host ports",
+      "Dated verification reports with PASS verdicts and matching evidence filenames under audit_docs/reports/"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "int_b13",
+    "entry_id": "bank_integration_internship",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Engineering Intern",
+    "claim_type": "verified",
+    "short": "Built a database-backed TTL response cache using canonical SHA-256 keys with excluded credentials.",
+    "medium": "Built a **database-backed TTL response cache** for national identity queries, constructing canonical SHA-256 keys that excluded caller credentials and per-request reference numbers to prevent redundant upstream lookups.",
+    "evidence": [
+      "gab_iprs/app/services/response_cache.py: cache_key = SHA-256 over json.dumps({request_type, body}, sort_keys=True, separators=(',',':'))",
+      "Credentials and external reference numbers are excluded from the key because they do not affect the IPRS result",
+      "Lazy expiry on read plus a cleanup_expired sweep; TTL from settings.response_cache_ttl_seconds",
+      "Cache hits surface downstream as response_origin=cache on the Core response event, so a cached answer is distinguishable in the audit trail"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b00_order_management_domain",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Built and maintained Java and Spring Boot microservices for the Order Management domain, automating builds, tests, and deployments to OpenShift through Jenkins CI/CD.",
+    "medium": "Built and maintained the **Java and Spring Boot microservices** behind the Order Management domain across Catalog, Shopping Cart, Proposal, and Agreement, automating builds, tests, and deployments to OpenShift with a **Jenkins CI/CD pipeline**.",
+    "evidence": [
+      "amdocs_software_developer.scope_line names the Order Management domain (Catalog, Shopping Cart, Proposal and Agreement), Java and Spring Boot microservices, Jenkins pipelines, and OpenShift deployment",
+      "Present as the opening bullet on all three prior resume versions"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b01_dlq_consolidation",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Cut idle Kafka topic sprawl by 70% by consolidating 862 dead-letter topics into shared per-subdomain DLQs behind a feature-flagged Helm function.",
+    "medium": "**Cut idle Kafka topic sprawl by 70% and reclaimed ~80% of empty DLQ partitions** by consolidating 862 per-consumer dead-letter topics across 11 deployments into one shared DLQ per subdomain, delivered behind a feature-flagged **Helm binding function**.",
+    "evidence": [
+      "Interview prep doc, DLQ section: instanceBind Helm function, sharedDlqTopicsEnabled flag defaulting false, error.<subdomain> naming",
+      "Migration runbook: enable flag -> drain under retention -> cleanup script -> rollback via flag or per-topic dlqTopicName override",
+      "D1 test suite defect found and fixed: Helm function reading wrong values path"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b02_row_level_entitlement",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Co-built a Java row-level entitlement library that returned only authorized rows by chaining JWT claim validators at the database layer, failing closed with HTTP 403.",
+    "medium": "Enforced **tenant data isolation** by co-building a Java row-level entitlement library that translated JWT claims into **Couchbase N1QL and Elasticsearch query predicates**, pre-filtering rows and failing closed with HTTP 403.",
+    "evidence": [
+      "Prep doc, data fencing section: CustomerIdValidator, MultiCustomerIdValidator, ExtUserAccessGroupIdListValidator (highest priority, fail-closed)",
+      "datafencing.extensions.customValidators flag making single- and multi-customer validators mutually exclusive",
+      "updateResource() hook stamping caller access groups into new resources' ExternalIdentifier array"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b03_audit_trail",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "estimated",
+    "short": "Cut issue-resolution time by ~60% with an append-only Kafka and Elasticsearch audit trail that replaced multi-service log correlation with a single filtered query.",
+    "medium": "**Cut issue-resolution time by ~60%** by replacing multi-service log correlation with a single filtered query, building an **append-only Kafka and Elasticsearch audit trail** that indexed actor-attributed lifecycle events with correlation IDs.",
+    "evidence": [
+      "Prep doc, traceability section: catalog config table driving which actions are tracked; tracking ID generation",
+      "Actor resolution: preferred_username from JWT mapped through workforce API to user ID",
+      "Cross-domain case: Product Order events resolved to proposalId via PO externalIdentifier array by category"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b04_data_retention",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "estimated",
+    "short": "Reduced production data footprint by ~40% and query latency by ~25% using policy-driven retention and Kafka-based archival.",
+    "medium": "**Reduced production data footprint by ~40% and query latency by ~25%** by implementing policy-driven retention across three microservices, combining REST lifecycle APIs and **Kafka archival with archive-before-delete ordering**.",
+    "evidence": [
+      "Prep doc, purge and archive section: retention rules (rejected/cancelled proposals >1mo purge; active agreements >1yr archive; rejected agreements >1mo purge)",
+      "Mass-process framework for bulk execution; Archive service completion and failure events; get-from-archive API"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b05_test_automation",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "estimated",
+    "short": "Reduced manual end-to-end effort by ~50% by automating Newman API tests in Jenkins with JSON-schema validation.",
+    "medium": "**Reduced manual end-to-end effort by ~50% and cross-service defects by ~40%** by automating Postman/Newman suites with **JSON-schema validation in Jenkins** to catch contract drift at build time.",
+    "evidence": [
+      "Prep doc, testing section: pre-request scripts for correlation IDs, pm.test assertions, per-environment variable files",
+      "WireMock scenarios: 201 happy path, 500 to verify non-blocking handling, 30s fixed delay for timeout behavior"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b07_code_quality_gates",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Raised unit-test coverage to 90% across four microservices using JUnit 5 and Mockito, resolving ~500 SonarQube findings.",
+    "medium": "**Raised unit-test coverage to 90%** across four microservices using **JUnit 5, Mockito, and WireMock**, resolving ~500 SonarQube findings behind enforced deployment quality gates.",
+    "evidence": [
+      "Prep doc, testing section: JUnit 5, Mockito, WireMock stubs for downstream dependencies",
+      "Jenkins quality gates failing builds on new-code coverage and new critical issues; ~500 smells cleared"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b06_aws_ci_transition",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Contributed to migrating continuous integration to Amazon Web Services (AWS) through Jenkinsfiles, Maven profiles, and Helm charts.",
+    "medium": "Contributed to migrating the domain's continuous integration to **Amazon Web Services (AWS)** through AWS-specific Jenkinsfiles, Maven profile updates, and **Helm chart configurations**.",
+    "evidence": [
+      "Prep doc: new Jenkinsfile_Org_aws, Maven AWS profiles, Helm value changes, backward-compatible cutover"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "am_b08_human_task_resilience",
+    "entry_id": "amdocs_software_developer",
+    "section": "Experience",
+    "company_or_project": "",
+    "title": "Software Developer",
+    "claim_type": "verified",
+    "short": "Integrated an external task service into sign-off with feature flags and non-blocking failure handling.",
+    "medium": "Integrated an external task service into agreement sign-off behind **per-flow feature flags**, implementing **non-blocking failure handling** so downstream service outages could not disrupt core business transactions.",
+    "evidence": [
+      "Human Task integration: rich payload mapping, dedicated task types per flow, searchable Agreement/Site IDs, warn-and-proceed on failure"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b01_ingestion_scale",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Surfaced 164 qualifying roles in a run that discovered 3,212 listings and resolved 2,019 current and backlog job descriptions.",
+    "medium": "Surfaced **164 qualifying US early-career roles** from a seven-day discovery window by building a deterministic Python pipeline that discovered 3,212 listings, inserted 3,176 records, and resolved **2,019 current and backlog job descriptions** in 1 hour 43 minutes.",
+    "evidence": [
+      "review/2026-09-08-ingest/REPORT.md sections 3, 4, and 6: run 22 timing, 3,212 discovered, 3,176 inserted, 2,019 resolved, and 164 qualifying",
+      "src/run_ingest.py: orchestrates discovery, persistence, resolution, eligibility, liveness, audit, and digest generation"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b02_eligibility_engine",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Filtered 1,766 listings through typed eligibility gates while preserving the source job description and an auditable rejection reason.",
+    "medium": "Filtered **1,766 ineligible listings** through a typed two-stage policy engine spanning location, work authorization, role family, seniority, opportunity type, and start date while preserving an **auditable reason** for every decision.",
+    "evidence": [
+      "review/2026-09-08-ingest/REPORT.md sections 4 and 8: 1,766 filtered with exact reason breakdown",
+      "src/eligibility.py and src/prefilter.py: pure typed classifier plus pre- and post-resolution gate adapters",
+      "config/eligibility.yaml and config/location_taxonomy.yaml: validated business policy and vocabulary"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b03_resolution_runtime",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Built pluggable ATS resolvers with content-quality gates, per-host throttling, typed failures, and circuit-broken browser fallback.",
+    "medium": "Engineered a **pluggable ATS resolution layer** across Greenhouse, Lever, Ashby, Workday, Amazon Jobs, and Jobright with quality-gated fallbacks, per-host rate limiting, typed failures, and a **run-scoped browser circuit breaker**.",
+    "evidence": [
+      "src/resolve/: router and dedicated Greenhouse, Lever, Ashby, Workday, Amazon Jobs, Jobright, generic, wrapper, and browser modules",
+      "src/resolve/outcomes.py and src/resolve/tier2.py: typed orchestration outcomes and run-scoped browser lifecycle",
+      "docs/ARCHITECTURE.md sections 6.1-6.5: implemented routing, throttling, fallback, and runtime-hardening contracts"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b04_idempotent_lifecycle",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Designed an idempotent SQLite state machine with atomic checkpoints, collision-safe identities, bounded retries, and liveness checks.",
+    "medium": "Designed an **idempotent SQLite lifecycle** with forward-only state transitions, durable insert-before-checkpoint ordering, collision-safe posting identities, bounded retries, compare-and-set remediation, and **dead-link liveness checks**.",
+    "evidence": [
+      "src/db.py: lifecycle schema, idempotent migrations, state transitions, collision keys, compare-and-set closures, and read-only tailoring queries",
+      "src/discover/base.py and src/run_ingest.py: pending checkpoints committed only after durable database insertion",
+      "src/freshness.py: repost detection, reopen handling, and liveness rechecks"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b05_duplicate_clustering",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Clustered 164 qualifying rows into 154 scoring objects using content hashes and Jaccard similarity while preserving source-row lineage.",
+    "medium": "Reduced **164 qualifying rows to 154 scoring objects** using exact content hashes, normalized titles, and **5-word-shingle Jaccard clustering**, preserving complete source-row lineage for score import.",
+    "evidence": [
+      "scripts/export_batch.py: _cluster_rows combines content hash, normalized title, and Jaccard similarity with a 0.85 threshold",
+      "review/2026-09-08-ingest/REPORT.md sections 6 and 9: 164 qualifying rows and the regenerated 154-object fresh batch",
+      "src/textsim.py: normalized text, SHA-256 content hashing, 5-word shingles, and Jaccard similarity"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b06_scoring_stability",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Reduced mean LLM score movement from 0.67 to 0.20 with three-pass self-consistency, median aggregation, and validated score import.",
+    "medium": "Cut mean absolute LLM score movement from **0.67 to 0.20** by scoring six-role chunks three times and aggregating median scores and majority-vote variants before **schema-validated SQLite import**.",
+    "evidence": [
+      "docs/superpowers/reports/2026-07-16-project-progress-errors-and-tailoring-forecast.md section 5: measured 0.67 to 0.20 movement and threshold-flip reduction",
+      "scripts/score_batch.py: CHUNK_SIZE=6, SELF_CONSISTENCY_K=3, median score and majority-vote variant aggregation",
+      "scripts/import_scores.py: strict schema, row-coverage validation, and transactional database update"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b07_model_authority_boundary",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Isolated LLMs behind a tool-free text boundary while deterministic code owned validation, traces, and all database and filesystem writes.",
+    "medium": "Contained LLMs behind a **least-authority text-in/text-out boundary** with no database or repository access, while deterministic Python owned schema validation, trace capture, and **every filesystem and SQLite write**.",
+    "evidence": [
+      "scripts/score_batch.py module contract: prompt content embedded directly; nested scorer has zero filesystem authority",
+      "src/tailor/invoke.py and src/tailor/providers.py: tool-disabled Claude invocation and direct tool-free Gemini/OpenAI HTTP calls",
+      "src/llm_trace.py: wrapper-owned immutable invocation traces with prompt hashes and raw output"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b08_tailoring_orchestration",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Implemented an agentic AI tailoring workflow with evidence selection, bounded edits, independent LLM evaluation, one-page rendering, and review.",
+    "medium": "Implemented a **resumable agentic AI workflow** for resume tailoring across requirement extraction, evidence selection, bounded alignment, deterministic lint, independent LLM evaluation, **one-page LaTeX rendering**, and human review.",
+    "evidence": [
+      "src/tailor/pilot.py: resumable S1, S0, S2, S3, G2, render, and G3 orchestration with per-stage manifests",
+      "src/tailor/alignment_view.py and src/tailor/artifacts.py: canonical projections, SHA-256 fingerprints, and atomic JSON artifacts",
+      "src/render/tailored.py, src/render/latex.py, and src/render/l7.py: deterministic projection, PDF generation, and post-render checks"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b09_jd_provenance",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Bound JD hashes and source evidence into fail-closed manifests, preventing aggregator summaries or unverified text from being tailored.",
+    "medium": "Enforced a **fail-closed JD provenance boundary** that binds content hashes, source and ATS metadata, and database verification or user attestation into each run, blocking **aggregator summaries and manifest drift**.",
+    "evidence": [
+      "src/tailor/provenance.py: typed provenance states, canonical fingerprints, content hashes, and database verification",
+      "src/tailor/lane.py: manifest v2 binds the verified provenance fingerprint to every file-fed run",
+      "tests/tailor/test_provenance.py and tests/tailor/test_lane.py: tampering, mismatch, and fail-closed cases"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b10_atomic_publication",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Built crash-consistent exports with immutable generations, stable indirection, one atomic commit point, and failure-injection tests.",
+    "medium": "Made exports **crash-consistent** with immutable generations, stable symlink indirection, and a **single atomic pointer swap**, backed by collision refusal and filesystem-level failure-injection tests.",
+    "evidence": [
+      "scripts/export_shortlist.py: generation directories, current pointer, compatibility indirections, and os.replace commit point",
+      "scripts/tailor_now.py export-jd: collision refusal, hidden temporary files, validation, and atomic installation",
+      "tests/tailor/test_provenance.py and tests/test_tailor_now_cli.py: multi-stage publication and crash-injection coverage"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b11_multi_provider",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Unified Claude, Gemini, and OpenAI behind a tool-free typed interface with credential checks, bounded diagnostics, and authority canaries.",
+    "medium": "Built one **typed model interface for Claude, Gemini, and OpenAI** with tool-free invocation, credential preflight, bounded diagnostics, strict response extraction, trace labels, and **authority-canary tests**.",
+    "evidence": [
+      "src/tailor/providers.py: Provider and ModelCommand contracts, safe command construction, credential checks, and authority canary evaluation",
+      "src/tailor/invoke.py: Claude subprocess plus direct Gemini and OpenAI HTTP invocation adapters",
+      "tests/tailor/test_providers.py and tests/tailor/test_invoke.py: deterministic provider, security, and error-path coverage"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b12_audit_framework",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Built a 14-invariant audit suite for source health, data integrity, lifecycle legality, LLM traces, prompt isolation, and score quality.",
+    "medium": "Implemented a **14-invariant audit framework** spanning source and resolver health, duplicate leakage, state legality, eligibility drift, LLM traceability, prompt isolation, score integrity, and **stale-shortlist detection**.",
+    "evidence": [
+      "src/audit/: deterministic source, export, database, and LLM invariant modules",
+      "scripts/audit.py: audit CLI and structured JSON report generation",
+      "docs/ROADMAP.md Phase 1 and docs/SELF_HEALING.md: 14-invariant contract and operational response policy"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b13_research_banks",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Built validated company and resume evidence banks with quote anchoring, privacy checks, duplicate detection, and atomic promotion.",
+    "medium": "Built **versioned company and resume evidence banks** with strict schemas, source-quote anchoring, privacy and domain checks, duplicate detection, deterministic lookup, and **atomic corpus promotion**.",
+    "evidence": [
+      "src/company_bank/: typed research bundles, source policy, validation, lookup, and atomic corpus importer",
+      "src/resume_evidence/: outcome evidence model, privacy and attribution policy, duplicate detection, reporting, and atomic promotion",
+      "scripts/company_bank.py and scripts/resume_evidence.py: deterministic operator CLIs"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b14_agentic_discovery_design",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Designed an agentic AI discovery plane with deterministic provenance, policy, quality, budget, deduplication, and human approval gates.",
+    "medium": "Designed a **staged agentic AI discovery control plane** in which LLM and crawler outputs remain proposals until deterministic provenance, policy, quality, deduplication, budget, and **human-promotion gates** pass.",
+    "evidence": [
+      "docs/ARCHITECTURE.md sections 4.5 and 5.4: approved hybrid discovery records, staging boundary, and acceptance gateway",
+      "docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md: versioned M9D control-plane design"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "rft_b15_budgeted_browser_backend",
+    "entry_id": "resume_finetune_pipeline",
+    "section": "Projects",
+    "company_or_project": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "title": "ResumeFinetune - Automated Job Search and Resume Tailoring Platform",
+    "claim_type": "verified",
+    "short": "Integrated a budget-aware Firecrawl backend with credit reconciliation, cooldowns, deterministic acceptance, and no double-fetch fallback.",
+    "medium": "Integrated a **credit-bounded Firecrawl REST backend** with reservation and reconciliation accounting, cooldown and budget enforcement, deterministic content gates, and an **exclusive backend switch** that prevents duplicate paid fetches.",
+    "evidence": [
+      "src/firecrawl/client.py and src/firecrawl/budget.py: REST transport, reservation ledger, reconciliation, cooldown, and budget checks",
+      "src/run_ingest.py _build_tier2_client: exactly one of Crawl4AI, Firecrawl, or off is constructed per run",
+      "docs/ROADMAP.md M9F-0: offline verification plus one user-supervised live scrape smoke; feature remains disabled by default"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b01_event_sourcing",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "verified",
+    "short": "Designed an event-driven P2P membership layer with an append-only event log and deterministic snapshot projection to maintain consistent local peer rosters.",
+    "medium": "Designed the event-driven membership layer for a **peer-to-peer chat system**, building an **append-only event log with deterministic snapshot projection** and state transition guards to maintain consistent local peer rosters.",
+    "evidence": [
+      "peer_discovery/membership/event_log.py: monotonic seq_no, RLock-guarded append, StaleTermError on term regression",
+      "peer_discovery/membership/snapshot.py: apply_event with _ALLOWED_FROM_STATES guards; zero wall-clock reads",
+      "test: build snapshot twice from same log, assert identical serialization"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b02_network_layer",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "verified",
+    "short": "Implemented gossip dissemination with LRU dedup, SWIM-inspired failure detection, and trust-on-first-use key exchange over WebSockets.",
+    "medium": "Implemented the network layer: gossip dissemination with LRU-backed dedup and single-hop cycle-breaking, SWIM-inspired two-phase failure detection, and trust-on-first-use public-key exchange over a shared WebSocket transport.",
+    "evidence": [
+      "peer_discovery/network/gossip.py: MAX_SEEN_EVENTS = 10_000; dedup key f'{originator}:{seq_no}:{event_type}:{user_id}'; source=='remote' not re-gossiped",
+      "peer_discovery/membership/presence.py: injectable time_fn; ACTIVE -> SUSPECTED -> DISCONNECTED",
+      "peer_discovery/network/discovery_node.py: lazy_register_pubkey planted on BroadcastNode.pre_verify_hook, idempotent"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b03_testing_rigor",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "verified",
+    "short": "Covered the module with 92 unit and integration tests, including concurrency and two-node end-to-end cases.",
+    "medium": "Validated with 92 unit and integration tests, including fake-clock deterministic failure-detection tests, a 500-append concurrency test, and a two-node end-to-end handshake.",
+    "evidence": [
+      "python3 -m pytest peer_discovery/ -q  ->  92 passed",
+      "peer_discovery/membership/tests/: FakeClock injected via PresenceManager(time_fn=...)",
+      "peer_discovery/network/tests/test_gossip.py, _helpers.FakeBroadcastNode"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b04_transport_consolidation",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "scoped",
+    "short": "Eliminated a redundant TCP and crypto stack by consolidating peer discovery onto a shared WebSocket transport.",
+    "medium": "Resolved a cross-machine discovery failure by **consolidating peer discovery onto a shared WebSocket connection**, eliminating a redundant TCP/crypto stack and leaving **one port and one retry queue**.",
+    "evidence": [
+      "peer_discovery/network/gossip.py docstring: 'outbound only after the consolidation'",
+      "Commit history under Himanshu Jain: removal of the standalone discovery transport"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b05_tofu_bootstrap",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "verified",
+    "short": "Implemented trust-on-first-use public key bootstrapping with an idempotent hook that extracts and caches keys from signed envelopes.",
+    "medium": "Implemented **trust-on-first-use public key bootstrapping** through an idempotent pre-verification hook, extracting and caching sender keys from signed message envelopes to verify all incoming payloads.",
+    "evidence": [
+      "peer_discovery/network/discovery_node.py: lazy_register_pubkey, registered on BroadcastNode.pre_verify_hook",
+      "Hook is idempotent (skips if registry already holds a key) and decrypts a copy rather than mutating the message"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "pc_b06_two_laptop_validation",
+    "entry_id": "peerchat_peer_discovery",
+    "section": "Projects",
+    "company_or_project": "PeerChat - Peer Discovery Module",
+    "title": "PeerChat - Peer Discovery Module",
+    "claim_type": "observed",
+    "short": "Validated the join handshake across two physical machines on a LAN, with a joining node reaching ACTIVE in about 200 ms and bidirectional heartbeats sustained for over 30 minutes without a drop.",
+    "medium": "",
+    "evidence": [
+      "Manual two-machine run on 10.0.0.0/24, 2026-05-17; not reproducible in CI"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b1",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "scoped",
+    "short": "Led a four-person team building an early sepsis prediction system across 40,336 ICU patients, predicting onset six hours ahead.",
+    "medium": "Led a four-person team building an **early sepsis prediction system across 40,336 ICU patients**, establishing patient-disjoint splits and feature pipelines targeting onset **six hours prior to clinical suspicion**.",
+    "evidence": [
+      "results/final_results.csv (Ensemble U_norm = 0.4387)",
+      "README.md results table"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b2",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Trained a PyTorch GRU-D network modeling irregular clinical sampling intervals, achieving 0.400 normalized utility on 40 variables.",
+    "medium": "Trained a **PyTorch GRU-D network** that explicitly modeled irregular clinical sampling and decay dynamics, achieving **0.400 normalized utility** on 40 clinical variables as the study's top individual model.",
+    "evidence": [
+      "notebooks/grud_new.ipynb (GRUDCell, GRUDModel)",
+      "results/final_results.csv (GRU-D U_norm = 0.4003)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b3",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Built a calibrated meta-stacking ensemble fusing XGBoost and GRU-D through isotonic calibration and a logistic-regression stacker.",
+    "medium": "Designed a **calibrated meta-stacking ensemble** isotonically calibrating XGBoost and GRU-D outputs and fusing them through a logistic-regression stacker, **lifting normalized utility about 10%** over the best single model.",
+    "evidence": [
+      "notebooks/sepsis_ensemble.ipynb",
+      "results/final_results.csv (0.4387 vs GRU-D 0.4003 = +9.6%)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b5",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Identified a temporal shortcut via ablation, showing that removing ICU length-of-stay collapsed model utility from 0.320 to -0.006.",
+    "medium": "Ran an ablation showing that removing ICU length-of-stay collapsed Random Forest utility from 0.320 to -0.006, **exposing a temporal shortcut** that artificially inflates retrospective sepsis models.",
+    "evidence": [
+      "results/iculos_ablation.csv (RF with ICULOS 0.3204, without -0.0063)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b4",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Stabilized divergent GRU-D training under 44:1 class imbalance using positive-class weighting, warmup, and gradient clipping.",
+    "medium": "Overcame severe training divergence under **44:1 class imbalance** by combining **positive-class loss weighting, warmup, and gradient clipping**, stabilizing GRU-D optimization toward convergence.",
+    "evidence": [
+      "notebooks/grud_new.ipynb training cell: pos_weight, WARMUP_STEPS=200, clip_grad_norm_=1.0, logit clamp +/-15, recurrent dropout mask"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b6",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Achieved 0.880 ROC-AUC and 88.5% sensitivity six hours before sepsis onset when evaluating an XGBoost model across hospitals.\"",
+    "medium": "Evaluated cross-hospital generalization by testing an **XGBoost model on an external hospital**, achieving **0.880 ROC-AUC and 88.5% sensitivity** six hours prior to clinical onset.",
+    "evidence": [
+      "results/lead_time_summary.csv (Hospital B, RF: median 32.0h, fraction >=6h = 0.891, 1142 septic patients)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b7",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Demonstrated that rule-based scoring baselines (qSOFA, NEWS) scored negative utility under PhysioNet evaluation metrics.\"",
+    "medium": "Benchmarked ML models against **rule-based clinical baselines (qSOFA and NEWS)** under PhysioNet utility metrics, demonstrating that high false-alarm rates drove baseline clinical utility below zero.",
+    "evidence": [
+      "results/rule_baselines.csv (qSOFA >=2: U_norm -0.2426; NEWS >=5: U_norm -0.4630)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b8",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "scoped",
+    "short": "Engineered a 175-feature clinical pipeline over 40 physiological signals evaluated strictly across patient-disjoint splits.",
+    "medium": "Built a **175-feature clinical pipeline** over 40 raw physiological signals with rolling statistics and measurement frequencies, computed strictly within **patient-disjoint splits**.",
+    "evidence": [
+      "notebooks/sepsis_corrected.ipynb",
+      "README.md Method Summary section 1"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b10",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "scoped",
+    "short": "Interpreted model behavior with SHAP attribution and 30+ per-patient trajectory case studies across true positives, false positives, and misses.",
+    "medium": "Interpreted model behavior with SHAP attribution and 30+ per-patient trajectory case studies spanning true positives, false positives, and missed cases, turning opaque risk scores into clinically reviewable evidence.",
+    "evidence": [
+      "figures/shap_xgb_summary_latest.png, figures/shap_rf_summary_latest.png",
+      "results/figures/case_studies/ (33 plots)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b9",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Evaluated five tabular models, GRU-D, and two clinical-rule baselines on one patient-level split, tuning thresholds against asymmetric clinical utility rather than accuracy.",
+    "medium": "",
+    "evidence": [
+      "results/final_results.csv (11 model rows with per-model tuned thresholds)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "sepsis_b11",
+    "entry_id": "sepsis_early_warning",
+    "section": "Projects",
+    "company_or_project": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "title": "Sepsis Early-Warning System (ICU Clinical Time-Series)",
+    "claim_type": "verified",
+    "short": "Built a documented experiment pipeline organizing modular feature generation, training, and evaluation scripts.\"",
+    "medium": "Built a **documented experiment pipeline** organizing modular feature generation, model training, and evaluation scripts to support **consistent ablation tracking**.",
+    "evidence": [
+      "README.md Setup and How to Run; SEED=42 across notebooks; models/ artifacts"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b1",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "verified",
+    "short": "Built a PySpark ETL over 608K Yelp reviews deriving 260K reviewer and 5K seller behavioral profiles into partitioned Delta Lake tables with automated quality checks.",
+    "medium": "Owned the data-engineering layer of a six-stage fake-review detection pipeline: a **PySpark ETL over 608K Yelp reviews** deriving 260K reviewer and 5K seller behavioral profiles, persisted as **partitioned Delta Lake tables** with OLAP cubes and eight automated quality checks.",
+    "evidence": [
+      "L1_ETL_OLAP/README.md (Owner: Himanshu Jain); L1_ETL_OLAP/main.py (Author: Himanshu Jain)",
+      "608,598 reviews -> 260,277 reviewer profiles + 5,044 seller profiles; 4 OLAP cubes; 8 quality checks",
+      "etl/transform_reviews.py, transform_reviewers.py, transform_sellers.py; olap/cube_builder.py"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b3",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "verified",
+    "short": "Conducted a layer ablation showing behavioral features plateaued at 0.815 AUC, while adding text embeddings reached 0.936 AUC / 0.741 F1.",
+    "medium": "Ran a seven-configuration layer ablation showing **behavioral signals plateaued at 0.815 AUC / 0.438 F1**, while adding DeBERTa text embeddings lifted performance to **0.936 AUC / 0.741 F1**.",
+    "evidence": [
+      "L6_validation/outputs/ablation_table.csv (7 configurations)",
+      "L2-only 0.716; L4-only 0.773; L5-supervised-only 0.819; L2+L4+L5 0.815; Full+L3 0.9358 / F1 0.7406 / AP 0.798"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b2",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "verified",
+    "short": "Fine-tuned DeBERTa-base on 423K Yelp reviews with reviewer-disjoint splits, achieving 0.93 ROC-AUC and 0.84 macro-F1.",
+    "medium": "Fine-tuned **DeBERTa-base on 423K Yelp reviews** using reviewer-disjoint splits to prevent same-author overlap, achieving **0.93 ROC-AUC and 0.84 macro-F1** on 53,687 held-out reviews.",
+    "evidence": [
+      "L3/outputs/deberta_metrics.json: auc_roc 0.9305, f1_macro_default 0.8412, f1_spam 0.7221, train 422704 / val 53468 / test 53687, unfreeze_layers 12, trainable_params 99,802,370, runtime 515.9 min",
+      "L3/l3_deberta_finetune.py group_split(): two-round StratifiedGroupKFold with assert train_users.isdisjoint(val_users/test_users)"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b6",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "verified",
+    "short": "Recovered DeBERTa macro-F1 from 0.44 to 0.84 by unfreezing backbone layers and tuning optimization schedules.",
+    "medium": "Diagnosed a DeBERTa optimization failure that collapsed macro-F1 to 0.44, **recovering to 0.84 macro-F1** by unfreezing backbone layers and optimizing learning-rate schedules.",
+    "evidence": [
+      "L3/L3_colab.ipynb: deberta-v3-base, auc_roc 0.5013, f1_spam_default 0.0",
+      "L3/deberta_finetune_notebook.ipynb: frozen backbone, head only (~1,540 trainable params), AUC 0.7421",
+      "L3/l3_deberta_finetune_v2.py docstring: 'v3 + bf16 sidesteps the v3+fp16 NaN issue'"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b5",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "verified",
+    "short": "Prevented target leakage by excluding reviewer and seller spam-rate features that were derived from labels across the full corpus.",
+    "medium": "Prevented target leakage by auditing every engineered feature for label derivation and excluding reviewer and seller spam counts and spam rates - features computed from labels across the full corpus that would have inflated every downstream metric.",
+    "evidence": [
+      "L3/l3_deberta_finetune_v2.py LEAKAGE NOTE: reviewer_profiles.{spam_count,spam_rate} and seller_profiles.{spam_reviews,spam_rate,suspicious_reviewer_fraction} excluded",
+      "USER_META and PROD_META constants exclude those columns explicitly"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b4",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "scoped",
+    "short": "Designed a multi-layer fraud architecture integrating behavioral rules, DeBERTa text representations, and graph clustering.",
+    "medium": "Designed a multi-layer fraud architecture integrating behavioral rules, DeBERTa text representations, and graph clustering, identifying synthetic probability artifacts in preliminary fusion experiments.",
+    "evidence": [
+      "L6_validation/02_synthetic_injection.py: TIER_COUNTS = easy 15, medium 15, hard 40",
+      "L6_validation/outputs/l6_validation_summary.txt: hard-tier L2 0.00, L4-kmeans 0.00, L4-dbscan 0.17, L5-anomaly 0.05, L5-supervised 0.33"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "frd_b7",
+    "entry_id": "fake_review_detection",
+    "section": "Projects",
+    "company_or_project": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "title": "Fake Review Detection on Yelp (Multi-Signal Pipeline)",
+    "claim_type": "scoped",
+    "short": "Evaluated signal overlap across behavioral and text layers using Jaccard similarity metrics.",
+    "medium": "Evaluated signal overlap across behavioral and text layers using **Jaccard similarity metrics**, analyzing detection concordance and divergence across fraud sub-populations.",
+    "evidence": [
+      "L6_validation/03_summary_report.py; l6_validation_summary.txt Jaccard stability table across K = 500..10000",
+      "L3-text vs L5-supervised J = 0.785 at K=5000; L4-dbscan vs L5-supervised J = 0.007"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "cm_b1",
+    "entry_id": "campus_marketplace",
+    "section": "Projects",
+    "company_or_project": "Campus Marketplace",
+    "title": "Campus Marketplace",
+    "claim_type": "scoped",
+    "short": "Built the backend of a campus peer-to-peer marketplace in Java 21 and Spring Boot over Flyway-controlled PostgreSQL.",
+    "medium": "Built the backend for a campus peer-to-peer marketplace as primary developer on a three-person team, delivering a domain-organized **Java 21 and Spring Boot** service over **Flyway-controlled PostgreSQL** schema migrations.",
+    "evidence": [
+      "campus-marketplace/src/main/java: 366 files counted 2026-07-30",
+      "20 files matching @RestController; 24 matching @Entity; 30 .sql files under src/main/resources/db",
+      "git shortlog -sne --all: hjain3004 + Himanshu Jain = 48 of 68 commits"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "cm_b2",
+    "entry_id": "campus_marketplace",
+    "section": "Projects",
+    "company_or_project": "Campus Marketplace",
+    "title": "Campus Marketplace",
+    "claim_type": "verified",
+    "short": "Implemented marketplace listing and user management with S3 image storage and Spring Security JWT authentication.",
+    "medium": "Engineered marketplace listing and user management with **AWS S3 image uploads**, securing endpoints via **Spring Security JWT validation** and role-based authorization.",
+    "evidence": [
+      "git log --author=himanshu --name-only: 226 file touches under listing/, 202 under user/",
+      "pom.xml: spring-boot-starter-security, spring-boot-starter-oauth2-resource-server, jjwt-api/impl/jackson, s3",
+      "campus-marketplace/src/main/java/edu/campus/campus_marketplace/listing/api/storage"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "cm_b3",
+    "entry_id": "campus_marketplace",
+    "section": "Projects",
+    "company_or_project": "Campus Marketplace",
+    "title": "Campus Marketplace",
+    "claim_type": "scoped",
+    "short": "Maintained backend quality with a 1,179-test suite using Mockito and Testcontainers against PostgreSQL.",
+    "medium": "Maintained backend reliability by contributing to a **1,179-test suite** across unit and integration layers, validating persistence with **Testcontainers against PostgreSQL**.",
+    "evidence": [
+      "1,179 @Test occurrences across 60 files under campus-marketplace/src/test",
+      "git log --author=himanshu --name-only: 84 file touches under src/test"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "cm_b4",
+    "entry_id": "campus_marketplace",
+    "section": "Projects",
+    "company_or_project": "Campus Marketplace",
+    "title": "Campus Marketplace",
+    "claim_type": "verified",
+    "short": "Built a sandbox payment workflow with Stripe and mock providers, handling signature-verified webhooks.",
+    "medium": "Built a **sandbox payment workflow** supporting Stripe and mock providers, ingesting **signature-verified webhooks** to update order lifecycles and record transaction history.",
+    "evidence": [
+      "StripeWebhookController.java, MockPaymentController.java, PaymentController.java, TransactionHistoryController.java",
+      "git log --author=himanshu --name-only: 30 file touches under payment/",
+      "30 .sql migrations under src/main/resources/db"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "cm_b5",
+    "entry_id": "campus_marketplace",
+    "section": "Projects",
+    "company_or_project": "Campus Marketplace",
+    "title": "Campus Marketplace",
+    "claim_type": "scoped",
+    "short": "Integrated the Gemini API to parse natural-language search queries into structured database filters.",
+    "medium": "Integrated the **Gemini API for natural-language search**, parsing conversational queries into **structured JSON filters** mapped to database queries.",
+    "evidence": [
+      "pom.xml: google-cloud-vertexai, libraries-bom",
+      "git log --author=himanshu: 5 file touches under gemini/; commit subjects 'ai search', 'natural language working', 'gemini import error'"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "ct_b1",
+    "entry_id": "clinical_trial_platform",
+    "section": "Projects",
+    "company_or_project": "Synthetic Clinical Trial Data Platform",
+    "title": "Synthetic Clinical Trial Data Platform",
+    "claim_type": "scoped",
+    "short": "Configured multi-service local orchestration with API gateway routing, Kafka messaging, and PostgreSQL.",
+    "medium": "Configured local orchestration for a **multi-service clinical trial platform**, wiring API gateway routing, **Kafka event streaming, and PostgreSQL** with Docker Compose.",
+    "evidence": [
+      "microservices/: api-gateway, data-generation-service, analytics-service, quality-service, edc-service, security-service, ai-monitor-service, daft-analytics-service, gan-service, gain-service, linkup-integration-service, shared",
+      "docker-compose.yml, k8s/, kubernetes/, terraform/ present at repo root",
+      "146 Python files counted 2026-07-30"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "ct_b2",
+    "entry_id": "clinical_trial_platform",
+    "section": "Projects",
+    "company_or_project": "Synthetic Clinical Trial Data Platform",
+    "title": "Synthetic Clinical Trial Data Platform",
+    "claim_type": "scoped",
+    "short": "Secured trial platform APIs with role-based JWT authentication and Spring Security filters.",
+    "medium": "Implemented **role-based API security** across microservices using **JWT authentication and Spring Security filters** to protect synthetic trial data.",
+    "evidence": [
+      "microservices/security-service: 24 file touches from hjain3004, 15 from nitishhrms, zero AI-assisted",
+      "git log --all --author=Claude -- microservices/security-service returns no commits"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "ct_b3",
+    "entry_id": "clinical_trial_platform",
+    "section": "Projects",
+    "company_or_project": "Synthetic Clinical Trial Data Platform",
+    "title": "Synthetic Clinical Trial Data Platform",
+    "claim_type": "scoped",
+    "short": "Built the synthetic data generation service on a statistics cache distilled from 557,000 real ClinicalTrials.gov studies.",
+    "medium": "Built the data generation service, processing the 15 GB AACT ClinicalTrials.gov dataset into a statistics cache over 557,000 real studies and generating synthetic patient records from those distributions, with no protected health information involved.",
+    "evidence": [
+      "data/AACT/scripts/: 01_inspect_aact.py, 02_process_aact.py, 03_process_aact_comprehensive.py, 04_patch_aact_cache.py",
+      "data/AACT/processed/aact_statistics_cache.json, 474KB, generated 2025-11-23",
+      "docs/AACT_INTEGRATION.md:424 'Loads existing cache (557,805 studies)'; :416 '15GB AACT data is on your machine'",
+      "microservices/data-generation-service: 51 file touches from hjain3004, the largest single-service share"
+    ],
+    "metrics": []
+  },
+  {
+    "id": "ct_b4",
+    "entry_id": "clinical_trial_platform",
+    "section": "Projects",
+    "company_or_project": "Synthetic Clinical Trial Data Platform",
+    "title": "Synthetic Clinical Trial Data Platform",
+    "claim_type": "scoped",
+    "short": "Built analytics and quality-scoring services for generated trial cohorts.",
+    "medium": "Built the analytics and quality services, scoring generated cohorts for statistical fidelity against real trial distributions.",
+    "evidence": [
+      "microservices/analytics-service: 23 file touches from hjain3004 against 40 from Claude",
+      "microservices/quality-service: 15 from hjain3004 against 8 from Claude"
+    ],
+    "metrics": []
+  }
+]

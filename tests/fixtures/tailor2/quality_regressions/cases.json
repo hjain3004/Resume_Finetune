@@ -1,0 +1,1752 @@
+[
+  {
+    "case_id": "reg_01_feature_catalogue_neg",
+    "pair_id": "reg_01_feature_catalogue",
+    "variant": "negative",
+    "category": "engineering_substance",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "ResumeFinetune presented as a feature catalogue rather than an engineering result",
+    "is_synthetic": false,
+    "resume_fragment": "Built personal job discovery pipeline featuring SQLite storage, Crawl4AI browser crawling, Pydantic data models, Trafilatura article extraction, deterministic deduplication filters, and scoring orchestrator.",
+    "canonical_evidence_ids": [
+      "rft_b01_ingestion_scale",
+      "rft_b02_eligibility_engine",
+      "rft_b03_resolution_runtime"
+    ],
+    "canonical_facts": [
+      "3-tier (three-tier) ingestion pipeline processing 50+ ATS sources",
+      "Deterministic state-machine transitions and transactional SQLite state",
+      "Tiered resolution: pure HTTP -> trafilatura -> crawl4ai headless browser fallback"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "engineering_depth",
+      "star_xyz_coherence",
+      "outcome_orientation"
+    ],
+    "forbidden_inferences": [
+      "Candidate merely assembled third-party libraries without solving concurrency, reliability, or systems challenges."
+    ],
+    "required_reviewer_observations": [
+      "Bullet reads as a feature and component inventory rather than an engineering accomplishment with clear actions and concrete guarantees."
+    ],
+    "acceptable_repair_properties": [
+      "Framed around architectural tiers, state-machine transitions, and transactional guarantees."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing distributed cluster metrics or unevidenced throughput numbers."
+    ]
+  },
+  {
+    "case_id": "reg_01_feature_catalogue_pos",
+    "pair_id": "reg_01_feature_catalogue",
+    "variant": "positive",
+    "category": "engineering_substance",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "ResumeFinetune presented as a feature catalogue rather than an engineering result",
+    "is_synthetic": false,
+    "resume_fragment": "Architected 3-tier ingestion engine processing 50+ ATS sources; isolated deterministic extraction from tiered HTTP and browser resolvers via transactional SQLite state transitions, guaranteeing idempotency.",
+    "canonical_evidence_ids": [
+      "rft_b01_ingestion_scale",
+      "rft_b02_eligibility_engine",
+      "rft_b03_resolution_runtime"
+    ],
+    "canonical_facts": [
+      "3-tier (three-tier) ingestion pipeline processing 50+ ATS sources",
+      "Deterministic state-machine transitions and transactional SQLite state",
+      "Tiered resolution: pure HTTP -> trafilatura -> crawl4ai headless browser fallback"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Candidate merely assembled third-party libraries without solving concurrency, reliability, or systems challenges."
+    ],
+    "required_reviewer_observations": [
+      "Clearly frames engineering mechanism, architectural tiers, and concrete reliability invariant."
+    ],
+    "acceptable_repair_properties": [
+      "Framed around architectural tiers, state-machine transitions, and transactional guarantees."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing distributed cluster metrics or unevidenced throughput numbers."
+    ]
+  },
+  {
+    "case_id": "reg_02_auxiliary_tools_dominating_header_neg",
+    "pair_id": "reg_02_auxiliary_tools_dominating_header",
+    "variant": "negative",
+    "category": "tech_stack_positioning",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Auxiliary tools such as SQLite or pytest dominating a project technology header",
+    "is_synthetic": false,
+    "resume_fragment": "ResumeFinetune | SQLite, Pytest, PyYAML, Trafilatura, Bash \\hfill Feb 2026 -- Present",
+    "canonical_evidence_ids": [
+      "rft_b01_ingestion_scale",
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Core project implementation is Python 3.11+ async system with LLM APIs, relational storage, and deterministic pipelines",
+      "Project timeline: Feb 2026 -- Present"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "technology_fidelity",
+      "recruiter_scan_quality",
+      "technology_header_discipline"
+    ],
+    "forbidden_inferences": [
+      "Candidate's primary technical depth is test runners and file parsers rather than async systems and API architecture."
+    ],
+    "required_reviewer_observations": [
+      "Project tech header is dominated by secondary utility tools (pytest, pyyaml, bash) rather than core architectural technologies."
+    ],
+    "acceptable_repair_properties": [
+      "Order technologies by architectural primacy: core language, concurrency model, data store, and external interfaces."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding technologies not used in the project (e.g. Apache Spark or Kubernetes)."
+    ]
+  },
+  {
+    "case_id": "reg_02_auxiliary_tools_dominating_header_pos",
+    "pair_id": "reg_02_auxiliary_tools_dominating_header",
+    "variant": "positive",
+    "category": "tech_stack_positioning",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Auxiliary tools such as SQLite or pytest dominating a project technology header",
+    "is_synthetic": false,
+    "resume_fragment": "ResumeFinetune | Python, AsyncIO, SQLite, LLM APIs \\hfill Feb 2026 -- Present",
+    "canonical_evidence_ids": [
+      "rft_b01_ingestion_scale",
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Core project implementation is Python 3.11+ async system with LLM APIs, relational storage, and deterministic pipelines",
+      "Project timeline: Feb 2026 -- Present"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Candidate's primary technical depth is test runners and file parsers rather than async systems and API architecture."
+    ],
+    "required_reviewer_observations": [
+      "Header leads with primary language, async execution model, and data/AI interfaces."
+    ],
+    "acceptable_repair_properties": [
+      "Order technologies by architectural primacy: core language, concurrency model, data store, and external interfaces."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding technologies not used in the project (e.g. Apache Spark or Kubernetes)."
+    ]
+  },
+  {
+    "case_id": "reg_03_omitted_agentic_ai_skills_neg",
+    "pair_id": "reg_03_omitted_agentic_ai_skills",
+    "variant": "negative",
+    "category": "skills_taxonomy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Demonstrated Agentic AI evidence omitted from Skills when it is relevant to the JD",
+    "is_synthetic": false,
+    "resume_fragment": "Technical Skills: Languages: Python, Java, SQL; Backend: FastAPI, Spring Boot, PostgreSQL; Tools: Docker, Git, Linux.",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration",
+      "rft_b07_model_authority_boundary"
+    ],
+    "canonical_facts": [
+      "Candidate engineered multi-agent LLM tailoring pipeline with staged critique, structured JSON schemas, and human approval gates",
+      "Target role explicitly seeks interest and experience in applied AI/ML systems"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "relevance",
+      "skills_jd_alignment",
+      "demonstrated_skill_omission"
+    ],
+    "forbidden_inferences": [
+      "Candidate lacks hands-on experience in LLM orchestration, structured outputs, and agentic workflows."
+    ],
+    "required_reviewer_observations": [
+      "Technical Skills completely omits verified Agentic AI and LLM Orchestration capabilities despite strong project evidence."
+    ],
+    "acceptable_repair_properties": [
+      "Include verified AI/ML terms: Agentic AI, LLM Orchestration, Prompt Engineering, Structured Outputs."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding unevidenced frontier research terms like custom transformer pretraining."
+    ]
+  },
+  {
+    "case_id": "reg_03_omitted_agentic_ai_skills_pos",
+    "pair_id": "reg_03_omitted_agentic_ai_skills",
+    "variant": "positive",
+    "category": "skills_taxonomy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Demonstrated Agentic AI evidence omitted from Skills when it is relevant to the JD",
+    "is_synthetic": false,
+    "resume_fragment": "Technical Skills: AI & Machine Learning: Agentic AI, LLM Orchestration, LLM Evaluation, Prompt Engineering, Structured Outputs; Languages: Python, Java, SQL; Backend: FastAPI, Spring Boot, PostgreSQL.",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration",
+      "rft_b07_model_authority_boundary"
+    ],
+    "canonical_facts": [
+      "Candidate engineered multi-agent LLM tailoring pipeline with staged critique, structured JSON schemas, and human approval gates",
+      "Target role explicitly seeks interest and experience in applied AI/ML systems"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Candidate lacks hands-on experience in LLM orchestration, structured outputs, and agentic workflows."
+    ],
+    "required_reviewer_observations": [
+      "Correctly highlights verified AI/ML competencies directly supported by ResumeFinetune implementation."
+    ],
+    "acceptable_repair_properties": [
+      "Include verified AI/ML terms: Agentic AI, LLM Orchestration, Prompt Engineering, Structured Outputs."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding unevidenced frontier research terms like custom transformer pretraining."
+    ]
+  },
+  {
+    "case_id": "reg_04_postgres_postgresql_semantic_split_neg",
+    "pair_id": "reg_04_postgres_postgresql_semantic_split",
+    "variant": "negative",
+    "category": "semantic_equivalence",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Postgres and PostgreSQL treated incorrectly as unrelated concepts",
+    "is_synthetic": false,
+    "resume_fragment": "Requirement Match Audit: Missing 'Postgres' (JD requires 'Postgres/MySQL', resume only demonstrates 'PostgreSQL'). Score penalty applied: -1.5.",
+    "canonical_evidence_ids": [
+      "int_b2",
+      "cm_b1"
+    ],
+    "canonical_facts": [
+      "PostgreSQL is the official full name and canonical synonym of Postgres",
+      "Candidate has verified PostgreSQL experience in FastAPI microservices and database schema migrations"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "semantic_normalization_failure",
+      "ats_matching_rigidity",
+      "relevance"
+    ],
+    "forbidden_inferences": [
+      "Postgres and PostgreSQL are two distinct technologies requiring separate candidate qualifications."
+    ],
+    "required_reviewer_observations": [
+      "Evaluator fails to equate 'Postgres' with 'PostgreSQL', penalizing the candidate for using the formal name."
+    ],
+    "acceptable_repair_properties": [
+      "Treat Postgres and PostgreSQL as interchangeable aliases under a unified technology entity."
+    ],
+    "unacceptable_repair_properties": [
+      "Redundantly inserting both 'Postgres' and 'PostgreSQL' in the same sentence or bullet."
+    ]
+  },
+  {
+    "case_id": "reg_04_postgres_postgresql_semantic_split_pos",
+    "pair_id": "reg_04_postgres_postgresql_semantic_split",
+    "variant": "positive",
+    "category": "semantic_equivalence",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Postgres and PostgreSQL treated incorrectly as unrelated concepts",
+    "is_synthetic": false,
+    "resume_fragment": "Requirement Match Audit: Verified 'Postgres' requirement via canonical alias 'PostgreSQL' in Experience (MalyTech) and Projects (Campus Marketplace).",
+    "canonical_evidence_ids": [
+      "int_b2",
+      "cm_b1"
+    ],
+    "canonical_facts": [
+      "PostgreSQL is the official full name and canonical synonym of Postgres",
+      "Candidate has verified PostgreSQL experience in FastAPI microservices and database schema migrations"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Postgres and PostgreSQL are two distinct technologies requiring separate candidate qualifications."
+    ],
+    "required_reviewer_observations": [
+      "Correctly resolves semantic alias Postgres <-> PostgreSQL without penalty."
+    ],
+    "acceptable_repair_properties": [
+      "Treat Postgres and PostgreSQL as interchangeable aliases under a unified technology entity."
+    ],
+    "unacceptable_repair_properties": [
+      "Redundantly inserting both 'Postgres' and 'PostgreSQL' in the same sentence or bullet."
+    ]
+  },
+  {
+    "case_id": "reg_05_ai_ml_interest_overstated_as_foundational_research_neg",
+    "pair_id": "reg_05_ai_ml_interest_overstated_as_foundational_research",
+    "variant": "negative",
+    "category": "claim_credibility",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "AI/ML interest evidence overstated as foundational AI research",
+    "is_synthetic": false,
+    "resume_fragment": "Pioneered foundational transformer architectures and novel mathematical alignment algorithms for next-generation generative AI models, publishing core algorithmic breakthroughs.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability",
+      "frd_b2"
+    ],
+    "canonical_facts": [
+      "Candidate fine-tuned pre-trained DeBERTa-v3 using PyTorch/HuggingFace on Yelp reviews",
+      "Candidate built multi-pass LLM scoring pipelines with median self-consistency via API"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "factual_fidelity",
+      "technology_fidelity",
+      "technical_guarantee_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Candidate is a theoretical AI researcher who developed frontier foundation models from scratch."
+    ],
+    "required_reviewer_observations": [
+      "Dramatically overstates applied fine-tuning and API orchestration as foundational algorithmic research, creating severe interview risk."
+    ],
+    "acceptable_repair_properties": [
+      "State precise applied role: fine-tuning DeBERTa-v3 with ablation testing and building multi-pass LLM evaluation pipelines."
+    ],
+    "unacceptable_repair_properties": [
+      "Retaining claims of authoring foundation models or inventing novel mathematical architectures."
+    ]
+  },
+  {
+    "case_id": "reg_05_ai_ml_interest_overstated_as_foundational_research_pos",
+    "pair_id": "reg_05_ai_ml_interest_overstated_as_foundational_research",
+    "variant": "positive",
+    "category": "claim_credibility",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "AI/ML interest evidence overstated as foundational AI research",
+    "is_synthetic": false,
+    "resume_fragment": "Fine-tuned DeBERTa-v3 on 423K Yelp reviews using reviewer-disjoint splits, evaluating class imbalance and ablation; engineered multi-pass LLM scoring pipelines with median self-consistency.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability",
+      "frd_b2"
+    ],
+    "canonical_facts": [
+      "Candidate fine-tuned pre-trained DeBERTa-v3 using PyTorch/HuggingFace on Yelp reviews",
+      "Candidate built multi-pass LLM scoring pipelines with median self-consistency via API"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Candidate is a theoretical AI researcher who developed frontier foundation models from scratch."
+    ],
+    "required_reviewer_observations": [
+      "Accurately frames applied deep learning and evaluation discipline with zero unsupported theoretical research claims."
+    ],
+    "acceptable_repair_properties": [
+      "State precise applied role: fine-tuning DeBERTa-v3 with ablation testing and building multi-pass LLM evaluation pipelines."
+    ],
+    "unacceptable_repair_properties": [
+      "Retaining claims of authoring foundation models or inventing novel mathematical architectures."
+    ]
+  },
+  {
+    "case_id": "reg_06_disjunctive_degree_requirement_split_neg",
+    "pair_id": "reg_06_disjunctive_degree_requirement_split",
+    "variant": "negative",
+    "category": "eligibility_parsing",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Bachelor's degree or equivalent practical experience split into conflicting mandatory requirements",
+    "is_synthetic": false,
+    "resume_fragment": "Audit Rejection: Candidate fails JD criteria. Failed mandatory check 'equivalent practical experience (5+ years required)' despite holding an accredited Bachelor's degree in Computer Science.",
+    "canonical_evidence_ids": [
+      "am_b00_order_management_domain"
+    ],
+    "canonical_facts": [
+      "JD states: 'Bachelor's or Master's degree in Computer Science, Computer Engineering, relevant technical field, or equivalent practical experience'",
+      "Candidate holds Bachelor of Technology in Computer Science and Engineering"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "disjunctive_requirement_splitting",
+      "eligibility_misinterpretation",
+      "relevance"
+    ],
+    "forbidden_inferences": [
+      "The JD requires both an accredited academic degree and multi-year professional equivalence."
+    ],
+    "required_reviewer_observations": [
+      "The validator incorrectly treats an 'A OR B' disjunctive clause as an 'A AND B' conjunctive requirement."
+    ],
+    "acceptable_repair_properties": [
+      "Parse 'X or equivalent practical experience' as a disjunction satisfied by satisfying either branch."
+    ],
+    "unacceptable_repair_properties": [
+      "Fabricating years of senior industry experience to satisfy the erroneously conjunctive requirement."
+    ]
+  },
+  {
+    "case_id": "reg_06_disjunctive_degree_requirement_split_pos",
+    "pair_id": "reg_06_disjunctive_degree_requirement_split",
+    "variant": "positive",
+    "category": "eligibility_parsing",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Bachelor's degree or equivalent practical experience split into conflicting mandatory requirements",
+    "is_synthetic": false,
+    "resume_fragment": "Audit Verification: Requirement 'Bachelor's degree or equivalent practical experience' satisfied via B.Tech in Computer Science and Engineering.",
+    "canonical_evidence_ids": [
+      "am_b00_order_management_domain"
+    ],
+    "canonical_facts": [
+      "JD states: 'Bachelor's or Master's degree in Computer Science, Computer Engineering, relevant technical field, or equivalent practical experience'",
+      "Candidate holds Bachelor of Technology in Computer Science and Engineering"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "The JD requires both an accredited academic degree and multi-year professional equivalence."
+    ],
+    "required_reviewer_observations": [
+      "Correctly evaluates disjunction: academic CS degree satisfies requirement."
+    ],
+    "acceptable_repair_properties": [
+      "Parse 'X or equivalent practical experience' as a disjunction satisfied by satisfying either branch."
+    ],
+    "unacceptable_repair_properties": [
+      "Fabricating years of senior industry experience to satisfy the erroneously conjunctive requirement."
+    ]
+  },
+  {
+    "case_id": "reg_07_spurious_positioning_rationale_neg",
+    "pair_id": "reg_07_spurious_positioning_rationale",
+    "variant": "negative",
+    "category": "project_selection",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A project linked to an unrelated positioning rationale",
+    "is_synthetic": false,
+    "resume_fragment": "Selected Project: Sepsis Early Warning System. Positioning Rationale: 'Directly demonstrates ability to design high-engagement ChatGPT consumer experiences and conversational UX.'",
+    "canonical_evidence_ids": [
+      "sepsis_b1",
+      "sepsis_b2"
+    ],
+    "canonical_facts": [
+      "Sepsis Early Warning is a clinical hospital ICU mortality prediction system using MIMIC-III time-series vital signs",
+      "OpenAI role is Applied Engineering for customer-facing ChatGPT and API product features"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "relevance",
+      "positioning_integrity",
+      "recruiter_scan_quality"
+    ],
+    "forbidden_inferences": [
+      "Clinical physiological data modeling demonstrates conversational chat UI/UX and consumer product features."
+    ],
+    "required_reviewer_observations": [
+      "Spurious positioning justification attaches an unrelated clinical ICU project to a consumer conversational product engineering role."
+    ],
+    "acceptable_repair_properties": [
+      "Select projects with direct product/API/LLM relevance: ResumeFinetune and PeerChat (or Fake Review Detection)."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing consumer chat features inside the Sepsis ICU codebase."
+    ]
+  },
+  {
+    "case_id": "reg_07_spurious_positioning_rationale_pos",
+    "pair_id": "reg_07_spurious_positioning_rationale",
+    "variant": "positive",
+    "category": "project_selection",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A project linked to an unrelated positioning rationale",
+    "is_synthetic": false,
+    "resume_fragment": "Selected Project: PeerChat. Positioning Rationale: 'Demonstrates real-time distributed networking, event-driven presence, and concurrent socket communication relevant to live user features.'",
+    "canonical_evidence_ids": [
+      "sepsis_b1",
+      "sepsis_b2"
+    ],
+    "canonical_facts": [
+      "Sepsis Early Warning is a clinical hospital ICU mortality prediction system using MIMIC-III time-series vital signs",
+      "OpenAI role is Applied Engineering for customer-facing ChatGPT and API product features"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Clinical physiological data modeling demonstrates conversational chat UI/UX and consumer product features."
+    ],
+    "required_reviewer_observations": [
+      "Selects appropriate systems project with legitimate, defensible connection to high-scale interactive user features."
+    ],
+    "acceptable_repair_properties": [
+      "Select projects with direct product/API/LLM relevance: ResumeFinetune and PeerChat (or Fake Review Detection)."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing consumer chat features inside the Sepsis ICU codebase."
+    ]
+  },
+  {
+    "case_id": "reg_08_excessive_amdocs_density_neg",
+    "pair_id": "reg_08_excessive_amdocs_density",
+    "variant": "negative",
+    "category": "page_budget",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Seven long Amdocs bullets causing excessive density",
+    "is_synthetic": false,
+    "resume_fragment": "Amdocs Experience: [Contains 7 full bullets: am_b01, am_b02, am_b03, am_b04, am_b05, am_b06, am_b07, each 3 lines long, occupying 21 lines of dense text, pushing Projects section past the page boundary].",
+    "canonical_evidence_ids": [
+      "am_b01_dlq_consolidation",
+      "am_b02_row_level_entitlement",
+      "am_b03_audit_trail",
+      "am_b04_data_retention",
+      "am_b05_test_automation",
+      "am_b06_aws_ci_transition",
+      "am_b07_code_quality_gates"
+    ],
+    "canonical_facts": [
+      "Amdocs has 5 verified core priority-1 bullets (am_b01 through am_b05) and 2 lower-priority bullets (am_b06, am_b07)",
+      "Total page budget is 1 page; excessive experience bullets cause unreadable crowding or page overflow"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "readability",
+      "bullet_budget_overflow",
+      "recruiter_scan_quality"
+    ],
+    "forbidden_inferences": [
+      "Maximizing the raw quantity of bullets always improves recruiter perception regardless of typographical density."
+    ],
+    "required_reviewer_observations": [
+      "Seven long experience bullets consume disproportionate vertical budget, compromising scanability and squeezing out critical project evidence."
+    ],
+    "acceptable_repair_properties": [
+      "Cap Amdocs at 4-5 high-impact bullets, recording omitted bullets in the omission ledger."
+    ],
+    "unacceptable_repair_properties": [
+      "Arbitrarily truncating bullet sentences to fragments without complete grammatical clauses."
+    ]
+  },
+  {
+    "case_id": "reg_08_excessive_amdocs_density_pos",
+    "pair_id": "reg_08_excessive_amdocs_density",
+    "variant": "positive",
+    "category": "page_budget",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Seven long Amdocs bullets causing excessive density",
+    "is_synthetic": false,
+    "resume_fragment": "Amdocs Experience: [Contains 5 balanced bullets (am_b01 to am_b05), averaging 2 lines each, leaving sufficient budget for Projects and Skills within 1 page].",
+    "canonical_evidence_ids": [
+      "am_b01_dlq_consolidation",
+      "am_b02_row_level_entitlement",
+      "am_b03_audit_trail",
+      "am_b04_data_retention",
+      "am_b05_test_automation",
+      "am_b06_aws_ci_transition",
+      "am_b07_code_quality_gates"
+    ],
+    "canonical_facts": [
+      "Amdocs has 5 verified core priority-1 bullets (am_b01 through am_b05) and 2 lower-priority bullets (am_b06, am_b07)",
+      "Total page budget is 1 page; excessive experience bullets cause unreadable crowding or page overflow"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Maximizing the raw quantity of bullets always improves recruiter perception regardless of typographical density."
+    ],
+    "required_reviewer_observations": [
+      "Balanced 5-bullet experience block preserves readable vertical rhythm and fits cleanly on 1 page."
+    ],
+    "acceptable_repair_properties": [
+      "Cap Amdocs at 4-5 high-impact bullets, recording omitted bullets in the omission ledger."
+    ],
+    "unacceptable_repair_properties": [
+      "Arbitrarily truncating bullet sentences to fragments without complete grammatical clauses."
+    ]
+  },
+  {
+    "case_id": "reg_09_project_header_column_collision_neg",
+    "pair_id": "reg_09_project_header_column_collision",
+    "variant": "negative",
+    "category": "layout_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Project technology text colliding with the date column",
+    "is_synthetic": false,
+    "resume_fragment": "\\resumeProjectHeading{\\textbf{ResumeFinetune: Agentic Discovery} $|$ Python, AsyncIO, SQLite, Trafilatura, Pydantic, Crawl4AI, Pytest, LLM APIs}{\\small Feb 2026 -- Present}",
+    "canonical_evidence_ids": [
+      "rft_b12_audit_framework"
+    ],
+    "canonical_facts": [
+      "Project timeline: Feb 2026 -- Present",
+      "LaTeX two-column project header macro collides when technology text string width exceeds 0.72\\textwidth at 0.30in margins"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "horizontal_overflow",
+      "column_collision",
+      "readability"
+    ],
+    "forbidden_inferences": [
+      "LaTeX compiler will automatically wrap single-line project heading arguments without overlapping the right-aligned date block."
+    ],
+    "required_reviewer_observations": [
+      "Technology list is so long that it visually runs into and overlaps the right-aligned date column."
+    ],
+    "acceptable_repair_properties": [
+      "Compact the technology list to primary tools (<=4 items), preserving >=1.5cm horizontal clearance before the date column."
+    ],
+    "unacceptable_repair_properties": [
+      "Removing the date column entirely or shrinking font size below repository minimums."
+    ]
+  },
+  {
+    "case_id": "reg_09_project_header_column_collision_pos",
+    "pair_id": "reg_09_project_header_column_collision",
+    "variant": "positive",
+    "category": "layout_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Project technology text colliding with the date column",
+    "is_synthetic": false,
+    "resume_fragment": "\\resumeProjectHeading{\\textbf{ResumeFinetune} $|$ Python, AsyncIO, SQLite, LLM APIs}{\\small Feb 2026 -- Present}",
+    "canonical_evidence_ids": [
+      "rft_b12_audit_framework"
+    ],
+    "canonical_facts": [
+      "Project timeline: Feb 2026 -- Present",
+      "LaTeX two-column project header macro collides when technology text string width exceeds 0.72\\textwidth at 0.30in margins"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "LaTeX compiler will automatically wrap single-line project heading arguments without overlapping the right-aligned date block."
+    ],
+    "required_reviewer_observations": [
+      "Concise technology header leaves ample horizontal whitespace before the date column."
+    ],
+    "acceptable_repair_properties": [
+      "Compact the technology list to primary tools (<=4 items), preserving >=1.5cm horizontal clearance before the date column."
+    ],
+    "unacceptable_repair_properties": [
+      "Removing the date column entirely or shrinking font size below repository minimums."
+    ]
+  },
+  {
+    "case_id": "reg_10_excessive_bold_spans_neg",
+    "pair_id": "reg_10_excessive_bold_spans",
+    "variant": "negative",
+    "category": "visual_hygiene",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Excessive bold spans in nearly every bullet",
+    "is_synthetic": false,
+    "resume_fragment": "Built **anti-corruption layer** of **four adapter services** orchestrating **microservices** with **FastAPI** and **PostgreSQL**, cutting **latency by 40%** with **zero downtime**.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Candidate built 4 adapter microservices and 1 core orchestrator service in FastAPI/PostgreSQL"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "recruiter_scan_quality",
+      "excessive_bolding",
+      "readability"
+    ],
+    "forbidden_inferences": [
+      "Bolding multiple buzzwords and phrases in every line makes the resume easier to read."
+    ],
+    "required_reviewer_observations": [
+      "Six bold spans in a single bullet creates visual noise and disrupts natural reading flow."
+    ],
+    "acceptable_repair_properties": [
+      "Limit bolding to at most one key concept or metric lead-in, or eliminate mid-sentence bold spans entirely."
+    ],
+    "unacceptable_repair_properties": [
+      "Deleting the underlying technical facts or metrics to avoid bolding."
+    ]
+  },
+  {
+    "case_id": "reg_10_excessive_bold_spans_pos",
+    "pair_id": "reg_10_excessive_bold_spans",
+    "variant": "positive",
+    "category": "visual_hygiene",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Excessive bold spans in nearly every bullet",
+    "is_synthetic": false,
+    "resume_fragment": "Built the anti-corruption layer of four adapter services and one non-blocking Core onboarding service across five asynchronous Python microservices.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Candidate built 4 adapter microservices and 1 core orchestrator service in FastAPI/PostgreSQL"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Bolding multiple buzzwords and phrases in every line makes the resume easier to read."
+    ],
+    "required_reviewer_observations": [
+      "Clean typography without mid-sentence bold clutter allows natural reading."
+    ],
+    "acceptable_repair_properties": [
+      "Limit bolding to at most one key concept or metric lead-in, or eliminate mid-sentence bold spans entirely."
+    ],
+    "unacceptable_repair_properties": [
+      "Deleting the underlying technical facts or metrics to avoid bolding."
+    ]
+  },
+  {
+    "case_id": "reg_11_undisclosed_self_review_neg",
+    "pair_id": "reg_11_undisclosed_self_review",
+    "variant": "negative",
+    "category": "audit_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "The same model drafting and rubber-stamping its own output without disclosure",
+    "is_synthetic": false,
+    "resume_fragment": "Verification Report: 'Independent external quality review completed by Auditor AI. Result: 100% compliance, zero risks identified.' (Review generated by the exact same Claude session that wrote the draft).",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Draft and review were performed by the same model provider in the same session without external verification",
+      "Internal audit evaluates 9 quality dimensions with disclosed trade-offs"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "undisclosed_self_review",
+      "false_independence_claim",
+      "audit_integrity"
+    ],
+    "forbidden_inferences": [
+      "An internal prompt instructing a model to act as a critic creates an objective, independent 3rd-party review."
+    ],
+    "required_reviewer_observations": [
+      "The review falsely presents self-evaluation as an independent 3rd-party audit without disclosing shared model context."
+    ],
+    "acceptable_repair_properties": [
+      "Explicitly label the evaluation as an adversarial self-review with disclosed trade-offs, or route to a distinct secondary model."
+    ],
+    "unacceptable_repair_properties": [
+      "Masking the self-review by renaming the prompt header."
+    ]
+  },
+  {
+    "case_id": "reg_11_undisclosed_self_review_pos",
+    "pair_id": "reg_11_undisclosed_self_review",
+    "variant": "positive",
+    "category": "audit_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "The same model drafting and rubber-stamping its own output without disclosure",
+    "is_synthetic": false,
+    "resume_fragment": "Verification Report: 'Adversarial self-review executed by drafting model session; evaluated 9 quality dimensions with disclosed density trade-offs. Cross-model audit pending.'",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Draft and review were performed by the same model provider in the same session without external verification",
+      "Internal audit evaluates 9 quality dimensions with disclosed trade-offs"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "An internal prompt instructing a model to act as a critic creates an objective, independent 3rd-party review."
+    ],
+    "required_reviewer_observations": [
+      "Accurately discloses review stance as an internal adversarial self-check rather than claiming false independence."
+    ],
+    "acceptable_repair_properties": [
+      "Explicitly label the evaluation as an adversarial self-review with disclosed trade-offs, or route to a distinct secondary model."
+    ],
+    "unacceptable_repair_properties": [
+      "Masking the self-review by renaming the prompt header."
+    ]
+  },
+  {
+    "case_id": "reg_12_cramped_unreadable_layout_neg",
+    "pair_id": "reg_12_cramped_unreadable_layout",
+    "variant": "negative",
+    "category": "visual_scannability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A technically one-page r\u00e9sum\u00e9 that is visually unreadable",
+    "is_synthetic": false,
+    "resume_fragment": "Render Configuration: margins=0.20in, itemsep=-4pt, parsep=0pt, topsep=0pt, fontsize=9.5pt. Visual result: solid block of text with virtually no white space between sections or bullets.",
+    "canonical_evidence_ids": [
+      "rft_b12_audit_framework",
+      "am_b07_code_quality_gates"
+    ],
+    "canonical_facts": [
+      "Repository guidelines establish 0.30in margin floor, 10-11pt font, comfortable 2-3pt bullet separation, and 16-17 bullet target across 1 clean page"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "cramped_spacing",
+      "readability",
+      "recruiter_scan_quality"
+    ],
+    "forbidden_inferences": [
+      "Any layout that fits onto a single page is acceptable regardless of how unreadable it is to human eyes."
+    ],
+    "required_reviewer_observations": [
+      "Layout violates typographic standards to force excessive content onto one page, failing the 10-second human scan."
+    ],
+    "acceptable_repair_properties": [
+      "Maintain margins >=0.30in, clear section spacing, and reduce bullet count to 16-17 to preserve scannability."
+    ],
+    "unacceptable_repair_properties": [
+      "Arbitrarily deleting entire mandatory sections like Education or Experience."
+    ]
+  },
+  {
+    "case_id": "reg_12_cramped_unreadable_layout_pos",
+    "pair_id": "reg_12_cramped_unreadable_layout",
+    "variant": "positive",
+    "category": "visual_scannability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A technically one-page r\u00e9sum\u00e9 that is visually unreadable",
+    "is_synthetic": false,
+    "resume_fragment": "Render Configuration: margins=0.30in, fontsize=11pt, comfortable 2-3pt bullet separation, distinct section headers, 16 bullets total across 1 clean page.",
+    "canonical_evidence_ids": [
+      "rft_b12_audit_framework",
+      "am_b07_code_quality_gates"
+    ],
+    "canonical_facts": [
+      "Repository guidelines establish 0.30in margin floor, 10-11pt font, comfortable 2-3pt bullet separation, and 16-17 bullet target across 1 clean page"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Any layout that fits onto a single page is acceptable regardless of how unreadable it is to human eyes."
+    ],
+    "required_reviewer_observations": [
+      "Follows repository layout constraints, providing clear visual hierarchy and comfortable line spacing."
+    ],
+    "acceptable_repair_properties": [
+      "Maintain margins >=0.30in, clear section spacing, and reduce bullet count to 16-17 to preserve scannability."
+    ],
+    "unacceptable_repair_properties": [
+      "Arbitrarily deleting entire mandatory sections like Education or Experience."
+    ]
+  },
+  {
+    "case_id": "reg_13_buried_lead_evidence_neg",
+    "pair_id": "reg_13_buried_lead_evidence",
+    "variant": "negative",
+    "category": "information_hierarchy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Strong role evidence buried below weaker projects",
+    "is_synthetic": false,
+    "resume_fragment": "Projects Section Order: 1. Campus Marketplace (Course CRUD app), 2. Fake Review Detection, 3. ResumeFinetune (Agentic LLM system).",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability",
+      "cm_b1"
+    ],
+    "canonical_facts": [
+      "ResumeFinetune is the candidate's strongest, most differentiated LLM and systems engineering project (Position 1)",
+      "Fake Review Detection provides transformer fine-tuning evidence (Position 2)",
+      "PeerChat provides distributed event sourcing evidence (Position 3)",
+      "Campus Marketplace is an older undergraduate course project"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "suboptimal_hierarchy",
+      "buried_lead_evidence",
+      "relevance"
+    ],
+    "forbidden_inferences": [
+      "Undergraduate course projects should precede production-grade autonomous agent systems."
+    ],
+    "required_reviewer_observations": [
+      "Strongest role-relevant LLM evidence is buried at the bottom of the section beneath basic CRUD projects."
+    ],
+    "acceptable_repair_properties": [
+      "Order projects by relevance and technical rigor: ResumeFinetune first, followed by Fake Review Detection / PeerChat."
+    ],
+    "unacceptable_repair_properties": [
+      "Deleting older projects entirely if page space and database requirements warrant their inclusion."
+    ]
+  },
+  {
+    "case_id": "reg_13_buried_lead_evidence_pos",
+    "pair_id": "reg_13_buried_lead_evidence",
+    "variant": "positive",
+    "category": "information_hierarchy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Strong role evidence buried below weaker projects",
+    "is_synthetic": false,
+    "resume_fragment": "Projects Section Order: 1. ResumeFinetune (Agentic LLM System), 2. Fake Review Detection (Transformer Fine-Tuning), 3. PeerChat (Distributed Event Sourcing).",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability",
+      "cm_b1"
+    ],
+    "canonical_facts": [
+      "ResumeFinetune is the candidate's strongest, most differentiated LLM and systems engineering project (Position 1)",
+      "Fake Review Detection provides transformer fine-tuning evidence (Position 2)",
+      "PeerChat provides distributed event sourcing evidence (Position 3)",
+      "Campus Marketplace is an older undergraduate course project"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Undergraduate course projects should precede production-grade autonomous agent systems."
+    ],
+    "required_reviewer_observations": [
+      "Places the candidate's strongest and most relevant AI engineering work immediately at the top of Projects."
+    ],
+    "acceptable_repair_properties": [
+      "Order projects by relevance and technical rigor: ResumeFinetune first, followed by Fake Review Detection / PeerChat."
+    ],
+    "unacceptable_repair_properties": [
+      "Deleting older projects entirely if page space and database requirements warrant their inclusion."
+    ]
+  },
+  {
+    "case_id": "reg_14_repaired_bullet_remains_ai_slop_neg",
+    "pair_id": "reg_14_repaired_bullet_remains_ai_slop",
+    "variant": "negative",
+    "category": "prose_quality",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A repaired bullet that remains AI slop",
+    "is_synthetic": false,
+    "resume_fragment": "Spearheaded cutting-edge, synergistic prompt engineering paradigms utilizing state-of-the-art LLM architectures, driving robust scoring consistency from 2.4 to 0.6 standard deviations.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Reduced scoring variance from 2.4 to 0.6 points on 10-point scale via median self-consistency"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "ai_slop_risk",
+      "readability",
+      "star_xyz_coherence"
+    ],
+    "forbidden_inferences": [
+      "Including a verified metric excuses hollow marketing adjectives like 'cutting-edge', 'synergistic', and 'spearheaded'."
+    ],
+    "required_reviewer_observations": [
+      "Repair correctly integrates the variance numbers but saturates the sentence with banned AI slop buzzwords."
+    ],
+    "acceptable_repair_properties": [
+      "Replace marketing jargon with concrete engineering verbs: 'Engineered three-pass self-consistency evaluation pipeline...'"
+    ],
+    "unacceptable_repair_properties": [
+      "Stripping the metric to simplify the sentence."
+    ]
+  },
+  {
+    "case_id": "reg_14_repaired_bullet_remains_ai_slop_pos",
+    "pair_id": "reg_14_repaired_bullet_remains_ai_slop",
+    "variant": "positive",
+    "category": "prose_quality",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A repaired bullet that remains AI slop",
+    "is_synthetic": false,
+    "resume_fragment": "Engineered three-pass self-consistency evaluation pipeline using median aggregation, reducing scoring variance from 2.4 to 0.6 points on a 10-point scale.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Reduced scoring variance from 2.4 to 0.6 points on 10-point scale via median self-consistency"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Including a verified metric excuses hollow marketing adjectives like 'cutting-edge', 'synergistic', and 'spearheaded'."
+    ],
+    "required_reviewer_observations": [
+      "Clean, natural technical prose with verified metric and zero promotional filler."
+    ],
+    "acceptable_repair_properties": [
+      "Replace marketing jargon with concrete engineering verbs: 'Engineered three-pass self-consistency evaluation pipeline...'"
+    ],
+    "unacceptable_repair_properties": [
+      "Stripping the metric to simplify the sentence."
+    ]
+  },
+  {
+    "case_id": "reg_15_employer_title_tampering_neg",
+    "pair_id": "reg_15_employer_title_tampering",
+    "variant": "negative",
+    "category": "title_fidelity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Software Developer displayed when canonical or explicitly approved title is Software Engineer",
+    "is_synthetic": false,
+    "resume_fragment": "Amdocs \\hfill Pune, India \\\\ Software Engineer \\hfill Jul 2022 -- Jul 2024",
+    "canonical_evidence_ids": [
+      "am_b00_order_management_domain"
+    ],
+    "canonical_facts": [
+      "Candidate's canonical, legally verified former title at Amdocs is 'Software Developer' from Jul 2022 -- Jul 2024",
+      "Profile explicitly notes: '# NEVER altered. Target-title seeding happens in summary line only. Altering is resume fraud.'"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "title_tampering",
+      "fraud_guardrail_breach",
+      "factual_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Tailoring justifies altering historical employer job titles to match the target job description."
+    ],
+    "required_reviewer_observations": [
+      "Job title was altered from 'Software Developer' to 'Software Engineer', violating strict anti-fraud policy."
+    ],
+    "acceptable_repair_properties": [
+      "Retain exact historical employer title 'Software Developer'; express target title affinity in summary or header."
+    ],
+    "unacceptable_repair_properties": [
+      "Conflating candidate target title with former employer HR payroll titles."
+    ]
+  },
+  {
+    "case_id": "reg_15_employer_title_tampering_pos",
+    "pair_id": "reg_15_employer_title_tampering",
+    "variant": "positive",
+    "category": "title_fidelity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Software Developer displayed when canonical or explicitly approved title is Software Engineer",
+    "is_synthetic": false,
+    "resume_fragment": "Amdocs \\hfill Pune, India \\\\ Software Developer \\hfill Jul 2022 -- Jul 2024",
+    "canonical_evidence_ids": [
+      "am_b00_order_management_domain"
+    ],
+    "canonical_facts": [
+      "Candidate's canonical, legally verified former title at Amdocs is 'Software Developer' from Jul 2022 -- Jul 2024",
+      "Profile explicitly notes: '# NEVER altered. Target-title seeding happens in summary line only. Altering is resume fraud.'"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Tailoring justifies altering historical employer job titles to match the target job description."
+    ],
+    "required_reviewer_observations": [
+      "Strictly preserves canonical employer title 'Software Developer' while maintaining full factual fidelity."
+    ],
+    "acceptable_repair_properties": [
+      "Retain exact historical employer title 'Software Developer'; express target title affinity in summary or header."
+    ],
+    "unacceptable_repair_properties": [
+      "Conflating candidate target title with former employer HR payroll titles."
+    ]
+  },
+  {
+    "case_id": "reg_16_unanchored_scoring_movement_metric_neg",
+    "pair_id": "reg_16_unanchored_scoring_movement_metric",
+    "variant": "negative",
+    "category": "metric_interpretability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Mean LLM scoring movement used without a definition, scale, or evaluation context",
+    "is_synthetic": false,
+    "resume_fragment": "Iterated prompt templates across evaluation runs, driving a 1.8 mean LLM scoring movement.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Prompt iteration shifted scores by +1.8 points on a 10-point scale across 35 benchmark evaluations with an initial baseline of 5.4"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "metric_fidelity",
+      "unanchored_metric",
+      "ambiguous_scale"
+    ],
+    "forbidden_inferences": [
+      "A floating-point delta without a scale or baseline is an interpretable engineering metric."
+    ],
+    "required_reviewer_observations": [
+      "'1.8 mean LLM scoring movement' is completely uninterpretable without specifying whether it was positive, what the scale is, or what baseline was used."
+    ],
+    "acceptable_repair_properties": [
+      "Anchor the metric: state baseline, scale range (e.g. 10-point rubric), and whether it represents variance reduction or alignment improvement."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing a percentage conversion like '+180% improvement'."
+    ]
+  },
+  {
+    "case_id": "reg_16_unanchored_scoring_movement_metric_pos",
+    "pair_id": "reg_16_unanchored_scoring_movement_metric",
+    "variant": "positive",
+    "category": "metric_interpretability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Mean LLM scoring movement used without a definition, scale, or evaluation context",
+    "is_synthetic": false,
+    "resume_fragment": "Hardened prompt criteria across 35 benchmark runs, shifting average candidate evaluation scores by +1.8 points on a 10-point rubric toward calibrated human scores.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Prompt iteration shifted scores by +1.8 points on a 10-point scale across 35 benchmark evaluations with an initial baseline of 5.4"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "A floating-point delta without a scale or baseline is an interpretable engineering metric."
+    ],
+    "required_reviewer_observations": [
+      "Metric is fully anchored with scale (10-point rubric), direction (+1.8), and ground-truth reference."
+    ],
+    "acceptable_repair_properties": [
+      "Anchor the metric: state baseline, scale range (e.g. 10-point rubric), and whether it represents variance reduction or alignment improvement."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing a percentage conversion like '+180% improvement'."
+    ]
+  },
+  {
+    "case_id": "reg_17_score_stability_presented_as_accuracy_neg",
+    "pair_id": "reg_17_score_stability_presented_as_accuracy",
+    "variant": "negative",
+    "category": "claim_credibility",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Score stability presented as model accuracy",
+    "is_synthetic": false,
+    "resume_fragment": "Built three-pass LLM scoring aggregator that increased model accuracy to 95% on job evaluation benchmarks.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Three-pass median consensus reduced run-to-run scoring variance from 2.4 to 0.6 standard deviations across repeat evaluations on a 10-point scale",
+      "Technique improved score consistency and stability, but did not measure ground truth classification accuracy"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "metric_semantic_drift",
+      "accuracy_conflation",
+      "factual_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Stochastic agreement between multiple LLM calls proves factual correctness or ground-truth accuracy."
+    ],
+    "required_reviewer_observations": [
+      "Confuses inter-run stability/consistency with model accuracy against ground truth."
+    ],
+    "acceptable_repair_properties": [
+      "Describe the metric accurately as variance reduction, score stability, or repeat-run agreement."
+    ],
+    "unacceptable_repair_properties": [
+      "Claiming ground truth benchmark accuracy without labeled test sets."
+    ]
+  },
+  {
+    "case_id": "reg_17_score_stability_presented_as_accuracy_pos",
+    "pair_id": "reg_17_score_stability_presented_as_accuracy",
+    "variant": "positive",
+    "category": "claim_credibility",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Score stability presented as model accuracy",
+    "is_synthetic": false,
+    "resume_fragment": "Built three-pass LLM scoring aggregator with median consensus, reducing run-to-run score variance from 2.4 to 0.6 standard deviations across repeat evaluations.",
+    "canonical_evidence_ids": [
+      "rft_b06_scoring_stability"
+    ],
+    "canonical_facts": [
+      "Three-pass median consensus reduced run-to-run scoring variance from 2.4 to 0.6 standard deviations across repeat evaluations on a 10-point scale",
+      "Technique improved score consistency and stability, but did not measure ground truth classification accuracy"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Stochastic agreement between multiple LLM calls proves factual correctness or ground-truth accuracy."
+    ],
+    "required_reviewer_observations": [
+      "Precisely describes consistency engineering without confusing stability with ground-truth accuracy."
+    ],
+    "acceptable_repair_properties": [
+      "Describe the metric accurately as variance reduction, score stability, or repeat-run agreement."
+    ],
+    "unacceptable_repair_properties": [
+      "Claiming ground truth benchmark accuracy without labeled test sets."
+    ]
+  },
+  {
+    "case_id": "reg_18_missing_dataset_provenance_neg",
+    "pair_id": "reg_18_missing_dataset_provenance",
+    "variant": "negative",
+    "category": "provenance_transparency",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Fake-review metrics presented without dataset or label provenance",
+    "is_synthetic": false,
+    "resume_fragment": "Trained DeBERTa transformer achieving 0.93 ROC-AUC and 0.84 macro-F1 for fake review detection.",
+    "canonical_evidence_ids": [
+      "frd_b1",
+      "frd_b2"
+    ],
+    "canonical_facts": [
+      "Dataset was 423K Yelp reviews partitioned with reviewer-disjoint splits to prevent identity leakage"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "unattributed_eval_benchmark",
+      "missing_provenance",
+      "technical_guarantee_fidelity"
+    ],
+    "forbidden_inferences": [
+      "High evaluation metrics are meaningful without identifying the evaluation corpus or partitioning methodology."
+    ],
+    "required_reviewer_observations": [
+      "Fails to cite dataset source, scale, or split discipline, raising questions of evaluation leakage."
+    ],
+    "acceptable_repair_properties": [
+      "Name the corpus (Yelp 423K reviews) and split discipline (reviewer-disjoint)."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing private proprietary dataset benchmarks."
+    ]
+  },
+  {
+    "case_id": "reg_18_missing_dataset_provenance_pos",
+    "pair_id": "reg_18_missing_dataset_provenance",
+    "variant": "positive",
+    "category": "provenance_transparency",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Fake-review metrics presented without dataset or label provenance",
+    "is_synthetic": false,
+    "resume_fragment": "Fine-tuned DeBERTa-v3 on 423K Yelp reviews using reviewer-disjoint train/test splits, achieving 0.93 ROC-AUC and 0.84 macro-F1 under class imbalance.",
+    "canonical_evidence_ids": [
+      "frd_b1",
+      "frd_b2"
+    ],
+    "canonical_facts": [
+      "Dataset was 423K Yelp reviews partitioned with reviewer-disjoint splits to prevent identity leakage"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "High evaluation metrics are meaningful without identifying the evaluation corpus or partitioning methodology."
+    ],
+    "required_reviewer_observations": [
+      "Full provenance provided: corpus name, review count, reviewer-disjoint split, and balanced metrics."
+    ],
+    "acceptable_repair_properties": [
+      "Name the corpus (Yelp 423K reviews) and split discipline (reviewer-disjoint)."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing private proprietary dataset benchmarks."
+    ]
+  },
+  {
+    "case_id": "reg_19_mechanism_inventory_without_outcome_neg",
+    "pair_id": "reg_19_mechanism_inventory_without_outcome",
+    "variant": "negative",
+    "category": "engineering_substance",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A project bullet listing many mechanisms without demonstrated behavior",
+    "is_synthetic": false,
+    "resume_fragment": "Configured PostgreSQL row-level locks, SHA-256 payload hashing, FastAPI background tasks, Pydantic schemas, and Redis caches for payment operations.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Used atomic reservations and payload hashing in idempotent transfer engine to collapse 8 concurrent requests to 1 downstream execution"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "empty_mechanism_inventory",
+      "star_xyz_coherence",
+      "outcome_orientation"
+    ],
+    "forbidden_inferences": [
+      "Listing software mechanisms proves that the software successfully enforced business invariants or solved concurrency problems."
+    ],
+    "required_reviewer_observations": [
+      "Lists a catalog of mechanisms without explaining the problem solved or the resulting behavioral outcome."
+    ],
+    "acceptable_repair_properties": [
+      "Connect mechanism to behavioral guarantee: idempotent transfer engine collapsing concurrent requests."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding more tools to the list without an outcome."
+    ]
+  },
+  {
+    "case_id": "reg_19_mechanism_inventory_without_outcome_pos",
+    "pair_id": "reg_19_mechanism_inventory_without_outcome",
+    "variant": "positive",
+    "category": "engineering_substance",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A project bullet listing many mechanisms without demonstrated behavior",
+    "is_synthetic": false,
+    "resume_fragment": "Built an idempotent fund transfer engine using PostgreSQL atomic reservations and SHA-256 payload hashing, collapsing 8 concurrent requests into a single execution.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Used atomic reservations and payload hashing in idempotent transfer engine to collapse 8 concurrent requests to 1 downstream execution"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Listing software mechanisms proves that the software successfully enforced business invariants or solved concurrency problems."
+    ],
+    "required_reviewer_observations": [
+      "Directly links mechanism (atomic reservations + payload hashing) to concrete invariant and outcome (collapsing 8 calls into 1)."
+    ],
+    "acceptable_repair_properties": [
+      "Connect mechanism to behavioral guarantee: idempotent transfer engine collapsing concurrent requests."
+    ],
+    "unacceptable_repair_properties": [
+      "Adding more tools to the list without an outcome."
+    ]
+  },
+  {
+    "case_id": "reg_20_buzzword_saturation_neg",
+    "pair_id": "reg_20_buzzword_saturation",
+    "variant": "negative",
+    "category": "vocabulary_discipline",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Repeated agentic, orchestration, evidence-grounded, validation, and human review language across multiple sections",
+    "is_synthetic": false,
+    "resume_fragment": "Orchestrated agentic AI workflows with agentic validation; engineered agentic orchestration pipelines enforcing evidence-grounded validation with human-in-the-loop review orchestration.",
+    "canonical_evidence_ids": [
+      "rft_b07_model_authority_boundary",
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Designed multi-stage tailoring pipeline separating drafting, critique, and human approval"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "lexical_repetition",
+      "buzzword_saturation",
+      "ai_slop_risk"
+    ],
+    "forbidden_inferences": [
+      "Repeating buzzwords across every phrase strengthens candidate qualification in the recruiter's mind."
+    ],
+    "required_reviewer_observations": [
+      "Excessive repetition of 'agentic', 'orchestration', and 'validation' sounds like an automated keyword stuffing loop."
+    ],
+    "acceptable_repair_properties": [
+      "Use diverse, precise engineering verbs: 'staged', 'isolated', 'enforced', 'benchmarked'."
+    ],
+    "unacceptable_repair_properties": [
+      "Replacing buzzwords with generic filler like 'did various tasks'."
+    ]
+  },
+  {
+    "case_id": "reg_20_buzzword_saturation_pos",
+    "pair_id": "reg_20_buzzword_saturation",
+    "variant": "positive",
+    "category": "vocabulary_discipline",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Repeated agentic, orchestration, evidence-grounded, validation, and human review language across multiple sections",
+    "is_synthetic": false,
+    "resume_fragment": "Engineered multi-stage LLM tailoring pipeline with staged critique; isolated untrusted model output behind schema validation and explicit human approval gates.",
+    "canonical_evidence_ids": [
+      "rft_b07_model_authority_boundary",
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Designed multi-stage tailoring pipeline separating drafting, critique, and human approval"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Repeating buzzwords across every phrase strengthens candidate qualification in the recruiter's mind."
+    ],
+    "required_reviewer_observations": [
+      "Uses crisp, varied technical vocabulary with zero buzzword repetition."
+    ],
+    "acceptable_repair_properties": [
+      "Use diverse, precise engineering verbs: 'staged', 'isolated', 'enforced', 'benchmarked'."
+    ],
+    "unacceptable_repair_properties": [
+      "Replacing buzzwords with generic filler like 'did various tasks'."
+    ]
+  },
+  {
+    "case_id": "reg_21_unsupported_skills_padding_neg",
+    "pair_id": "reg_21_unsupported_skills_padding",
+    "variant": "negative",
+    "category": "skills_taxonomy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Unsupported or weakly supported terms added to Skills merely for ATS coverage",
+    "is_synthetic": false,
+    "resume_fragment": "Technical Skills: Kubernetes, GraphQL, Redis, C++, AWS, Terraform, Apache Spark, Elasticsearch, Kafka.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "am_b01_dlq_consolidation"
+    ],
+    "canonical_facts": [
+      "Kubernetes is explicitly listed in profile do_not_claim",
+      "Resume bullets on this version only demonstrate Kafka, Python, Java, PostgreSQL, and Spring Boot"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "unsupported_skill_padding",
+      "phantom_keywords",
+      "technology_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Adding buzzwords to the skills section is acceptable even if they are unevidenced or prohibited by profile guardrails."
+    ],
+    "required_reviewer_observations": [
+      "Skills section contains unevidenced keywords and explicitly prohibited do-not-claim technologies (Kubernetes)."
+    ],
+    "acceptable_repair_properties": [
+      "Prune skills to only technologies evidenced in the rendered experience and project entries."
+    ],
+    "unacceptable_repair_properties": [
+      "Fabricating experience bullets to justify unevidenced skills."
+    ]
+  },
+  {
+    "case_id": "reg_21_unsupported_skills_padding_pos",
+    "pair_id": "reg_21_unsupported_skills_padding",
+    "variant": "positive",
+    "category": "skills_taxonomy",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Unsupported or weakly supported terms added to Skills merely for ATS coverage",
+    "is_synthetic": false,
+    "resume_fragment": "Technical Skills: Languages: Python, Java, SQL; Backend: FastAPI, Spring Boot, PostgreSQL, Apache Kafka; Developer Tools: Docker, Git, Linux.",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "am_b01_dlq_consolidation"
+    ],
+    "canonical_facts": [
+      "Kubernetes is explicitly listed in profile do_not_claim",
+      "Resume bullets on this version only demonstrate Kafka, Python, Java, PostgreSQL, and Spring Boot"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Adding buzzwords to the skills section is acceptable even if they are unevidenced or prohibited by profile guardrails."
+    ],
+    "required_reviewer_observations": [
+      "Every skill listed is directly evidenced by at least one bullet on the resume."
+    ],
+    "acceptable_repair_properties": [
+      "Prune skills to only technologies evidenced in the rendered experience and project entries."
+    ],
+    "unacceptable_repair_properties": [
+      "Fabricating experience bullets to justify unevidenced skills."
+    ]
+  },
+  {
+    "case_id": "reg_22_unanchored_rounded_percentages_neg",
+    "pair_id": "reg_22_unanchored_rounded_percentages",
+    "variant": "negative",
+    "category": "metric_interpretability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Numerous rounded percentages presented without measurement context",
+    "is_synthetic": false,
+    "resume_fragment": "Optimized distributed message queues, boosting overall system performance by 50% and increasing deployment velocity by 80%.",
+    "canonical_evidence_ids": [
+      "am_b01_dlq_consolidation",
+      "am_b05_test_automation"
+    ],
+    "canonical_facts": [
+      "Consolidated 862 dead-letter topics into shared queues, cutting topic sprawl by ~70%",
+      "Automated ~500 regression test cases across integration environments"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "unanchored_rounded_metrics",
+      "vanity_metrics",
+      "metric_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Clean round percentages without operational definitions represent credible real-world engineering results."
+    ],
+    "required_reviewer_observations": [
+      "Presents suspiciously round percentage metrics without operational definitions or baseline context."
+    ],
+    "acceptable_repair_properties": [
+      "Replace vanity percentages with verified counts and hedged approximations (~70% topic sprawl across 862 topics)."
+    ],
+    "unacceptable_repair_properties": [
+      "Replacing rounded numbers with fabricated decimal precision (e.g. 51.34%)."
+    ]
+  },
+  {
+    "case_id": "reg_22_unanchored_rounded_percentages_pos",
+    "pair_id": "reg_22_unanchored_rounded_percentages",
+    "variant": "positive",
+    "category": "metric_interpretability",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Numerous rounded percentages presented without measurement context",
+    "is_synthetic": false,
+    "resume_fragment": "Consolidated 862 dead-letter topics into shared queues with error-payload routing, cutting topic sprawl by ~70% across production clusters.",
+    "canonical_evidence_ids": [
+      "am_b01_dlq_consolidation",
+      "am_b05_test_automation"
+    ],
+    "canonical_facts": [
+      "Consolidated 862 dead-letter topics into shared queues, cutting topic sprawl by ~70%",
+      "Automated ~500 regression test cases across integration environments"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Clean round percentages without operational definitions represent credible real-world engineering results."
+    ],
+    "required_reviewer_observations": [
+      "Grounded metric with concrete count (862 topics) and appropriate approximation hedge (~70%)."
+    ],
+    "acceptable_repair_properties": [
+      "Replace vanity percentages with verified counts and hedged approximations (~70% topic sprawl across 862 topics)."
+    ],
+    "unacceptable_repair_properties": [
+      "Replacing rounded numbers with fabricated decimal precision (e.g. 51.34%)."
+    ]
+  },
+  {
+    "case_id": "reg_23_unsupported_role_repositioning_neg",
+    "pair_id": "reg_23_unsupported_role_repositioning",
+    "variant": "negative",
+    "category": "positioning_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A r\u00e9sum\u00e9 that is factually valid but positions a backend candidate as an applied product engineer without supporting product evidence",
+    "is_synthetic": false,
+    "resume_fragment": "Summary: 'Applied Product Engineer & UI/UX Specialist with deep experience leading customer discovery interviews, frontend React development, and end-user delight.'",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "pc_b01_event_sourcing"
+    ],
+    "canonical_facts": [
+      "Candidate's verified experience is backend microservices, event-sourcing, and data pipelines; product/end-user evidence is a recognized gap"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "unsupported_role_repositioning",
+      "fabricated_product_orientation",
+      "factual_fidelity"
+    ],
+    "forbidden_inferences": [
+      "A backend systems candidate should fabricate full-stack UI and product management experience to match a product engineering JD."
+    ],
+    "required_reviewer_observations": [
+      "Summary positions candidate as a frontend UI/UX product specialist despite having zero frontend product evidence in experience bullets."
+    ],
+    "acceptable_repair_properties": [
+      "Position candidate honestly as a backend/systems engineer building reliable APIs and LLM pipelines for product features."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing customer user interviews in former enterprise backend roles."
+    ]
+  },
+  {
+    "case_id": "reg_23_unsupported_role_repositioning_pos",
+    "pair_id": "reg_23_unsupported_role_repositioning",
+    "variant": "positive",
+    "category": "positioning_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A r\u00e9sum\u00e9 that is factually valid but positions a backend candidate as an applied product engineer without supporting product evidence",
+    "is_synthetic": false,
+    "resume_fragment": "Summary: 'Software Engineer specializing in backend systems, high-concurrency microservices, and reliable LLM evaluation pipelines; experienced in building robust APIs for product applications.'",
+    "canonical_evidence_ids": [
+      "int_b1",
+      "pc_b01_event_sourcing"
+    ],
+    "canonical_facts": [
+      "Candidate's verified experience is backend microservices, event-sourcing, and data pipelines; product/end-user evidence is a recognized gap"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "A backend systems candidate should fabricate full-stack UI and product management experience to match a product engineering JD."
+    ],
+    "required_reviewer_observations": [
+      "Honest, defensible positioning grounded in backend, systems, and LLM evaluation strengths."
+    ],
+    "acceptable_repair_properties": [
+      "Position candidate honestly as a backend/systems engineer building reliable APIs and LLM pipelines for product features."
+    ],
+    "unacceptable_repair_properties": [
+      "Inventing customer user interviews in former enterprise backend roles."
+    ]
+  },
+  {
+    "case_id": "reg_24_premature_evidence_truncation_neg",
+    "pair_id": "reg_24_premature_evidence_truncation",
+    "variant": "negative",
+    "category": "page_budget",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Strong unused evidence remaining while the rendered page has usable blank space",
+    "is_synthetic": false,
+    "resume_fragment": "Document Layout: 11 bullets total, 4.5 inches of blank whitespace at bottom of page. Omitted high-value verified evidence rft_b07_model_authority_boundary and pc_b01_event_sourcing.",
+    "canonical_evidence_ids": [
+      "rft_b07_model_authority_boundary",
+      "pc_b01_event_sourcing"
+    ],
+    "canonical_facts": [
+      "Target page budget is 1 complete page (16-17 bullets) with comfortable 2-3pt spacing and balanced margins",
+      "Candidate has high-priority verified bullets available in profile (rft_b07 and pc_b01)"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "underutilized_page_budget",
+      "premature_evidence_truncation",
+      "recruiter_scan_quality"
+    ],
+    "forbidden_inferences": [
+      "Leaving large expanses of empty page space conveys brevity better than including strong verified technical achievements."
+    ],
+    "required_reviewer_observations": [
+      "Document leaves 4+ inches of blank space while omitting top-priority verified evidence directly relevant to the target role."
+    ],
+    "acceptable_repair_properties": [
+      "Fill page cleanly with 16-17 high-impact verified bullets while maintaining comfortable margins."
+    ],
+    "unacceptable_repair_properties": [
+      "Padding page with artificial whitespace macros or giant fonts."
+    ]
+  },
+  {
+    "case_id": "reg_24_premature_evidence_truncation_pos",
+    "pair_id": "reg_24_premature_evidence_truncation",
+    "variant": "positive",
+    "category": "page_budget",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "Strong unused evidence remaining while the rendered page has usable blank space",
+    "is_synthetic": false,
+    "resume_fragment": "Document Layout: 16 bullets total across Experience and Projects, filling 1 complete page with comfortable 2-3pt spacing and balanced margins.",
+    "canonical_evidence_ids": [
+      "rft_b07_model_authority_boundary",
+      "pc_b01_event_sourcing"
+    ],
+    "canonical_facts": [
+      "Target page budget is 1 complete page (16-17 bullets) with comfortable 2-3pt spacing and balanced margins",
+      "Candidate has high-priority verified bullets available in profile (rft_b07 and pc_b01)"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Leaving large expanses of empty page space conveys brevity better than including strong verified technical achievements."
+    ],
+    "required_reviewer_observations": [
+      "Effectively utilizes full 1-page budget with 16 verified bullets and balanced whitespace."
+    ],
+    "acceptable_repair_properties": [
+      "Fill page cleanly with 16-17 high-impact verified bullets while maintaining comfortable margins."
+    ],
+    "unacceptable_repair_properties": [
+      "Padding page with artificial whitespace macros or giant fonts."
+    ]
+  },
+  {
+    "case_id": "reg_25_lossy_prose_repair_neg",
+    "pair_id": "reg_25_lossy_prose_repair",
+    "variant": "negative",
+    "category": "repair_fidelity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A repair that improves prose by deleting a supported achievement or metric",
+    "is_synthetic": false,
+    "resume_fragment": "Repaired Bullet: 'Implemented a reliable fund transfer engine with database locking, improving payment processing efficiency.' (Deleted: 'PostgreSQL atomic reservations', 'SHA-256 payload hashing', 'collapsing 8 concurrent calls into 1').",
+    "canonical_evidence_ids": [
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Original verified achievement: idempotent fund transfer engine using PostgreSQL atomic reservations and payload hashing, collapsing 8 concurrent calls to 1"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "destructive_metric_elimination",
+      "lossy_prose_repair",
+      "metric_fidelity"
+    ],
+    "forbidden_inferences": [
+      "Eliminating specific technical mechanisms and verified metrics is an acceptable trade-off for smoother sentence flow."
+    ],
+    "required_reviewer_observations": [
+      "Repair improved sentence length by deleting the core quantitative metric and the primary technical mechanisms."
+    ],
+    "acceptable_repair_properties": [
+      "Tighten prose while retaining key mechanisms (atomic reservations, payload hashing) and metric (8 concurrent calls to 1)."
+    ],
+    "unacceptable_repair_properties": [
+      "Downgrading engineering bullets to generic task summaries."
+    ]
+  },
+  {
+    "case_id": "reg_25_lossy_prose_repair_pos",
+    "pair_id": "reg_25_lossy_prose_repair",
+    "variant": "positive",
+    "category": "repair_fidelity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A repair that improves prose by deleting a supported achievement or metric",
+    "is_synthetic": false,
+    "resume_fragment": "Repaired Bullet: 'Engineered an idempotent transfer engine with PostgreSQL atomic reservations and payload hashing, collapsing 8 concurrent calls into 1 execution.'",
+    "canonical_evidence_ids": [
+      "int_b2"
+    ],
+    "canonical_facts": [
+      "Original verified achievement: idempotent fund transfer engine using PostgreSQL atomic reservations and payload hashing, collapsing 8 concurrent calls to 1"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "Eliminating specific technical mechanisms and verified metrics is an acceptable trade-off for smoother sentence flow."
+    ],
+    "required_reviewer_observations": [
+      "Tightens sentence flow while preserving both technical mechanisms and the quantitative concurrency metric."
+    ],
+    "acceptable_repair_properties": [
+      "Tighten prose while retaining key mechanisms (atomic reservations, payload hashing) and metric (8 concurrent calls to 1)."
+    ],
+    "unacceptable_repair_properties": [
+      "Downgrading engineering bullets to generic task summaries."
+    ]
+  },
+  {
+    "case_id": "reg_26_fraudulent_independence_assertion_neg",
+    "pair_id": "reg_26_fraudulent_independence_assertion",
+    "variant": "negative",
+    "category": "audit_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A reviewer claiming independent model review when the same model/provider performed both stages",
+    "is_synthetic": false,
+    "resume_fragment": "Recruiter Review Stance: 'Independent multi-model cross-verification completed: GPT-4o drafted and Anthropic Claude audited the document independently.' (In reality, Claude 3.7 executed both prompt steps via the same API key).",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Pipeline ran single-provider execution; drafting and critique were performed by the same Claude 3.7 model",
+      "Multi-model cross-vendor verification requires distinct secondary provider"
+    ],
+    "expected_result": "REJECT",
+    "expected_blocking_dimensions": [
+      "fraudulent_independence_assertion",
+      "vendor_model_circularity",
+      "audit_integrity"
+    ],
+    "forbidden_inferences": [
+      "A single model executing separate system prompts constitutes cross-provider independent auditing."
+    ],
+    "required_reviewer_observations": [
+      "Audit falsely claims cross-vendor model independence when both stages were executed by the same provider."
+    ],
+    "acceptable_repair_properties": [
+      "Truthfully report single-model adversarial review or route evaluation to an actual secondary model provider."
+    ],
+    "unacceptable_repair_properties": [
+      "Masking model provider names in the audit log."
+    ]
+  },
+  {
+    "case_id": "reg_26_fraudulent_independence_assertion_pos",
+    "pair_id": "reg_26_fraudulent_independence_assertion",
+    "variant": "positive",
+    "category": "audit_integrity",
+    "target_role": "OpenAI Applied Emerging Talent",
+    "description": "A reviewer claiming independent model review when the same model/provider performed both stages",
+    "is_synthetic": false,
+    "resume_fragment": "Recruiter Review Stance: 'Single-provider adversarial self-review executed by Claude 3.7; cross-vendor audit by distinct secondary provider marked as optional manual gate.'",
+    "canonical_evidence_ids": [
+      "rft_b08_tailoring_orchestration"
+    ],
+    "canonical_facts": [
+      "Pipeline ran single-provider execution; drafting and critique were performed by the same Claude 3.7 model",
+      "Multi-model cross-vendor verification requires distinct secondary provider"
+    ],
+    "expected_result": "ACCEPT",
+    "expected_blocking_dimensions": [],
+    "forbidden_inferences": [
+      "A single model executing separate system prompts constitutes cross-provider independent auditing."
+    ],
+    "required_reviewer_observations": [
+      "Transparently documents execution boundaries and avoids false claims of cross-provider independence."
+    ],
+    "acceptable_repair_properties": [
+      "Truthfully report single-model adversarial review or route evaluation to an actual secondary model provider."
+    ],
+    "unacceptable_repair_properties": [
+      "Masking model provider names in the audit log."
+    ]
+  }
+]

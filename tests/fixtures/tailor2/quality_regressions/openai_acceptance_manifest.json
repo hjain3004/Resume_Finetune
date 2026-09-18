@@ -1,0 +1,389 @@
+{
+  "manifest_version": "2.0.0",
+  "target": {
+    "company": "OpenAI",
+    "job_id": 4949,
+    "exact_title": "Software Engineer - Applied Emerging Talent",
+    "canonical_ats_url": "https://jobs.ashbyhq.com/openai/55150071-fce8-48f5-aea4-14ed78b83511/application?embed=true",
+    "base_variant": "backend",
+    "source_type": "tracker_simplify",
+    "date_posted": "2026-09-15",
+    "jd_filename": "07_OpenAI_Software_Engineer_Applied_Emerging_Talen.txt",
+    "jd_sha256": "22a740d9b3d353e2c26c2cea4cb9733c677c74b313955cff07da9aba624c2130"
+  },
+  "employer_title_fidelity": {
+    "amdocs": {
+      "canonical_title": "Software Developer",
+      "prohibited_substitutions": [
+        "Software Engineer",
+        "Backend Engineer",
+        "Senior Software Engineer",
+        "Full Stack Developer"
+      ],
+      "guardrail_rationale": "Historical former job title is legally verified via reference and background checks. Altering former employment title is resume fraud."
+    },
+    "malytech": {
+      "canonical_title": "Software Engineering Intern",
+      "prohibited_substitutions": [
+        "Software Engineer",
+        "Backend Engineer Intern",
+        "Software Developer Intern"
+      ],
+      "guardrail_rationale": "Internship designation must remain explicit per canonical profile."
+    }
+  },
+  "acceptable_semantic_equivalences": [
+    {
+      "canonical_concept": "PostgreSQL",
+      "acceptable_aliases": [
+        "Postgres",
+        "PostgreSQL",
+        "Postgres DB",
+        "PostgreSQL DB"
+      ],
+      "normalization_rule": "Treat Postgres and PostgreSQL as exact canonical synonyms satisfying relational database requirements."
+    },
+    {
+      "canonical_concept": "React",
+      "acceptable_aliases": [
+        "React",
+        "React.js",
+        "ReactJS"
+      ],
+      "normalization_rule": "Treat React and React.js as canonical synonyms."
+    },
+    {
+      "canonical_concept": "AsyncIO",
+      "acceptable_aliases": [
+        "AsyncIO",
+        "asyncio",
+        "Python asyncio"
+      ],
+      "normalization_rule": "Case-insensitive Python async runtime synonym."
+    },
+    {
+      "canonical_concept": "Apache Kafka",
+      "acceptable_aliases": [
+        "Kafka",
+        "Apache Kafka"
+      ],
+      "normalization_rule": "Messaging platform synonym."
+    },
+    {
+      "canonical_concept": "FastAPI",
+      "acceptable_aliases": [
+        "FastAPI",
+        "FastAPI microservices"
+      ],
+      "normalization_rule": "Framework synonym."
+    }
+  ],
+  "protected_metrics": [
+    {
+      "evidence_id": "am_b01_dlq_consolidation",
+      "metric_token": "862",
+      "description": "862 dead-letter topics consolidated",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "am_b01_dlq_consolidation",
+      "metric_token": "~70%",
+      "description": "cutting topic sprawl by ~70%",
+      "tolerance": "approximate_allowed"
+    },
+    {
+      "evidence_id": "am_b04_data_retention",
+      "metric_token": "~40%",
+      "description": "reducing storage footprint by ~40%",
+      "tolerance": "approximate_allowed"
+    },
+    {
+      "evidence_id": "am_b05_test_automation",
+      "metric_token": "~500",
+      "description": "covering ~500 regression test cases",
+      "tolerance": "approximate_allowed"
+    },
+    {
+      "evidence_id": "int_b1",
+      "metric_token": "4",
+      "description": "four adapter services",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "int_b1",
+      "metric_token": "5",
+      "description": "five asynchronous Python microservices in all",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "int_b2",
+      "metric_token": "8",
+      "description": "collapsing 8 concurrent requests into a single execution",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "frd_b1",
+      "metric_token": "608K",
+      "description": "608K Yelp reviews in dataset",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "frd_b1",
+      "metric_token": "260K/5K",
+      "description": "260K user / 5K business profiles",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "frd_b2",
+      "metric_token": "423K",
+      "description": "423K reviews in filtered corpus",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "frd_b2",
+      "metric_token": "0.93",
+      "description": "0.93 ROC-AUC",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "frd_b2",
+      "metric_token": "0.84",
+      "description": "0.84 macro-F1",
+      "tolerance": "exact"
+    },
+    {
+      "evidence_id": "rft_b06_scoring_stability",
+      "metric_token": "2.4 to 0.6",
+      "description": "scoring variance reduction from 2.4 to 0.6 on a 10-point scale across 35 benchmark evaluations",
+      "tolerance": "exact"
+    }
+  ],
+  "prohibited_metric_implications": [
+    {
+      "prohibited_claim": "Conflating variance reduction with ground truth accuracy",
+      "rule": "Inter-run score agreement from three-pass median aggregation must not be described as model accuracy."
+    },
+    {
+      "prohibited_claim": "Unanchored metric movements",
+      "rule": "Phrases like '1.8 mean LLM scoring movement' are prohibited unless explicitly anchored to scale, baseline, and direction."
+    },
+    {
+      "prohibited_claim": "Vanity rounded percentages without measurement protocol",
+      "rule": "Generic rounded percentages like '+50% efficiency' are prohibited unless backed by canonical profile evidence."
+    },
+    {
+      "prohibited_claim": "Foundational architectural claims from API usage or fine-tuning",
+      "rule": "Using OpenAI API or fine-tuning DeBERTa must never be elevated to authoring foundation models or theoretical architectures."
+    }
+  ],
+  "project_inclusion_exclusion_rules": {
+    "required_included_projects": [
+      {
+        "project_id": "resume_finetune_pipeline",
+        "lead_position": true,
+        "bullet_count_range": [
+          3,
+          5
+        ],
+        "justification": "Primary AI/LLM orchestration, prompt engineering, structured outputs, and evaluation discipline evidence."
+      },
+      {
+        "project_id": "fake_review_detection",
+        "bullet_count_range": [
+          2,
+          2
+        ],
+        "justification": "Provides hands-on transformer fine-tuning, reviewer-disjoint split rigor, and macro-F1 evaluation evidence."
+      },
+      {
+        "project_id": "peerchat_peer_discovery",
+        "bullet_count_range": [
+          2,
+          2
+        ],
+        "justification": "Provides distributed systems event-sourcing and presence networking; replaced campus_marketplace in Rev 3/4."
+      }
+    ],
+    "excluded_projects": [
+      {
+        "project_id": "campus_marketplace",
+        "exclusion_reason": "Older undergraduate course CRUD project; superseded by PeerChat for stronger backend systems depth."
+      },
+      {
+        "project_id": "sepsis_early_warning",
+        "exclusion_reason": "Clinical ICU time-series domain is irrelevant to consumer-facing ChatGPT/API product engineering."
+      },
+      {
+        "project_id": "clinical_trial_platform",
+        "exclusion_reason": "Specialized healthcare domain not aligned with OpenAI Applied Engineering lane."
+      }
+    ]
+  },
+  "skill_support_expectations": {
+    "required_categories": [
+      "AI and Machine Learning",
+      "Languages",
+      "Backend and Data",
+      "Developer Tools"
+    ],
+    "strictly_supported_terms": [
+      "Agentic AI",
+      "LLM Orchestration",
+      "LLM Evaluation",
+      "Prompt Engineering",
+      "Structured Outputs",
+      "Human-in-the-Loop Systems",
+      "Python",
+      "Java",
+      "SQL",
+      "Spring Boot",
+      "FastAPI",
+      "PostgreSQL",
+      "Apache Kafka",
+      "RabbitMQ",
+      "Elasticsearch",
+      "PySpark",
+      "PyTorch",
+      "Docker",
+      "Git/GitHub",
+      "Linux"
+    ],
+    "prohibited_unsupported_terms": [
+      "Kubernetes",
+      "GraphQL",
+      "Redis",
+      "Terraform",
+      "C++",
+      "AWS"
+    ],
+    "rule": "Every technical skill listed must be directly supported by at least one rendered bullet on this specific resume version."
+  },
+  "known_evidence_gaps": [
+    {
+      "gap_id": "customer_facing_product_ux",
+      "jd_phrase": "Talk to users to understand their problems and design solutions to address them",
+      "gap_nature": "Candidate experience is primarily async backend infrastructure, distributed networking, and LLM evaluation pipelines; candidate has not conducted formal user discovery interviews.",
+      "handling_instruction": "Frame candidate honestly as backend systems and API engineer building reliable platforms and evaluation pipelines for product applications; do NOT invent product manager or UX discovery credentials."
+    }
+  ],
+  "page_fill_preference": {
+    "target_pages": 1,
+    "target_bullets_min": 16,
+    "target_bullets_max": 17,
+    "hard_bullet_ceiling": 18,
+    "section_bullet_targets": {
+      "Experience": {
+        "bank_integration_internship": 3,
+        "amdocs_software_developer": 5
+      },
+      "Projects": {
+        "resume_finetune_pipeline": 4,
+        "fake_review_detection": 2,
+        "peerchat_peer_discovery": 2
+      }
+    }
+  },
+  "layout_and_render_constraints": {
+    "margin_floor_in": 0.3,
+    "margin_recommended_in": 0.3,
+    "font_size_pt": 11.0,
+    "min_font_size_pt": 10.0,
+    "min_header_date_clearance_cm": 1.5,
+    "vertical_spacing": {
+      "resume_item_trailing_pt": -3.0,
+      "section_title_spacing": "default",
+      "list_topsep_pt": 1.0
+    },
+    "max_three_line_bullets": 4,
+    "max_four_line_bullets": 0
+  },
+  "expected_recruiter_review_concerns": [
+    "10-second visual scannability: is whitespace preserved or is the page an impenetrable wall of text?",
+    "Technical credibility: are metrics traceable to master profile and hedged where estimated?",
+    "Outcome vs mechanism: does ResumeFinetune read as an engineering triumph or a library inventory?",
+    "AI slop absence: zero instances of banned fluff words (cutting-edge, spearheaded, robust, leveraged).",
+    "Review independence stance: truthful disclosure of single-provider adversarial self-review."
+  ],
+  "referenced_regression_cases": [
+    "reg_01_feature_catalogue_neg",
+    "reg_01_feature_catalogue_pos",
+    "reg_02_auxiliary_tools_dominating_header_neg",
+    "reg_02_auxiliary_tools_dominating_header_pos",
+    "reg_03_omitted_agentic_ai_skills_neg",
+    "reg_03_omitted_agentic_ai_skills_pos",
+    "reg_04_postgres_postgresql_semantic_split_neg",
+    "reg_04_postgres_postgresql_semantic_split_pos",
+    "reg_05_ai_ml_interest_overstated_as_foundational_research_neg",
+    "reg_05_ai_ml_interest_overstated_as_foundational_research_pos",
+    "reg_06_disjunctive_degree_requirement_split_neg",
+    "reg_06_disjunctive_degree_requirement_split_pos",
+    "reg_07_spurious_positioning_rationale_neg",
+    "reg_07_spurious_positioning_rationale_pos",
+    "reg_08_excessive_amdocs_density_neg",
+    "reg_08_excessive_amdocs_density_pos",
+    "reg_09_project_header_column_collision_neg",
+    "reg_09_project_header_column_collision_pos",
+    "reg_10_excessive_bold_spans_neg",
+    "reg_10_excessive_bold_spans_pos",
+    "reg_11_undisclosed_self_review_neg",
+    "reg_11_undisclosed_self_review_pos",
+    "reg_12_cramped_unreadable_layout_neg",
+    "reg_12_cramped_unreadable_layout_pos",
+    "reg_13_buried_lead_evidence_neg",
+    "reg_13_buried_lead_evidence_pos",
+    "reg_14_repaired_bullet_remains_ai_slop_neg",
+    "reg_14_repaired_bullet_remains_ai_slop_pos",
+    "reg_15_employer_title_tampering_neg",
+    "reg_15_employer_title_tampering_pos",
+    "reg_16_unanchored_scoring_movement_metric_neg",
+    "reg_16_unanchored_scoring_movement_metric_pos",
+    "reg_17_score_stability_presented_as_accuracy_neg",
+    "reg_17_score_stability_presented_as_accuracy_pos",
+    "reg_18_missing_dataset_provenance_neg",
+    "reg_18_missing_dataset_provenance_pos",
+    "reg_19_mechanism_inventory_without_outcome_neg",
+    "reg_19_mechanism_inventory_without_outcome_pos",
+    "reg_20_buzzword_saturation_neg",
+    "reg_20_buzzword_saturation_pos",
+    "reg_21_unsupported_skills_padding_neg",
+    "reg_21_unsupported_skills_padding_pos",
+    "reg_22_unanchored_rounded_percentages_neg",
+    "reg_22_unanchored_rounded_percentages_pos",
+    "reg_23_unsupported_role_repositioning_neg",
+    "reg_23_unsupported_role_repositioning_pos",
+    "reg_24_premature_evidence_truncation_neg",
+    "reg_24_premature_evidence_truncation_pos",
+    "reg_25_lossy_prose_repair_neg",
+    "reg_25_lossy_prose_repair_pos",
+    "reg_26_fraudulent_independence_assertion_neg",
+    "reg_26_fraudulent_independence_assertion_pos"
+  ],
+  "applicable_evidence_ids": [
+    "am_b00_order_management_domain",
+    "am_b01_dlq_consolidation",
+    "am_b02_row_level_entitlement",
+    "am_b03_audit_trail",
+    "am_b04_data_retention",
+    "am_b05_test_automation",
+    "am_b06_aws_ci_transition",
+    "am_b07_code_quality_gates",
+    "int_b1",
+    "int_b2",
+    "int_b3",
+    "pc_b01_event_sourcing",
+    "pc_b02_network_layer",
+    "frd_b1",
+    "frd_b2",
+    "cm_b1",
+    "sepsis_b1",
+    "sepsis_b2",
+    "rft_b01_ingestion_scale",
+    "rft_b02_eligibility_engine",
+    "rft_b03_resolution_runtime",
+    "rft_b06_scoring_stability",
+    "rft_b07_model_authority_boundary",
+    "rft_b08_tailoring_orchestration",
+    "rft_b09_jd_provenance",
+    "rft_b12_audit_framework"
+  ]
+}
