@@ -21,6 +21,7 @@ from src.tailor.providers import (
 from src.tailor.publish import slugify
 from src.tailor2.invoker import Tailor2Invoker
 from src.tailor2.lane import Tailor2RunResult, run_tailor2_lane
+from src.tailor2.render_fill import RenderFillConfig
 
 
 def _fail(label: str, msg: str) -> int:
@@ -216,6 +217,13 @@ def cmd_run(args: argparse.Namespace) -> int:
                 else not args.disable_selection_ranking
             ),
             selection_candidate_count=args.selection_candidate_count,
+            render_fill_config=RenderFillConfig(
+                max_render_iterations=args.max_render_iterations,
+                max_expansion_attempts=args.max_expansion_attempts,
+                max_compression_attempts=args.max_compression_attempts,
+                max_provider_rewrites=args.max_provider_rewrites,
+                max_renderer_failures=args.max_renderer_failures,
+            ),
         )
     except Exception as exc:
         return _fail("run", str(exc))
@@ -326,6 +334,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use the legacy single-draft path; intended only for backward-compatible offline replays.",
     )
+    run.add_argument("--max-render-iterations", type=int, default=8)
+    run.add_argument("--max-expansion-attempts", type=int, default=3)
+    run.add_argument("--max-compression-attempts", type=int, default=4)
+    run.add_argument("--max-provider-rewrites", type=int, default=0)
+    run.add_argument("--max-renderer-failures", type=int, default=1)
     run.add_argument("--root", help="Root directory for manual applications (default: applications_manual)")
     run.add_argument("--out-dir", help="Explicit output directory override")
     run.add_argument("--suffix", help="Optional suffix for the application directory slug")

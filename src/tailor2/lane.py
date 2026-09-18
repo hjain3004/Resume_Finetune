@@ -16,12 +16,15 @@ import dataclasses
 import datetime
 import json
 import logging
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from src.profile import MasterProfile, load_profile
 from src.render.lines import parse_rendered_lines
+from src.render.l7 import run_l7_tailored
+from src.render.parse import parse_pdf
 from src.tailor.artifacts import write_json_atomic
 from src.tailor2.audit_projection import ResumeProjection, build_resume_projection
 from src.tailor2.invoker import Tailor2Invoker
@@ -51,6 +54,19 @@ from src.tailor2.selection_ranking import (
     selection_bundle_to_dict,
 )
 from src.tailor2.render import compile_draft_to_pdf
+from src.tailor2.render_fill import (
+    LayoutState,
+    RenderAttempt,
+    RenderFillConfig,
+    RenderMeasurement,
+    build_compression_candidates,
+    build_expansion_candidates,
+    build_richer_variant_candidates,
+    optimize_render_fill,
+    classify_layout,
+    candidate_fingerprint,
+    measure_rendered_layout,
+)
 from src.tailor2.severity import RunStatus, Severity
 from src.tailor2.validators import (
     apply_deterministic_auto_corrections,
@@ -119,6 +135,7 @@ class _Stage:
     selection_enabled: bool = False
     selection_artifacts: dict[str, Any] = field(default_factory=dict)
     unresolved: list[str] = field(default_factory=list)
+    render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
 
 
 def _record_dimension_scores(stage: _Stage, audit: AuditResponse) -> None:
@@ -167,6 +184,7 @@ def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: lis
         selection_enabled=stage.selection_enabled,
         selection_artifacts=dict(stage.selection_artifacts),
         unresolved=list(stage.unresolved),
+        render_fill_artifacts=dict(stage.render_fill_artifacts),
     )
 
 
@@ -205,6 +223,7 @@ def run_tailor2_lane(
     source_conflicts: set[str] | None = None,
     selection_enabled: bool | None = None,
     selection_candidate_count: int = 3,
+    render_fill_config: RenderFillConfig | None = None,
 ) -> Tailor2RunResult:
     """Run the LLM-first tailoring pipeline.
 
@@ -386,7 +405,7 @@ def run_tailor2_lane(
             )
 
     # ---------------------------------------------------------
-    # RENDER & L7 GATE
+    # RENDER, MEASURE, AND BOUNDED FILL OPTIMIZATION
     # ---------------------------------------------------------
     resolved_titles = {
         e.entry_id: e.displayed_title_or_tech for e in final_projection.entries if e.kind == "Experience"
@@ -395,38 +414,122 @@ def run_tailor2_lane(
         cat: tuple(s.term for s in terms if s.is_displayed)
         for cat, terms in final_projection.skills.items()
     }
-    try:
-        tex_path, pdf_path, render_doc = compile_draft_to_pdf(
-            final_draft, profile, out_dir, template_path, resolved_titles, filtered_skills
+    render_fill_dir = out_dir / "render_fill"
+    render_fill_dir.mkdir(parents=True, exist_ok=True)
+    fill_config = render_fill_config or RenderFillConfig()
+    unused_evidence = stage.selection_artifacts.get("unused_evidence", [])
+    expansion_candidates = [
+        *build_expansion_candidates(final_draft, profile, unused_evidence),
+        *build_richer_variant_candidates(final_draft, profile),
+    ]
+    compression_candidates = build_compression_candidates(final_draft, profile)
+
+    def render_candidate(candidate_draft: DraftResponse, iteration: int, candidate: Any) -> RenderAttempt:
+        iteration_dir = render_fill_dir / f"iteration-{iteration:02d}"
+        iteration_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            validate_draft_response(candidate_draft, jd_text, profile, variant)
+            tex_path, pdf_path, render_doc = compile_draft_to_pdf(
+                candidate_draft,
+                profile,
+                iteration_dir,
+                template_path,
+                resolved_titles,
+                filtered_skills,
+            )
+            parsed = parse_pdf(pdf_path)
+            pages = parse_rendered_lines(pdf_path)
+            measurement = measure_rendered_layout(render_doc, parsed, pages, config=fill_config)
+            modified_bullet_ids = frozenset(
+                bullet.bullet_id
+                for bullet in candidate_draft.bullets
+                if bullet.text
+            )
+            l7_violations = run_l7_tailored(
+                render_doc,
+                parsed,
+                pages,
+                modified_bullet_ids,
+                do_not_claim=profile.do_not_claim,
+            )
+            measurement = dataclasses.replace(measurement, l7_violations=tuple(l7_violations))
+            state = classify_layout(measurement, config=fill_config)
+            return RenderAttempt(
+                candidate_id="initial" if candidate is None else candidate.candidate_id,
+                iteration=iteration,
+                draft=candidate_draft,
+                measurement=measurement,
+                state=state,
+                factual_integrity=True,
+                evidence_value=0.0 if candidate is None else candidate.value_score,
+                clarity_score=0.0 if candidate is None else candidate.clarity_score,
+                candidate_fingerprint=candidate_fingerprint(candidate_draft),
+                tex_path=str(tex_path),
+                pdf_path=str(pdf_path),
+            )
+        except Exception as exc:
+            return RenderAttempt(
+                candidate_id="initial" if candidate is None else candidate.candidate_id,
+                iteration=iteration,
+                draft=candidate_draft,
+                measurement=RenderMeasurement(
+                    page_count=0,
+                    page_width=0.0,
+                    page_height=0.0,
+                    usable_bottom=fill_config.minimum_margin_pt,
+                    usable_top=fill_config.minimum_margin_pt,
+                    occupied_bottom=0.0,
+                    occupied_top=0.0,
+                    occupied_vertical_extent=0.0,
+                    remaining_usable_space=0.0,
+                    overflow_pt=0.0,
+                    render_succeeded=False,
+                    l7_violations=(str(exc),),
+                ),
+                state=LayoutState.RENDER_FAILURE,
+                factual_integrity=False,
+                candidate_fingerprint=candidate_fingerprint(candidate_draft),
+                render_error=str(exc),
+            )
+
+    result = optimize_render_fill(
+        final_draft,
+        render_candidate,
+        expansion_candidates=expansion_candidates,
+        compression_candidates=compression_candidates,
+        config=fill_config,
+    )
+    stage.render_fill_artifacts = result.to_manifest_dict()
+    stage.render_fill_artifacts["unused_evidence_consumed"] = [
+        list(item.evidence_ids)
+        for item in result.iterations
+        if item.accepted and item.action in {"expand", "richer_variant"}
+    ]
+    stage.warnings.extend(warning for warning in result.warnings if warning not in stage.warnings)
+    stage.unresolved.extend(item for item in result.unresolved if item not in stage.unresolved)
+    if (
+        result.best_attempt is None
+        or not result.best_attempt.measurement.render_succeeded
+        or result.status is RunStatus.REJECTED_FATAL
+    ):
+        return _write_fatal(
+            out_dir,
+            stage,
+            list(result.unresolved) or ["Render fill produced no safe usable artifact"],
         )
-    except Exception as exc:
-        # Compilation itself failed -- a corrupted/unrenderable document is
-        # explicitly FATAL_INTEGRITY (cannot be repaired without inventing
-        # a working document).
-        return _write_fatal(out_dir, stage, [f"Render failed: {exc}"])
+    final_draft = result.best_attempt.draft
+    tex_path = Path(result.best_attempt.tex_path)
+    pdf_path = Path(result.best_attempt.pdf_path)
+    final_tex = out_dir / "resume.tex"
+    final_pdf = out_dir / "resume.pdf"
+    shutil.copy2(tex_path, final_tex)
+    shutil.copy2(pdf_path, final_pdf)
 
-    try:
-        pages = parse_rendered_lines(pdf_path)
-    except Exception as exc:
-        return _write_fatal(out_dir, stage, [f"Could not parse rendered PDF: {exc}"])
-
-    page_overflow = len(pages) != 1
-    if page_overflow:
-        # Page-fill variance is NOT a fatal defect (explicit override in
-        # this task): the résumé compiled successfully, it is just not
-        # exactly one page. Preserve the artifact and mark for human
-        # review rather than discarding it.
-        stage.warnings.append(f"Compiled PDF has {len(pages)} page(s) (expected 1); preserved for human review.")
-
-    # ---------------------------------------------------------
-    # FINAL STATUS RESOLUTION
-    # ---------------------------------------------------------
-    if page_overflow or stage.needs_human_review:
+    run_status = result.status
+    if stage.needs_human_review and run_status in {RunStatus.ACCEPTED, RunStatus.ACCEPTED_WITH_WARNINGS}:
         run_status = RunStatus.NEEDS_HUMAN_REVIEW
-    elif stage.auto_corrections or stage.advisory_gaps or any("Skills advisory" in w for w in stage.warnings):
+    elif run_status is RunStatus.ACCEPTED and (stage.auto_corrections or stage.advisory_gaps or any("Skills advisory" in w for w in stage.warnings)):
         run_status = RunStatus.ACCEPTED_WITH_WARNINGS
-    else:
-        run_status = RunStatus.ACCEPTED
 
     manifest = _build_manifest(stage, run_status, [])
     manifest_path = out_dir / "run_manifest.json"
@@ -437,7 +540,7 @@ def run_tailor2_lane(
         call_count=stage.call_count,
         repair_performed=stage.repair_performed,
         manifest_path=manifest_path,
-        out_pdf=pdf_path,
+        out_pdf=final_pdf,
         status=run_status.value,
         warnings=list(stage.warnings),
     )
