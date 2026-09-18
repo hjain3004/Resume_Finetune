@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "comparison_id": "cmp-openai_4949",
+  "reviewer_id": "evaluator_template",
+  "dimension_preferences": {
+    "factual_trustworthiness": "A",
+    "target_role_fit": "A",
+    "recruiter_scan_quality": "A",
+    "clarity": "A",
+    "achievement_strength": "A",
+    "metric_interpretability": "A",
+    "interview_defensibility": "A",
+    "mechanism_outcome_balance": "A",
+    "redundancy": "A",
+    "ai_slop": "A",
+    "skills_credibility": "A",
+    "visual_readability": "A",
+    "page_utilization": "A",
+    "overall_preference": "A"
+  },
+  "overall_preference": "A",
+  "reviewer_confidence": 1.0,
+  "free_text_concerns": "Example response template. Replace preference values ('A', 'B', 'TIE', 'NEITHER') and provide notes if any discrepancies or factual inaccuracies are observed.",
+  "factual_error_flags": []
+}

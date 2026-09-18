@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "openai_smoke_recorded",
+  "profile_id": "master_profile@6412c9fd6e7e",
+  "profile_checksum": "6412c9fd6e7ea390c64a7c773c46afda74199de36966369afb6f79c746534c8d",
+  "target_ids": [
+    "openai_4949"
+  ],
+  "target_jd_checksums": {
+    "openai_4949": "22a740d9b3d353e2c26c2cea4cb9733c677c74b313955cff07da9aba624c2130"
+  },
+  "candidate_pipeline_id": "tailor2@candidate",
+  "baseline_pipeline_id": "openai-4949-manual",
+  "drafter": {
+    "provider": "mock",
+    "model": "mock-drafter"
+  },
+  "auditor": {
+    "provider": "mock",
+    "model": "mock-auditor"
+  },
+  "repair": {
+    "provider": "mock",
+    "model": "mock-repair"
+  },
+  "re_audit": {
+    "provider": "mock",
+    "model": "mock-reaudit"
+  },
+  "deterministic_config": {
+    "temperature": 0.0
+  },
+  "max_cost_usd": 1.0,
+  "max_calls": 10,
+  "timeout_seconds": 300,
+  "resume_policy": "skip_completed",
+  "artifact_root": "artifacts/evaluation/tailor2/openai_smoke_recorded",
+  "blind_comparison": {
+    "enabled": true,
+    "seed": 42,
+    "dimensions": [
+      "factual_trustworthiness",
+      "target_role_fit",
+      "recruiter_scan_quality",
+      "clarity",
+      "achievement_strength",
+      "metric_interpretability",
+      "interview_defensibility",
+      "mechanism_outcome_balance",
+      "redundancy",
+      "ai_slop",
+      "skills_credibility",
+      "visual_readability",
+      "page_utilization",
+      "overall_preference"
+    ]
+  }
+}

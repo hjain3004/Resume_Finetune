@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "top10_live",
+  "profile_id": "master_profile@6412c9fd6e7e",
+  "profile_checksum": "6412c9fd6e7ea390c64a7c773c46afda74199de36966369afb6f79c746534c8d",
+  "target_ids": [
+    "zoom_4766",
+    "doordash_4608",
+    "idme_3981",
+    "tiktok_4164",
+    "roadrunner_5027",
+    "lexisnexislegalprofessional_4987",
+    "openai_4949",
+    "c3ai_4894",
+    "commure_4839",
+    "twitch_4182"
+  ],
+  "target_jd_checksums": {
+    "zoom_4766": "3cb0db9d4a8b3af912332a1d52213c52742cc7c73a29281f119ce807d3d3c72f",
+    "doordash_4608": "b39e57fb914bba84cab470e13e74fbc845681a6612ccd8ea461c036c7f39e548",
+    "idme_3981": "4bb41c9a8b25ea211c49bfc0036775b1392f32057a3c3e729e8f11fc0c978f3a",
+    "tiktok_4164": "37d3962b02d5c59fd0ca91915cd2ba86e593938eec5866cb97443666365c6452",
+    "roadrunner_5027": "5688e99db817f037164e826e83ec8b1e90d2b11259578f6c9e35f8fe68868ecb",
+    "lexisnexislegalprofessional_4987": "28509077c88abd860271921b7ee7bcac1ee47f52e676539a8887ce492d4b2532",
+    "openai_4949": "22a740d9b3d353e2c26c2cea4cb9733c677c74b313955cff07da9aba624c2130",
+    "c3ai_4894": "7b03db4b9387ab42e94da649b6cdd6f68ec18295cfd7f2795a49f5e18ee5b975",
+    "commure_4839": "a1336d0d0077d11118edc35638c8cfdada22ab7b46a61426866199404e294bd4",
+    "twitch_4182": "da07be5a86568397b34dd45497ba1421236c51ea5e6fb0f0a2e0a533cccd5fc7"
+  },
+  "candidate_pipeline_id": "tailor2@candidate",
+  "baseline_pipeline_id": "tailor1@legacy",
+  "drafter": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "auditor": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "repair": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "re_audit": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "deterministic_config": {
+    "temperature": 0.0
+  },
+  "max_cost_usd": 15.0,
+  "max_calls": 120,
+  "timeout_seconds": 3600,
+  "resume_policy": "skip_completed",
+  "artifact_root": "artifacts/evaluation/tailor2/top10_live",
+  "blind_comparison": {
+    "enabled": true,
+    "seed": 1337,
+    "dimensions": [
+      "factual_trustworthiness",
+      "target_role_fit",
+      "recruiter_scan_quality",
+      "clarity",
+      "achievement_strength",
+      "metric_interpretability",
+      "interview_defensibility",
+      "mechanism_outcome_balance",
+      "redundancy",
+      "ai_slop",
+      "skills_credibility",
+      "visual_readability",
+      "page_utilization",
+      "overall_preference"
+    ]
+  }
+}
