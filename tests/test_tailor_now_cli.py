@@ -14,6 +14,11 @@ from tests.tailor.test_pilot import _seed_db
 JD = "Python " * 60
 
 
+import sqlite3
+
+from src.tailor.provenance import JD_PROVENANCE_SCHEMA, parse_provenance_dict
+
+
 def test_export_jd_writes_text_and_prints_metadata(tmp_path, capsys):
     db_path = tmp_path / "jobs.db"
     _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD, base_variant="backend")
@@ -21,8 +26,66 @@ def test_export_jd_writes_text_and_prints_metadata(tmp_path, capsys):
     rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
     assert rc == 0
     assert out.read_text(encoding="utf-8") == JD
+    sidecar_path = tmp_path / "jd" / "225.txt.provenance.json"
+    assert sidecar_path.exists()
+    prov_data = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    prov = parse_provenance_dict(prov_data)
+    assert prov.schema_version == JD_PROVENANCE_SCHEMA
+    assert prov.job_id == 225
+    assert prov.company == "Notion"
+    assert prov.title == "SWE"
+    assert prov.source_type == "ats"
+    assert prov.jd_quality == "ats"
+    assert prov.attestation is None
+
     printed = capsys.readouterr().out
     assert "Notion" in printed and "SWE" in printed and "backend" in printed and "ats" in printed
+    assert f"--db {db_path}" in printed
+    assert "Recommended tailoring command:" in printed
+
+
+def test_export_jd_refuses_aggregator_quality(tmp_path, capsys):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("UPDATE jobs SET jd_quality = 'aggregator' WHERE id = 225")
+    conn.commit()
+    conn.close()
+
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "only 'ats' quality jobs may be exported" in err
+    assert not out.exists()
+    assert not (tmp_path / "jd" / "225.txt.provenance.json").exists()
+
+
+def test_export_jd_refuses_short_jd(tmp_path, capsys):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text="Short text")
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "shorter than 300 characters" in err
+    assert not out.exists()
+
+
+def test_export_jd_refuses_aggregator_url(tmp_path, capsys):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("UPDATE jobs SET url = 'https://www.linkedin.com/jobs/view/123', ats_url = NULL WHERE id = 225")
+    conn.commit()
+    conn.close()
+
+    out = tmp_path / "jd" / "225.txt"
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "aggregator URL" in err
+    assert not out.exists()
 
 
 def test_export_jd_unknown_job_fails_closed(tmp_path, capsys):
@@ -94,9 +157,12 @@ def test_status_lists_lane_applications(tmp_path, capsys):
     manifest = rebuild_manifest(directory, job_id=-9, company="Acme", title="Engineer")
     (directory / "run_manifest.json").write_text(json.dumps(manifest_to_dict(manifest)), encoding="utf-8")
     (directory / "lane_manifest.json").write_text(json.dumps({
-        "schema_version": "m8n0.lane_manifest.v1", "job_id": -9, "jd_sha256": "a" * 64, "jd_path": "x",
+        "schema_version": "m8n0.lane_manifest.v2", "job_id": -9, "jd_sha256": "a" * 64, "jd_path": "x",
         "company": "Acme", "title": "Engineer", "variant": "backend", "model": "sonnet",
-        "claude_cmd": ["claude"], "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00"}), encoding="utf-8")
+        "claude_cmd": ["claude"], "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00",
+        "provider": "claude", "provenance_fingerprint": "f" * 64, "source_url": "https://example.com/job/1",
+        "ats_url": "https://example.com/job/1", "attestation_digest": None,
+    }), encoding="utf-8")
     rc = cli.main(["status", "--root", str(tmp_path / "apps")])
     assert rc == 0
     out = capsys.readouterr().out

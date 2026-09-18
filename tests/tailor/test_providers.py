@@ -19,6 +19,7 @@ from src.tailor.invoke import (
 from src.tailor.lane import (
     APPLICATIONS_MANUAL_ROOT,
     LANE_MANIFEST_SCHEMA,
+    LANE_MANIFEST_SCHEMA_V1,
     LaneError,
     build_claude_cmd,
     lane_directory,
@@ -365,10 +366,22 @@ def test_invoke_gemini_http_empty_candidates_raises_invocation_error(monkeypatch
 def test_manifest_round_trip_with_provider():
     for p in ("claude", "gemini", "openai"):
         raw = {
-            "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -10, "jd_sha256": "b" * 64,
-            "jd_path": "inbox/jd/y.txt", "company": "Co", "title": "Dev", "variant": "backend",
-            "model": "m1", "claude_cmd": ["dummy", "cmd"], "jd_quality": "ats",
-            "created_at": "2026-09-16T00:00:00+00:00", "provider": p,
+            "schema_version": LANE_MANIFEST_SCHEMA,
+            "job_id": -10,
+            "jd_sha256": "b" * 64,
+            "jd_path": "inbox/jd/y.txt",
+            "company": "Co",
+            "title": "Dev",
+            "variant": "backend",
+            "model": "m1",
+            "claude_cmd": ["dummy", "cmd"],
+            "jd_quality": "ats",
+            "created_at": "2026-09-16T00:00:00+00:00",
+            "provider": p,
+            "provenance_fingerprint": "f" * 64,
+            "source_url": "https://example.com/job/10",
+            "ats_url": "https://example.com/job/10",
+            "attestation_digest": None,
         }
         manifest = parse_lane_manifest(raw)
         assert manifest.provider == p
@@ -377,13 +390,20 @@ def test_manifest_round_trip_with_provider():
 
 def test_old_manifest_without_provider_defaults_to_claude():
     old_raw = {
-        "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -5, "jd_sha256": "a" * 64,
-        "jd_path": "inbox/jd/x.txt", "company": "Acme", "title": "Engineer", "variant": "backend",
-        "model": None, "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "ats",
+        "schema_version": LANE_MANIFEST_SCHEMA_V1,
+        "job_id": -5,
+        "jd_sha256": "a" * 64,
+        "jd_path": "inbox/jd/x.txt",
+        "company": "Acme",
+        "title": "Engineer",
+        "variant": "backend",
+        "model": None,
+        "claude_cmd": list(DEFAULT_CLAUDE_CMD),
+        "jd_quality": "ats",
         "created_at": "2026-09-01T00:00:00+00:00",
     }
-    manifest = parse_lane_manifest(old_raw)
-    assert manifest.provider == "claude"
+    with pytest.raises(LaneError, match="legacy schema v1"):
+        parse_lane_manifest(old_raw)
 
 
 # ---------------------------------------------------------------------------
@@ -421,20 +441,14 @@ def test_lane_directory_suffixing(tmp_path):
 def _write_jd_with_provenance(tmp_path: Path) -> Path:
     path = tmp_path / "jd.txt"
     path.write_text(JD_TEXT, encoding="utf-8")
-    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
-    sidecar = tmp_path / "jd.txt.provenance.json"
-    sidecar.write_text(json.dumps({
-        "schema_version": JD_PROVENANCE_SCHEMA,
-        "company": "Example",
-        "title": "Engineer",
-        "source_url": "https://jobs.example.com/123",
-        "source_type": "ats",
-        "jd_quality": "ats",
-        "jd_sha256": compute_jd_sha256(path.read_bytes()),
-        "job_id": None,
-        "ats_url": "https://jobs.example.com/123",
-        "attestation": None,
-    }), encoding="utf-8")
+    from src.tailor.provenance import create_user_attestation
+    create_user_attestation(
+        path,
+        company="Example",
+        title="Engineer",
+        source_url="https://jobs.example.com/123",
+        notes="provider fixture",
+    )
     return path
 
 

@@ -37,20 +37,8 @@ JD_TEXT = "Python " * 60  # 420 chars, above JD_MIN_CHARS
 def jd_file(tmp_path):
     path = tmp_path / "jd.txt"
     path.write_text(JD_TEXT, encoding="utf-8")
-    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
-    sidecar = tmp_path / "jd.txt.provenance.json"
-    sidecar.write_text(json.dumps({
-        "schema_version": JD_PROVENANCE_SCHEMA,
-        "company": "Example",
-        "title": "Engineer",
-        "source_url": "https://jobs.example.com/123",
-        "source_type": "ats",
-        "jd_quality": "ats",
-        "jd_sha256": compute_jd_sha256(path.read_bytes()),
-        "job_id": None,
-        "ats_url": "https://jobs.example.com/123",
-        "attestation": None,
-    }), encoding="utf-8")
+    from src.tailor.provenance import create_user_attestation
+    create_user_attestation(path, company="Example", title="Engineer", source_url="https://jobs.example.com/123")
     return path
 
 
@@ -60,6 +48,7 @@ def passing_preflight(monkeypatch):
                         lambda *a, **k: PreflightReport(findings=(), passed=True))
     monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
     monkeypatch.setattr("src.tailor.lane.check_openai_credentials", lambda *a, **k: None)
+    monkeypatch.setattr("shutil.which", lambda exe: "/usr/bin/" + exe)
 
 
 @pytest.fixture
@@ -172,8 +161,9 @@ def test_lane_manifest_round_trips_strictly():
     raw = {
         "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -5, "jd_sha256": "a" * 64, "jd_path": "inbox/jd/x.txt",
         "company": "Acme", "title": "Engineer", "variant": "backend", "model": None,
-        "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00",
-        "provider": "claude",
+        "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "user_attested", "created_at": "2026-09-01T00:00:00+00:00",
+        "provider": "claude", "provenance_fingerprint": "f" * 64, "source_url": "https://example.com/job",
+        "ats_url": "https://example.com/job", "attestation_digest": "d" * 64,
     }
     manifest = parse_lane_manifest(raw)
     assert lane_manifest_to_dict(manifest) == raw
@@ -183,14 +173,15 @@ def test_lane_manifest_round_trips_strictly():
         parse_lane_manifest({k: v for k, v in raw.items() if k != "variant"})
 
 
-def test_old_manifest_without_provider_defaults_to_claude():
-    old_raw = {
-        "schema_version": LANE_MANIFEST_SCHEMA, "job_id": -5, "jd_sha256": "a" * 64, "jd_path": "inbox/jd/x.txt",
+def test_v1_manifest_lacking_provenance_binding_is_rejected():
+    v1_raw = {
+        "schema_version": "m8n0.lane_manifest.v1", "job_id": -5, "jd_sha256": "a" * 64, "jd_path": "inbox/jd/x.txt",
         "company": "Acme", "title": "Engineer", "variant": "backend", "model": None,
         "claude_cmd": list(DEFAULT_CLAUDE_CMD), "jd_quality": "ats", "created_at": "2026-09-01T00:00:00+00:00",
+        "provider": "claude",
     }
-    manifest = parse_lane_manifest(old_raw)
-    assert manifest.provider == "claude"
+    with pytest.raises(LaneError, match="legacy schema v1 lacking provenance fingerprint"):
+        parse_lane_manifest(v1_raw)
 
 
 def test_check_gemini_credentials():
@@ -251,6 +242,7 @@ def test_unknown_variant_is_refused_before_any_write(tmp_path, jd_file, passing_
 
 
 def test_preflight_failure_stops_before_any_model_call(tmp_path, jd_file, fake_chain, monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda exe: "/usr/bin/" + exe)
     monkeypatch.setattr("src.tailor.lane.run_preflight", lambda *a, **k: PreflightReport(
         findings=(PreflightFinding("prompt_invariants", "tailoring_s1.md", "bad"),), passed=False))
     outcome = run_manual_application(jd_file, company="Example", title="Engineer", variant="ml",
@@ -270,7 +262,7 @@ def test_full_run_writes_jd_snapshot_manifest_and_reaches_g3(tmp_path, jd_file, 
     assert (directory / "jd.txt").read_text(encoding="utf-8") == normalize_jd(JD_TEXT)
     manifest = parse_lane_manifest(json.loads((directory / "lane_manifest.json").read_text(encoding="utf-8")))
     assert manifest.model == "sonnet" and manifest.claude_cmd == build_claude_cmd("sonnet")
-    assert manifest.jd_quality == "ats" and manifest.variant == "ml"
+    assert manifest.jd_quality == "user_attested" and manifest.variant == "ml"
     assert (directory / "s1_request.json").exists() and (directory / "packet.json").exists()
     assert (directory / "run_manifest.json").exists()
     assert outcome.manifest.db_mutations == 0 and outcome.manifest.submissions == 0
@@ -296,19 +288,8 @@ def test_mismatched_jd_for_same_directory_is_refused(tmp_path, jd_file, fake_cha
                            root=tmp_path / "apps", profile_path=PROFILE)
     other = tmp_path / "jd2.txt"
     other.write_text(JD_TEXT + " Go", encoding="utf-8")
-    from src.tailor.provenance import JD_PROVENANCE_SCHEMA, compute_jd_sha256
-    (tmp_path / "jd2.txt.provenance.json").write_text(json.dumps({
-        "schema_version": JD_PROVENANCE_SCHEMA,
-        "company": "Example",
-        "title": "Engineer",
-        "source_url": "https://jobs.example.com/123",
-        "source_type": "ats",
-        "jd_quality": "ats",
-        "jd_sha256": compute_jd_sha256(other.read_bytes()),
-        "job_id": None,
-        "ats_url": "https://jobs.example.com/123",
-        "attestation": None,
-    }), encoding="utf-8")
+    from src.tailor.provenance import create_user_attestation
+    create_user_attestation(other, company="Example", title="Engineer", source_url="https://jobs.example.com/123")
     fake_chain.calls.clear()
     outcome = run_manual_application(other, company="Example", title="Engineer", variant="ml",
                                      root=tmp_path / "apps", profile_path=PROFILE)

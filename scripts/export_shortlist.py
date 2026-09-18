@@ -14,14 +14,17 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import sqlite3
 import sys
 from typing import Any
+import uuid
 
 from src import db
 from src.tailor.provenance import (
@@ -72,6 +75,22 @@ def _evaluate_row_eligibility(row: sqlite3.Row, mode: ExportMode) -> str | None:
             return f"aggregator summary ({quality or 'unspecified'})"
 
     return None
+
+
+def _atomic_symlink(target_rel: Path, link_path: Path) -> None:
+    """Atomically create or update a symlink to target_rel."""
+    if link_path.is_dir() and not link_path.is_symlink():
+        shutil.rmtree(link_path)
+    tmp_link = link_path.parent / f".tmp_symlink_{link_path.name}_{uuid.uuid4().hex}"
+    try:
+        tmp_link.symlink_to(target_rel)
+        os.replace(tmp_link, link_path)
+    finally:
+        if tmp_link.is_symlink() or tmp_link.exists():
+            try:
+                tmp_link.unlink()
+            except OSError:
+                pass
 
 
 def export_shortlist(
@@ -127,19 +146,20 @@ def export_shortlist(
         for r, count in sorted(reasons_tally.items()):
             print(f"    - {count} {r}")
 
-    # Safe atomic publication via staging directory inside dest
-    staging_dir = dest / f".staging_export_{export_mode.value}"
-    if staging_dir.exists():
-        shutil.rmtree(staging_dir)
-    staging_dir.mkdir(parents=True, exist_ok=True)
+    # Safe immutable generation directory publication
+    generations_dir = dest / "generations"
+    generations_dir.mkdir(parents=True, exist_ok=True)
+    gen_id = f"gen_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+    gen_dir = generations_dir / gen_id
+    gen_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        staging_jds = staging_dir / "jds"
-        staging_jds.mkdir(parents=True, exist_ok=True)
+        gen_jds = gen_dir / "jds"
+        gen_jds.mkdir(parents=True, exist_ok=True)
 
         # 1. SQLite database
-        staging_db_file = staging_dir / f"jobs_top{limit}.db"
-        dst_conn = sqlite3.connect(staging_db_file)
+        gen_db_file = gen_dir / f"jobs_top{limit}.db"
+        dst_conn = sqlite3.connect(gen_db_file)
         try:
             src_conn_rw = db.get_readonly_connection(db_path)
             try:
@@ -172,7 +192,7 @@ def export_shortlist(
             co_slug = slugify(r["company"])
             title_slug = slugify(r["title"])
             filename = f"{idx:02d}_{co_slug}_{title_slug}.txt"
-            jd_file_path = staging_jds / filename
+            jd_file_path = gen_jds / filename
             jd_text = r["jd_text"] or ""
             jd_bytes = jd_text.encode("utf-8")
             jd_file_path.write_bytes(jd_bytes)
@@ -181,7 +201,7 @@ def export_shortlist(
 
             # Determine quality & source type for provenance sidecar
             raw_quality = r["jd_quality"] or "unverified"
-            source_type = r["resolver"] or ("ats" if r["ats_url"] else "company_careers")
+            source_type = r["resolver"] or ("ats" if r["ats_url"] else "aggregator")
 
             sidecar = JDProvenance(
                 schema_version=JD_PROVENANCE_SCHEMA,
@@ -195,7 +215,7 @@ def export_shortlist(
                 ats_url=r["ats_url"] or (r["url"] if raw_quality == "ats" else None),
                 attestation=None,
             )
-            sidecar_path = staging_jds / f"{filename}.provenance.json"
+            sidecar_path = gen_jds / f"{filename}.provenance.json"
             sidecar_path.write_text(json.dumps(sidecar.to_dict(), indent=2), encoding="utf-8")
 
             can_tailor = raw_quality in (JDQuality.ATS.value, JDQuality.USER_ATTESTED.value)
@@ -206,8 +226,8 @@ def export_shortlist(
                 f"{r['location'] or 'N/A'} | {tailor_badge} | [`{filename}`](jds/{filename}) |"
             )
 
-        staging_json_file = staging_dir / f"jobs_top{limit}.json"
-        with open(staging_json_file, "w", encoding="utf-8") as f:
+        gen_json_file = gen_dir / f"jobs_top{limit}.json"
+        with open(gen_json_file, "w", encoding="utf-8") as f:
             json.dump(
                 {
                     "mode": export_mode.value,
@@ -291,28 +311,37 @@ def export_shortlist(
 |---|---|---|---|---|---|---|---|
 """ + "\n".join(table_rows) + "\n" + exclusion_md
 
-        staging_readme = staging_dir / "README.md"
-        staging_readme.write_text(readme_content, encoding="utf-8")
+        gen_readme_file = gen_dir / "README.md"
+        gen_readme_file.write_text(readme_content, encoding="utf-8")
 
-        # 4. Atomic publication: swap files and directories safely into dest
-        target_jds = dest / "jds"
-        old_jds = dest / ".jds_old"
-        if old_jds.exists():
-            shutil.rmtree(old_jds)
-        if target_jds.exists():
-            target_jds.rename(old_jds)
-        staging_jds.rename(target_jds)
-        if old_jds.exists():
-            shutil.rmtree(old_jds)
+        # 4. Atomic publication: update symlinks to the new generation
+        _atomic_symlink(Path("generations") / gen_id / "jds", dest / "jds")
+        _atomic_symlink(Path("generations") / gen_id / f"jobs_top{limit}.db", dest / f"jobs_top{limit}.db")
+        _atomic_symlink(Path("generations") / gen_id / f"jobs_top{limit}.json", dest / f"jobs_top{limit}.json")
+        _atomic_symlink(Path("generations") / gen_id / "README.md", dest / "README.md")
+        _atomic_symlink(Path("generations") / gen_id, dest / "current")
 
-        # Replace database and metadata files atomically
-        staging_db_file.replace(dest / f"jobs_top{limit}.db")
-        staging_json_file.replace(dest / f"jobs_top{limit}.json")
-        staging_readme.replace(dest / "README.md")
+        # 5. Write atomic current.json pointer LAST
+        current_data = {
+            "generation_id": gen_id,
+            "mode": export_mode.value,
+            "limit": limit,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "artifacts": {
+                "jds": f"generations/{gen_id}/jds",
+                "db": f"generations/{gen_id}/jobs_top{limit}.db",
+                "json": f"generations/{gen_id}/jobs_top{limit}.json",
+                "readme": f"generations/{gen_id}/README.md",
+            },
+        }
+        tmp_current = dest / f".tmp_current_{uuid.uuid4().hex}.json"
+        tmp_current.write_text(json.dumps(current_data, indent=2), encoding="utf-8")
+        os.replace(tmp_current, dest / "current.json")
 
-    finally:
-        if staging_dir.exists():
-            shutil.rmtree(staging_dir)
+    except Exception:
+        if gen_dir.exists():
+            shutil.rmtree(gen_dir, ignore_errors=True)
+        raise
 
     return dest
 

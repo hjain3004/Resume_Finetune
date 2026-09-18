@@ -113,6 +113,9 @@ def passing_preflight(monkeypatch):
         "src.tailor.lane.run_preflight",
         lambda *a, **k: PreflightReport(findings=(), passed=True),
     )
+    monkeypatch.setattr("shutil.which", lambda exe: f"/fake/bin/{exe}")
+    monkeypatch.setattr("src.tailor.lane.check_gemini_credentials", lambda *a, **k: None)
+    monkeypatch.setattr("src.tailor.lane.check_openai_credentials", lambda *a, **k: None)
 
 
 @pytest.fixture
@@ -126,15 +129,47 @@ def _create_jd_file(tmp_path: Path, filename: str = "jd.txt", content: str = JD_
     return p
 
 
-def _create_sidecar(
+def _create_user_attested_sidecar(
     jd_path: Path,
     *,
     company: str = "Example",
     title: str = "Engineer",
     source_url: str = "https://jobs.example.com/1",
-    source_type: str = "ats",
-    jd_quality: str = "ats",
-    job_id: int | None = None,
+    notes: str | None = None,
+    tamper_hash: str | None = None,
+) -> Path:
+    jd_bytes = jd_path.read_bytes()
+    sha = tamper_hash or compute_jd_sha256(jd_bytes)
+    sidecar_p = jd_path.parent / f"{jd_path.name}.provenance.json"
+    data = {
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": company,
+        "title": title,
+        "source_url": source_url,
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": source_url,
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": source_url,
+            "notes": notes,
+        },
+    }
+    sidecar_p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return sidecar_p
+
+
+def _create_ats_sidecar(
+    jd_path: Path,
+    *,
+    job_id: int,
+    company: str = "Example",
+    title: str = "Engineer",
+    source_url: str = "https://jobs.lever.co/example/1",
+    source_type: str = "lever",
     ats_url: str | None = None,
     tamper_hash: str | None = None,
 ) -> Path:
@@ -147,10 +182,37 @@ def _create_sidecar(
         "title": title,
         "source_url": source_url,
         "source_type": source_type,
-        "jd_quality": jd_quality,
+        "jd_quality": "ats",
         "jd_sha256": sha,
         "job_id": job_id,
         "ats_url": ats_url or source_url,
+        "attestation": None,
+    }
+    sidecar_p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return sidecar_p
+
+
+def _create_aggregator_sidecar(
+    jd_path: Path,
+    *,
+    company: str = "Example",
+    title: str = "Engineer",
+    source_url: str = "https://jobright.ai/jobs/1",
+    tamper_hash: str | None = None,
+) -> Path:
+    jd_bytes = jd_path.read_bytes()
+    sha = tamper_hash or compute_jd_sha256(jd_bytes)
+    sidecar_p = jd_path.parent / f"{jd_path.name}.provenance.json"
+    data = {
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": company,
+        "title": title,
+        "source_url": source_url,
+        "source_type": "aggregator",
+        "jd_quality": "aggregator",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": None,
         "attestation": None,
     }
     sidecar_p.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -163,7 +225,7 @@ def _create_sidecar(
 
 def test_aggregator_jd_cannot_enter_tailoring(tmp_path, fake_chain, passing_preflight):
     jd_p = _create_jd_file(tmp_path)
-    _create_sidecar(jd_p, jd_quality="aggregator", source_type="aggregator")
+    _create_aggregator_sidecar(jd_p)
 
     with pytest.raises(LaneError, match="cannot tailor aggregator-quality JD"):
         run_manual_application(
@@ -221,7 +283,7 @@ def test_missing_provenance_fails_before_any_model_call(tmp_path, fake_chain, pa
 def test_mismatched_jd_hash_fails_before_any_model_call(tmp_path, fake_chain, passing_preflight):
     jd_p = _create_jd_file(tmp_path)
     wrong_hash = "0" * 64
-    _create_sidecar(jd_p, tamper_hash=wrong_hash)
+    _create_user_attested_sidecar(jd_p, tamper_hash=wrong_hash)
 
     with pytest.raises(LaneError, match="jd hash mismatch"):
         run_manual_application(
@@ -238,7 +300,7 @@ def test_mismatched_jd_hash_fails_before_any_model_call(tmp_path, fake_chain, pa
 
 def test_company_title_mismatch_fails(tmp_path, fake_chain, passing_preflight):
     jd_p = _create_jd_file(tmp_path)
-    _create_sidecar(jd_p, company="Acme Corp", title="Backend Engineer")
+    _create_user_attested_sidecar(jd_p, company="Acme Corp", title="Backend Engineer")
 
     # Mismatched company
     with pytest.raises(LaneError, match="provenance company/title mismatch"):
@@ -271,16 +333,20 @@ def _seed_job_with_quality(
     base_variant: str = "backend",
     jd_quality: str = "ats",
     status: str = "SHORTLISTED",
+    url: str = "https://example.test/job",
+    ats_url: str | None = None,
+    resolver: str | None = None,
+    source: str = "inbox",
 ) -> None:
     conn = db.get_connection(db_path)
     conn.execute(
         """
         INSERT INTO jobs (id, dedup_key, company, title, location, url, source, discovered_at,
-                          status, jd_text, jd_quality, base_variant)
-        VALUES (?, ?, ?, ?, 'Remote', 'https://example.test/job', 'inbox',
-                '2026-08-01T00:00:00+00:00', ?, ?, ?, ?)
+                          status, jd_text, jd_quality, base_variant, ats_url, resolver)
+        VALUES (?, ?, ?, ?, 'Remote', ?, ?,
+                '2026-08-01T00:00:00+00:00', ?, ?, ?, ?, ?, ?)
         """,
-        (job_id, f"key-{job_id}", company, title, status, jd_text, jd_quality, base_variant),
+        (job_id, f"key-{job_id}", company, title, url, source, status, jd_text, jd_quality, base_variant, ats_url, resolver),
     )
     conn.commit()
     conn.close()
@@ -296,16 +362,18 @@ def test_valid_database_backed_ats_jd_passes(tmp_path, fake_chain, passing_prefl
         jd_text=JD_TEXT,
         base_variant="backend",
         jd_quality="ats",
+        url="https://jobs.lever.co/notion/225",
+        ats_url="https://jobs.lever.co/notion/225",
+        resolver="lever",
     )
 
     jd_p = _create_jd_file(tmp_path)
-    _create_sidecar(
+    _create_ats_sidecar(
         jd_p,
         company="Notion",
         title="Software Engineer",
         source_url="https://jobs.lever.co/notion/225",
         source_type="lever",
-        jd_quality="ats",
         job_id=225,
     )
 
@@ -336,17 +404,19 @@ def test_database_metadata_disagreement_fails_before_any_model_call(tmp_path, fa
         jd_text=JD_TEXT,
         base_variant="backend",
         jd_quality="aggregator",
+        url="https://jobs.lever.co/tiktok/225",
+        ats_url="https://jobs.lever.co/tiktok/225",
+        resolver="lever",
     )
 
     # But sidecar fraudulently claims jd_quality='ats'
     jd_p = _create_jd_file(tmp_path)
-    _create_sidecar(
+    _create_ats_sidecar(
         jd_p,
         company="TikTok",
         title="Software Engineer",
-        source_url="https://tiktok.com/job/225",
-        source_type="aggregator",
-        jd_quality="ats",
+        source_url="https://jobs.lever.co/tiktok/225",
+        source_type="lever",
         job_id=225,
     )
 
@@ -610,7 +680,7 @@ def test_no_raw_shortlist_sql_outside_src_db():
 
 def test_dry_run_performs_no_model_call_and_no_output_write(tmp_path, fake_chain, passing_preflight):
     jd_p = _create_jd_file(tmp_path)
-    _create_sidecar(jd_p, company="Example", title="Engineer", jd_quality="ats")
+    _create_user_attested_sidecar(jd_p, company="Example", title="Engineer")
 
     outcome = run_manual_application(
         jd_p, company="Example", title="Engineer", variant="ml",
@@ -681,3 +751,464 @@ def test_cli_attest_command_integration(tmp_path, capsys):
     assert prov.jd_quality == "user_attested"
     assert prov.attestation is not None
     assert prov.attestation.attester == "user"
+
+
+# ---------------------------------------------------------------------------
+# 16. Adversarial Rejection Tests (Strict Provenance State Machine Verification)
+# ---------------------------------------------------------------------------
+
+def test_adversarial_1_ats_with_job_id_null_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/1",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://jobs.lever.co/example/1",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="ATS provenance sidecar requires a valid integer job_id"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_2_ats_without_database_connection_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/1",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": 225,
+        "ats_url": "https://jobs.lever.co/example/1",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="requires an active database connection"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer", db_conn=None)
+
+
+def test_adversarial_3_ats_referencing_nonexistent_database_row_is_rejected(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    conn = db.get_connection(db_path)
+
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/1",
+        "source_type": "ats",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": 999,
+        "ats_url": "https://jobs.lever.co/example/1",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="nonexistent database row"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer", db_conn=conn)
+    conn.close()
+
+
+def test_adversarial_4_ats_whose_file_text_differs_from_db_jd_text_is_rejected(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _seed_job_with_quality(
+        db_path,
+        job_id=225,
+        company="Example",
+        title="Engineer",
+        jd_text="Original DB text that differs from file",
+        url="https://jobs.lever.co/example/1",
+        ats_url="https://jobs.lever.co/example/1",
+        resolver="lever",
+    )
+    conn = db.get_readonly_connection(db_path)
+
+    jd_p = _create_jd_file(tmp_path, content="Different file text on disk " * 20)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/1",
+        "source_type": "lever",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": 225,
+        "ats_url": "https://jobs.lever.co/example/1",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="database JD text mismatch"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer", db_conn=conn)
+    conn.close()
+
+
+def test_adversarial_5_ats_whose_source_url_disagrees_with_db_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    db_path = tmp_path / "jobs.db"
+    _seed_job_with_quality(
+        db_path,
+        job_id=225,
+        company="Example",
+        title="Engineer",
+        jd_text=JD_TEXT,
+        url="https://jobs.lever.co/example/original",
+        ats_url="https://jobs.lever.co/example/original",
+        resolver="lever",
+    )
+    conn = db.get_readonly_connection(db_path)
+
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/forged_different",
+        "source_type": "lever",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": 225,
+        "ats_url": "https://jobs.lever.co/example/forged_different",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="database URL disagreement"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer", db_conn=conn)
+    conn.close()
+
+
+def test_adversarial_6_ats_carrying_an_attestation_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    db_path = tmp_path / "jobs.db"
+    _seed_job_with_quality(
+        db_path,
+        job_id=225,
+        company="Example",
+        title="Engineer",
+        jd_text=JD_TEXT,
+        url="https://jobs.lever.co/example/1",
+        ats_url="https://jobs.lever.co/example/1",
+        resolver="lever",
+    )
+    conn = db.get_readonly_connection(db_path)
+
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://jobs.lever.co/example/1",
+        "source_type": "lever",
+        "jd_quality": "ats",
+        "jd_sha256": sha,
+        "job_id": 225,
+        "ats_url": "https://jobs.lever.co/example/1",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://jobs.lever.co/example/1",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="ATS provenance sidecar must not carry an attestation"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer", db_conn=conn)
+    conn.close()
+
+
+def test_adversarial_7_user_attested_with_attestation_null_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="user_attested quality requires an attestation"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_8_user_attested_with_non_null_job_id_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": 225,
+        "ats_url": "https://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://example.com/job",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="user_attested copy must not have a database job_id"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_9_user_attested_with_mismatched_top_level_and_attestation_urls_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job-a",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job-a",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://example.com/job-b",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="does not match sidecar source_url"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_10_user_attested_with_http_rather_than_https_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "http://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "http://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "http://example.com/job",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="must use HTTPS"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_11_user_attested_with_known_aggregator_url_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://www.linkedin.com/jobs/view/9999",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://www.linkedin.com/jobs/view/9999",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://www.linkedin.com/jobs/view/9999",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="cannot attest an aggregator URL"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_12_user_attested_with_invalid_or_timezone_naive_attested_at_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    # Test naive timestamp
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T12:00:00",  # naive, missing timezone!
+            "attester": "user",
+            "source_url": "https://example.com/job",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="timezone-aware UTC ISO-8601"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_13_user_attested_with_empty_attester_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "   ",  # empty
+            "source_url": "https://example.com/job",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="attester must be a nonempty string"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_14_user_attested_with_unknown_attestation_fields_is_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "user_attested",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://example.com/job",
+            "unauthorized_field": "injected",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="unrecognized keys in attestation"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_adversarial_15_unknown_quality_source_type_combinations_are_rejected(tmp_path):
+    jd_p = _create_jd_file(tmp_path)
+    sha = compute_jd_sha256(jd_p.read_bytes())
+    sidecar_p = jd_p.parent / f"{jd_p.name}.provenance.json"
+
+    # unknown quality
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "partner",
+        "jd_quality": "partner",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": None,
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="cannot tailor unverified JD"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+    # Inconsistent combination: user_attested quality but source_type='ats'
+    sidecar_p.write_text(json.dumps({
+        "schema_version": JD_PROVENANCE_SCHEMA,
+        "company": "Example",
+        "title": "Engineer",
+        "source_url": "https://example.com/job",
+        "source_type": "ats",
+        "jd_quality": "user_attested",
+        "jd_sha256": sha,
+        "job_id": None,
+        "ats_url": "https://example.com/job",
+        "attestation": {
+            "attested_at": "2026-09-17T00:00:00+00:00",
+            "attester": "user",
+            "source_url": "https://example.com/job",
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="requires source_type='user_attested'"):
+        validate_provenance_for_tailoring(jd_p, company="Example", title="Engineer")
+
+
+def test_export_shortlist_failure_injection_preserves_previous_export(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    out_dir = tmp_path / "shortlist_export"
+
+    # 1. Complete successful initial export
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+    current_json = out_dir / "current.json"
+    assert current_json.exists()
+    initial_current_data = json.loads(current_json.read_text(encoding="utf-8"))
+    initial_gen_id = initial_current_data["generation_id"]
+    initial_files = {p.name: p.read_bytes() for p in out_dir.glob("jds/*")}
+    initial_readme = (out_dir / "README.md").read_text(encoding="utf-8")
+    initial_db_bytes = (out_dir / "jobs_top10.db").read_bytes()
+
+    # 2. Inject failure during the next export's artifact creation
+    original_dump = json.dump
+
+    def failing_dump(obj, fp, **kwargs):
+        if isinstance(obj, dict) and obj.get("mode") == "tailoring_ready":
+            raise OSError("Disk full simulation during export")
+        return original_dump(obj, fp, **kwargs)
+
+    monkeypatch.setattr("json.dump", failing_dump)
+
+    with pytest.raises(OSError, match="Disk full simulation"):
+        export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=1, mode=ExportMode.TAILORING_READY)
+
+    # 3. Verify previous export is completely unchanged and readable
+    assert current_json.exists()
+    post_failure_current_data = json.loads(current_json.read_text(encoding="utf-8"))
+    assert post_failure_current_data["generation_id"] == initial_gen_id
+
+    post_failure_files = {p.name: p.read_bytes() for p in out_dir.glob("jds/*")}
+    assert post_failure_files == initial_files
+    assert (out_dir / "README.md").read_text(encoding="utf-8") == initial_readme
+    assert (out_dir / "jobs_top10.db").read_bytes() == initial_db_bytes

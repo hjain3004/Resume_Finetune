@@ -2777,3 +2777,35 @@ Added Gemini and Codex CLI support alongside Claude for the Apply-Now tailoring 
   before executing any stage, failing immediately with an actionable error message if missing.
 - **Claude MCP isolation:** Claude CLI remains the default provider, hardened with `--strict-mcp-config`
   to guarantee zero user or project MCP servers are loaded into the process.
+
+## 2026-09-17 — Strict JD Provenance Boundary, Manifest Schema v2 & Safe Exporter Publication
+
+- **Problem:** The file-fed Apply-Now lane previously accepted arbitrary text files and constructed
+  `S1Request(..., jd_quality="ats")`, silently relabeling aggregator summaries as ATS-quality postings
+  and violating the repository's JD provenance boundary. Independent review of commit `4801372` demonstrated
+  that forged sidecars and mismatched text were still accepted.
+- **Closed 2-State Provenance Machine:** Tailoring provenance validation is enforced strictly as a closed
+  2-state machine:
+  - **State A (Database-verified ATS):** Requires valid non-bool integer `job_id` bound to an active SQLite
+    database (`--db`), `attestation is None`, matching row in DB with `jd_quality == 'ats'`, exact
+    case/whitespace-normalized company and title match, exact UTF-8 sha256 hash match between file bytes and
+    DB `jd_text`, and deterministic source/ATS URL agreement (`prov.source_url` matches DB `url` or `ats_url`;
+    `prov.ats_url` matches DB `ats_url` or `url`).
+  - **State B (User-attested official copy):** Requires `job_id is None`, `source_type == 'user_attested'`,
+    valid timezone-aware UTC ISO-8601 timestamp with explicit UTC offset (`+00:00` or `Z`), valid HTTPS source URL
+    with non-empty netloc that is not an aggregator URL, exact non-empty attester, and `ats_url == source_url`.
+  - All other states (unverified JDs, aggregator summaries, forged ATS metadata without DB, forged user
+    attestation without metadata) fail closed.
+- **Manifest Schema v2 (`m8n0.lane_manifest.v2`):** Lane manifests now cryptographically bind the canonical
+  provenance fingerprint (`provenance_fingerprint`), `source_url`, `ats_url`, and `attestation_digest`.
+  Manifests written under schema v1 are rejected upon directory re-run with an actionable error. Existing
+  application directories snapshot `jd.provenance.json` and refuse re-runs if provenance has changed.
+- **Provider Independence:** Deterministic tests are decoupled from machine executables and credentials;
+  preflight provider presence and credential checks execute only when `not dry_run`.
+- **Safe Exporter Publication:** `scripts/export_shortlist.py` now publishes through immutable generation
+  directories (`dest / "generations" / gen_<id>`), updates atomic symlinks for `jds/`, `jobs_top{limit}.db`,
+  `jobs_top{limit}.json`, `README.md`, and writes `current.json` last. Any failure during generation or
+  publication leaves previous exports completely unchanged and readable.
+- **Historical Shortlist Status:** `shortlist/` is preserved as a historical review export with 19 ATS and
+  21 aggregator rows documented in `shortlist/README.md`. Direct tailoring from aggregator rows is explicitly
+  prohibited without prior user attestation.

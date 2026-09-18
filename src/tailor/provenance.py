@@ -202,17 +202,28 @@ def parse_provenance_dict(raw: dict[str, Any]) -> JDProvenance:
     if attestation_raw is not None:
         if not isinstance(attestation_raw, dict):
             raise ProvenanceError("attestation must be a dictionary or null")
+        att_allowed = {"attested_at", "attester", "source_url", "notes"}
+        extra_att = set(attestation_raw.keys()) - att_allowed
+        if extra_att:
+            raise ProvenanceError(f"unrecognized keys in attestation: {sorted(extra_att)}")
         att_req = {"attested_at", "attester", "source_url"}
-        if not att_req.issubset(attestation_raw.keys()):
-            raise ProvenanceError(f"attestation missing required keys: {sorted(att_req - set(attestation_raw.keys()))}")
+        missing_att = att_req - set(attestation_raw.keys())
+        if missing_att:
+            raise ProvenanceError(f"attestation missing required keys: {sorted(missing_att)}")
+        attester = attestation_raw["attester"]
+        if not isinstance(attester, str) or not attester.strip():
+            raise ProvenanceError("attestation attester must be a nonempty string")
+        source_url = attestation_raw["source_url"]
+        if not isinstance(source_url, str) or not source_url.strip():
+            raise ProvenanceError("attestation source_url must be a nonempty string")
         notes = attestation_raw.get("notes")
         if notes is not None and not isinstance(notes, str):
             raise ProvenanceError("attestation notes must be a string or null")
         attestation = AttestationMetadata(
             attested_at=str(attestation_raw["attested_at"]),
-            attester=str(attestation_raw["attester"]),
-            source_url=str(attestation_raw["source_url"]),
-            notes=notes,
+            attester=attester.strip(),
+            source_url=source_url.strip(),
+            notes=notes.strip() if notes else None,
         )
 
     return JDProvenance(
@@ -227,6 +238,12 @@ def parse_provenance_dict(raw: dict[str, Any]) -> JDProvenance:
         ats_url=ats_url.strip() if ats_url else None,
         attestation=attestation,
     )
+
+
+def compute_provenance_fingerprint(prov: JDProvenance) -> str:
+    """Deterministic cryptographic fingerprint computed from canonical serialized provenance."""
+    canonical = json.dumps(prov.to_dict(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def create_user_attestation(
@@ -248,8 +265,8 @@ def create_user_attestation(
 
     url_str = source_url.strip()
     parsed = urllib.parse.urlparse(url_str)
-    if not parsed.scheme or not parsed.netloc:
-        raise ProvenanceError(f"invalid source URL: {source_url!r}")
+    if parsed.scheme.lower() != "https" or not parsed.netloc:
+        raise ProvenanceError(f"invalid source URL (must use HTTPS): {source_url!r}")
     if is_aggregator_url(url_str):
         raise ProvenanceError(
             f"cannot attest an aggregator URL ({parsed.hostname}) as an official employer posting; "
@@ -343,39 +360,140 @@ def validate_provenance_for_tailoring(
             f"but run requested company={company!r}, title={title!r}"
         )
 
-    # 5. Aggregator quality
+    # 5. Quality validation: closed explicit state machine
     if prov.jd_quality == JDQuality.AGGREGATOR.value:
         raise ProvenanceError(
             f"cannot tailor aggregator-quality JD ({jd_p}): tailoring requires an official ATS JD "
             "or a user-attested official copy. Aggregator summaries are not suitable for tailoring."
         )
 
-    # 6. Unverified quality
     if prov.jd_quality not in TAILORABLE_JD_QUALITIES:
         raise ProvenanceError(
             f"cannot tailor unverified JD ({jd_p}) with quality {prov.jd_quality!r}. "
             f"Only qualities {sorted(TAILORABLE_JD_QUALITIES)} may proceed to tailoring."
         )
 
-    # 7. Database metadata disagreement
-    if prov.job_id is not None and db_conn is not None:
-        from src import db
-        db_row = db.job_row_for_export(db_conn, prov.job_id)
-        if db_row is not None:
-            if db_row["jd_quality"] != prov.jd_quality:
-                raise ProvenanceError(
-                    f"database metadata disagreement for job {prov.job_id}: "
-                    f"DB has jd_quality={db_row['jd_quality']!r} while provenance sidecar claims {prov.jd_quality!r}"
-                )
-            if _norm_str(db_row["company"]) != _norm_str(prov.company):
-                raise ProvenanceError(
-                    f"database metadata disagreement for job {prov.job_id}: "
-                    f"DB company {db_row['company']!r} != provenance company {prov.company!r}"
-                )
-            if _norm_str(db_row["title"]) != _norm_str(prov.title):
-                raise ProvenanceError(
-                    f"database metadata disagreement for job {prov.job_id}: "
-                    f"DB title {db_row['title']!r} != provenance title {prov.title!r}"
-                )
+    # --- STATE A: Database-verified ATS ---
+    if prov.jd_quality == JDQuality.ATS.value:
+        if prov.attestation is not None:
+            raise ProvenanceError("ATS provenance sidecar must not carry an attestation")
+        if prov.job_id is None or isinstance(prov.job_id, bool) or not isinstance(prov.job_id, int):
+            raise ProvenanceError("ATS provenance sidecar requires a valid integer job_id bound to the database")
+        if db_conn is None:
+            raise ProvenanceError(
+                f"ATS provenance verification requires an active database connection "
+                f"(cannot verify job_id={prov.job_id} without db)"
+            )
 
-    return prov
+        from src import db as db_module
+        db_row = db_module.job_row_for_export(db_conn, prov.job_id)
+        if db_row is None:
+            raise ProvenanceError(f"ATS provenance references nonexistent database row for job {prov.job_id}")
+
+        if db_row["jd_quality"] != "ats":
+            raise ProvenanceError(
+                f"database metadata disagreement for job {prov.job_id}: "
+                f"DB has jd_quality={db_row['jd_quality']!r} while provenance sidecar claims 'ats'"
+            )
+        if _norm_str(db_row["company"]) != _norm_str(prov.company):
+            raise ProvenanceError(
+                f"database metadata disagreement for job {prov.job_id}: "
+                f"DB company {db_row['company']!r} != provenance company {prov.company!r}"
+            )
+        if _norm_str(db_row["title"]) != _norm_str(prov.title):
+            raise ProvenanceError(
+                f"database metadata disagreement for job {prov.job_id}: "
+                f"DB title {db_row['title']!r} != provenance title {prov.title!r}"
+            )
+
+        db_jd_text = db_row["jd_text"] or ""
+        db_hash = compute_jd_sha256(db_jd_text.encode("utf-8"))
+        if db_hash != prov.jd_sha256:
+            raise ProvenanceError(
+                f"database JD text mismatch for job {prov.job_id}: "
+                f"DB text hash {db_hash} != provenance hash {prov.jd_sha256}"
+            )
+
+        # Deterministic URL matching
+        db_url = (db_row["url"] or "").strip()
+        db_ats_url = (db_row["ats_url"] or "").strip() or db_url
+        if prov.source_url != db_url and prov.source_url != db_ats_url:
+            raise ProvenanceError(
+                f"database URL disagreement for job {prov.job_id}: sidecar source_url {prov.source_url!r} "
+                f"does not match DB url {db_url!r} or ats_url {db_ats_url!r}"
+            )
+        if prov.ats_url is not None and prov.ats_url != db_ats_url:
+            raise ProvenanceError(
+                f"database ATS URL disagreement for job {prov.job_id}: sidecar ats_url {prov.ats_url!r} "
+                f"does not match DB ats_url {db_ats_url!r}"
+            )
+
+        # Deterministic source_type matching
+        allowed_source_types = set()
+        resolver = (db_row["resolver"] or "").strip()
+        source = (db_row["source"] or "").strip()
+        if resolver:
+            allowed_source_types.add(resolver)
+        if source:
+            allowed_source_types.add(source)
+        allowed_source_types.add("ats")
+        if db_row["ats_url"]:
+            allowed_source_types.add("ats")
+        else:
+            allowed_source_types.add("company_careers")
+        if prov.source_type not in allowed_source_types:
+            raise ProvenanceError(
+                f"database source_type disagreement for job {prov.job_id}: sidecar source_type {prov.source_type!r} "
+                f"not in permitted DB types {sorted(allowed_source_types)}"
+            )
+
+        return prov
+
+    # --- STATE B: User-attested official copy ---
+    if prov.jd_quality == JDQuality.USER_ATTESTED.value:
+        if prov.source_type != "user_attested":
+            raise ProvenanceError(
+                f"user_attested quality requires source_type='user_attested', got {prov.source_type!r}"
+            )
+        if prov.job_id is not None:
+            raise ProvenanceError(f"user_attested copy must not have a database job_id (got job_id={prov.job_id})")
+        if prov.attestation is None:
+            raise ProvenanceError("user_attested quality requires an attestation object")
+
+        if not prov.attestation.attester.strip():
+            raise ProvenanceError("attestation attester must be a nonempty string")
+
+        # Validate timezone-aware UTC ISO-8601 timestamp
+        try:
+            dt = datetime.fromisoformat(prov.attestation.attested_at)
+        except Exception as exc:
+            raise ProvenanceError(
+                f"attestation attested_at must be a valid timezone-aware UTC ISO-8601 timestamp: {exc}"
+            ) from exc
+        if dt.tzinfo is None or dt.utcoffset() is None or dt.utcoffset().total_seconds() != 0:
+            raise ProvenanceError(
+                f"attestation attested_at must be a timezone-aware UTC ISO-8601 timestamp, got {prov.attestation.attested_at!r}"
+            )
+
+        if prov.attestation.source_url != prov.source_url:
+            raise ProvenanceError(
+                f"attestation source_url {prov.attestation.source_url!r} does not match sidecar source_url {prov.source_url!r}"
+            )
+
+        parsed_url = urllib.parse.urlparse(prov.source_url)
+        if parsed_url.scheme.lower() != "https" or not parsed_url.netloc:
+            raise ProvenanceError(f"user_attested source_url must use HTTPS: {prov.source_url!r}")
+
+        if is_aggregator_url(prov.source_url):
+            raise ProvenanceError(
+                f"cannot attest an aggregator URL ({parsed_url.hostname}) as an official employer posting"
+            )
+
+        if prov.ats_url is not None and prov.ats_url != prov.source_url:
+            raise ProvenanceError(
+                f"user_attested ats_url must equal source_url, got ats_url={prov.ats_url!r}"
+            )
+
+        return prov
+
+    raise ProvenanceError(f"unhandled provenance state for quality {prov.jd_quality!r}")

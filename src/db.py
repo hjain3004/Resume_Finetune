@@ -927,9 +927,9 @@ def jd_text_by_id(conn: sqlite3.Connection, job_id: int) -> str | None:
 
 
 def job_row_for_export(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
-    """Read-only single-row read for the Apply-Now benchmark export (M8N-0)."""
+    """Read-only single-row read for the Apply-Now benchmark export and provenance validation."""
     return conn.execute(
-        "SELECT id, company, title, jd_text, jd_quality, base_variant, status FROM jobs WHERE id = ?",
+        "SELECT id, company, title, jd_text, jd_quality, base_variant, status, url, ats_url, resolver, source FROM jobs WHERE id = ?",
         (job_id,),
     ).fetchone()
 

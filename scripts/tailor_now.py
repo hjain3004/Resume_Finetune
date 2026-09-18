@@ -6,10 +6,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
 import sys
+import urllib.parse
 from pathlib import Path
 
 from src import db
+from src.tailor.provenance import (
+    JD_PROVENANCE_SCHEMA,
+    JDProvenance,
+    compute_jd_sha256,
+    is_aggregator_url,
+)
 from src.tailor.lane import (
     APPLICATIONS_MANUAL_ROOT,
     LANE_MANIFEST_NAME,
@@ -117,18 +126,89 @@ def cmd_export_jd(args) -> int:
     conn = None
     try:
         conn = db.get_readonly_connection(args.db)
-        row = db.job_row_for_export(conn, args.job_id)
-        if row is None:
+        raw_row = db.job_row_for_export(conn, args.job_id)
+        if raw_row is None:
             raise LaneError(f"job {args.job_id}: no such row")
+        row = dict(raw_row)
+
+        quality = row.get("jd_quality")
+        if quality != "ats":
+            raise LaneError(
+                f"job {args.job_id}: jd_quality is {quality!r}; only 'ats' quality jobs may be exported for tailoring"
+            )
+
+        text = row.get("jd_text") or ""
+        if len(text.strip()) < 300:
+            raise LaneError(
+                f"job {args.job_id}: jd_text is missing or shorter than 300 characters ({len(text)} chars)"
+            )
+
+        ats_url = (row.get("ats_url") or "").strip()
+        direct_url = (row.get("url") or "").strip()
+        source_url = ats_url if ats_url else direct_url
+        if not source_url:
+            raise LaneError(f"job {args.job_id}: lacks source URL")
+
+        parsed = urllib.parse.urlparse(source_url)
+        if parsed.scheme.lower() != "https" or not parsed.netloc:
+            raise LaneError(f"job {args.job_id}: invalid source URL {source_url!r} (must use HTTPS)")
+
+        if is_aggregator_url(source_url):
+            raise LaneError(
+                f"job {args.job_id}: source URL {source_url!r} is an aggregator URL; only direct ATS URLs may be exported"
+            )
+
+        if ats_url and is_aggregator_url(ats_url):
+            raise LaneError(f"job {args.job_id}: ats_url {ats_url!r} is an aggregator URL")
+
+        company = (row.get("company") or "").strip()
+        title = (row.get("title") or "").strip()
+        if not company or not title:
+            raise LaneError(f"job {args.job_id}: missing company or title")
+
+        sha256 = compute_jd_sha256(text.encode("utf-8"))
+        prov = JDProvenance(
+            schema_version=JD_PROVENANCE_SCHEMA,
+            company=company,
+            title=title,
+            source_url=source_url,
+            source_type="ats",
+            jd_quality="ats",
+            jd_sha256=sha256,
+            job_id=int(row["id"]),
+            ats_url=ats_url if ats_url else source_url,
+            attestation=None,
+        )
+
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(row["jd_text"] or "", encoding="utf-8")
-        print(f"wrote {out} ({len(row['jd_text'] or '')} chars)")
-        print(f"company: {row['company']}")
-        print(f"title: {row['title']}")
+        sidecar_path = out.parent / f"{out.name}.provenance.json"
+        tmp_out = out.with_name(f"{out.name}.tmp.{os.getpid()}")
+        tmp_sidecar = out.with_name(f"{out.name}.provenance.json.tmp.{os.getpid()}")
+        try:
+            tmp_out.write_text(text, encoding="utf-8")
+            tmp_sidecar.write_text(json.dumps(prov.to_dict(), indent=2), encoding="utf-8")
+            tmp_out.replace(out)
+            tmp_sidecar.replace(sidecar_path)
+        finally:
+            if tmp_out.exists():
+                tmp_out.unlink()
+            if tmp_sidecar.exists():
+                tmp_sidecar.unlink()
+
+        print(f"wrote {out} ({len(text)} chars)")
+        print(f"wrote provenance sidecar: {sidecar_path}")
+        print(f"company: {company}")
+        print(f"title: {title}")
         print(f"base_variant: {row['base_variant']}")
         print(f"jd_quality: {row['jd_quality']}")
         print(f"status: {row['status']}")
+        variant = row["base_variant"] or "backend"
+        print(
+            f"\nRecommended tailoring command:\n"
+            f"  python -m scripts.tailor_now run --jd {out} --company {shlex.quote(company)} "
+            f"--title {shlex.quote(title)} --variant {variant} --db {args.db}"
+        )
         return 0
     except Exception as exc:  # noqa: BLE001
         return _fail("export-jd", exc)

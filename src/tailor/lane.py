@@ -35,7 +35,8 @@ from src.tailor.s1 import S1Request
 
 log = logging.getLogger(__name__)
 
-LANE_MANIFEST_SCHEMA = "m8n0.lane_manifest.v1"
+LANE_MANIFEST_SCHEMA_V1 = "m8n0.lane_manifest.v1"
+LANE_MANIFEST_SCHEMA = "m8n0.lane_manifest.v2"
 APPLICATIONS_MANUAL_ROOT = Path("applications_manual")
 JD_MIN_CHARS = 300
 JD_MAX_CHARS = 40_000
@@ -105,49 +106,100 @@ class LaneManifest:
     jd_quality: str
     created_at: str
     provider: str = "claude"
+    provenance_fingerprint: str = ""
+    source_url: str = ""
+    ats_url: str | None = None
+    attestation_digest: str | None = None
 
 
-_LANE_MANIFEST_OLD_KEYS = {
+_LANE_MANIFEST_V1_KEYS = {
     "schema_version", "job_id", "jd_sha256", "jd_path", "company", "title", "variant", "model",
     "claude_cmd", "jd_quality", "created_at",
 }
-_LANE_MANIFEST_KEYS = _LANE_MANIFEST_OLD_KEYS | {"provider"}
+_LANE_MANIFEST_V1_PLUS_PROVIDER_KEYS = _LANE_MANIFEST_V1_KEYS | {"provider"}
+_LANE_MANIFEST_V2_KEYS = {
+    "schema_version", "job_id", "jd_sha256", "jd_path", "company", "title", "variant", "model",
+    "claude_cmd", "jd_quality", "created_at", "provider", "provenance_fingerprint", "source_url",
+    "ats_url", "attestation_digest",
+}
 
 
 def lane_manifest_to_dict(m: LaneManifest) -> dict[str, object]:
-    d: dict[str, object] = {
-        "schema_version": m.schema_version, "job_id": m.job_id, "jd_sha256": m.jd_sha256,
-        "jd_path": m.jd_path, "company": m.company, "title": m.title, "variant": m.variant,
-        "model": m.model, "claude_cmd": list(m.claude_cmd), "jd_quality": m.jd_quality,
+    return {
+        "schema_version": m.schema_version,
+        "job_id": m.job_id,
+        "jd_sha256": m.jd_sha256,
+        "jd_path": m.jd_path,
+        "company": m.company,
+        "title": m.title,
+        "variant": m.variant,
+        "model": m.model,
+        "claude_cmd": list(m.claude_cmd),
+        "jd_quality": m.jd_quality,
         "created_at": m.created_at,
+        "provider": m.provider,
+        "provenance_fingerprint": m.provenance_fingerprint,
+        "source_url": m.source_url,
+        "ats_url": m.ats_url,
+        "attestation_digest": m.attestation_digest,
     }
-    # Include provider in manifest
-    d["provider"] = m.provider
-    return d
 
 
 def parse_lane_manifest(raw: object) -> LaneManifest:
-    if not isinstance(raw, dict) or set(raw) not in (_LANE_MANIFEST_OLD_KEYS, _LANE_MANIFEST_KEYS):
-        raise LaneError("lane_manifest.json: unexpected or missing fields")
-    if raw["schema_version"] != LANE_MANIFEST_SCHEMA:
-        raise LaneError(f"lane_manifest.json: unsupported schema {raw['schema_version']!r}")
+    if not isinstance(raw, dict):
+        raise LaneError("lane_manifest.json: expected a JSON object")
+
+    schema = raw.get("schema_version")
+    if schema == LANE_MANIFEST_SCHEMA_V1:
+        raise LaneError(
+            "lane_manifest.json has legacy schema v1 lacking provenance fingerprint binding; "
+            "refusing unverified directory. Use --suffix or remove the application directory to re-run."
+        )
+    if schema != LANE_MANIFEST_SCHEMA:
+        raise LaneError(f"lane_manifest.json: unsupported schema {schema!r}")
+
+    if set(raw.keys()) != _LANE_MANIFEST_V2_KEYS:
+        missing = _LANE_MANIFEST_V2_KEYS - set(raw.keys())
+        extra = set(raw.keys()) - _LANE_MANIFEST_V2_KEYS
+        raise LaneError(
+            f"lane_manifest.json: unexpected schema fields (missing: {sorted(missing)}, extra: {sorted(extra)})"
+        )
+
     if isinstance(raw["job_id"], bool) or not isinstance(raw["job_id"], int):
         raise LaneError("lane_manifest.json: job_id must be an integer")
     if not isinstance(raw["claude_cmd"], list) or not all(isinstance(x, str) for x in raw["claude_cmd"]):
         raise LaneError("lane_manifest.json: claude_cmd must be a list of strings")
     if raw["model"] is not None and not isinstance(raw["model"], str):
         raise LaneError("lane_manifest.json: model must be a string or null")
-    for key in ("jd_sha256", "jd_path", "company", "title", "variant", "jd_quality", "created_at"):
+    if raw["ats_url"] is not None and not isinstance(raw["ats_url"], str):
+        raise LaneError("lane_manifest.json: ats_url must be a string or null")
+    if raw["attestation_digest"] is not None and not isinstance(raw["attestation_digest"], str):
+        raise LaneError("lane_manifest.json: attestation_digest must be a string or null")
+
+    for key in (
+        "jd_sha256", "jd_path", "company", "title", "variant", "jd_quality", "created_at",
+        "provider", "provenance_fingerprint", "source_url",
+    ):
         if not isinstance(raw[key], str) or not raw[key]:
             raise LaneError(f"lane_manifest.json: {key} must be a nonempty string")
-    provider = raw.get("provider", "claude")
-    if not isinstance(provider, str) or not provider.strip():
-        raise LaneError("lane_manifest.json: provider must be a nonempty string")
+
     return LaneManifest(
-        schema_version=raw["schema_version"], job_id=raw["job_id"], jd_sha256=raw["jd_sha256"],
-        jd_path=raw["jd_path"], company=raw["company"], title=raw["title"], variant=raw["variant"],
-        model=raw["model"], claude_cmd=tuple(raw["claude_cmd"]), jd_quality=raw["jd_quality"],
-        created_at=raw["created_at"], provider=provider,
+        schema_version=raw["schema_version"],
+        job_id=raw["job_id"],
+        jd_sha256=raw["jd_sha256"],
+        jd_path=raw["jd_path"],
+        company=raw["company"],
+        title=raw["title"],
+        variant=raw["variant"],
+        model=raw["model"],
+        claude_cmd=tuple(raw["claude_cmd"]),
+        jd_quality=raw["jd_quality"],
+        created_at=raw["created_at"],
+        provider=raw["provider"],
+        provenance_fingerprint=raw["provenance_fingerprint"],
+        source_url=raw["source_url"],
+        ats_url=raw["ats_url"],
+        attestation_digest=raw["attestation_digest"],
     )
 
 
@@ -158,11 +210,24 @@ def _preflight_findings(profile_path: Path, template_path: Path, prompt_dir: Pat
 
 
 def _manifest_mismatch(
-    existing: LaneManifest, *, jd_sha256: str, company: str, title: str, variant: str, provider: str = "claude",
+    existing: LaneManifest,
+    *,
+    jd_sha256: str,
+    provenance_fingerprint: str,
+    company: str,
+    title: str,
+    variant: str,
+    provider: str = "claude",
     jd_quality: str = "ats",
+    job_id: int,
+    source_url: str,
+    ats_url: str | None = None,
+    attestation_digest: str | None = None,
 ) -> str | None:
     if existing.jd_sha256 != jd_sha256:
         return "jd text differs from the JD this directory was created from"
+    if existing.provenance_fingerprint != provenance_fingerprint:
+        return "provenance fingerprint differs from this directory's lane manifest"
     if (existing.company, existing.title) != (company, title):
         return "company/title differ from this directory's lane manifest"
     if existing.variant != variant:
@@ -171,6 +236,14 @@ def _manifest_mismatch(
         return f"provider {provider!r} differs from this directory's provider {existing.provider!r}"
     if existing.jd_quality != jd_quality:
         return f"jd_quality {jd_quality!r} differs from this directory's jd_quality {existing.jd_quality!r}"
+    if existing.job_id != job_id:
+        return f"job_id {job_id} differs from this directory's job_id {existing.job_id}"
+    if existing.source_url != source_url:
+        return f"source_url {source_url!r} differs from this directory's source_url {existing.source_url!r}"
+    if existing.ats_url != ats_url:
+        return f"ats_url {ats_url!r} differs from this directory's ats_url {existing.ats_url!r}"
+    if existing.attestation_digest != attestation_digest:
+        return "attestation metadata differs from this directory's lane manifest"
     return None
 
 
@@ -259,7 +332,18 @@ def run_manual_application(
         + (f" --suffix {suffix!r}" if suffix else "") + (f" --model {model}" if model else "")
     )
 
+    from src.tailor.provenance import (
+        compute_provenance_fingerprint,
+        parse_provenance_dict,
+    )
+
     manifest_path = directory / LANE_MANIFEST_NAME
+    prov_fingerprint = compute_provenance_fingerprint(provenance)
+    att_digest = (
+        hashlib.sha256(json.dumps(provenance.attestation.to_dict(), sort_keys=True).encode("utf-8")).hexdigest()
+        if provenance.attestation is not None else None
+    )
+
     if manifest_path.exists():
         try:
             existing = parse_lane_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
@@ -268,11 +352,16 @@ def run_manual_application(
         reason = _manifest_mismatch(
             existing,
             jd_sha256=jd_sha256,
+            provenance_fingerprint=prov_fingerprint,
             company=company,
             title=title,
             variant=variant,
             provider=prov_enum.value,
             jd_quality=provenance.jd_quality,
+            job_id=existing.job_id,
+            source_url=provenance.source_url,
+            ats_url=provenance.ats_url,
+            attestation_digest=att_digest,
         )
         if reason is not None:
             return _prepare_failure(
@@ -281,22 +370,38 @@ def run_manual_application(
             )
         job_id = existing.job_id
 
-    # Preflight provider requirements before any model call
-    if prov_enum is Provider.CLAUDE:
-        exe = model_command.argv[0] if model_command.argv else "claude"
-        if shutil.which(exe) is None:
-            return _prepare_failure(
-                job_id, "preflight_failure",
-                f"provider executable {exe!r} not found on PATH", started,
-            )
-    elif prov_enum is Provider.OPENAI:
-        cred_err = check_openai_credentials()
-        if cred_err is not None:
-            return _prepare_failure(job_id, "preflight_failure", cred_err, started)
-    elif prov_enum is Provider.GEMINI:
-        cred_err = check_gemini_credentials()
-        if cred_err is not None:
-            return _prepare_failure(job_id, "preflight_failure", cred_err, started)
+    sidecar_snapshot = directory / "jd.provenance.json"
+    if sidecar_snapshot.exists():
+        try:
+            snap_raw = json.loads(sidecar_snapshot.read_text(encoding="utf-8"))
+            snap_prov = parse_provenance_dict(snap_raw)
+            if compute_provenance_fingerprint(snap_prov) != prov_fingerprint:
+                return _prepare_failure(
+                    job_id, "lane_manifest_mismatch",
+                    f"existing jd.provenance.json in {directory} differs from supplied provenance; "
+                    f"refusing to silently overwrite snapshot. Use --suffix or remove the directory",
+                    started,
+                )
+        except Exception as exc:
+            return _prepare_failure(job_id, "lane_manifest_unreadable", str(exc), started)
+
+    # Preflight provider requirements before any model call (dry-run does no model call)
+    if not dry_run:
+        if prov_enum is Provider.CLAUDE:
+            exe = model_command.argv[0] if model_command.argv else "claude"
+            if shutil.which(exe) is None:
+                return _prepare_failure(
+                    job_id, "preflight_failure",
+                    f"provider executable {exe!r} not found on PATH", started,
+                )
+        elif prov_enum is Provider.OPENAI:
+            cred_err = check_openai_credentials()
+            if cred_err is not None:
+                return _prepare_failure(job_id, "preflight_failure", cred_err, started)
+        elif prov_enum is Provider.GEMINI:
+            cred_err = check_gemini_credentials()
+            if cred_err is not None:
+                return _prepare_failure(job_id, "preflight_failure", cred_err, started)
 
     findings = _preflight_findings(profile_path, template_path, prompt_dir)
     if findings:
@@ -316,7 +421,6 @@ def run_manual_application(
         snapshot = directory / JD_SNAPSHOT_NAME
         if not snapshot.exists():
             snapshot.write_text(jd_text, encoding="utf-8")
-        sidecar_snapshot = directory / "jd.provenance.json"
         if not sidecar_snapshot.exists():
             write_json_atomic(sidecar_snapshot, provenance.to_dict())
         if not manifest_path.exists():
@@ -324,7 +428,8 @@ def run_manual_application(
                 schema_version=LANE_MANIFEST_SCHEMA, job_id=job_id, jd_sha256=jd_sha256, jd_path=str(jd_path),
                 company=company, title=title, variant=variant, model=model, claude_cmd=model_command.argv,
                 jd_quality=provenance.jd_quality, created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                provider=prov_enum.value,
+                provider=prov_enum.value, provenance_fingerprint=prov_fingerprint,
+                source_url=provenance.source_url, ats_url=provenance.ats_url, attestation_digest=att_digest,
             )))
         log.info("apply-now lane: job %d (%s / %s) -> %s", job_id, company, title, directory)
 
