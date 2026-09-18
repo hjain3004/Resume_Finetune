@@ -1,0 +1,44 @@
+{
+  "target_id": "openai_4949",
+  "status": "success",
+  "interpreted_requirements": [
+    {
+      "id": "req_edu_or_exp",
+      "raw_quote": "Bachelor’s degree in Computer Science or a related field, or equivalent practical experience.",
+      "interpreted_intent": "Candidate must possess either a relevant degree OR equivalent practical software engineering experience.",
+      "importance": "must_have",
+      "is_alternative_or_group": true,
+      "alternative_branches": [
+        "Degree: Bachelor's or Master's in CS / related field",
+        "Experience: Equivalent practical software engineering experience"
+      ],
+      "candidate_satisfaction_status": "SATISFIED",
+      "satisfied_by": "Degree (MS in Software Engineering) and Experience (Amdocs Software Developer)"
+    },
+    {
+      "id": "req_backend_infra",
+      "raw_quote": "Experience building reliable, scalable backend infrastructure supporting product features.",
+      "interpreted_intent": "Demonstrated backend systems and infrastructure implementation.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_branches": [],
+      "candidate_satisfaction_status": "SATISFIED",
+      "satisfied_by": "am_b00_order_management_domain, int_b2"
+    },
+    {
+      "id": "req_user_facing_product",
+      "raw_quote": "Experience building user-facing web applications or collaborating closely with product designers.",
+      "interpreted_intent": "Frontend web interfaces or direct product design collaboration.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_branches": [],
+      "candidate_satisfaction_status": "ADVISORY_GAP",
+      "satisfied_by": null,
+      "gap_details": "Candidate has strong backend infrastructure and student web project (cm_b1), but lacks direct commercial consumer product design experience."
+    }
+  ],
+  "ambiguity_notes": [
+    "Wording 'Emerging Talent' indicates 0-2 years professional experience; candidate's Amdocs and MalyTech experience is directly in range."
+  ],
+  "overall_severity": "ADVISORY_GAP"
+}

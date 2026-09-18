@@ -1,0 +1,56 @@
+{
+  "target_id": "openai_4949",
+  "status": "success",
+  "matches": [
+    {
+      "requirement_id": "req_db_postgres",
+      "requirement_term": "Postgres",
+      "matched_evidence_id": "int_b2",
+      "canonical_technology": "PostgreSQL",
+      "semantic_relationship": "canonical_synonym",
+      "confidence": 1.0,
+      "is_grounded": true,
+      "metrics_preserved": [
+        "~40% lock contention reduction"
+      ]
+    },
+    {
+      "requirement_id": "req_applied_ai",
+      "requirement_term": "applied machine learning systems",
+      "matched_evidence_id": "sepsis_b1",
+      "canonical_technology": "XGBoost, LightGBM, MIMIC-III",
+      "semantic_relationship": "applied_ai_alignment",
+      "confidence": 0.95,
+      "is_grounded": true,
+      "metrics_preserved": [
+        "AUROC 0.88"
+      ],
+      "notes": "Relevant to applied AI; candidate is NOT classified as an AI research scientist."
+    },
+    {
+      "requirement_id": "req_scalable_infra",
+      "requirement_term": "scalable backend infrastructure",
+      "matched_evidence_id": "am_b01_dlq_consolidation",
+      "canonical_technology": "Kafka, Distributed Queues",
+      "semantic_relationship": "direct_systems_evidence",
+      "confidence": 0.98,
+      "is_grounded": true,
+      "metrics_preserved": [
+        "862 dead-letter topics",
+        "~70% topic sprawl reduction"
+      ]
+    }
+  ],
+  "rejected_matches": [
+    {
+      "requirement_term": "WebRTC real-time video streaming",
+      "candidate_technology": "Kafka distributed queues",
+      "rejection_reason": "Unrelated technologies; both are distributed systems but belong to disjoint engineering domains."
+    },
+    {
+      "requirement_term": "Vue.js",
+      "candidate_technology": "React",
+      "rejection_reason": "Frameworks belong to same family but Vue is not canonically supported in candidate profile."
+    }
+  ]
+}
