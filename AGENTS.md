@@ -18,7 +18,7 @@ the current/target boundary is fixed in `docs/ARCHITECTURE.md`, the phase status
    is a bug, full stop.
 4. **No unapproved dependencies.** The currently approved list is: requests, trafilatura,
    PyYAML, pytest, crawl4ai (M6.5 tier-2 resolver; M9D may evaluate bounded deep crawling),
-   playwright (company-bank `verify-sources --render`; see below).
+   playwright (company-bank `verify-sources --render`; see below), pydantic (M8L-1 strict validation).
    Crawlee Python and Apify integrations are design candidates, not approved runtime
    dependencies. Ask before adding either or anything else, including BeautifulSoup.
 

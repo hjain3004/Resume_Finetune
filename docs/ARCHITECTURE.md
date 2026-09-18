@@ -107,6 +107,11 @@ job-pipeline/
 │   │   ├── tailored.py        # M8P-5: draft-to-RenderDoc projection and fingerprint binding
 │   │   ├── lines.py           # M8P-5: PDF line- and character-level geometry
 │   │   └── l7.py              # M10/M8P-5: structural and tailored L7 validation
+│   ├── llm_tailor/            # M8L-1: new LLM-first tailoring lane
+│   │   ├── __init__.py
+│   │   ├── schemas.py         # draft, audit, repair, re-audit contracts
+│   │   ├── validators.py      # deterministic enforcement
+│   │   └── lane.py            # isolated control plane workflow
 │   ├── tailor/                # M8: Tailoring stages, G1/G2 critic, and publication
 │   │   ├── publish.py         # M8P-5: atomic per-application publication and commit marker
 │   │   ├── feedback.py        # M8P-6: validated feedback contract, immutable revision-numbered storage

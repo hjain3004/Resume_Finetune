@@ -100,6 +100,20 @@ selections; (5) user signs off; the file is thereafter append-mostly — edits t
 
 ## 3. Per-application workflow
 
+**Amendment (2026-09-09, M8L-1).** A separate LLM-first lane exists
+alongside the staged chain below. It normally uses two model calls:
+evidence-grounded drafting and independent audit. When the audit rejects
+one or more bullets, the lane may make one targeted repair call followed
+by one re-audit of only the repaired bullets, for a maximum of four model
+calls. A failed re-audit halts for human review.
+
+Code in this lane enforces only objective properties, including schema
+validity, resolvable source spans and evidence IDs, prohibited claims,
+unsupported numeric tokens, repair scope, and post-render L7 checks.
+Editorial judgment belongs to the independent audit model, never to a
+regex or test-specific exception. The existing staged chain remains
+available and its stage code is not shared with the new lane.
+
 ```
 JD (jd_quality='ats' REQUIRED)
   → S1 Requirement extraction        (LLM, structured, evidence-quoted, + company_context)
