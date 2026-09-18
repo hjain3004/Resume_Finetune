@@ -19,7 +19,7 @@ from typing import Any
 
 from src.profile import MasterProfile
 from src.tailor2.models import DraftResponse
-from src.tailor2.title_policy import resolve_displayed_title
+from src.tailor2.title_policy import TitleResolution, resolve_displayed_title
 
 
 @dataclasses.dataclass(frozen=True)
@@ -40,11 +40,44 @@ class ProjectionEntry:
     bullets: list[ProjectionBullet]
 
 
+SEMANTIC_SKILL_ALIASES: dict[str, frozenset[str]] = {
+    "postgres": frozenset({"postgres", "postgresql", "postgres db", "postgresql db"}),
+    "postgresql": frozenset({"postgres", "postgresql", "postgres db", "postgresql db"}),
+    "react": frozenset({"react", "react.js", "reactjs"}),
+    "react.js": frozenset({"react", "react.js", "reactjs"}),
+    "reactjs": frozenset({"react", "react.js", "reactjs"}),
+    "asyncio": frozenset({"asyncio", "async", "aio"}),
+    "async": frozenset({"asyncio", "async", "aio"}),
+    "kafka": frozenset({"kafka", "apache kafka"}),
+    "apache kafka": frozenset({"kafka", "apache kafka"}),
+    "fastapi": frozenset({"fastapi", "fastapi microservices"}),
+    "fastapi microservices": frozenset({"fastapi", "fastapi microservices"}),
+}
+
+
+def get_skill_aliases(term: str) -> set[str]:
+    low = term.strip().casefold()
+    return set(SEMANTIC_SKILL_ALIASES.get(low, frozenset({low}))) | {low}
+
+
 @dataclasses.dataclass(frozen=True)
 class SkillTermProjection:
     term: str
-    supported: bool
-    evidence_ids: list[str]
+    canonical_support: bool = True
+    selected_demonstration: bool = False
+    target_relevance: bool = True
+    display_decision: bool = True
+    evidence_ids: list[str] = dataclasses.field(default_factory=list)
+    canonical_evidence_ids: list[str] = dataclasses.field(default_factory=list)
+    supported: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.canonical_support and self.supported:
+            object.__setattr__(self, "supported", False)
+        elif not self.supported and self.canonical_support:
+            object.__setattr__(self, "canonical_support", False)
+        if not self.canonical_support:
+            object.__setattr__(self, "display_decision", False)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -68,6 +101,7 @@ class ResumeProjection:
     omission_ledger: list[dict[str, Any]]
     model_identities: dict[str, dict[str, str]]
     title_auto_corrections: list[str]
+    title_resolutions: list[TitleResolution] = dataclasses.field(default_factory=list)
 
 
 def _evidence_summary(ev: Any) -> dict[str, Any]:
@@ -80,54 +114,117 @@ def _evidence_summary(ev: Any) -> dict[str, Any]:
     }
 
 
-def _resolve_skills(profile: MasterProfile, evidence_by_id: dict[str, Any], selected_evidence_ids: set[str]) -> dict[str, list[SkillTermProjection]]:
-    """Every skill term the profile lists, marked as supported only if it is
-    a substring (case-insensitive) of some cited evidence's canonical
-    phrasing/evidence/keywords for a bullet actually selected this run.
-    Deterministic and conservative: a term is "supported" only when the
-    run's own selected evidence backs it, not merely because it appears
-    somewhere in the whole profile."""
+def _text_matches_skill(text: str, term: str) -> bool:
+    import re
+    aliases = get_skill_aliases(term)
+    text_lower = text.casefold()
+    for a in aliases:
+        pattern = r"(?<!\w)" + re.escape(a) + r"(?!\w)"
+        if re.search(pattern, text_lower):
+            return True
+    return False
+
+
+def _evidence_matches_term(ev: Any, term: str) -> bool:
+    if ev is None:
+        return False
+    ph = getattr(ev, "phrasings", None)
+    if ph:
+        for attr in ("short", "medium", "long"):
+            val = getattr(ph, attr, "")
+            if val and _text_matches_skill(str(val), term):
+                return True
+    if hasattr(ev, "text") and ev.text and _text_matches_skill(str(ev.text), term):
+        return True
+    ev_text = getattr(ev, "evidence", "")
+    if ev_text:
+        if isinstance(ev_text, (list, tuple)):
+            for item in ev_text:
+                if _text_matches_skill(str(item), term):
+                    return True
+        elif _text_matches_skill(str(ev_text), term):
+            return True
+    kws = getattr(ev, "keywords_hit", ()) or ()
+    for kw in kws:
+        if _text_matches_skill(str(kw), term):
+            return True
+    return False
+
+
+def _resolve_skills(
+    profile: MasterProfile,
+    evidence_by_id: dict[str, Any],
+    selected_evidence_ids: set[str],
+    skills_by_category: dict[str, list[str]] | None = None,
+) -> dict[str, list[SkillTermProjection]]:
+    """Resolve skills using the 4-tier model:
+    1. canonical_support: supported anywhere in verified master profile or profile.skills.
+    2. selected_demonstration: visibly demonstrated by selected evidence for this run.
+    3. target_relevance: relevant to the target role / JD context.
+    4. display_decision: selected for display on the tailored resume.
+
+    Semantic aliases (e.g. Postgres <-> PostgreSQL) resolve to the same concept.
+    Banned terms (Kubernetes, do_not_claim) have canonical_support = False and are auto-corrected.
+    Canonically supported terms lacking selected demonstration remain on the resume,
+    generating an advisory notice rather than automatic removal.
+    """
     banned = {t.casefold() for t in profile.do_not_claim}
     banned.add("kubernetes")
 
-    haystacks: list[str] = []
-    for eid in selected_evidence_ids:
-        ev = evidence_by_id.get(eid)
-        if ev is None:
-            continue
-        haystacks.append(str(getattr(getattr(ev, "phrasings", None), "medium", "")))
-        haystacks.append(str(getattr(getattr(ev, "phrasings", None), "long", "")))
-        ev_text = ev.evidence
-        if isinstance(ev_text, (list, tuple)):
-            haystacks.extend(str(x) for x in ev_text)
-        else:
-            haystacks.append(str(ev_text))
-        haystacks.extend(str(k) for k in getattr(ev, "keywords_hit", ()) or ())
-    combined = " \n ".join(haystacks).casefold()
+    profile_skill_terms = {
+        t.casefold()
+        for cat_terms in profile.skills.values()
+        for t in cat_terms
+    }
 
+    target_skills = skills_by_category if skills_by_category is not None else profile.skills
     result: dict[str, list[SkillTermProjection]] = {}
-    for category, terms in profile.skills.items():
-        projected = []
+
+    for category, terms in target_skills.items():
+        projected: list[SkillTermProjection] = []
         for term in terms:
-            if term.casefold() in banned:
-                continue
-            supported = term.casefold() in combined
-            # Which selected evidence ids actually mention it (best-effort,
-            # for auditor traceability -- not used to gate anything itself).
-            supporting = [
-                eid
-                for eid in selected_evidence_ids
-                if evidence_by_id.get(eid) is not None
-                and term.casefold() in " ".join(
-                    [
-                        str(getattr(getattr(evidence_by_id[eid], "phrasings", None), "medium", "")),
-                        str(getattr(getattr(evidence_by_id[eid], "phrasings", None), "long", "")),
-                        str(evidence_by_id[eid].evidence),
-                    ]
-                ).casefold()
+            term_clean = term.strip()
+            aliases = get_skill_aliases(term_clean)
+            is_banned = any(a in banned for a in aliases)
+
+            all_supporting_eids = [
+                eid for eid, ev in evidence_by_id.items()
+                if _evidence_matches_term(ev, term_clean)
             ]
-            projected.append(SkillTermProjection(term=term, supported=supported, evidence_ids=supporting))
+
+            if is_banned:
+                canonical_support = False
+            elif any(a in profile_skill_terms for a in aliases) or len(all_supporting_eids) > 0:
+                canonical_support = True
+            else:
+                canonical_support = False
+
+            if canonical_support:
+                supporting_selected = [
+                    eid for eid in all_supporting_eids
+                    if eid in selected_evidence_ids
+                ]
+                selected_demonstration = len(supporting_selected) > 0
+                display_decision = True
+            else:
+                supporting_selected = []
+                selected_demonstration = False
+                display_decision = False
+
+            projected.append(
+                SkillTermProjection(
+                    term=term_clean,
+                    canonical_support=canonical_support,
+                    selected_demonstration=selected_demonstration,
+                    target_relevance=True,
+                    display_decision=display_decision,
+                    evidence_ids=supporting_selected,
+                    canonical_evidence_ids=all_supporting_eids,
+                    supported=canonical_support,
+                )
+            )
         result[category] = projected
+
     return result
 
 
@@ -191,17 +288,16 @@ def build_resume_projection(
 
     entries: list[ProjectionEntry] = []
     title_auto_corrections: list[str] = []
+    title_resolutions: list[TitleResolution] = []
     for entry_id in entry_order:
         if entry_id in exp_by_id:
             exp = exp_by_id[entry_id]
             resolution = resolve_displayed_title(
                 entry_id, draft.entry_title_overrides.get(entry_id), exp.title
             )
+            title_resolutions.append(resolution)
             if resolution.was_auto_corrected:
-                title_auto_corrections.append(
-                    f"entry {entry_id!r}: proposed title {resolution.proposed_title!r} is not canonical or an "
-                    f"approved variant; corrected to canonical title {resolution.canonical_title!r}"
-                )
+                title_auto_corrections.append(resolution.authority_note)
             entries.append(
                 ProjectionEntry(
                     entry_id=entry_id,
@@ -239,6 +335,7 @@ def build_resume_projection(
         omission_ledger=[dataclasses.asdict(om) for om in draft.amdocs_omission_ledger],
         model_identities=model_identities,
         title_auto_corrections=title_auto_corrections,
+        title_resolutions=title_resolutions,
     )
 
 
@@ -247,10 +344,28 @@ def projection_to_dict(projection: ResumeProjection) -> dict[str, Any]:
 
 
 def unsupported_skill_terms(projection: ResumeProjection) -> list[tuple[str, str]]:
-    """(category, term) pairs whose `supported` flag is False."""
+    """(category, term) pairs where canonical_support is False."""
     return [
         (category, s.term)
         for category, terms in projection.skills.items()
         for s in terms
-        if not s.supported
+        if not s.canonical_support
+    ]
+
+
+def weakly_demonstrated_skill_terms(projection: ResumeProjection) -> list[tuple[str, str]]:
+    """(category, term) pairs where canonical_support is True but selected_demonstration is False."""
+    return [
+        (category, s.term)
+        for category, terms in projection.skills.items()
+        for s in terms
+        if s.canonical_support and not s.selected_demonstration
+    ]
+
+
+def check_skills_advisories(projection: ResumeProjection) -> list[str]:
+    """Advisory notices for canonically supported skills not demonstrated in selected bullets."""
+    return [
+        f"Skills advisory: {category!r} term {term!r} is canonically supported in profile but not demonstrated in selected bullets for this run"
+        for category, term in weakly_demonstrated_skill_terms(projection)
     ]

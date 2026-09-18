@@ -22,15 +22,13 @@ recorded as a warning so it's visible in the manifest.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Mapping
 
-# entry_id -> set of titles that may be substituted for the canonical
-# Experience.title when the drafter proposes one via entry_title_overrides.
-# Intentionally conservative: every variant here is a title Himanshu has
-# actually held or that differs from the canonical title only in a way that
-# does not change seniority, scope, or employment relationship (e.g. the
-# generic industry-standard rendering of an internal title).
+
+# entry_id -> frozenset of explicitly pre-authorized display variants with
+# verified provenance. NO Amdocs variants are approved (canonical title is
+# "Software Developer", and altering it is documented as resume fraud).
 APPROVED_TITLE_VARIANTS: dict[str, frozenset[str]] = {
-    "amdocs_software_developer": frozenset({"Software Developer", "Software Engineer"}),
     "bank_integration_internship": frozenset({"Software Engineering Intern"}),
 }
 
@@ -40,30 +38,79 @@ class TitleResolution:
     entry_id: str
     proposed_title: str | None
     canonical_title: str
-    final_title: str
+    displayed_title: str
+    resolution_status: str  # "canonical" | "approved_variant" | "unresolved_conflict"
     was_auto_corrected: bool
+    requires_human_review: bool
+    authority_note: str
+
+    @property
+    def final_title(self) -> str:
+        """Backward compatibility with c13677c."""
+        return self.displayed_title
 
 
 def resolve_displayed_title(
     entry_id: str,
     proposed_title: str | None,
     canonical_title: str,
+    approved_variants: frozenset[str] | set[str] | None = None,
 ) -> TitleResolution:
     """Resolve what title should actually render for an experience entry.
 
-    - No proposal -> canonical title, no correction.
-    - Proposal exactly equals canonical -> canonical title, no correction.
-    - Proposal is a listed approved variant for this entry -> use the
-      proposal as-is (it is a legitimate, pre-approved rendering).
-    - Anything else -> silently corrected to canonical; caller is expected
-      to record `was_auto_corrected` as a warning, per the AUTO_CORRECTABLE
-      severity tier (continue the run, don't fail it).
+    - No proposal -> canonical title, resolution_status="canonical".
+    - Proposal equals canonical -> canonical title, resolution_status="canonical".
+    - Proposal is an approved variant with verified provenance -> use proposal,
+      resolution_status="approved_variant".
+    - Anything else -> unapproved substitution. Preserves the safest supported
+      canonical title, sets resolution_status="unresolved_conflict",
+      was_auto_corrected=True, and requires_human_review=True.
+      The run is never rejected over this; the artifact is preserved and
+      routed to human review.
     """
-    if not proposed_title or proposed_title == canonical_title:
-        return TitleResolution(entry_id, proposed_title, canonical_title, canonical_title, False)
+    if not proposed_title or proposed_title.strip() == canonical_title.strip():
+        return TitleResolution(
+            entry_id=entry_id,
+            proposed_title=proposed_title,
+            canonical_title=canonical_title,
+            displayed_title=canonical_title,
+            resolution_status="canonical",
+            was_auto_corrected=False,
+            requires_human_review=False,
+            authority_note="Verified canonical employment title.",
+        )
 
-    approved = APPROVED_TITLE_VARIANTS.get(entry_id, frozenset())
-    if proposed_title in approved:
-        return TitleResolution(entry_id, proposed_title, canonical_title, proposed_title, False)
+    clean_proposed = proposed_title.strip()
+    if approved_variants is None:
+        approved = APPROVED_TITLE_VARIANTS.get(entry_id, frozenset())
+    else:
+        approved = frozenset(approved_variants)
 
-    return TitleResolution(entry_id, proposed_title, canonical_title, canonical_title, True)
+    if clean_proposed in approved:
+        return TitleResolution(
+            entry_id=entry_id,
+            proposed_title=proposed_title,
+            canonical_title=canonical_title,
+            displayed_title=clean_proposed,
+            resolution_status="approved_variant",
+            was_auto_corrected=False,
+            requires_human_review=False,
+            authority_note=f"Using authorized display variant {clean_proposed!r} with documented provenance.",
+        )
+
+    # Unresolved conflict: do NOT alter canonical history.
+    # Preserve the safest canonical title and route to human review.
+    return TitleResolution(
+        entry_id=entry_id,
+        proposed_title=proposed_title,
+        canonical_title=canonical_title,
+        displayed_title=canonical_title,
+        resolution_status="unresolved_conflict",
+        was_auto_corrected=True,
+        requires_human_review=True,
+        authority_note=(
+            f"entry {entry_id!r}: proposed title {proposed_title!r} differs from canonical title "
+            f"{canonical_title!r} and is not an approved display variant. Preserved safest canonical "
+            f"title {canonical_title!r}; flagged for human review."
+        ),
+    )

@@ -8,6 +8,7 @@ task's "Use recorded/fake responses" requirement).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -97,15 +98,24 @@ def test_quality_core_title_mismatch_is_auto_corrected_not_rejected(profile):
 
 
 def test_quality_core_approved_title_variant_passes_without_correction():
-    resolution = resolve_displayed_title("amdocs_software_developer", "Software Engineer", "Software Developer")
-    assert resolution.was_auto_corrected is False
-    assert resolution.final_title == "Software Engineer"
+    # Canonical title passes without correction
+    res_canonical = resolve_displayed_title("amdocs_software_developer", "Software Developer", "Software Developer")
+    assert res_canonical.was_auto_corrected is False
+    assert res_canonical.resolution_status == "canonical"
+    assert res_canonical.final_title == "Software Developer"
+
+    # Documented approved variant passes without correction
+    res_approved = resolve_displayed_title(
+        "bank_integration_internship", "Software Engineering Intern", "Software Engineering Intern"
+    )
+    assert res_approved.was_auto_corrected is False
+    assert res_approved.final_title == "Software Engineering Intern"
 
 
 def test_quality_core_title_mismatch_end_to_end_continues_the_run(tmp_path, valid_jd_file, fake_draft_response_backend):
     """A drafter that proposes a non-canonical, non-approved title for an
     entry does not halt the lane -- render.py uses the corrected title and
-    the run completes."""
+    the run completes with NEEDS_HUMAN_REVIEW (preserving the artifact)."""
     draft = dict(fake_draft_response_backend)
     draft["entry_title_overrides"] = {"amdocs_software_developer": "Chief Technology Officer"}
     bullet_ids = [b["bullet_id"] for b in draft["bullets"]]
@@ -124,7 +134,7 @@ def test_quality_core_title_mismatch_end_to_end_continues_the_run(tmp_path, vali
     assert result.out_pdf is not None and result.out_pdf.exists()
     manifest = json.loads(result.manifest_path.read_text())
     assert any("Chief Technology Officer" in c for c in manifest["auto_corrections"])
-    assert manifest["status"] in ("ACCEPTED", "ACCEPTED_WITH_WARNINGS")
+    assert manifest["status"] == "NEEDS_HUMAN_REVIEW"
 
 
 # ---------------------------------------------------------------------------
@@ -177,12 +187,28 @@ def test_quality_core_unsupported_skills_term_deterministically_removed(profile,
     projection = build_resume_projection(
         draft, profile, "Acme", "SE", "backend", {"drafter": {}, "auditor": {}, "repair": {}, "re_audit": {}}
     )
-    unsupported = unsupported_skill_terms(projection)
-    assert len(unsupported) > 0  # this fixture's evidence selection doesn't cover every profile skill
+    # Canonically supported profile skills are not removed; weakly demonstrated skills generate advisories
+    from src.tailor2.audit_projection import SkillTermProjection, check_skills_advisories, weakly_demonstrated_skill_terms
+    import dataclasses as _dc
 
-    corrected, corrections = apply_deterministic_auto_corrections(projection)
-    assert len(corrections) == len(unsupported)
-    # Every remaining skill in the corrected projection is supported.
+    weakly = weakly_demonstrated_skill_terms(projection)
+    assert len(weakly) > 0  # some profile skills are not cited in this draft's bullets
+    advisories = check_skills_advisories(projection)
+    assert len(advisories) == len(weakly)
+
+    # Now inject an unsupported term (e.g. Kubernetes / ungrounded skill)
+    injected_skills = dict(projection.skills)
+    injected_skills["developer_tools"] = list(injected_skills.get("developer_tools", [])) + [
+        SkillTermProjection(term="Kubernetes", canonical_support=False, selected_demonstration=False, supported=False)
+    ]
+    proj_with_unsupported = _dc.replace(projection, skills=injected_skills)
+
+    unsupported = unsupported_skill_terms(proj_with_unsupported)
+    assert len(unsupported) == 1
+    assert unsupported[0][1] == "Kubernetes"
+
+    corrected, corrections = apply_deterministic_auto_corrections(proj_with_unsupported)
+    assert any("Kubernetes" in c for c in corrections)
     assert unsupported_skill_terms(corrected) == []
 
 
@@ -203,8 +229,9 @@ def test_quality_core_unsupported_skills_end_to_end_does_not_reject(tmp_path, va
     )
     assert result.success is True
     manifest = json.loads(result.manifest_path.read_text())
-    assert len(manifest["auto_corrections"]) > 0
+    assert any("Skills advisory" in w for w in manifest["warnings"])
     assert manifest["status"] == "ACCEPTED_WITH_WARNINGS"
+
 
 
 # ---------------------------------------------------------------------------
@@ -525,3 +552,276 @@ def test_quality_core_happy_path_is_exactly_two_calls(tmp_path, valid_jd_file, f
     )
     assert result.call_count == 2
     assert result.repair_performed is False
+
+
+# ===========================================================================
+# Skills Integration Tests (Correction 1: 4-Tier Skills Model & Semantic Aliases)
+# ===========================================================================
+
+
+def test_skills_canonically_supported_evidence_not_selected_for_bullet(profile, fake_draft_response_backend):
+    """1. A Skill supported anywhere in canonical evidence remains eligible and is NOT
+    removed solely because its supporting project or bullet was not selected."""
+    draft = _draft_from_fixture(fake_draft_response_backend)
+    projection = build_resume_projection(
+        draft, profile, "Acme", "SE", "backend", {"drafter": {}, "auditor": {}, "repair": {}, "re_audit": {}}
+    )
+    lang_terms = {s.term: s for s in projection.skills.get("languages", [])}
+    assert "Java" in lang_terms
+    assert lang_terms["Java"].canonical_support is True
+    assert lang_terms["Java"].display_decision is True
+
+    corrected, corrections = apply_deterministic_auto_corrections(projection)
+    corrected_langs = [s.term for s in corrected.skills.get("languages", [])]
+    assert "Java" in corrected_langs
+    assert not any("Java" in c and "removed" in c for c in corrections)
+
+
+def test_skills_support_through_selected_evidence(profile, fake_draft_response_backend):
+    """2. Support through selected evidence: selected_demonstration is True when
+    a selected bullet visibly cites the skill."""
+    draft = _draft_from_fixture(fake_draft_response_backend)
+    projection = build_resume_projection(
+        draft, profile, "Acme", "SE", "backend", {"drafter": {}, "auditor": {}, "repair": {}, "re_audit": {}}
+    )
+    db_terms = {s.term: s for s in projection.skills.get("databases", [])}
+    assert "PostgreSQL" in db_terms
+    assert db_terms["PostgreSQL"].canonical_support is True
+    assert db_terms["PostgreSQL"].selected_demonstration is True
+    assert "int_b2" in db_terms["PostgreSQL"].evidence_ids
+
+
+def test_skills_supported_but_weakly_demonstrated_produces_only_advisory(profile, fake_draft_response_backend):
+    """3. Supported but weakly demonstrated Skills produce only an advisory warning,
+    never automatic removal or fatal rejection."""
+    draft = _draft_from_fixture(fake_draft_response_backend)
+    projection = build_resume_projection(
+        draft, profile, "Acme", "SE", "backend", {"drafter": {}, "auditor": {}, "repair": {}, "re_audit": {}}
+    )
+    from src.tailor2.audit_projection import check_skills_advisories, weakly_demonstrated_skill_terms
+    weakly = weakly_demonstrated_skill_terms(projection)
+    assert len(weakly) > 0
+    advisories = check_skills_advisories(projection)
+    assert len(advisories) == len(weakly)
+    assert all("Skills advisory" in a for a in advisories)
+
+    from src.tailor2.validators import check_skills_evidence_integrity
+    removals = check_skills_evidence_integrity(projection)
+    assert len(removals) == 0
+
+
+def test_skills_completely_unsupported_removed_or_repaired(profile, fake_draft_response_backend):
+    """4. Completely unsupported Skills (e.g. Kubernetes, ungrounded terms) are
+    detected as integrity defects and removed deterministically."""
+    draft = _draft_from_fixture(fake_draft_response_backend)
+    from src.tailor2.audit_projection import SkillTermProjection
+    import dataclasses as _dc
+
+    projection = build_resume_projection(
+        draft, profile, "Acme", "SE", "backend", {"drafter": {}, "auditor": {}, "repair": {}, "re_audit": {}}
+    )
+    custom_skills = dict(projection.skills)
+    custom_skills["developer_tools"] = list(custom_skills.get("developer_tools", [])) + [
+        SkillTermProjection(term="Kubernetes", canonical_support=False, selected_demonstration=False, supported=False),
+        SkillTermProjection(term="GraphQL", canonical_support=False, selected_demonstration=False, supported=False),
+    ]
+    proj_with_unsupported = _dc.replace(projection, skills=custom_skills)
+
+    unsupported = unsupported_skill_terms(proj_with_unsupported)
+    unsupported_terms = [term for _, term in unsupported]
+    assert "Kubernetes" in unsupported_terms
+    assert "GraphQL" in unsupported_terms
+
+    corrected, corrections = apply_deterministic_auto_corrections(proj_with_unsupported)
+    corrected_terms = [s.term for terms in corrected.skills.values() for s in terms]
+    assert "Kubernetes" not in corrected_terms
+    assert "GraphQL" not in corrected_terms
+    assert any("Kubernetes" in c for c in corrections)
+    assert any("GraphQL" in c for c in corrections)
+
+
+def test_skills_postgres_postgresql_semantic_equivalence(profile):
+    """5. Explicit semantic aliases such as Postgres and PostgreSQL resolve to the same supported concept."""
+    from src.tailor2.audit_projection import _resolve_skills, get_skill_aliases
+    aliases = get_skill_aliases("Postgres")
+    assert "postgresql" in aliases
+    assert "postgres" in aliases
+
+    evidence_by_id = {}
+    for exp in profile.experience:
+        for b in exp.bullets:
+            evidence_by_id[b.id] = b
+    for proj in profile.projects:
+        for b in proj.bullets:
+            evidence_by_id[b.id] = b
+
+    custom_skills = {"databases": ["Postgres"]}
+    resolved = _resolve_skills(profile, evidence_by_id, {"int_b2"}, skills_by_category=custom_skills)
+    postgres_proj = resolved["databases"][0]
+    assert postgres_proj.canonical_support is True
+    assert postgres_proj.selected_demonstration is True
+    assert "int_b2" in postgres_proj.evidence_ids
+
+
+def test_skills_selection_concerns_never_rejected_fatal(tmp_path, valid_jd_file, fake_draft_response_backend):
+    """6. Skills selection concerns or weakly demonstrated skills never become REJECTED_FATAL."""
+    bullet_ids = [b["bullet_id"] for b in fake_draft_response_backend["bullets"]]
+    invoker = Tailor2Invoker(
+        provider="openai",
+        model="fake-model",
+        fake_responses={
+            "draft": json.dumps(fake_draft_response_backend),
+            "audit": _passing_audit_json(bullet_ids),
+        },
+        trace_dir=tmp_path / "traces",
+    )
+    out_dir = tmp_path / "out"
+    result = run_tailor2_lane(
+        jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
+    )
+    assert result.success is True
+    assert result.status != RunStatus.REJECTED_FATAL.value
+    assert result.out_pdf is not None and result.out_pdf.exists()
+
+
+def test_skills_existing_factual_integrity_behavior_intact(tmp_path, valid_jd_file, fake_draft_response_backend):
+    """7. Existing factual-integrity behavior remains intact: fabricated numbers still fail fatally."""
+    draft = dict(fake_draft_response_backend)
+    draft["bullets"][0]["text"] = "Engineered custom distributed system scaling by 9999%."
+    invoker = Tailor2Invoker(
+        provider="openai", model="fake-model", fake_responses={"draft": json.dumps(draft)}, trace_dir=tmp_path / "traces"
+    )
+    out_dir = tmp_path / "out"
+    result = run_tailor2_lane(
+        jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
+    )
+    assert result.success is False
+    assert result.status == RunStatus.REJECTED_FATAL.value
+
+
+# ===========================================================================
+# Title Provenance Tests (Correction 2: Amdocs Title Provenance Conflict)
+# ===========================================================================
+
+
+def test_title_exact_canonical_title_passes():
+    """1. Exact canonical title passes with resolution_status='canonical'."""
+    resolution = resolve_displayed_title("amdocs_software_developer", "Software Developer", "Software Developer")
+    assert resolution.displayed_title == "Software Developer"
+    assert resolution.resolution_status == "canonical"
+    assert resolution.was_auto_corrected is False
+    assert resolution.requires_human_review is False
+
+
+def test_title_approved_display_variant_passes_with_provenance():
+    """2. Explicitly approved display variant with verified provenance passes."""
+    resolution = resolve_displayed_title(
+        "bank_integration_internship",
+        "Software Engineering Intern",
+        "Intern",
+        approved_variants=frozenset({"Software Engineering Intern"}),
+    )
+    assert resolution.displayed_title == "Software Engineering Intern"
+    assert resolution.resolution_status == "approved_variant"
+    assert resolution.was_auto_corrected is False
+    assert resolution.requires_human_review is False
+
+
+def test_title_unapproved_substitution_does_not_silently_pass():
+    """3. Unapproved title substitution does not silently pass; routes to human review."""
+    resolution = resolve_displayed_title("amdocs_software_developer", "Software Engineer", "Software Developer")
+    assert resolution.displayed_title == "Software Developer"  # preserves canonical!
+    assert resolution.resolution_status == "unresolved_conflict"
+    assert resolution.was_auto_corrected is True
+    assert resolution.requires_human_review is True
+    assert "differs from canonical title" in resolution.authority_note
+
+
+def test_title_recruiter_preference_not_rewriting_canonical_history():
+    """4. Recruiter or drafter preference does not rewrite canonical history."""
+    resolution = resolve_displayed_title(
+        "amdocs_software_developer", "Senior Software Engineer", "Software Developer"
+    )
+    assert resolution.displayed_title == "Software Developer"
+    assert resolution.resolution_status == "unresolved_conflict"
+    assert resolution.was_auto_corrected is True
+
+
+def test_title_conflicting_sources_produce_needs_human_review_not_fatal(tmp_path, valid_jd_file, fake_draft_response_backend):
+    """5. Conflicting title sources produce NEEDS_HUMAN_REVIEW, not REJECTED_FATAL."""
+    draft = dict(fake_draft_response_backend)
+    draft["entry_title_overrides"] = {"amdocs_software_developer": "Software Engineer"}
+    bullet_ids = [b["bullet_id"] for b in draft["bullets"]]
+
+    invoker = Tailor2Invoker(
+        provider="openai",
+        model="fake-model",
+        fake_responses={"draft": json.dumps(draft), "audit": _passing_audit_json(bullet_ids)},
+        trace_dir=tmp_path / "traces",
+    )
+    out_dir = tmp_path / "out"
+    result = run_tailor2_lane(
+        jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
+    )
+    assert result.status == RunStatus.NEEDS_HUMAN_REVIEW.value
+    assert result.status != RunStatus.REJECTED_FATAL.value
+
+
+def test_title_artifact_preservation_during_title_review(tmp_path, valid_jd_file, fake_draft_response_backend):
+    """6. Title review preserves the usable rendered résumé artifact."""
+    draft = dict(fake_draft_response_backend)
+    draft["entry_title_overrides"] = {"amdocs_software_developer": "Software Engineer"}
+    bullet_ids = [b["bullet_id"] for b in draft["bullets"]]
+
+    invoker = Tailor2Invoker(
+        provider="openai",
+        model="fake-model",
+        fake_responses={"draft": json.dumps(draft), "audit": _passing_audit_json(bullet_ids)},
+        trace_dir=tmp_path / "traces",
+    )
+    out_dir = tmp_path / "out"
+    result = run_tailor2_lane(
+        jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
+    )
+    assert result.success is True
+    assert result.out_pdf is not None and result.out_pdf.exists()
+    manifest = json.loads(result.manifest_path.read_text())
+    assert manifest["status"] == "NEEDS_HUMAN_REVIEW"
+    assert len(manifest["title_resolutions"]) > 0
+    amdocs_res = next(r for r in manifest["title_resolutions"] if r["entry_id"] == "amdocs_software_developer")
+    assert amdocs_res["displayed_title"] == "Software Developer"
+    assert amdocs_res["resolution_status"] == "unresolved_conflict"
+
+
+def test_title_no_amdocs_specific_production_rule():
+    """7. No Amdocs-specific production rule: APPROVED_TITLE_VARIANTS has no Amdocs entry,
+    and resolve_displayed_title has no branching on 'amdocs'."""
+    from src.tailor2.title_policy import APPROVED_TITLE_VARIANTS
+    assert "amdocs_software_developer" not in APPROVED_TITLE_VARIANTS
+    import inspect
+    from src.tailor2 import title_policy
+    source = inspect.getsource(title_policy.resolve_displayed_title)
+    assert "amdocs" not in source.lower()
+
+
+def test_title_openai_fixtures_do_not_assert_unverified_title_as_fact():
+    """8. OpenAI fixtures do not assert an unverified title as unquestionable fact."""
+    cases_path = Path("tests/fixtures/tailor2/quality_regressions/cases.json")
+    cases = json.loads(cases_path.read_text(encoding="utf-8"))
+    reg15_neg = next(c for c in cases if c["case_id"] == "reg_15_employer_title_tampering_neg")
+    reg15_pos = next(c for c in cases if c["case_id"] == "reg_15_employer_title_tampering_pos")
+    assert "Software Developer displayed when canonical or explicitly approved title is Software Engineer" not in reg15_neg["description"]
+    assert "Software Developer displayed when canonical or explicitly approved title is Software Engineer" not in reg15_pos["description"]
+
+    manifest_path = Path("tests/fixtures/tailor2/quality_regressions/openai_acceptance_manifest.json")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["employer_title_fidelity"]["amdocs"]["canonical_title"] == "Software Developer"
+    assert "Software Engineer" in manifest["employer_title_fidelity"]["amdocs"]["prohibited_substitutions"]
+
+
+
+def test_title_existing_approved_variant_backward_compatible():
+    """9. TitleResolution maintains backward-compatible final_title property."""
+    resolution = resolve_displayed_title("bank_integration_internship", "Software Engineering Intern", "Software Engineering Intern")
+    assert resolution.final_title == resolution.displayed_title
+    assert hasattr(resolution, "was_auto_corrected")

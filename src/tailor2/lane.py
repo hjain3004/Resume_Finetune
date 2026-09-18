@@ -41,6 +41,7 @@ from src.tailor2.render import compile_draft_to_pdf
 from src.tailor2.severity import RunStatus, Severity
 from src.tailor2.validators import (
     apply_deterministic_auto_corrections,
+    check_skills_advisories,
     classify_evaluation_severity,
     classify_whole_resume_severity,
     validate_audit_response,
@@ -93,6 +94,7 @@ class _Stage:
     repair_id: tuple[str, str] = ("", "")
     re_audit_id: tuple[str, str] = ("", "")
     same_model_draft_and_audit: bool = False
+    title_resolutions: list[dict[str, Any]] = field(default_factory=list)
     # Set by _audit_repair_cycle once it settles on a final draft; the
     # caller reads these back to proceed to rendering. `needs_human_review`
     # distinguishes "clean pass" from "gave up after the repair budget /
@@ -145,7 +147,9 @@ def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: lis
         auto_corrections=list(stage.auto_corrections),
         advisory_gaps=list(stage.advisory_gaps),
         dimension_scores=dict(stage.dimension_scores),
+        title_resolutions=list(stage.title_resolutions),
     )
+
 
 
 def _write_fatal(out_dir: Path, stage: _Stage, reasons: list[str]) -> Tailor2RunResult:
@@ -317,7 +321,7 @@ def run_tailor2_lane(
     # ---------------------------------------------------------
     if page_overflow or stage.needs_human_review:
         run_status = RunStatus.NEEDS_HUMAN_REVIEW
-    elif stage.auto_corrections or stage.advisory_gaps:
+    elif stage.auto_corrections or stage.advisory_gaps or any("Skills advisory" in w for w in stage.warnings):
         run_status = RunStatus.ACCEPTED_WITH_WARNINGS
     else:
         run_status = RunStatus.ACCEPTED
@@ -394,6 +398,21 @@ def _audit_repair_cycle(
         corrected_projection, auto_corrections = apply_deterministic_auto_corrections(projection)
         if auto_corrections:
             stage.auto_corrections.extend(auto_corrections)
+
+        # Record title resolutions and route to human review if any unresolved conflict
+        if projection.title_resolutions:
+            stage.title_resolutions = [dataclasses.asdict(tr) for tr in projection.title_resolutions]
+            for tr in projection.title_resolutions:
+                if tr.requires_human_review:
+                    stage.needs_human_review = True
+                    if tr.authority_note not in stage.warnings:
+                        stage.warnings.append(tr.authority_note)
+
+        # Record skills advisories for weakly demonstrated skills
+        for adv in check_skills_advisories(corrected_projection):
+            if adv not in stage.warnings:
+                stage.warnings.append(adv)
+
 
         if attempts == 0:
             active_invoker = auditor_invoker

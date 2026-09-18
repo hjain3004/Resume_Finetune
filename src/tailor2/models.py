@@ -188,6 +188,7 @@ class Tailor2Manifest:
     # outcome. Required by the task's "preserve the original dimension
     # scores and reasons in the manifest" instruction.
     dimension_scores: dict[str, dict[str, Any]] = field(default_factory=dict)
+    title_resolutions: list[dict[str, Any]] = field(default_factory=list)
 
 
 def parse_draft_response(raw_text: str) -> DraftResponse:

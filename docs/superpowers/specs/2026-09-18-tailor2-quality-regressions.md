@@ -232,3 +232,72 @@ To support this parallel workflow without breaking CI or asserting premature cap
   1. Tests fail as expected today without breaking CI.
   2. If an un-implemented feature is accidentally passed or merged, `strict=True` triggers an `XPASS` error, enforcing rigorous validation.
   3. When Claude completes `quality-core`, the xfail markers can be cleanly transitioned to standard passing assertions.
+
+---
+
+## 8. Amdocs Title Provenance Reconciliation Table & Resolution Policy
+
+### 8.1 Source Reconciliation Table
+
+| Source | Title Value | Source Type | Authority & Status |
+|---|---|---|---|
+| `config/master_profile.yaml` (`amdocs_software_developer`) | `Software Developer` | Primary canonical profile | **Authoritative Ground Truth.** Explicitly comments: `# NEVER altered. Target-title seeding happens in summary line only. Altering is resume fraud.` |
+| Master profile known gaps (`am_gap_title_mismatch`) | `Software Developer` | Risk ledger / compliance policy | **Authoritative.** Notes target postings say "Software Engineer", but dictates title is immutable on résumé. |
+| Manual résumé TeX (`output/openai-4949/Himanshu_Jain_Resume.tex`) | `Software Developer` | Candidate manual submission | **Authoritative Applied Artifact.** Line 96 renders `\textit{Software Developer}`. |
+| Provenance report (`output/openai-4949/PROVENANCE.md`) | `Software Developer` | Application audit log | **Authoritative Audit Record.** Notes title change to "Software Engineer" was explicitly held/not applied without confirmation. |
+| Recruiter review (`output/openai-4949/RECRUITER_REVIEW.md`) | `Software Engineer` (advocated) | Advisory critique | **Advisory Only.** Recommends ATS keyword alignment, but notes reference/background check risk. Lacks authority to alter employment facts. |
+| OpenAI acceptance manifest (`openai_acceptance_manifest.json`) | `Software Developer` | Acceptance specification | **Authoritative Acceptance Baseline.** Explicitly lists `Software Engineer` in `prohibited_substitutions`. |
+| Title regression fixtures (`cases.json` `reg_15`) | `Software Developer` (canonical) | Test fixtures | **Authoritative Test Baseline.** Rejects altering to Software Engineer (`reg_15_neg`), accepts canonical (`reg_15_pos`). |
+| Quality-core intermediate code (`title_policy.py` in `c13677c`) | `Software Developer` / `Software Engineer` | Intermediate prototype | **Non-Authoritative Hardcoding.** Erroneous hardcoded synonym mapping; removed during integration to maintain clean generic title policy. |
+
+### 8.2 Production Title Resolution Policy
+
+To resolve title fidelity without hardcoding employer-specific exceptions:
+1. **Four Explicit Title Concepts:**
+   - `canonical_title`: The legally verified former employment title in `master_profile.yaml`.
+   - `approved_display_variants`: Pre-authorized display variants with documented provenance (`APPROVED_TITLE_VARIANTS`). Amdocs has no approved variants.
+   - `displayed_title`: The actual string rendered in the generated LaTeX/PDF résumé.
+   - `resolution_status`: One of `"canonical"`, `"approved_variant"`, or `"unresolved_conflict"`.
+2. **Conflict Routing (`NEEDS_HUMAN_REVIEW`):**
+   - If an unapproved substitution is proposed (e.g. `Software Engineer` for Amdocs):
+     - The safest supported title is preserved (`displayed_title = canonical_title`).
+     - `resolution_status = "unresolved_conflict"` and `was_auto_corrected = True`.
+     - `requires_human_review = True`, routing the run to `RunStatus.NEEDS_HUMAN_REVIEW`.
+   - Title ambiguity **never produces `REJECTED_FATAL`** and **never destroys the usable rendered artifact**.
+3. **No Amdocs-Specific Rules:**
+   - `APPROVED_TITLE_VARIANTS` contains only entries with documented provenance (e.g. `bank_integration_internship`).
+   - `title_policy.py` contains zero employer-specific hardcoding or string branching.
+
+---
+
+## 9. Four-Tier Skills Model & Semantic Aliasing Specification
+
+### 9.1 The Four-Tier Skills Architecture
+
+To prevent over-restrictive skills pruning where valid canonical capabilities were previously stripped when bullets were not selected, Tailor2 implements a decoupled 4-tier model:
+
+1. `canonical_support` (bool):
+   - True if the skill appears in `profile.skills` or is backed by any bullet across `profile.experience` or `profile.projects`.
+   - False for banned terms (`profile.do_not_claim`, `Kubernetes`) or terms unsupported anywhere in canonical evidence.
+2. `selected_demonstration` (bool):
+   - True if the skill (or any of its semantic aliases) is visibly demonstrated in the bullets selected for this specific run (`selected_evidence_ids`).
+   - False otherwise. Weak demonstration is an informational advisory, not a truth gate.
+3. `target_relevance` (bool):
+   - True if the skill is relevant to the target job description or atomic requirements.
+4. `display_decision` (bool):
+   - Determines whether the skill is retained in the Skills section of the rendered résumé.
+   - Matches `canonical_support`. Canonically supported skills remain on the résumé even if their supporting bullets were not selected.
+
+### 9.2 Semantic Aliasing
+
+The pipeline resolves canonical technology synonyms symmetrically:
+- `PostgreSQL` $\equiv$ `Postgres` $\equiv$ `Postgres DB` $\equiv$ `PostgreSQL DB`
+- `React` $\equiv$ `React.js` $\equiv$ `ReactJS`
+- `AsyncIO` $\equiv$ `asyncio` $\equiv$ `async`
+- `Apache Kafka` $\equiv$ `Kafka`
+- `FastAPI` $\equiv$ `FastAPI microservices`
+
+### 9.3 Advisory Warnings vs. Auto-Correction
+
+- **Weakly Demonstrated Skills:** Canonically supported skills lacking selected demonstration generate advisory warnings (`check_skills_advisories`) and manifest notices. They are **never removed** and **never cause fatal rejection**.
+- **Completely Unsupported Skills:** Terms lacking canonical support anywhere (or explicitly banned) are classified as `AUTO_CORRECTABLE` integrity defects and stripped deterministically with an auditable manifest correction.

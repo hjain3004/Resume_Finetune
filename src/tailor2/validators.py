@@ -373,14 +373,19 @@ def classify_whole_resume_severity(evaluation: WholeResumeEvaluation | None) -> 
 
 def check_skills_evidence_integrity(projection: ResumeProjection) -> list[str]:
     """Deterministic AUTO_CORRECTABLE check: every rendered Skills term must
-    resolve to this run's selected evidence. Returns human-readable
-    auto-correction messages for any term that does not (the caller is
-    expected to actually remove them -- see
-    apply_deterministic_auto_corrections)."""
+    be supported by canonical profile evidence. Terms unsupported anywhere in
+    canonical evidence are removed."""
     return [
-        f"Skills: {category!r} term {term!r} does not resolve to any selected evidence for this run; removed"
+        f"Skills: {category!r} term {term!r} is not canonically supported in profile; removed"
         for category, term in unsupported_skill_terms(projection)
     ]
+
+
+def check_skills_advisories(projection: ResumeProjection) -> list[str]:
+    """Advisory check: canonically supported terms that lack visible demonstration
+    in this run's selected evidence generate informational warnings without removal."""
+    from src.tailor2.audit_projection import check_skills_advisories as _advisories
+    return _advisories(projection)
 
 
 def apply_deterministic_auto_corrections(
@@ -398,7 +403,7 @@ def apply_deterministic_auto_corrections(
     corrections.extend(check_skills_evidence_integrity(projection))
 
     corrected_skills = {
-        category: [s for s in terms if s.supported]
+        category: [s for s in terms if s.canonical_support]
         for category, terms in projection.skills.items()
     }
     corrected = _dc.replace(projection, skills=corrected_skills)

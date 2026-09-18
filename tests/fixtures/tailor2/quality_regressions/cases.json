@@ -961,7 +961,7 @@
     "variant": "negative",
     "category": "title_fidelity",
     "target_role": "OpenAI Applied Emerging Talent",
-    "description": "Software Developer displayed when canonical or explicitly approved title is Software Engineer",
+    "description": "Altering Amdocs historical title from canonical 'Software Developer' to 'Software Engineer' to match target role",
     "is_synthetic": false,
     "resume_fragment": "Amdocs \\hfill Pune, India \\\\ Software Engineer \\hfill Jul 2022 -- Jul 2024",
     "canonical_evidence_ids": [
@@ -996,7 +996,7 @@
     "variant": "positive",
     "category": "title_fidelity",
     "target_role": "OpenAI Applied Emerging Talent",
-    "description": "Software Developer displayed when canonical or explicitly approved title is Software Engineer",
+    "description": "Preserving canonical Amdocs historical title 'Software Developer' without unverified substitution",
     "is_synthetic": false,
     "resume_fragment": "Amdocs \\hfill Pune, India \\\\ Software Developer \\hfill Jul 2022 -- Jul 2024",
     "canonical_evidence_ids": [
