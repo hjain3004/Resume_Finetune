@@ -1,0 +1,48 @@
+{
+  "scenario_id": "scen_08_cycle_detected",
+  "target_id": "twitch_4182",
+  "description": "Candidate fingerprinting detects oscillation between Candidate A and Candidate B and halts.",
+  "initial_state": {
+    "candidate_id": "cand_state_A",
+    "vertical_fill_ratio": 1.02,
+    "page_count": 2,
+    "fingerprint": "fp_8a2d1f"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "swap_shorter_variant",
+      "resulting_fingerprint": "fp_3c7e9b",
+      "vertical_fill_ratio": 0.88
+    },
+    {
+      "iteration_index": 2,
+      "action": "expand_bullet",
+      "resulting_fingerprint": "fp_8a2d1f",
+      "vertical_fill_ratio": 1.02
+    },
+    {
+      "iteration_index": 3,
+      "action": "fingerprint_cycle_check",
+      "detected_cycle": [
+        "fp_8a2d1f",
+        "fp_3c7e9b",
+        "fp_8a2d1f"
+      ],
+      "decision": "BREAK_CYCLE_SELECT_BEST_SAFE",
+      "selected_safe_fingerprint": "fp_3c7e9b"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_state_B",
+    "vertical_fill_ratio": 0.88,
+    "page_count": 1,
+    "layout_state": "MINOR_UNDERFILL",
+    "runtime_outcome": "OPTIMIZATION_ROLLED_BACK"
+  },
+  "trace_ledger": [
+    "Fingerprint fp_8a2d1f recurred on iteration 2.",
+    "Detected cycle between 1.02 (overflow) and 0.88 (underfill).",
+    "Terminated loop and selected best safe 1-page candidate (fp_3c7e9b, 0.88 fill)."
+  ]
+}

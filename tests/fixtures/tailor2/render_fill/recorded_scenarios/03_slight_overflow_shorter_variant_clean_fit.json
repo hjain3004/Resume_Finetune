@@ -1,0 +1,47 @@
+{
+  "scenario_id": "scen_03_slight_overflow_shorter_variant",
+  "target_id": "doordash_4608",
+  "description": "Single-line overflow resolved by swapping a verbose 2-line bullet for its 1-line concise variant.",
+  "initial_state": {
+    "candidate_id": "cand_doordash_overflow_1",
+    "vertical_fill_ratio": 1.02,
+    "page_count": 2,
+    "bullet_count": 11,
+    "layout_state": "SLIGHT_OVERFLOW"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "swap_shorter_variant",
+      "target_bullet_id": "b02",
+      "original_variant": "Consolidated 862 dead-letter topics across distributed clusters into centralized queues, cutting messaging sprawl by ~70% and accelerating engineering triage.",
+      "replacement_variant": "Consolidated 862 dead-letter topics across distributed clusters, reducing topic sprawl by ~70%.",
+      "preserved_facts": [
+        "862",
+        "~70%"
+      ],
+      "measurement_after": {
+        "vertical_fill_ratio": 0.98,
+        "page_count": 1,
+        "has_collision": false,
+        "has_overflow": false,
+        "readability_density_score": 0.92,
+        "layout_state": "CLEAN_FIT"
+      },
+      "decision": "ACCEPT_VARIANT_SWAP",
+      "is_safe": true
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_doordash_compact_v2",
+    "vertical_fill_ratio": 0.98,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "runtime_outcome": "ACCEPTED"
+  },
+  "trace_ledger": [
+    "Detected slight overflow at 1.02 (1 line on page 2).",
+    "Swapped b02 to 1-line variant; preserved exact metrics (862, ~70%).",
+    "Re-render: 0.98 fill ratio, 1 page. Clean fit accepted."
+  ]
+}

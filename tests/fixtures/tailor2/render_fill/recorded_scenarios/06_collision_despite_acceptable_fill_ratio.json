@@ -1,0 +1,45 @@
+{
+  "scenario_id": "scen_06_collision_despite_fill_ratio",
+  "target_id": "lexisnexis_4987",
+  "description": "Layout has 0.94 fill ratio but horizontal tech-line collides with date; collision fix takes precedence.",
+  "initial_state": {
+    "candidate_id": "cand_lexis_colliding",
+    "vertical_fill_ratio": 0.94,
+    "page_count": 1,
+    "bullet_count": 10,
+    "has_collision": true,
+    "collision_type": "tech_date_collision",
+    "layout_state": "COLLISION_DETECTED"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "compress_project_tech_line",
+      "target_project_id": "campus_marketplace",
+      "original_tech_line": "Python, Django, PostgreSQL, Docker, AWS S3, Redis, HTML5, CSS3, JavaScript, Pytest",
+      "compressed_tech_line": "Python, Django, PostgreSQL, Docker, Redis",
+      "measurement_after": {
+        "vertical_fill_ratio": 0.94,
+        "page_count": 1,
+        "has_collision": false,
+        "collision_type": "none",
+        "readability_density_score": 0.91,
+        "layout_state": "CLEAN_FIT"
+      },
+      "decision": "ACCEPT_TECH_LINE_COMPRESSION",
+      "is_safe": true
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_lexis_resolved",
+    "vertical_fill_ratio": 0.94,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "runtime_outcome": "ACCEPTED"
+  },
+  "trace_ledger": [
+    "Fill ratio 0.94 acceptable, but project heading collided with right-aligned date.",
+    "Shortened tech line to fit within 0.70\\textwidth budget.",
+    "Collision cleared; clean fit accepted."
+  ]
+}

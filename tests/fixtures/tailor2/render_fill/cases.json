@@ -1,0 +1,2898 @@
+[
+  {
+    "case_id": "rf_01_clean_one_page_layout",
+    "category": "measurement",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_clean",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.94,
+      "bottom_margin_in": 0.58,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.92,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer",
+      "50+ ATS sources"
+    ],
+    "allowed_actions": [
+      "accept_as_is"
+    ],
+    "forbidden_actions": [
+      "expand_unnecessarily",
+      "compress_clean_layout",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "CLEAN_FIT",
+    "expected_runtime_outcome": "ACCEPTED",
+    "expected_decision_properties": [
+      "clean_layout_accepted_without_modification",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: balanced one-page render fitting within standard typographic and vertical fill bounds."
+  },
+  {
+    "case_id": "rf_02_minor_harmless_underfill",
+    "category": "measurement",
+    "target_id": "roadrunner_5027",
+    "input_candidate": {
+      "candidate_id": "cand_roadrunner_minor_underfill",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.88,
+      "bottom_margin_in": 1.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "MalyTech Software Engineering Intern"
+    ],
+    "allowed_actions": [
+      "accept_as_is",
+      "emit_advisory_underfill_warning"
+    ],
+    "forbidden_actions": [
+      "fatal_rejection_for_whitespace",
+      "force_filler_padding"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "minor_whitespace_is_non_fatal",
+      "acceptable_clean_presentation"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target RoadRunner: harmless whitespace at bottom of page; acceptable with advisory notice, never fatal rejection."
+  },
+  {
+    "case_id": "rf_03_meaningful_underfill",
+    "category": "measurement",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_underfill",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 7,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 14
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform",
+        "value_score": 0.92,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.74,
+      "bottom_margin_in": 2.5,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.88,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer"
+    ],
+    "allowed_actions": [
+      "query_unused_evidence_ledger",
+      "expand_high_value_evidence"
+    ],
+    "forbidden_actions": [
+      "leave_excessive_whitespace_unaddressed",
+      "fatal_abort"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "meaningful_underfill_triggers_expansion",
+      "prioritize_high_value_evidence"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: meaningful underfill (fill 0.74) triggers query to unused evidence ledger for safe expansion."
+  },
+  {
+    "case_id": "rf_04_slight_overflow",
+    "category": "measurement",
+    "target_id": "doordash_4608",
+    "input_candidate": {
+      "candidate_id": "cand_doordash_slight_overflow",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.03,
+      "bottom_margin_in": -0.25,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Single line spilling to page 2"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PostgreSQL atomic reservations",
+      "~40% lock contention reduction"
+    ],
+    "allowed_actions": [
+      "swap_shorter_variant",
+      "tighten_vertical_spacing"
+    ],
+    "forbidden_actions": [
+      "delete_supported_achievement",
+      "shrink_font_below_minimum"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "slight_overflow_solvable_via_variant_or_spacing",
+      "preserve_facts_and_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target DoorDash: slight overflow (1-2 lines on page 2) resolved cleanly via compact bullet variant."
+  },
+  {
+    "case_id": "rf_05_substantial_overflow",
+    "category": "measurement",
+    "target_id": "twitch_4182",
+    "input_candidate": {
+      "candidate_id": "cand_twitch_substantial_overflow",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 13,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 20
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.15,
+      "bottom_margin_in": -1.45,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "6 lines spilling to page 2"
+      ],
+      "readability_density_score": 0.85,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Idempotent transfer engine",
+      "MalyTech Software Engineering Intern"
+    ],
+    "allowed_actions": [
+      "swap_shorter_variant",
+      "tighten_vertical_spacing",
+      "curate_skills_tight"
+    ],
+    "forbidden_actions": [
+      "arbitrary_bullet_truncation",
+      "font_size_reduction_below_policy"
+    ],
+    "expected_layout_state": "SUBSTANTIAL_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "multi_level_compression_strategy",
+      "preserve_key_experience_bullets"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Twitch: substantial overflow (5-6 lines spilling) requiring coordinated variant shortening and spacing."
+  },
+  {
+    "case_id": "rf_06_two_page_output",
+    "category": "measurement",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_two_pages",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 16,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 25
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.45,
+      "bottom_margin_in": -4.2,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Substantial content filling half of page 2"
+      ],
+      "readability_density_score": 0.75,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "allowed_actions": [
+      "route_to_human_review",
+      "generate_preview_artifact"
+    ],
+    "forbidden_actions": [
+      "silent_unverified_content_drop",
+      "claim_one_page_compliance"
+    ],
+    "expected_layout_state": "TWO_PAGE_OVERFLOW",
+    "expected_runtime_outcome": "NEEDS_HUMAN_REVIEW",
+    "expected_decision_properties": [
+      "two_page_overflow_exceeds_safe_compression",
+      "human_review_preserves_audit_trace"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: massive two-page overflow cannot be compressed without content destruction; routes to human review."
+  },
+  {
+    "case_id": "rf_07_text_outside_page_bounds",
+    "category": "measurement",
+    "target_id": "zoom_4766",
+    "input_candidate": {
+      "candidate_id": "cand_zoom_bounds_violation",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.95,
+      "bottom_margin_in": 0.45,
+      "has_collision": true,
+      "collision_type": "page_boundary",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.15,
+      "line_wrap_warnings": [
+        "Horizontal rule extends past right margin into unprintable zone"
+      ],
+      "readability_density_score": 0.7,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Peer discovery module",
+      "Multiplexed stream"
+    ],
+    "allowed_actions": [
+      "realign_margins_to_printable_boundary",
+      "wrap_wide_elements"
+    ],
+    "forbidden_actions": [
+      "ignore_printable_boundary_violation"
+    ],
+    "expected_layout_state": "BOUNDS_VIOLATION",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "printable_bounds_enforced",
+      "prevent_print_clipping"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Zoom: element extends past physical print margins; detected as bounds violation and corrected."
+  },
+  {
+    "case_id": "rf_08_section_collision",
+    "category": "measurement",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_section_collision",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.95,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.98,
+      "bottom_margin_in": 0.15,
+      "has_collision": true,
+      "collision_type": "section_collision",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.45,
+      "line_wrap_warnings": [
+        "Projects section header overlaps last Experience bullet"
+      ],
+      "readability_density_score": 0.45,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer"
+    ],
+    "allowed_actions": [
+      "rollback_excessive_tightening",
+      "swap_shorter_variant"
+    ],
+    "forbidden_actions": [
+      "accept_overlapping_headers",
+      "prioritize_fill_over_legibility"
+    ],
+    "expected_layout_state": "COLLISION_DETECTED",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "collision_outranks_fill_ratio",
+      "vertical_space_restored"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: vertical spacing over-tightening causes section overlap collision; collision fix outranks fill ratio."
+  },
+  {
+    "case_id": "rf_09_project_tech_date_collision",
+    "category": "measurement",
+    "target_id": "lexisnexis_4987",
+    "input_candidate": {
+      "candidate_id": "cand_lexis_tech_date_collision",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.93,
+      "bottom_margin_in": 0.65,
+      "has_collision": true,
+      "collision_type": "tech_date_collision",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Project tech string width 0.78\\textwidth collides with right-aligned date"
+      ],
+      "readability_density_score": 0.6,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PostgreSQL partitioned tables"
+    ],
+    "allowed_actions": [
+      "compress_tech_line",
+      "wrap_date_or_tech_line"
+    ],
+    "forbidden_actions": [
+      "allow_overlapping_text_and_date"
+    ],
+    "expected_layout_state": "COLLISION_DETECTED",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "horizontal_heading_date_budget_enforced"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target LexisNexis: long project tech line collides horizontally with date; heading budget enforced."
+  },
+  {
+    "case_id": "rf_10_suspicious_line_wrapping",
+    "category": "measurement",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_orphan_wrap",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.95,
+      "bottom_margin_in": 0.45,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Bullet b02 ends with orphan word 'clusters.' on newline consuming full vertical height"
+      ],
+      "readability_density_score": 0.72,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "allowed_actions": [
+      "trim_wording_to_eliminate_orphan",
+      "tighten_tracking_within_limits"
+    ],
+    "forbidden_actions": [
+      "delete_numerical_metric"
+    ],
+    "expected_layout_state": "LINE_WRAP_DEFECT",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "orphan_elimination_saves_vertical_line"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: 1-word orphan wrap on newline identified and tightened to save vertical height."
+  },
+  {
+    "case_id": "rf_11_minimum_font_violation",
+    "category": "measurement",
+    "target_id": "idme_3981",
+    "input_candidate": {
+      "candidate_id": "cand_idme_font_violation",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 12,
+      "font_size_pt": 8.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.5,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.92,
+      "bottom_margin_in": 0.75,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 8.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Font size 8.0pt is below acceptable threshold 9.5pt"
+      ],
+      "readability_density_score": 0.35,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Row-level access control filters"
+    ],
+    "allowed_actions": [
+      "rollback_font_reduction",
+      "restore_minimum_font_size"
+    ],
+    "forbidden_actions": [
+      "accept_sub_9pt_font"
+    ],
+    "expected_layout_state": "FONT_SIZE_VIOLATION",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "font_minimum_strictly_enforced",
+      "protect_human_readability"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target ID.me: font size 8.0pt violates 9.5pt readability policy; optimization rolled back."
+  },
+  {
+    "case_id": "rf_12_margin_violation",
+    "category": "measurement",
+    "target_id": "roadrunner_5027",
+    "input_candidate": {
+      "candidate_id": "cand_roadrunner_margin_violation",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 12,
+      "font_size_pt": 10.0,
+      "margin_in": 0.25,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.94,
+      "bottom_margin_in": 0.25,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.25,
+      "line_wrap_warnings": [
+        "Margins 0.25in violate minimum 0.45in policy"
+      ],
+      "readability_density_score": 0.5,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Autonomous retry handler"
+    ],
+    "allowed_actions": [
+      "rollback_margin_reduction",
+      "restore_safe_margins"
+    ],
+    "forbidden_actions": [
+      "accept_sub_margin_render"
+    ],
+    "expected_layout_state": "MARGIN_VIOLATION",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "margin_minimum_strictly_enforced",
+      "prevent_edge_clipping"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target RoadRunner: margins 0.25in violate minimum 0.45in policy; rolled back."
+  },
+  {
+    "case_id": "rf_13_technically_one_page_unreadable_compression",
+    "category": "measurement",
+    "target_id": "twitch_4182",
+    "input_candidate": {
+      "candidate_id": "cand_twitch_unreadable_squish",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 14,
+      "font_size_pt": 8.5,
+      "margin_in": 0.35,
+      "spacing_tightness": 0.98,
+      "skills_count": 22
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.99,
+      "bottom_margin_in": 0.1,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 8.5,
+      "min_margin_in": 0.35,
+      "line_wrap_warnings": [
+        "Extreme vertical baselineskip compression"
+      ],
+      "readability_density_score": 0.32,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Idempotent transfer engine"
+    ],
+    "allowed_actions": [
+      "rollback_to_prior_safe",
+      "route_to_human_review"
+    ],
+    "forbidden_actions": [
+      "accept_squished_unreadable_page"
+    ],
+    "expected_layout_state": "UNREADABLE_COMPRESSION",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "readability_outranks_maximum_density",
+      "reject_unreadable_squish"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Twitch: technically 1 page but unreadable (readability 0.32); density rejected in favor of legibility."
+  },
+  {
+    "case_id": "rf_14_renderer_failure_prior_safe_artifact",
+    "category": "measurement",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_crashed_template",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 0,
+      "vertical_fill_ratio": 0.0,
+      "bottom_margin_in": 0.0,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 0.0,
+      "min_margin_in": 0.0,
+      "line_wrap_warnings": [
+        "LaTeX compilation failed with syntax error in macro"
+      ],
+      "readability_density_score": 0.0,
+      "renderer_status": "FAILED_CRASH"
+    },
+    "protected_facts": [
+      "Prior safe PDF artifact available from iteration 1"
+    ],
+    "allowed_actions": [
+      "fallback_to_prior_safe_artifact",
+      "emit_advisory_crash_warning"
+    ],
+    "forbidden_actions": [
+      "crash_unhandled_exception",
+      "discard_safe_artifact",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "RENDER_FAILURE",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "prior_safe_artifact_fallback",
+      "graceful_recovery_without_fatal_abort",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: renderer crashes during experimental macro tweak; falls back cleanly to prior safe artifact."
+  },
+  {
+    "case_id": "rf_15_strong_unused_evidence_fits",
+    "category": "expansion",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_exp1",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 8,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "rft_b01_ingestion_scale",
+        "entry_id": "resumefinetune",
+        "summary": "3-tier ingestion engine processing 50+ ATS sources",
+        "value_score": 0.95,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.76,
+      "bottom_margin_in": 2.3,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "3-tier ingestion engine",
+      "50+ ATS sources"
+    ],
+    "allowed_actions": [
+      "add_unused_bullet"
+    ],
+    "forbidden_actions": [
+      "ignore_available_space",
+      "add_unverified_claims",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "strong_unused_evidence_promoted",
+      "improves_coverage_and_fill",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: strong unused evidence fits and improves coverage; promoted to fill space."
+  },
+  {
+    "case_id": "rf_16_strong_evidence_redundant_rejected",
+    "category": "expansion",
+    "target_id": "twitch_4182",
+    "input_candidate": {
+      "candidate_id": "cand_twitch_redundant_check",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Normalized PostgreSQL schema for student marketplace",
+        "value_score": 0.65,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": true,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.85,
+      "bottom_margin_in": 1.45,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.88,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PostgreSQL atomic reservations (already present)"
+    ],
+    "allowed_actions": [
+      "accept_as_is",
+      "reject_redundant_evidence"
+    ],
+    "forbidden_actions": [
+      "add_redundant_bullet_merely_for_fill"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "redundant_evidence_rejected_despite_space",
+      "diversity_preserved"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Twitch: unused evidence is strong but redundant (duplicate Postgres); rejected to preserve diversity."
+  },
+  {
+    "case_id": "rf_17_low_value_filler_rejected",
+    "category": "expansion",
+    "target_id": "doordash_4608",
+    "input_candidate": {
+      "candidate_id": "cand_doordash_filler_check",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "cm_b5",
+        "entry_id": "campus_marketplace",
+        "summary": "Configured local SQLite database for development testing",
+        "value_score": 0.2,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.82,
+      "bottom_margin_in": 1.7,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.89,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Commercial engineering experience prioritized"
+    ],
+    "allowed_actions": [
+      "reject_low_value_filler",
+      "accept_with_warning"
+    ],
+    "forbidden_actions": [
+      "pad_with_trivial_coursework_filler"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "low_value_filler_rejected",
+      "quality_over_artificial_fullness"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target DoorDash: trivial coursework note rejected as filler; whitespace preferred over fluff."
+  },
+  {
+    "case_id": "rf_18_prohibited_evidence_blocked",
+    "category": "expansion",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_prohibited_check",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 8,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "synth_prohibited_title_claim",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Led team as Senior Software Engineer (unapproved title substitution)",
+        "value_score": 0.9,
+        "is_supported": false,
+        "is_prohibited": true,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.78,
+      "bottom_margin_in": 2.1,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer (canonical title)"
+    ],
+    "allowed_actions": [
+      "block_prohibited_evidence",
+      "accept_with_warning"
+    ],
+    "forbidden_actions": [
+      "add_prohibited_evidence_to_fill_space"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "prohibited_evidence_strictly_blocked",
+      "factual_guardrails_override_fill"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: prohibited evidence (unapproved title tampering) strictly blocked from expansion."
+  },
+  {
+    "case_id": "rf_19_unsupported_evidence_blocked",
+    "category": "expansion",
+    "target_id": "idme_3981",
+    "input_candidate": {
+      "candidate_id": "cand_idme_unsupported_check",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 8,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "synth_unsupported_k8s",
+        "entry_id": "synth_kubernetes_project",
+        "summary": "Configured production Kubernetes cluster auto-scaling across AWS EKS nodes",
+        "value_score": 0.95,
+        "is_supported": false,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.77,
+      "bottom_margin_in": 2.2,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Zero Kubernetes experience in master profile"
+    ],
+    "allowed_actions": [
+      "block_unsupported_evidence",
+      "accept_with_warning"
+    ],
+    "forbidden_actions": [
+      "inject_unsupported_skills_or_projects"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "unsupported_claims_strictly_ineligible",
+      "maintain_canonical_truth"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target ID.me: unsupported evidence (Kubernetes cluster) strictly blocked from expansion."
+  },
+  {
+    "case_id": "rf_20_richer_variant_preferred_to_new_bullet",
+    "category": "expansion",
+    "target_id": "zoom_4766",
+    "input_candidate": {
+      "candidate_id": "cand_zoom_variant_expand",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "pc_b06_two_laptop_validation",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Tested network protocol across two physical laptops",
+        "value_score": 0.4,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.86,
+      "bottom_margin_in": 1.35,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.89,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "pc_b04_transport_consolidation",
+      "~500ms connection setup latency reduction"
+    ],
+    "allowed_actions": [
+      "swap_richer_variant"
+    ],
+    "forbidden_actions": [
+      "add_weak_testing_bullet_instead_of_enriching"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "richer_existing_variant_preferred_to_weak_new_bullet",
+      "preserves_information_density"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Zoom: expanding existing compact bullet to rich variant with metrics preferred over adding weak bullet."
+  },
+  {
+    "case_id": "rf_21_supported_skill_fills_limited_space",
+    "category": "expansion",
+    "target_id": "lexisnexis_4987",
+    "input_candidate": {
+      "candidate_id": "cand_lexis_skill_fill",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 14
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform",
+        "value_score": 0.9,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 3
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.89,
+      "bottom_margin_in": 1.05,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Docker and Git are canonically supported in master profile"
+    ],
+    "allowed_actions": [
+      "add_supported_skill"
+    ],
+    "forbidden_actions": [
+      "add_3_line_bullet_that_causes_overflow"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "supported_skill_fills_small_gap_without_overflow"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target LexisNexis: small remaining space (1 line) filled safely by adding supported skills rather than overflowing bullet."
+  },
+  {
+    "case_id": "rf_22_complete_skills_inventory_not_dumped",
+    "category": "expansion",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_skills_dump_attempt",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 8,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 14
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.8,
+      "bottom_margin_in": 1.9,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.91,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Master profile contains 35+ skills across multiple categories"
+    ],
+    "allowed_actions": [
+      "curate_target_skills",
+      "expand_strong_evidence"
+    ],
+    "forbidden_actions": [
+      "dump_complete_skills_inventory",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "prevent_whole_inventory_dump",
+      "curate_relevance",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: complete skills inventory dump blocked; space filled via evidence bullets instead."
+  },
+  {
+    "case_id": "rf_23_expansion_overflow_rolled_back",
+    "category": "expansion",
+    "target_id": "c3ai_4894",
+    "input_candidate": {
+      "candidate_id": "cand_c3ai_expansion_attempt",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "frd_b1",
+        "entry_id": "fake_review_detection",
+        "summary": "Multi-signal fake review classification pipeline",
+        "value_score": 0.88,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 3
+      }
+    ],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.04,
+      "bottom_margin_in": -0.35,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Addition pushed 2 lines onto page 2"
+      ],
+      "readability_density_score": 0.88,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Prior 1-page candidate was clean at 0.90 fill ratio"
+    ],
+    "allowed_actions": [
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "keep_two_page_expansion_result",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "expansion_causing_overflow_is_rolled_back",
+      "prior_safe_restored",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target C3.ai: adding a 3-line bullet spills onto page 2; optimizer rolls back to clean 1-page prior state."
+  },
+  {
+    "case_id": "rf_24_two_additions_only_higher_value_fits",
+    "category": "expansion",
+    "target_id": "commure_4839",
+    "input_candidate": {
+      "candidate_id": "cand_commure_two_choice",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 8,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Sepsis early warning time-series ML (AUROC 0.88)",
+        "value_score": 0.95,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Django student marketplace web app",
+        "value_score": 0.55,
+        "is_supported": true,
+        "is_prohibited": false,
+        "is_redundant": false,
+        "estimated_lines": 2
+      }
+    ],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.82,
+      "bottom_margin_in": 1.7,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.89,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "AUROC 0.88 on MIMIC-III ICU time-series"
+    ],
+    "allowed_actions": [
+      "add_highest_value_evidence"
+    ],
+    "forbidden_actions": [
+      "select_lower_value_evidence",
+      "attempt_both_and_overflow",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "MEANINGFUL_UNDERFILL",
+    "expected_runtime_outcome": "OPTIMIZATION_EXPANDED",
+    "expected_decision_properties": [
+      "highest_value_evidence_selected_when_space_limited",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Commure: space permits exactly 1 new bullet; higher-value clinical AI bullet selected over student project."
+  },
+  {
+    "case_id": "rf_25_blank_space_remains_no_meaningful_evidence",
+    "category": "expansion",
+    "target_id": "roadrunner_5027",
+    "input_candidate": {
+      "candidate_id": "cand_roadrunner_no_evidence_left",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.81,
+      "bottom_margin_in": 1.85,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer",
+      "MalyTech Software Engineering Intern"
+    ],
+    "allowed_actions": [
+      "accept_as_is",
+      "emit_advisory_underfill_warning"
+    ],
+    "forbidden_actions": [
+      "hallucinate_claims_to_fill_space",
+      "fatal_rejection_for_underfill"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "no_meaningful_evidence_terminates_expansion_gracefully"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target RoadRunner: blank space remains but no meaningful evidence is left; accepted cleanly with warning."
+  },
+  {
+    "case_id": "rf_26_shorter_variant_resolves_slight_overflow",
+    "category": "compression",
+    "target_id": "doordash_4608",
+    "input_candidate": {
+      "candidate_id": "cand_doordash_overflow_variant",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.18,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line spilling onto page 2"
+      ],
+      "readability_density_score": 0.91,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "allowed_actions": [
+      "swap_shorter_variant"
+    ],
+    "forbidden_actions": [
+      "alter_numerical_metrics",
+      "delete_bullet_completely"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "shorter_safe_variant_preferred_to_spacing_or_deletion"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target DoorDash: swapping verbose 2-line bullet for concise 1-line variant brings layout to 0.98 fill cleanly."
+  },
+  {
+    "case_id": "rf_27_wording_compression_preserves_facts",
+    "category": "compression",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_wording_compression",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.03,
+      "bottom_margin_in": -0.25,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line spilling to page 2"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "allowed_actions": [
+      "tighten_prose_syntax"
+    ],
+    "forbidden_actions": [
+      "round_862_to_850_or_1000",
+      "drop_topic_count"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "wording_compression_preserves_exact_metrics",
+      "zero_factual_drift"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: prose tightening preserves exact integers and percentages while eliminating newline wrap."
+  },
+  {
+    "case_id": "rf_28_approximation_marker_survives_compression",
+    "category": "compression",
+    "target_id": "twitch_4182",
+    "input_candidate": {
+      "candidate_id": "cand_twitch_approx_compression",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line spilling to page 2"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "~40% lock contention reduction"
+    ],
+    "allowed_actions": [
+      "swap_shorter_variant"
+    ],
+    "forbidden_actions": [
+      "convert_tilde_approx_to_exact_number"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "approximation_marker_preserved_during_compression"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Twitch: compression preserves tilde approximation (~40%) without converting to exact 40%."
+  },
+  {
+    "case_id": "rf_29_compression_deleting_achievement_rejected",
+    "category": "compression",
+    "target_id": "commure_4839",
+    "input_candidate": {
+      "candidate_id": "cand_commure_bad_metric_delete",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.03,
+      "bottom_margin_in": -0.22,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line spilling to page 2"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "AUROC 0.88"
+    ],
+    "allowed_actions": [
+      "swap_alternative_compact_variant",
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "delete_supported_metric_to_save_line"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "reject_compression_that_deletes_verified_metric"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Commure: compression proposal that deletes AUROC 0.88 to save a line is strictly rejected and rolled back."
+  },
+  {
+    "case_id": "rf_30_spacing_adjustment_within_limits_succeeds",
+    "category": "compression",
+    "target_id": "zoom_4766",
+    "input_candidate": {
+      "candidate_id": "cand_zoom_micro_spacing",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.01,
+      "bottom_margin_in": -0.08,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Half line overflow at bottom"
+      ],
+      "readability_density_score": 0.91,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PeerChat transport multiplexing"
+    ],
+    "allowed_actions": [
+      "tighten_vertical_spacing"
+    ],
+    "forbidden_actions": [
+      "drastic_font_cut",
+      "bullet_deletion"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "spacing_tightening_within_readability_bounds_succeeds"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Zoom: micro-overflow (0.5 line) resolved via subtle itemsep adjustment (0.98 tightness)."
+  },
+  {
+    "case_id": "rf_31_spacing_adjustment_below_minimum_rejected",
+    "category": "compression",
+    "target_id": "idme_3981",
+    "input_candidate": {
+      "candidate_id": "cand_idme_extreme_spacing_attempt",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 13,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 20
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.1,
+      "bottom_margin_in": -0.95,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "4 lines spilling to page 2"
+      ],
+      "readability_density_score": 0.86,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Row-level security boundaries"
+    ],
+    "allowed_actions": [
+      "swap_shorter_variant",
+      "curate_skills",
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "tighten_spacing_past_0_85_threshold"
+    ],
+    "expected_layout_state": "UNREADABLE_COMPRESSION",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "spacing_tightness_limit_enforced",
+      "reject_unreadable_spacing"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target ID.me: spacing adjustment below readability threshold (tightness > 0.85) is rejected."
+  },
+  {
+    "case_id": "rf_32_redundant_content_removed_last_resort",
+    "category": "compression",
+    "target_id": "lexisnexis_4987",
+    "input_candidate": {
+      "candidate_id": "cand_lexis_last_resort_deletion",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 13,
+      "font_size_pt": 9.5,
+      "margin_in": 0.45,
+      "spacing_tightness": 0.8,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.12,
+      "bottom_margin_in": -1.2,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 9.5,
+      "min_margin_in": 0.45,
+      "line_wrap_warnings": [
+        "4 lines spilling after all variant shortening and spacing exhausted"
+      ],
+      "readability_density_score": 0.82,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs production data retention",
+      "PostgreSQL partitioned tables"
+    ],
+    "allowed_actions": [
+      "remove_lowest_value_redundant_bullet_as_last_resort"
+    ],
+    "forbidden_actions": [
+      "remove_high_value_commercial_bullet"
+    ],
+    "expected_layout_state": "SUBSTANTIAL_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "redundant_bullet_removal_permitted_only_as_last_resort",
+      "audit_ledger_records_removal"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target LexisNexis: all spacing/shortening exhausted; removing lowest-value redundant bullet succeeds as last resort."
+  },
+  {
+    "case_id": "rf_33_hardcoded_bullet_deletion_prohibited",
+    "category": "compression",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_naive_truncation",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 13,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.14,
+      "bottom_margin_in": -1.35,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "5 lines spilling to page 2"
+      ],
+      "readability_density_score": 0.86,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer",
+      "50+ ATS sources"
+    ],
+    "allowed_actions": [
+      "route_to_human_review",
+      "systematic_compression"
+    ],
+    "forbidden_actions": [
+      "naive_slice_truncation_bullets_10",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "SUBSTANTIAL_OVERFLOW",
+    "expected_runtime_outcome": "NEEDS_HUMAN_REVIEW",
+    "expected_decision_properties": [
+      "arbitrary_bullet_truncation_prohibited",
+      "semantic_evaluation_required",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: naive hardcoded bullet slicing (e.g. bullets[:10]) is strictly prohibited."
+  },
+  {
+    "case_id": "rf_34_compression_worsens_layout_rolled_back",
+    "category": "compression",
+    "target_id": "c3ai_4894",
+    "input_candidate": {
+      "candidate_id": "cand_c3ai_bad_compression_attempt",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.96,
+      "bottom_margin_in": 0.35,
+      "has_collision": true,
+      "collision_type": "tech_date_collision",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Tech line shortening caused awkward wrap and date overlap"
+      ],
+      "readability_density_score": 0.52,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Prior candidate had fill 1.02 without collision"
+    ],
+    "allowed_actions": [
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "accept_worsened_layout_with_collision",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "COLLISION_DETECTED",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "worsening_layout_is_rolled_back",
+      "collision_is_strictly_worse_than_slight_overflow",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target C3.ai: compression attempt produced a header collision; rolled back to prior candidate."
+  },
+  {
+    "case_id": "rf_35_all_compression_fails_usable_preview_remains",
+    "category": "compression",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_unresolvable_overflow",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 14,
+      "font_size_pt": 9.5,
+      "margin_in": 0.45,
+      "spacing_tightness": 0.85,
+      "skills_count": 22
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.16,
+      "bottom_margin_in": -1.5,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 9.5,
+      "min_margin_in": 0.45,
+      "line_wrap_warnings": [
+        "6 lines spilling to page 2 after all automated options exhausted"
+      ],
+      "readability_density_score": 0.8,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer",
+      "50+ ATS sources"
+    ],
+    "allowed_actions": [
+      "route_to_human_review",
+      "generate_preview_artifact"
+    ],
+    "forbidden_actions": [
+      "fatal_abort_without_preview",
+      "corrupt_content"
+    ],
+    "expected_layout_state": "SUBSTANTIAL_OVERFLOW",
+    "expected_runtime_outcome": "NEEDS_HUMAN_REVIEW",
+    "expected_decision_properties": [
+      "exhausted_compression_routes_to_human_review",
+      "preview_artifact_preserved"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: all compression options exhausted; system generates clean preview PDF and routes to human review."
+  },
+  {
+    "case_id": "rf_36_best_safe_candidate_survives_worse_iteration",
+    "category": "optimization_behavior",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_iter3_worse",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 12,
+      "font_size_pt": 9.0,
+      "margin_in": 0.4,
+      "spacing_tightness": 0.9,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.04,
+      "bottom_margin_in": -0.3,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 9.0,
+      "min_margin_in": 0.4,
+      "line_wrap_warnings": [
+        "Iteration 3 worsened layout relative to Iteration 1"
+      ],
+      "readability_density_score": 0.65,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Iteration 1 best_safe artifact had fill 0.96 and readability 0.92"
+    ],
+    "allowed_actions": [
+      "restore_best_safe_candidate",
+      "terminate_optimization"
+    ],
+    "forbidden_actions": [
+      "return_degraded_current_state",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "best_safe_candidate_survives_worse_later_iteration",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: best safe candidate (Iteration 1) restored when later iteration degrades."
+  },
+  {
+    "case_id": "rf_37_iteration_budget_terminates",
+    "category": "optimization_behavior",
+    "target_id": "roadrunner_5027",
+    "input_candidate": {
+      "candidate_id": "cand_roadrunner_iter5_budget",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.88,
+      "bottom_margin_in": 1.1,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Iteration count: 5 (max budget = 5)"
+    ],
+    "allowed_actions": [
+      "terminate_loop_at_budget",
+      "accept_best_candidate"
+    ],
+    "forbidden_actions": [
+      "infinite_looping",
+      "exceed_iteration_budget",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "iteration_budget_terminates_cleanly",
+      "returns_best_safe_artifact",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target RoadRunner: optimizer terminates cleanly when iteration budget (5) is reached."
+  },
+  {
+    "case_id": "rf_38_provider_call_budget_terminates",
+    "category": "optimization_behavior",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_provider_budget",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line overflow; LLM regeneration budget exhausted"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Provider call count = 4 (max budget = 4)"
+    ],
+    "allowed_actions": [
+      "terminate_provider_calls",
+      "fallback_to_deterministic_spacing"
+    ],
+    "forbidden_actions": [
+      "exceed_provider_call_budget",
+      "unbounded_llm_calls",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "provider_call_budget_strictly_bounded",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: LLM regeneration calls strictly bounded to budget; falls back to deterministic rules."
+  },
+  {
+    "case_id": "rf_39_resumed_optimization_skips_completed",
+    "category": "optimization_behavior",
+    "target_id": "zoom_4766",
+    "input_candidate": {
+      "candidate_id": "cand_zoom_resume_checkpoint",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.95,
+      "bottom_margin_in": 0.5,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.92,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Checkpoint state exists for step 1 and step 2"
+    ],
+    "allowed_actions": [
+      "resume_from_checkpoint_step_3",
+      "accept_as_is"
+    ],
+    "forbidden_actions": [
+      "re_run_completed_measurement_steps",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "CLEAN_FIT",
+    "expected_runtime_outcome": "ACCEPTED",
+    "expected_decision_properties": [
+      "resumed_optimization_skips_completed_attempts",
+      "idempotent_resumption",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Zoom: optimizer resumption recognizes prior checkpoint artifacts and avoids re-executing steps."
+  },
+  {
+    "case_id": "rf_40_candidate_fingerprint_prevents_cycles",
+    "category": "optimization_behavior",
+    "target_id": "twitch_4182",
+    "input_candidate": {
+      "candidate_id": "cand_twitch_cycling_state",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Candidate fingerprint matches Iteration 1 exactly"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Candidate SHA-256 fingerprint: a8f9e2b1... (already seen in step 1)"
+    ],
+    "allowed_actions": [
+      "detect_cycle_and_terminate",
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "repeat_cycling_transition",
+      "alter_numerical_metrics"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "candidate_fingerprint_prevents_repeated_cycles",
+      "preserve_factual_metrics"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Twitch: fingerprint hash detects cyclic oscillation between states and breaks loop immediately."
+  },
+  {
+    "case_id": "rf_41_fill_percentage_alone_does_not_determine_acceptance",
+    "category": "optimization_behavior",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_high_fill_bad_layout",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 12,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.9,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.98,
+      "bottom_margin_in": 0.2,
+      "has_collision": true,
+      "collision_type": "section_collision",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.45,
+      "line_wrap_warnings": [
+        "Section collision detected between Experience and Projects"
+      ],
+      "readability_density_score": 0.45,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Amdocs Software Developer"
+    ],
+    "allowed_actions": [
+      "reject_colliding_high_fill_render",
+      "fix_collision"
+    ],
+    "forbidden_actions": [
+      "auto_accept_merely_because_fill_is_98_percent"
+    ],
+    "expected_layout_state": "COLLISION_DETECTED",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "fill_percentage_alone_does_not_determine_acceptance",
+      "collision_blocks_acceptance"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: 98% fill ratio rejected because section collision exists; fill ratio is not the sole metric."
+  },
+  {
+    "case_id": "rf_42_collision_outranks_fill_ratio",
+    "category": "optimization_behavior",
+    "target_id": "lexisnexis_4987",
+    "input_candidate": {
+      "candidate_id": "cand_lexis_collision_precedence",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.95,
+      "bottom_margin_in": 0.5,
+      "has_collision": true,
+      "collision_type": "tech_date_collision",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "Project tech-line collides with date"
+      ],
+      "readability_density_score": 0.6,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PostgreSQL partitioned tables"
+    ],
+    "allowed_actions": [
+      "shorten_tech_line_even_if_fill_drops_to_92"
+    ],
+    "forbidden_actions": [
+      "preserve_collision_to_keep_95_fill"
+    ],
+    "expected_layout_state": "COLLISION_DETECTED",
+    "expected_runtime_outcome": "OPTIMIZATION_COMPRESSED",
+    "expected_decision_properties": [
+      "collision_outranks_fill_ratio_improvement"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target LexisNexis: fixing heading collision strictly outranks keeping fill ratio at 0.95."
+  },
+  {
+    "case_id": "rf_43_readability_outranks_maximum_density",
+    "category": "optimization_behavior",
+    "target_id": "c3ai_4894",
+    "input_candidate": {
+      "candidate_id": "cand_c3ai_readability_vs_density",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.91,
+      "bottom_margin_in": 0.9,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.92,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Fake review detection classification pipeline"
+    ],
+    "allowed_actions": [
+      "accept_high_readability_layout"
+    ],
+    "forbidden_actions": [
+      "force_high_density_squishing"
+    ],
+    "expected_layout_state": "CLEAN_FIT",
+    "expected_runtime_outcome": "ACCEPTED",
+    "expected_decision_properties": [
+      "readability_outranks_maximum_density"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target C3.ai: candidate with 0.92 readability and 0.91 fill preferred over 0.45 readability and 0.99 fill."
+  },
+  {
+    "case_id": "rf_44_factual_integrity_outranks_layout_score",
+    "category": "optimization_behavior",
+    "target_id": "tiktok_4164",
+    "input_candidate": {
+      "candidate_id": "cand_tiktok_fact_vs_layout",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [
+        "1 line overflow"
+      ],
+      "readability_density_score": 0.9,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "allowed_actions": [
+      "swap_valid_variant",
+      "tighten_spacing",
+      "rollback_to_prior_safe"
+    ],
+    "forbidden_actions": [
+      "accept_metric_dropping_compression_for_clean_fit"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "OPTIMIZATION_ROLLED_BACK",
+    "expected_decision_properties": [
+      "factual_integrity_strictly_outranks_layout_score"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target TikTok: candidate altering 862 to fit 1 page rejected; factual integrity strictly outranks layout fit."
+  },
+  {
+    "case_id": "rf_45_unresolved_usable_layout_maps_to_human_review",
+    "category": "optimization_behavior",
+    "target_id": "commure_4839",
+    "input_candidate": {
+      "candidate_id": "cand_commure_marginal_wrap",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 11,
+      "font_size_pt": 9.5,
+      "margin_in": 0.45,
+      "spacing_tightness": 0.85,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 2,
+      "vertical_fill_ratio": 1.02,
+      "bottom_margin_in": -0.15,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": true,
+      "min_font_pt": 9.5,
+      "min_margin_in": 0.45,
+      "line_wrap_warnings": [
+        "Marginal 1-line wrap that cannot be compressed without deleting clinical metrics"
+      ],
+      "readability_density_score": 0.88,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Sepsis early warning AUROC 0.88"
+    ],
+    "allowed_actions": [
+      "route_to_human_review",
+      "generate_preview_pdf"
+    ],
+    "forbidden_actions": [
+      "crash_with_fatal_error",
+      "delete_clinical_metric"
+    ],
+    "expected_layout_state": "SLIGHT_OVERFLOW",
+    "expected_runtime_outcome": "NEEDS_HUMAN_REVIEW",
+    "expected_decision_properties": [
+      "unresolved_usable_layout_routes_to_human_review_not_fatal"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Commure: marginal 1-line overflow with protected clinical metrics routes to human review with preview PDF."
+  },
+  {
+    "case_id": "rf_46_minor_underfill_maps_to_warning_or_acceptance",
+    "category": "optimization_behavior",
+    "target_id": "doordash_4608",
+    "input_candidate": {
+      "candidate_id": "cand_doordash_acceptable_underfill",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 9,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 16
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.89,
+      "bottom_margin_in": 1.05,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.91,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "PostgreSQL atomic reservations"
+    ],
+    "allowed_actions": [
+      "accept_with_warning",
+      "accept_as_is"
+    ],
+    "forbidden_actions": [
+      "fatal_error_for_fill_89"
+    ],
+    "expected_layout_state": "MINOR_UNDERFILL",
+    "expected_runtime_outcome": "ACCEPTED_WITH_WARNING",
+    "expected_decision_properties": [
+      "minor_underfill_maps_to_warning_never_fatal"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target DoorDash: 0.89 fill ratio is clean and legible; maps to ACCEPTED_WITH_WARNING, never fatal."
+  },
+  {
+    "case_id": "rf_47_no_safe_render_maps_to_fatal_only_when_unrecoverable",
+    "category": "optimization_behavior",
+    "target_id": "zoom_4766",
+    "input_candidate": {
+      "candidate_id": "cand_zoom_total_crash",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 0,
+      "vertical_fill_ratio": 0.0,
+      "bottom_margin_in": 0.0,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 0.0,
+      "min_margin_in": 0.0,
+      "line_wrap_warnings": [
+        "Complete template compilation failure on iteration 1 with zero prior safe artifacts"
+      ],
+      "readability_density_score": 0.0,
+      "renderer_status": "FAILED_CRASH"
+    },
+    "protected_facts": [
+      "No prior safe artifact exists"
+    ],
+    "allowed_actions": [
+      "emit_fatal_error_with_diagnostics"
+    ],
+    "forbidden_actions": [
+      "silent_hang",
+      "claim_success"
+    ],
+    "expected_layout_state": "RENDER_FAILURE",
+    "expected_runtime_outcome": "FATAL_RENDER_ERROR",
+    "expected_decision_properties": [
+      "fatal_only_when_no_safe_render_and_recovery_impossible"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target Zoom: unrecoverable renderer failure with zero prior safe artifacts correctly maps to FATAL_RENDER_ERROR."
+  },
+  {
+    "case_id": "rf_48_all_intermediate_artifacts_traceable",
+    "category": "optimization_behavior",
+    "target_id": "openai_4949",
+    "input_candidate": {
+      "candidate_id": "cand_openai_full_trace",
+      "sections": [
+        "Education",
+        "Experience",
+        "Projects",
+        "Technical Skills"
+      ],
+      "bullet_count": 10,
+      "font_size_pt": 10.0,
+      "margin_in": 0.5,
+      "spacing_tightness": 0.0,
+      "skills_count": 18
+    },
+    "unused_evidence": [],
+    "render_measurement": {
+      "page_count": 1,
+      "vertical_fill_ratio": 0.94,
+      "bottom_margin_in": 0.58,
+      "has_collision": false,
+      "collision_type": "none",
+      "has_overflow": false,
+      "min_font_pt": 10.0,
+      "min_margin_in": 0.5,
+      "line_wrap_warnings": [],
+      "readability_density_score": 0.92,
+      "renderer_status": "SUCCESS"
+    },
+    "protected_facts": [
+      "Iteration artifacts preserved: iter_01.tex, iter_01.pdf, measurement_trace.json"
+    ],
+    "allowed_actions": [
+      "archive_trace_ledger",
+      "accept_as_is"
+    ],
+    "forbidden_actions": [
+      "delete_intermediate_artifacts_without_trace"
+    ],
+    "expected_layout_state": "CLEAN_FIT",
+    "expected_runtime_outcome": "ACCEPTED",
+    "expected_decision_properties": [
+      "all_intermediate_artifacts_and_decisions_traceable"
+    ],
+    "tolerance_policy": {
+      "fill_ratio_tolerance": 0.03,
+      "min_font_size_pt": 9.5,
+      "min_margin_in": 0.45,
+      "max_compression_tightness": 0.85
+    },
+    "notes": "Target OpenAI: all intermediate steps, renders, measurements, and decisions are archived and traceable."
+  }
+]

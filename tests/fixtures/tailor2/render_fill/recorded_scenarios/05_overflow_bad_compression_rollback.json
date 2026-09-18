@@ -1,0 +1,42 @@
+{
+  "scenario_id": "scen_05_overflow_bad_compression_rollback",
+  "target_id": "openai_4949",
+  "description": "Aggressive font compression produces unreadable layout; optimizer rolls back to previous state.",
+  "initial_state": {
+    "candidate_id": "cand_openai_overflow",
+    "vertical_fill_ratio": 1.03,
+    "page_count": 2,
+    "bullet_count": 11,
+    "font_size_pt": 10.0,
+    "layout_state": "SLIGHT_OVERFLOW"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "reduce_font_size",
+      "proposed_font_pt": 8.0,
+      "measurement_after": {
+        "vertical_fill_ratio": 0.88,
+        "page_count": 1,
+        "min_font_pt": 8.0,
+        "readability_density_score": 0.35,
+        "layout_state": "FONT_SIZE_VIOLATION"
+      },
+      "decision": "ROLLBACK_CHANGE",
+      "is_safe": false,
+      "rollback_target_candidate": "cand_openai_overflow"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_openai_overflow",
+    "vertical_fill_ratio": 1.03,
+    "page_count": 2,
+    "layout_state": "SLIGHT_OVERFLOW",
+    "runtime_outcome": "OPTIMIZATION_ROLLED_BACK"
+  },
+  "trace_ledger": [
+    "Attempted font reduction to 8.0pt to force 1-page fit.",
+    "Measurement flagged FONT_SIZE_VIOLATION (8.0pt < 9.5pt minimum) and low readability (0.35).",
+    "Rolled back font cut to restore safe candidate state."
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "scenario_id": "scen_01_underfill_add_strong_bullet",
+  "target_id": "openai_4949",
+  "description": "Underfilled résumé selects high-value unused evidence from ledger and achieves clean 1-page fit.",
+  "initial_state": {
+    "candidate_id": "cand_underfill_v1",
+    "vertical_fill_ratio": 0.76,
+    "page_count": 1,
+    "bullet_count": 8,
+    "layout_state": "MEANINGFUL_UNDERFILL"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "query_unused_evidence_ledger",
+      "proposed_addition": {
+        "evidence_id": "rft_b01_ingestion_scale",
+        "text": "Architected 3-tier ingestion engine processing 50+ ATS sources; isolated deterministic extraction via transactional SQLite state transitions, guaranteeing idempotency.",
+        "value_score": 0.95
+      },
+      "measurement_after": {
+        "vertical_fill_ratio": 0.94,
+        "page_count": 1,
+        "has_collision": false,
+        "has_overflow": false,
+        "readability_density_score": 0.92,
+        "layout_state": "CLEAN_FIT"
+      },
+      "decision": "ACCEPT_EXPANSION",
+      "is_safe": true
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_expanded_clean",
+    "vertical_fill_ratio": 0.94,
+    "page_count": 1,
+    "layout_state": "CLEAN_FIT",
+    "runtime_outcome": "ACCEPTED"
+  },
+  "trace_ledger": [
+    "Detected meaningful underfill (0.76).",
+    "Selected highest-ranked unused evidence rft_b01_ingestion_scale (value: 0.95).",
+    "Re-rendered: 0.94 fill ratio, 1 page, zero collisions. Accepted."
+  ]
+}

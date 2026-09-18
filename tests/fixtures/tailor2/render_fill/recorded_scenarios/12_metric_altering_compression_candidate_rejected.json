@@ -1,0 +1,38 @@
+{
+  "scenario_id": "scen_12_metric_compression_rejected",
+  "target_id": "tiktok_4164",
+  "description": "Automated compression proposal altering protected metric (862 topics or ~70%) is caught and rejected.",
+  "initial_state": {
+    "candidate_id": "cand_tiktok_slight_overflow",
+    "vertical_fill_ratio": 1.02,
+    "page_count": 2,
+    "bullet_count": 11,
+    "layout_state": "SLIGHT_OVERFLOW"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "audit_proposed_compression",
+      "proposed_bullet_text": "Consolidated dead-letter queues across distributed clusters, reducing topic sprawl by 70%.",
+      "detected_violations": [
+        "Dropped exact integer metric: 862 dead-letter topics",
+        "Stripped approximation marker: ~70% converted to exact 70%"
+      ],
+      "decision": "REJECT_COMPRESSION_CANDIDATE",
+      "severity": "FATAL_INTEGRITY",
+      "pipeline_action": "DISCARD_PROPOSAL_KEEP_ORIGINAL"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_tiktok_slight_overflow",
+    "vertical_fill_ratio": 1.02,
+    "page_count": 2,
+    "layout_state": "SLIGHT_OVERFLOW",
+    "runtime_outcome": "OPTIMIZATION_ROLLED_BACK"
+  },
+  "trace_ledger": [
+    "Proposed compression dropped '862' and stripped tilde from '~70%'.",
+    "Factual integrity validator intercepted change and marked proposal ineligible.",
+    "Preserved original candidate state; prevented metric corruption."
+  ]
+}

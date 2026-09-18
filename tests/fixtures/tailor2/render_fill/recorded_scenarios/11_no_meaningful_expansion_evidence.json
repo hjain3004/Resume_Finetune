@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scen_11_no_evidence_available",
+  "target_id": "roadrunner_5027",
+  "description": "Layout has minor underfill but unused evidence ledger is empty; accepted as-is with advisory notice.",
+  "initial_state": {
+    "candidate_id": "cand_roadrunner_fully_selected",
+    "vertical_fill_ratio": 0.84,
+    "page_count": 1,
+    "bullet_count": 9,
+    "layout_state": "MINOR_UNDERFILL"
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "action": "query_unused_evidence_ledger",
+      "available_unused_count": 0,
+      "decision": "TERMINATE_EXPANSION_ACCEPT_LAYOUT"
+    }
+  ],
+  "final_state": {
+    "candidate_id": "cand_roadrunner_fully_selected",
+    "vertical_fill_ratio": 0.84,
+    "page_count": 1,
+    "layout_state": "MINOR_UNDERFILL",
+    "runtime_outcome": "ACCEPTED_WITH_WARNING"
+  },
+  "trace_ledger": [
+    "Minor underfill (0.84 fill).",
+    "Ledger query returned 0 available unused evidence items.",
+    "Accepted layout with minor underfill warning; did not fabricate filler."
+  ]
+}
