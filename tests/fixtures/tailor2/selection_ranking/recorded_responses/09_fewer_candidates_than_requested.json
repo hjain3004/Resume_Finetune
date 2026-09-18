@@ -1,0 +1,19 @@
+{
+  "requested_candidate_count": 3,
+  "returned_candidate_count": 2,
+  "evidence_id": "am_b02_row_level_entitlement",
+  "returned_candidates": [
+    {
+      "variant_id": "v1",
+      "text": "Enforced fine-grained security by implementing row-level access control filters across partitioned order datasets.",
+      "is_valid": true
+    },
+    {
+      "variant_id": "v2",
+      "text": "Built row-level access control filters across order datasets, securing cross-tenant data boundaries.",
+      "is_valid": true
+    }
+  ],
+  "status": "DEGRADED_PASS",
+  "advisory_warning": "Provider generated 2 candidates instead of requested 3; proceeding with available candidates without failure."
+}

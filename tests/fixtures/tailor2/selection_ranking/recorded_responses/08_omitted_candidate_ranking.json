@@ -1,0 +1,25 @@
+{
+  "input_candidate_ids": [
+    "c1_xyz",
+    "c2_star",
+    "c3_active"
+  ],
+  "provider_returned_ranks": [
+    {
+      "rank": 1,
+      "candidate_id": "c1_xyz",
+      "score": 0.94
+    },
+    {
+      "rank": 2,
+      "candidate_id": "c3_active",
+      "score": 0.89
+    }
+  ],
+  "omission_detected": true,
+  "omitted_candidate_ids": [
+    "c2_star"
+  ],
+  "recovery_action": "FALLBACK_EVALUATION",
+  "recovery_resolution": "Assign baseline evaluation score to c2_star and retain in ranking pool without failing run."
+}

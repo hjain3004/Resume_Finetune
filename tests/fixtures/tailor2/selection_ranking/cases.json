@@ -1,0 +1,2469 @@
+[
+  {
+    "case_id": "sel_01_or_group_degree_or_exp",
+    "category": "requirement_interpretation",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_edu_or_exp",
+      "raw_quote": "Bachelor’s degree in Computer Science or a related field, or equivalent practical experience.",
+      "interpreted_intent": "Candidate must possess either a relevant degree (BS/MS in CS/related) OR equivalent practical software engineering experience; satisfying either branch satisfies the requirement.",
+      "importance": "must_have",
+      "is_alternative_or_group": true,
+      "alternative_options": [
+        "Bachelor's/Master's degree in Computer Science or related technical discipline",
+        "Equivalent practical professional software engineering experience"
+      ]
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "1+ years professional full-time software developer experience at Amdocs"
+      }
+    ],
+    "protected_facts": [
+      "BS or MS in Computer Science / technical field or equivalent experience",
+      "Amdocs Software Developer professional experience"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "or_semantics_preserved",
+      "single_branch_satisfaction_sufficient"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Treating degree AND practical experience as mandatory conjoined requirements (AND-logic)",
+      "Flagging a missing bachelor degree as a failure when candidate has master degree or equivalent experience"
+    ],
+    "acceptable_variation": [
+      "Evaluation may cite academic degree branch, industry experience branch, or both",
+      "Term formulation may use 'Degree OR Experience' or 'Education/Equivalence'"
+    ],
+    "notes": "Target OpenAI Applied Emerging Talent: ensures OR-groups are treated as alternative branches rather than multiple distinct hurdles."
+  },
+  {
+    "case_id": "sel_02_req_vs_pref_qualifications",
+    "category": "requirement_interpretation",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_pref_pci",
+      "raw_quote": "Basic Qualifications: 1+ years of non-internship professional software development experience ... Preferred Qualifications: Experience with payment processing systems, credit card fraud detection, or PCI compliance.",
+      "interpreted_intent": "Basic qualifications are strictly required for role eligibility; preferred qualifications (PCI compliance, payment processing) boost candidate score when present but do not disqualify when absent.",
+      "importance": "nice_to_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "PostgreSQL atomic reservations and double-entry transaction ledger"
+      },
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Full-time enterprise order processing backend"
+      }
+    ],
+    "protected_facts": [
+      "1+ years professional experience (Amdocs Software Developer)",
+      "Banking ledger reservations without PCI DSS certification claims"
+    ],
+    "expected_matches": [
+      "int_b2",
+      "am_b00_order_management_domain"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "preferred_qualification_not_blocking",
+      "transferable_transaction_ledger_surfaced"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Treating preferred qualification as mandatory eligibility blocker",
+      "Rejecting candidate or failing pipeline due to lack of formal PCI compliance certification"
+    ],
+    "acceptable_variation": [
+      "Tagging requirement as 'preferred', 'nice_to_have', or 'bonus'",
+      "Highlighting transferable ledger work as partial alignment"
+    ],
+    "notes": "Target Twitch Payments: prevents preferred qualifications from acting as fatal gates."
+  },
+  {
+    "case_id": "sel_03_responsibilities_not_mandatory_gates",
+    "category": "requirement_interpretation",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_resp_arch",
+      "raw_quote": "Responsibilities: Participate in the system architecture design of global e-commerce payment and settlement systems ... Drive technical solutions across cross-functional teams.",
+      "interpreted_intent": "Day-to-day responsibilities describe expected scope of on-the-job duties, not prerequisite gates candidate must have executed end-to-end prior to joining.",
+      "importance": "nice_to_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Consolidated 862 dead-letter topics across distributed clusters cutting sprawl by ~70%"
+      }
+    ],
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "responsibility_interpreted_as_target_scope",
+      "demonstrated_subsystem_ownership_qualifies"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Treating job responsibility description as an unyielding minimum entry gate",
+      "Requiring proof that candidate previously held global lead architect role",
+      "Altering or stripping approximation marker ~70% on topic sprawl reduction metric"
+    ],
+    "acceptable_variation": [
+      "Mapping distributed messaging and queue consolidation evidence to settlement systems scope",
+      "Selecting architecture-adjacent backend evidence"
+    ],
+    "notes": "Target TikTok Backend Graduate (Global E-commerce): responsibilities describe job scope, not entry barriers."
+  },
+  {
+    "case_id": "sel_04_ambiguous_jd_wording",
+    "category": "requirement_interpretation",
+    "target_id": "roadrunner_5027",
+    "requirement": {
+      "id": "req_roadrunner_curiosity",
+      "raw_quote": "Deep curiosity and ability to get up to speed on complex enterprise software quickly, with high ownership.",
+      "interpreted_intent": "Qualitative behavioral trait reflecting fast learning and ownership across complex enterprise systems; should be satisfied via evidence of rapid onboarding and independent technical delivery.",
+      "importance": "nice_to_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b08_human_task_resilience",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Designed autonomous retry handler for asynchronous workflow failures"
+      },
+      {
+        "evidence_id": "rft_b01_ingestion_scale",
+        "entry_id": "resumefinetune",
+        "summary": "Architected 3-tier ingestion engine processing 50+ ATS sources"
+      }
+    ],
+    "protected_facts": [
+      "50+ ATS sources",
+      "Autonomous retry handler"
+    ],
+    "expected_matches": [
+      "am_b08_human_task_resilience",
+      "rft_b01_ingestion_scale"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "qualitative_attribute_supported_by_concrete_delivery",
+      "no_invented_precision"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Inventing an arbitrary keyword requirement (e.g. demanding 'Curiosity certification')",
+      "Flagging ambiguous qualitative prose as a fatal discrepancy"
+    ],
+    "acceptable_variation": [
+      "Demonstrating fast ramp-up via multi-tier ingestion architecture or autonomous workflow resilience",
+      "Formulating bullet around high ownership without reciting 'deep curiosity'"
+    ],
+    "notes": "Target RoadRunner Forward Deployed Engineer: avoids inventing rigid keyword gates for qualitative traits."
+  },
+  {
+    "case_id": "sel_05_missing_product_evidence_disclosed_gap",
+    "category": "requirement_interpretation",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_user_facing",
+      "raw_quote": "Experience building user-facing web applications or collaborating closely with product designers.",
+      "interpreted_intent": "Role desires experience with user-facing web interfaces or direct product design collaboration.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Django web application with PostgreSQL backend for campus marketplace"
+      },
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Enterprise order processing backend services"
+      }
+    ],
+    "protected_facts": [
+      "Django web application with PostgreSQL backend",
+      "Backend order management domain"
+    ],
+    "expected_matches": [
+      "cm_b1"
+    ],
+    "expected_non_matches": [
+      "am_b00_order_management_domain"
+    ],
+    "expected_selection_properties": [
+      "gap_disclosed_without_fatal_error",
+      "adjacent_backend_framed_honestly"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "ADVISORY_GAP",
+    "forbidden_inferences": [
+      "Treating missing deep frontend product evidence as FATAL_INTEGRITY pipeline failure",
+      "Fabricating frontend React design system work to cover the gap"
+    ],
+    "acceptable_variation": [
+      "Disclosing frontend gap in audit ledger as ADVISORY_GAP",
+      "Pairing student marketplace web app with enterprise backend services"
+    ],
+    "notes": "Target OpenAI Applied Emerging Talent: honest gap disclosure without fatal pipeline abort."
+  },
+  {
+    "case_id": "sel_06_postgres_postgresql_equivalence",
+    "category": "semantic_matching",
+    "target_id": "doordash_4608",
+    "requirement": {
+      "id": "req_doordash_db",
+      "raw_quote": "Experience with relational databases (PostgreSQL, MySQL).",
+      "interpreted_intent": "Hands-on experience with production relational databases, specifically PostgreSQL or MySQL.",
+      "importance": "must_have",
+      "is_alternative_or_group": true,
+      "alternative_options": [
+        "PostgreSQL",
+        "MySQL"
+      ]
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Architected normalized PostgreSQL database schema"
+      }
+    ],
+    "protected_facts": [
+      "PostgreSQL atomic reservations",
+      "~40% lock contention reduction"
+    ],
+    "expected_matches": [
+      "int_b2",
+      "cm_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "canonical_alias_symmetry_postgres_postgresql",
+      "relational_database_requirement_satisfied"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Treating 'Postgres' and 'PostgreSQL' as distinct or incompatible database engines",
+      "Penalizing candidate bullet because JD said 'PostgreSQL' and evidence cited 'Postgres'",
+      "Altering, dropping, or rounding the ~40% lock contention reduction metric"
+    ],
+    "acceptable_variation": [
+      "Rendering as 'PostgreSQL' or 'Postgres' in final text",
+      "Citing transactional guarantees or schema normalization"
+    ],
+    "notes": "Target DoorDash: validates bi-directional semantic equivalence between Postgres and PostgreSQL."
+  },
+  {
+    "case_id": "sel_07_react_canonical_support_boundary",
+    "category": "semantic_matching",
+    "target_id": "c3ai_4894",
+    "requirement": {
+      "id": "req_c3ai_frontend",
+      "raw_quote": "Experience with modern frontend frameworks such as React, React.js, or Vue.",
+      "interpreted_intent": "Proficiency in component-based web UI development using React or similar framework.",
+      "importance": "must_have",
+      "is_alternative_or_group": true,
+      "alternative_options": [
+        "React",
+        "React.js",
+        "Vue"
+      ]
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "cm_b2",
+        "entry_id": "campus_marketplace",
+        "summary": "Built dynamic UI components and client-side state handling"
+      }
+    ],
+    "protected_facts": [
+      "React supported in master profile frameworks",
+      "Vue is NOT supported in master profile"
+    ],
+    "expected_matches": [
+      "cm_b2"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "alias_match_conditioned_on_canonical_support",
+      "unsupported_framework_remains_unselected"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Injecting Vue.js into profile or résumé merely because it appears in the JD prompt",
+      "Treating React.js as an unevidenced framework when React is canonically supported"
+    ],
+    "acceptable_variation": [
+      "Using 'React' or 'React.js' based on stylistic conciseness",
+      "Emphasizing frontend state management and API integration"
+    ],
+    "notes": "Target C3.ai Platform Full-Stack: React/React.js match only when canonically supported; unsupported Vue rejected."
+  },
+  {
+    "case_id": "sel_08_ai_ml_interest_vs_research",
+    "category": "semantic_matching",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_ai_interest",
+      "raw_quote": "Demonstrated interest in artificial intelligence and applied machine learning systems.",
+      "interpreted_intent": "Curiosity and practical experience with AI tools, applied ML pipelines, or LLM-integrated workflows.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Trained XGBoost and LightGBM models on MIMIC-III ICU time-series achieving AUROC 0.88"
+      },
+      {
+        "evidence_id": "frd_b1",
+        "entry_id": "fake_review_detection",
+        "summary": "Engineered multi-signal classification pipeline combining text features and behavioral signals"
+      },
+      {
+        "evidence_id": "rft_b08_tailoring_orchestration",
+        "entry_id": "resumefinetune",
+        "summary": "Evaluated prompt architectures across multi-provider LLM APIs with structured audit scoring"
+      }
+    ],
+    "protected_facts": [
+      "MIMIC-III time-series dataset",
+      "AUROC 0.88",
+      "Applied ML and LLM prompt orchestration"
+    ],
+    "expected_matches": [
+      "sepsis_b1",
+      "frd_b1",
+      "rft_b08_tailoring_orchestration"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "applied_ai_interest_satisfies_requirement",
+      "research_expertise_not_hallucinated"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Escalating applied ML or LLM orchestration into foundational AI research scientist experience",
+      "Claiming authorship of core transformer architectures or novel loss functions",
+      "Altering or inflating quantitative evaluation metrics (e.g. AUROC 0.88)"
+    ],
+    "acceptable_variation": [
+      "Framing around applied evaluation pipelines, model inference, and feature engineering",
+      "Selecting Sepsis time-series or ResumeFinetune prompt orchestration"
+    ],
+    "notes": "Target OpenAI: satisfies applied AI interest while firmly barring claims of AI research scientist expertise."
+  },
+  {
+    "case_id": "sel_09_backend_systems_adjacent_to_product",
+    "category": "semantic_matching",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_product_infra",
+      "raw_quote": "Build reliable, scalable product infrastructure supporting high-traffic user interactions.",
+      "interpreted_intent": "Infrastructure and backend services directly underpinning user-facing products.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "High-volume order processing services ensuring transaction consistency"
+      },
+      {
+        "evidence_id": "pc_b04_transport_consolidation",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Consolidated dual-transport network engine into single multiplexed stream"
+      }
+    ],
+    "protected_facts": [
+      "Order management transactional processing",
+      "Multiplexed transport stream"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain",
+      "pc_b04_transport_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "transferable_backend_adjacency",
+      "clear_distinction_from_direct_product_ux"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Labeling backend transaction engine or socket multiplexing as direct consumer UX design",
+      "Claiming candidate conducted user research or created Figma prototypes"
+    ],
+    "acceptable_variation": [
+      "Describing backend infrastructure as foundation for user transaction reliability",
+      "Framing network transport as enabler of real-time communication"
+    ],
+    "notes": "Target OpenAI: backend systems evidence is adjacent and transferable, but must not masquerade as direct UI/product design."
+  },
+  {
+    "case_id": "sel_10_unrelated_technologies_rejected",
+    "category": "semantic_matching",
+    "target_id": "zoom_4766",
+    "requirement": {
+      "id": "req_zoom_webrtc",
+      "raw_quote": "Hands-on experience with WebRTC and real-time audio/video streaming protocols (RTP, SIP).",
+      "interpreted_intent": "Direct experience with WebRTC peer connections, RTP packetization, or SIP signaling for live media.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "pc_b01_event_sourcing",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Peer discovery protocol using event sourcing and UDP/TCP sockets"
+      },
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Kafka dead-letter queue consolidation across distributed clusters"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Django web application with PostgreSQL backend"
+      }
+    ],
+    "protected_facts": [
+      "Kafka dead-letter topic consolidation",
+      "PeerChat TCP/UDP peer discovery (not WebRTC/RTP media streaming)"
+    ],
+    "expected_matches": [
+      "pc_b01_event_sourcing"
+    ],
+    "expected_non_matches": [
+      "am_b01_dlq_consolidation",
+      "cm_b1"
+    ],
+    "expected_selection_properties": [
+      "unrelated_technologies_rejected",
+      "advisory_gap_emitted_for_missing_media_protocols"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "ADVISORY_GAP",
+    "forbidden_inferences": [
+      "Matching Kafka distributed queue processing as equivalent to WebRTC streaming media",
+      "Treating Django web CRUD as satisfying real-time RTP protocol requirements"
+    ],
+    "acceptable_variation": [
+      "Offering PeerChat socket networking as adjacent network transport",
+      "Explicitly noting WebRTC/RTP as an unevidenced gap"
+    ],
+    "notes": "Target Zoom Contact Center: unrelated technical keywords (Kafka, Django) must never match WebRTC/SIP by coincidence."
+  },
+  {
+    "case_id": "sel_11_transferable_vs_direct_evidence",
+    "category": "semantic_matching",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_payments_ledger",
+      "raw_quote": "Experience designing payment gateways, billing ledgers, and credit card processing services.",
+      "interpreted_intent": "Experience implementing monetary transaction ledgers, financial reservations, or billing pipelines.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations collapsing concurrent requests"
+      },
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform handling financial transaction workflows"
+      }
+    ],
+    "protected_facts": [
+      "MalyTech banking integration internship",
+      "PostgreSQL atomic reservations",
+      "Idempotent transfer engine"
+    ],
+    "expected_matches": [
+      "int_b2",
+      "int_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "transferable_financial_ledger_distinguished_from_direct_payment_gateway",
+      "high_relevance_preserved_without_exaggeration"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Claiming candidate built a direct Visa/Mastercard payment gateway",
+      "Downgrading banking ledger evidence to zero relevance merely because employer was MalyTech"
+    ],
+    "acceptable_variation": [
+      "Highlighting atomic reservations, idempotency, and concurrent ledger updates",
+      "Framing as financial transaction and banking integration systems"
+    ],
+    "notes": "Target Twitch Payments: distinguishes transferable banking ledger evidence from direct credit card gateway."
+  },
+  {
+    "case_id": "sel_12_semantic_equivalence_metric_preservation",
+    "category": "semantic_matching",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_msg_scale",
+      "raw_quote": "Experience with distributed message queues (Kafka, RocketMQ) and message deduplication at scale.",
+      "interpreted_intent": "Handling high-volume message queues, topic organization, and deduplication.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Consolidated 862 dead-letter topics across distributed clusters into shared queues, cutting topic sprawl by ~70%"
+      }
+    ],
+    "protected_facts": [
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction",
+      "Amdocs Software Developer"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "semantic_matching_preserves_exact_metrics",
+      "approximation_symbol_preserved"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Rounding 862 to 850, 900, or 1000",
+      "Dropping tilde from ~70% to produce exact 70%",
+      "Inflating reduction percentage to 90%"
+    ],
+    "acceptable_variation": [
+      "Formulations emphasizing queue consolidation, cluster hygiene, or topic management",
+      "Active verbs: Consolidated, Aggregated, Redesigned"
+    ],
+    "notes": "Target TikTok: semantic matching and synonym adaptation must NEVER alter protected metrics."
+  },
+  {
+    "case_id": "sel_13_strong_role_outranks_weak_keyword_project",
+    "category": "evidence_selection",
+    "target_id": "lexisnexis_4987",
+    "requirement": {
+      "id": "req_lexis_data_pipeline",
+      "raw_quote": "Enterprise data processing, database query optimization, and production pipeline maintenance.",
+      "interpreted_intent": "Experience operating production data pipelines and optimizing database queries.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b04_data_retention",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Maintained production data retention policies across partitioned PostgreSQL tables"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Simple database schema and query setup for student marketplace project"
+      }
+    ],
+    "protected_facts": [
+      "Partitioned PostgreSQL tables",
+      "Amdocs production data retention"
+    ],
+    "expected_matches": [
+      "am_b04_data_retention"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "production_role_outranks_student_project",
+      "enterprise_scale_preferred"
+    ],
+    "expected_ranking_properties": [
+      "am_b04_data_retention ranked above cm_b1"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Preferring a project bullet over enterprise production experience because the project has more buzzwords"
+    ],
+    "acceptable_variation": [
+      "Retaining both if space permits, with Amdocs receiving primary placement",
+      "Emphasizing partition pruning, index maintenance, or compliance archiving"
+    ],
+    "notes": "Target LexisNexis: authentic production role evidence outranks keyword-heavy student coursework."
+  },
+  {
+    "case_id": "sel_14_mechanism_catalogue_loses_to_outcome",
+    "category": "evidence_selection",
+    "target_id": "doordash_4608",
+    "requirement": {
+      "id": "req_doordash_concurrency",
+      "raw_quote": "Improve reliability and latency of high-concurrency dispatch and fulfillment services.",
+      "interpreted_intent": "Mitigating concurrency bottlenecks and improving service throughput/latency.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing lock contention by ~40%"
+      },
+      {
+        "evidence_id": "int_b5",
+        "entry_id": "bank_integration_internship",
+        "summary": "Configured Spring Boot thread pool parameters and HikariCP connection pool settings"
+      }
+    ],
+    "protected_facts": [
+      "PostgreSQL atomic reservations",
+      "~40% lock contention reduction"
+    ],
+    "expected_matches": [
+      "int_b2"
+    ],
+    "expected_non_matches": [
+      "int_b5"
+    ],
+    "expected_selection_properties": [
+      "demonstrated_outcome_preferred_over_config_catalogue",
+      "high_concurrency_impact_selected"
+    ],
+    "expected_ranking_properties": [
+      "int_b2 selected over int_b5"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Ranking configuration tuning above architectural outcome that produced ~40% lock contention reduction"
+    ],
+    "acceptable_variation": [
+      "Highlighting atomic reservation pattern or race condition mitigation",
+      "XYZ framing: Accomplished [X] by [Y] resulting in [Z]"
+    ],
+    "notes": "Target DoorDash: outcome-driven architectural engineering defeats raw tool configuration catalogues."
+  },
+  {
+    "case_id": "sel_15_employment_not_buried_by_projects",
+    "category": "evidence_selection",
+    "target_id": "roadrunner_5027",
+    "requirement": {
+      "id": "req_roadrunner_prod_code",
+      "raw_quote": "Software engineer who can write production code, integrate enterprise systems, and deliver client value.",
+      "interpreted_intent": "Practical software engineering with verified production systems experience.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs enterprise order processing production code"
+      },
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration production platform"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Campus marketplace student project"
+      }
+    ],
+    "protected_facts": [
+      "Amdocs Software Developer experience",
+      "MalyTech Software Engineering Intern experience"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain",
+      "int_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "employment_prominence_preserved",
+      "projects_placed_subordinate_to_employment"
+    ],
+    "expected_ranking_properties": [
+      "Experience section ordered ahead of Projects",
+      "Amdocs and MalyTech receive top vertical visual hierarchy"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Placing student project above verified enterprise software employment in section hierarchy"
+    ],
+    "acceptable_variation": [
+      "Including high-substance projects below employment",
+      "Selecting 3-4 employment bullets before project bullets"
+    ],
+    "notes": "Target RoadRunner: relevant commercial employment must not be buried beneath academic or toy projects."
+  },
+  {
+    "case_id": "sel_16_single_employer_space_capped",
+    "category": "evidence_selection",
+    "target_id": "commure_4839",
+    "requirement": {
+      "id": "req_commure_backend_health",
+      "raw_quote": "Full-stack and backend systems for healthcare interoperability and clinical data pipelines.",
+      "interpreted_intent": "Backend engineering with healthcare data pipeline or clinical system adjacency.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs order processing"
+      },
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs DLQ consolidation"
+      },
+      {
+        "evidence_id": "am_b02_row_level_entitlement",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs row level security"
+      },
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Sepsis early warning time-series ML on MIMIC-III ICU data"
+      },
+      {
+        "evidence_id": "ct_b1",
+        "entry_id": "clinical_trial_platform",
+        "summary": "Synthetic clinical trial data platform with privacy-preserving pipelines"
+      }
+    ],
+    "protected_facts": [
+      "MIMIC-III ICU clinical dataset",
+      "Synthetic clinical trial platform"
+    ],
+    "expected_matches": [
+      "am_b02_row_level_entitlement",
+      "sepsis_b1",
+      "ct_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "single_employer_space_capped",
+      "domain_diversity_balanced"
+    ],
+    "expected_ranking_properties": [
+      "Amdocs capped to prevent monopolizing 1-page budget",
+      "Healthcare-adjacent projects (Sepsis, Clinical Trial) selected"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Allocating all 10-12 résumé bullet slots to Amdocs and discarding healthcare clinical projects"
+    ],
+    "acceptable_variation": [
+      "Allocating 3-4 bullets to Amdocs, 2 to MalyTech, and 3-4 to relevant healthcare projects",
+      "Selecting Sepsis ICU or Clinical Trial data pipelines"
+    ],
+    "notes": "Target Commure: prevents single employer sprawl from crowding out highly targeted domain projects."
+  },
+  {
+    "case_id": "sel_17_adaptable_selection_without_mandatory_ids",
+    "category": "evidence_selection",
+    "target_id": "c3ai_4894",
+    "requirement": {
+      "id": "req_c3ai_platform_services",
+      "raw_quote": "Design, develop, test, and maintain scalable full-stack capabilities for enterprise AI applications.",
+      "interpreted_intent": "Full-stack capabilities across APIs, testing, and enterprise platform services.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "frd_b1",
+        "entry_id": "fake_review_detection",
+        "summary": "Fake review multi-signal classification pipeline"
+      },
+      {
+        "evidence_id": "am_b05_test_automation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Automated regression test harness for backend services"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "Django and PostgreSQL web platform"
+      }
+    ],
+    "protected_facts": [
+      "Automated test harness",
+      "Classification pipeline"
+    ],
+    "expected_matches": [
+      "frd_b1",
+      "am_b05_test_automation",
+      "cm_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "adaptable_selection_across_valid_subsets",
+      "no_rigid_mandatory_evidence_id_lock"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Requiring one and only one exact combination of evidence IDs for valid selection",
+      "Rejecting an equally valid subset of testing and full-stack evidence"
+    ],
+    "acceptable_variation": [
+      "Pairing am_b05 with frd_b1, or pairing cm_b1 with am_b00",
+      "Varying project selection based on frontend vs platform emphasis"
+    ],
+    "notes": "Target C3.ai: selection adapts gracefully across multiple valid subsets without hardcoded ID locks."
+  },
+  {
+    "case_id": "sel_18_unsupported_capabilities_remain_gaps",
+    "category": "evidence_selection",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_mobile_pay",
+      "raw_quote": "Hands-on experience with mobile payments (Apple Pay, Google Pay SDK integration on iOS/Android).",
+      "interpreted_intent": "Direct client-side mobile SDK payment integration on iOS or Android.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "PostgreSQL atomic reservations for backend banking transfers"
+      }
+    ],
+    "protected_facts": [
+      "Zero mobile iOS/Android payment SDK experience in canonical profile"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [
+      "int_b2"
+    ],
+    "expected_selection_properties": [
+      "unsupported_capability_disclosed_as_gap",
+      "zero_hallucination_of_unsupported_mobile_sdks"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "ADVISORY_GAP",
+    "forbidden_inferences": [
+      "Inventing Swift, Kotlin, Apple Pay, or Google Pay SDK bullet points",
+      "Treating an advisory qualification gap as fatal integrity failure"
+    ],
+    "acceptable_variation": [
+      "Recording unsupported mobile requirement in audit gap ledger",
+      "Focusing selected bullets on backend payment ledgers and concurrency"
+    ],
+    "notes": "Target Twitch: honest disclosure of mobile SDK gap without fabrication or pipeline abort."
+  },
+  {
+    "case_id": "sel_19_agentic_ai_without_repetitive_buzzwords",
+    "category": "evidence_selection",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_agentic_workflows",
+      "raw_quote": "Interest in autonomous agent architectures, multi-step LLM workflows, and evaluation pipelines.",
+      "interpreted_intent": "Practical experience designing agentic control planes, staged workflows, or evaluation harnesses.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "rft_b08_tailoring_orchestration",
+        "entry_id": "resumefinetune",
+        "summary": "Engineered multi-provider LLM tailoring lane with structured audit, repair, and acceptance verification"
+      },
+      {
+        "evidence_id": "rft_b12_audit_framework",
+        "entry_id": "resumefinetune",
+        "summary": "Implemented deterministic quality audit framework scoring factual fidelity and technical guarantees"
+      }
+    ],
+    "protected_facts": [
+      "Multi-provider LLM tailoring lane",
+      "Deterministic quality audit framework"
+    ],
+    "expected_matches": [
+      "rft_b08_tailoring_orchestration",
+      "rft_b12_audit_framework"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "agentic_evidence_selected_on_technical_merit",
+      "repetition_of_ai_buzzwords_avoided"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Stuffing every bullet with 'AI', 'agentic', 'LLM' in repetitive buzzword fashion",
+      "Ignoring systems engineering aspects (state machines, validation gates) of the project"
+    ],
+    "acceptable_variation": [
+      "Framing around evaluation harnesses, deterministic validation gates, and provider orchestration",
+      "Using concrete architectural terminology instead of marketing hype"
+    ],
+    "notes": "Target OpenAI: selects genuine agentic orchestration evidence without falling into AI slop repetition."
+  },
+  {
+    "case_id": "sel_20_value_per_line_without_rigid_cutoff",
+    "category": "evidence_selection",
+    "target_id": "zoom_4766",
+    "requirement": {
+      "id": "req_zoom_dense_systems",
+      "raw_quote": "Engineers who write concise, high-impact systems software with clear architectural boundaries.",
+      "interpreted_intent": "High information density and concrete impact per bullet line.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "pc_b04_transport_consolidation",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Consolidated dual-transport network engine into single multiplexed stream, cutting connection setup latency by ~500ms"
+      },
+      {
+        "evidence_id": "pc_b06_two_laptop_validation",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Tested network protocol across two physical laptops on local WiFi"
+      }
+    ],
+    "protected_facts": [
+      "Multiplexed stream",
+      "~500ms connection setup latency reduction"
+    ],
+    "expected_matches": [
+      "pc_b04_transport_consolidation"
+    ],
+    "expected_non_matches": [
+      "pc_b06_two_laptop_validation"
+    ],
+    "expected_selection_properties": [
+      "high_value_per_line_preferred",
+      "no_rigid_character_count_cutoff"
+    ],
+    "expected_ranking_properties": [
+      "pc_b04 selected over pc_b06"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Imposing an arbitrary length threshold that discards valuable technical detail",
+      "Preferring low-value testing notes over core transport multiplexing",
+      "Altering or dropping approximation marker ~500ms during conciseness editing"
+    ],
+    "acceptable_variation": [
+      "1-line or 2-line bullet formatting based on typographic budget",
+      "Selecting socket multiplexing and latency reduction metrics"
+    ],
+    "notes": "Target Zoom: values information density per line while avoiding rigid character limits."
+  },
+  {
+    "case_id": "sel_21_supported_relevant_skill_eligible",
+    "category": "skills_selection",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_skills",
+      "raw_quote": "Proficient in Python, Java, or Go; familiar with distributed systems and Kafka.",
+      "interpreted_intent": "Backend programming languages and distributed streaming technologies.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs Kafka DLQ topics"
+      }
+    ],
+    "protected_facts": [
+      "Python, Java, Kafka supported in master profile"
+    ],
+    "expected_matches": [
+      "Python",
+      "Java",
+      "Kafka"
+    ],
+    "expected_non_matches": [
+      "Go"
+    ],
+    "expected_selection_properties": [
+      "supported_and_target_relevant_skill_eligible",
+      "unsupported_go_excluded"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Adding 'Go' to technical skills section when Go is not supported in master profile",
+      "Omitting Java or Kafka when both are core target requirements and fully supported"
+    ],
+    "acceptable_variation": [
+      "Categorizing under Languages (Python, Java) and Developer Tools / Technologies (Kafka)",
+      "Including or omitting auxiliary supported skills"
+    ],
+    "notes": "Target TikTok: canonically supported skills eligible; unsupported Go cleanly excluded."
+  },
+  {
+    "case_id": "sel_22_supported_skill_not_mandatory_display",
+    "category": "skills_selection",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_backend_langs",
+      "raw_quote": "Backend services in Java, Go, or C++.",
+      "interpreted_intent": "Backend systems programming languages.",
+      "importance": "must_have",
+      "is_alternative_or_group": true,
+      "alternative_options": [
+        "Java",
+        "Go",
+        "C++"
+      ]
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "C++ is present in master profile languages",
+      "Java is present in master profile languages"
+    ],
+    "expected_matches": [
+      "Java"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "supported_skill_display_is_curated_not_mandatory",
+      "candidate_focus_on_java_backend_preserved"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Forcing C++ onto the résumé merely because it exists in the master profile inventory",
+      "Treating omission of an older coursework language as a profile violation"
+    ],
+    "acceptable_variation": [
+      "Displaying Java and Python as primary languages without displaying C++",
+      "Displaying C++ if space permits and target role specifically values systems programming"
+    ],
+    "notes": "Target Twitch: supported skill display is an active editorial choice, not a mandatory dump."
+  },
+  {
+    "case_id": "sel_23_supported_skill_without_bullet",
+    "category": "skills_selection",
+    "target_id": "doordash_4608",
+    "requirement": {
+      "id": "req_doordash_tooling",
+      "raw_quote": "Familiarity with Git, Linux environments, and CI/CD workflows.",
+      "interpreted_intent": "Standard engineering developer tools and environments.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "Git, Linux, Docker supported in master profile developer_tools"
+    ],
+    "expected_matches": [
+      "Git",
+      "Linux",
+      "Docker"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "supported_skill_eligible_without_dedicated_bullet",
+      "saves_bullet_space_for_deep_engineering"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Requiring every displayed skill to have an explicit dedicated bullet in Experience or Projects",
+      "Wasting valuable bullet slots describing trivial Git commits or Linux terminal commands"
+    ],
+    "acceptable_variation": [
+      "Listing Git and Linux under Developer Tools in Skills section",
+      "Leaving bullets focused on distributed concurrency and data pipelines"
+    ],
+    "notes": "Target DoorDash: supported skills can appear in Skills section without consuming bullet space."
+  },
+  {
+    "case_id": "sel_24_unsupported_skill_blocked_for_ats",
+    "category": "skills_selection",
+    "target_id": "idme_3981",
+    "requirement": {
+      "id": "req_idme_unsupported_tech",
+      "raw_quote": "Experience with Ruby on Rails and Kubernetes cluster administration.",
+      "interpreted_intent": "Web framework and container orchestration skills.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "Neither Ruby on Rails nor Kubernetes is in canonical master profile"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [
+      "Ruby on Rails",
+      "Kubernetes"
+    ],
+    "expected_selection_properties": [
+      "unsupported_skill_strictly_blocked_from_skills_section",
+      "ats_keyword_stuffing_prevented"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "FATAL_INTEGRITY",
+    "forbidden_inferences": [
+      "Injecting unsupported skills into Skills section to game ATS scanners",
+      "Silently approving unevidenced technologies"
+    ],
+    "acceptable_variation": [
+      "Listing Docker (supported) while excluding Kubernetes (unsupported)",
+      "Recording Ruby on Rails as a disclosed gap in audit ledger"
+    ],
+    "notes": "Target ID.me: unevidenced skills cannot be added for ATS matching; injection is FATAL_INTEGRITY."
+  },
+  {
+    "case_id": "sel_25_auxiliary_tooling_not_dominating",
+    "category": "skills_selection",
+    "target_id": "roadrunner_5027",
+    "requirement": {
+      "id": "req_roadrunner_core_tech",
+      "raw_quote": "Core engineering skills: Python/TypeScript, system architecture, database design.",
+      "interpreted_intent": "High-value core languages, frameworks, and architecture patterns.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "Python, Java, PostgreSQL, Docker, Git supported in profile",
+      "Auxiliary utilities (Jira, Postman) present in profile"
+    ],
+    "expected_matches": [
+      "Python",
+      "Java",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "expected_non_matches": [
+      "Jira",
+      "Postman",
+      "Slack"
+    ],
+    "expected_selection_properties": [
+      "high_value_engineering_competencies_prioritized",
+      "auxiliary_tooling_demoted_or_omitted"
+    ],
+    "expected_ranking_properties": [
+      "Languages and Frameworks take visual precedence over tools",
+      "Low-signal tools do not crowd out core technologies"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Filling the Skills section with office/communication utilities while omitting core databases and languages"
+    ],
+    "acceptable_variation": [
+      "Omitting auxiliary tools entirely to keep Skills section concise",
+      "Listing auxiliary tools only at the tail end of Developer Tools"
+    ],
+    "notes": "Target RoadRunner: auxiliary tools must not dominate or crowd out high-value engineering skills."
+  },
+  {
+    "case_id": "sel_26_semantic_aliases_preserve_concept",
+    "category": "skills_selection",
+    "target_id": "lexisnexis_4987",
+    "requirement": {
+      "id": "req_lexis_db_alias",
+      "raw_quote": "Relational database expertise (PostgreSQL/Postgres) and asynchronous task execution.",
+      "interpreted_intent": "Relational databases and async execution runtime.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "PostgreSQL is canonical concept",
+      "AsyncIO is canonical concept"
+    ],
+    "expected_matches": [
+      "PostgreSQL",
+      "AsyncIO"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "alias_normalization_preserves_canonical_concept",
+      "no_duplicate_skill_entries"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Listing both 'Postgres' and 'PostgreSQL' as separate items in the same skills list",
+      "Altering canonical meaning when normalizing casing (asyncio vs AsyncIO)"
+    ],
+    "acceptable_variation": [
+      "Using either 'PostgreSQL' or 'Postgres' consistently",
+      "Using 'AsyncIO' or 'asyncio'"
+    ],
+    "notes": "Target LexisNexis: semantic aliases preserve canonical concept and avoid duplicate skills clutter."
+  },
+  {
+    "case_id": "sel_27_inventory_dump_prevented",
+    "category": "skills_selection",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_tailored_skills",
+      "raw_quote": "Strong foundation in software engineering, backend systems, and modern development tooling.",
+      "interpreted_intent": "Curated selection of core backend and systems skills tailored to the role.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [],
+    "protected_facts": [
+      "Master profile contains 35+ skills across languages, frameworks, tools, libraries"
+    ],
+    "expected_matches": [
+      "Python",
+      "Java",
+      "PostgreSQL",
+      "Docker",
+      "Git",
+      "Pytest",
+      "Kafka"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "curated_skills_subset_selected",
+      "wholesale_profile_inventory_dump_prevented"
+    ],
+    "expected_ranking_properties": [
+      "Skills section budgeted to 3-4 clean lines",
+      "Target-relevant technologies prioritized"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Dumping every single entry from master profile into the résumé",
+      "Failing pipeline because candidate curated a high-signal subset"
+    ],
+    "acceptable_variation": [
+      "Selecting 15-20 highly relevant skills across 3 categories",
+      "Organizing by Languages, Frameworks/Databases, and Developer Tools"
+    ],
+    "notes": "Target OpenAI: curated target relevance defeats whole-inventory dumping."
+  },
+  {
+    "case_id": "sel_28_candidate_variants_preserve_evidence_ids",
+    "category": "multi_candidate_generation",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_dlq_mgmt",
+      "raw_quote": "Manage and resolve messaging dead letters, failures, and queue bottlenecks.",
+      "interpreted_intent": "Handling dead-letter queues and messaging reliability.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Consolidated 862 dead-letter topics across distributed clusters into shared queues, cutting topic sprawl by ~70%"
+      }
+    ],
+    "protected_facts": [
+      "am_b01_dlq_consolidation",
+      "862 dead-letter topics",
+      "~70% topic sprawl reduction"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "all_generated_variants_cite_same_evidence_id"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Attributing generated bullet variant to an unselected or unrelated evidence ID",
+      "Dropping canonical evidence ID during candidate generation",
+      "Altering or stripping approximation marker (~) across variants or metrics"
+    ],
+    "acceptable_variation": [
+      "Generating 3 structurally distinct variants all bound to am_b01_dlq_consolidation"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_xyz",
+        "text": "Reduced topic sprawl by ~70% across distributed clusters by consolidating 862 dead-letter topics into centralized shared queues.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.95
+      },
+      {
+        "variant_id": "v2_star",
+        "text": "Consolidated 862 dead-letter topics across distributed clusters into centralized queues, cutting messaging sprawl by ~70% and accelerating triage.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.92
+      },
+      {
+        "variant_id": "v3_active",
+        "text": "Architected unified queue topology consolidating 862 legacy dead-letter topics, eliminating ~70% of distributed topic sprawl.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.9
+      }
+    ],
+    "notes": "Target TikTok: all bullet candidate variants must strictly preserve identical evidence IDs."
+  },
+  {
+    "case_id": "sel_29_candidate_variants_preserve_exact_metrics",
+    "category": "multi_candidate_generation",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_metrics",
+      "raw_quote": "Demonstrated track record of measurable systems impact in distributed environments.",
+      "interpreted_intent": "Quantitative performance and systems impact.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Consolidated 862 dead-letter topics across distributed clusters"
+      }
+    ],
+    "protected_facts": [
+      "862 dead-letter topics"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "exact_integer_metric_preserved"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "FATAL_INTEGRITY",
+    "forbidden_inferences": [
+      "Rounding 862 to 850, 860, 900, or 1000 in any generated candidate variant",
+      "Inventing metric units not present in canonical catalog"
+    ],
+    "acceptable_variation": [
+      "Phrasing as '862 dead-letter topics' or '862 legacy topics'",
+      "Placement of metric at beginning, middle, or end of bullet"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_valid_exact",
+        "text": "Consolidated 862 dead-letter topics across distributed clusters into shared queues, cutting topic sprawl by ~70%.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.95
+      },
+      {
+        "variant_id": "v2_invalid_rounded",
+        "text": "Consolidated nearly 1,000 dead-letter topics across distributed clusters into shared queues, cutting topic sprawl by ~70%.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": false,
+        "ranking_score": 0.0
+      }
+    ],
+    "notes": "Target TikTok: exact integer tokens must not be rounded or inflated across candidate variants."
+  },
+  {
+    "case_id": "sel_30_approximation_markers_preserved",
+    "category": "multi_candidate_generation",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_approx_metric",
+      "raw_quote": "Demonstrated optimization results with clear metrics and validation.",
+      "interpreted_intent": "Accurate metric presentation respecting verified measurement boundaries.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "cutting topic sprawl by ~70%"
+      }
+    ],
+    "protected_facts": [
+      "~70% (approximation marker tilde preserved)"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "approximation_symbol_preserved"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "FATAL_INTEGRITY",
+    "forbidden_inferences": [
+      "Converting '~70%' into exact '70%'",
+      "Claiming exact unrounded precision when profile specifies approximate measurement",
+      "Altering, rounding, or fabricating exact metric from approximate marker ~70%"
+    ],
+    "acceptable_variation": [
+      "Using '~70%' or 'approximately 70%'",
+      "Active verb variation"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_valid_approx",
+        "text": "Consolidated 862 dead-letter topics across distributed clusters, reducing topic sprawl by ~70%.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.94
+      },
+      {
+        "variant_id": "v2_invalid_exact_stripped",
+        "text": "Consolidated 862 dead-letter topics across distributed clusters, reducing topic sprawl by exactly 70.0%.",
+        "evidence_ids": [
+          "am_b01_dlq_consolidation"
+        ],
+        "is_factually_valid": false,
+        "ranking_score": 0.0
+      }
+    ],
+    "notes": "Target TikTok: approximation markers (~40%, ~70%) cannot be converted to exact numbers."
+  },
+  {
+    "case_id": "sel_31_candidates_vary_rhetoric_not_facts",
+    "category": "multi_candidate_generation",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_concurrency_race",
+      "raw_quote": "Design distributed backend services handling concurrent state changes with strong consistency guarantees.",
+      "interpreted_intent": "Concurrency control and race condition mitigation under transaction load.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing concurrent lock contention by ~40%"
+      }
+    ],
+    "protected_facts": [
+      "PostgreSQL atomic reservations",
+      "Idempotent transfer engine",
+      "~40% lock contention reduction",
+      "MalyTech Software Engineering Intern"
+    ],
+    "expected_matches": [
+      "int_b2"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "rhetorical_diversity_without_factual_drift"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Altering technical guarantees (idempotency, atomic reservations) between variants",
+      "Inventing new database engines (Redis, DynamoDB) in one of the variants",
+      "Altering or stripping approximation marker (~) across variants or metrics"
+    ],
+    "acceptable_variation": [
+      "XYZ structure vs STAR structure",
+      "Alternative active verbs (Engineered, Architected, Designed)"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_xyz",
+        "text": "Engineered idempotent transfer engine using PostgreSQL atomic reservations, reducing concurrent lock contention by ~40% across banking integration services.",
+        "evidence_ids": [
+          "int_b2"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.94
+      },
+      {
+        "variant_id": "v2_star",
+        "text": "Resolved high-concurrency race conditions in banking integration by designing atomic reservations in PostgreSQL, achieving ~40% reduction in lock contention.",
+        "evidence_ids": [
+          "int_b2"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.91
+      }
+    ],
+    "notes": "Target Twitch Payments: candidates vary rhetoric while holding facts and metrics invariant."
+  },
+  {
+    "case_id": "sel_32_feature_catalogue_loses_to_outcome",
+    "category": "multi_candidate_generation",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_systems_impact",
+      "raw_quote": "Build scalable, reliable systems with clear engineering impact and robust architectural decisions.",
+      "interpreted_intent": "Clear architectural decisions with demonstrated engineering outcomes.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "rft_b01_ingestion_scale",
+        "entry_id": "resumefinetune",
+        "summary": "Architected 3-tier ingestion engine processing 50+ ATS sources"
+      }
+    ],
+    "protected_facts": [
+      "3-tier ingestion engine",
+      "50+ ATS sources",
+      "Transactional SQLite state transitions"
+    ],
+    "expected_matches": [
+      "rft_b01_ingestion_scale"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "outcome_oriented_candidate_wins_local_ranking"
+    ],
+    "expected_ranking_properties": [
+      "Outcome candidate scored higher than feature catalogue candidate"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Favoring an undifferentiated list of libraries over an engineered architectural outcome"
+    ],
+    "acceptable_variation": [
+      "Action verb choices (Architected, Engineered, Built)",
+      "Mentioning idempotency guarantee and 3-tier resolution"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_outcome",
+        "text": "Architected 3-tier ingestion engine processing 50+ ATS sources; isolated deterministic extraction from tiered resolvers via transactional SQLite state transitions, guaranteeing idempotency.",
+        "evidence_ids": [
+          "rft_b01_ingestion_scale"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.95
+      },
+      {
+        "variant_id": "v2_catalogue",
+        "text": "Built job discovery pipeline featuring SQLite storage, Crawl4AI browser crawling, Pydantic data models, Trafilatura article extraction, deterministic deduplication filters, and scoring orchestrator.",
+        "evidence_ids": [
+          "rft_b01_ingestion_scale"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.55
+      }
+    ],
+    "notes": "Target OpenAI: feature catalogue loses to clear outcome-oriented candidate in local ranking."
+  },
+  {
+    "case_id": "sel_33_undefined_metric_loses_to_interpretable",
+    "category": "multi_candidate_generation",
+    "target_id": "idme_3981",
+    "requirement": {
+      "id": "req_idme_security_integrity",
+      "raw_quote": "Implement robust access controls and security boundaries across enterprise data platforms.",
+      "interpreted_intent": "Access control, entitlement filtering, and security perimeter enforcement.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b02_row_level_entitlement",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Built row-level access control filters enforcing security boundaries across datasets"
+      }
+    ],
+    "protected_facts": [
+      "Row-level access control filters",
+      "Security boundaries across datasets"
+    ],
+    "expected_matches": [
+      "am_b02_row_level_entitlement"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "interpretable_formulation_preferred",
+      "ungrounded_or_vague_metric_penalized"
+    ],
+    "expected_ranking_properties": [
+      "Interpretable candidate wins over vague 100x metric candidate"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Inventing an ungrounded 100x speedup or 99.999% security metric when canonical catalog has no metric"
+    ],
+    "acceptable_variation": [
+      "Highlighting data isolation, entitlement validation, and boundary enforcement",
+      "Clear qualitative outcome without invented numbers"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_interpretable",
+        "text": "Enforced fine-grained security by implementing row-level access control filters across partitioned order datasets, preventing unauthorized cross-tenant data exposure.",
+        "evidence_ids": [
+          "am_b02_row_level_entitlement"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.93
+      },
+      {
+        "variant_id": "v2_vague_metric",
+        "text": "Improved system security by 100x by deploying revolutionary row-level filters across datasets.",
+        "evidence_ids": [
+          "am_b02_row_level_entitlement"
+        ],
+        "is_factually_valid": false,
+        "ranking_score": 0.2
+      }
+    ],
+    "notes": "Target ID.me: ungrounded vague metrics lose to clear, interpretable, evidenced formulations."
+  },
+  {
+    "case_id": "sel_34_repair_cannot_delete_supported_achievement",
+    "category": "multi_candidate_generation",
+    "target_id": "commure_4839",
+    "requirement": {
+      "id": "req_commure_ml_metrics",
+      "raw_quote": "Experience building, deploying, and evaluating machine learning models in production or research environments.",
+      "interpreted_intent": "ML model development and rigorous evaluation with benchmark metrics.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Trained XGBoost and LightGBM models on MIMIC-III ICU time-series achieving AUROC 0.88"
+      }
+    ],
+    "protected_facts": [
+      "MIMIC-III dataset",
+      "AUROC 0.88",
+      "XGBoost and LightGBM"
+    ],
+    "expected_matches": [
+      "sepsis_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "repaired_candidate_preserves_supported_achievement",
+      "metric_deletion_disallowed_during_conciseness_pass"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Deleting supported quantitative achievement (AUROC 0.88) merely to shorten line length"
+    ],
+    "acceptable_variation": [
+      "Restructuring clause order to maintain AUROC 0.88 within tight line budget",
+      "Active verb adjustments"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_valid_repaired",
+        "text": "Trained XGBoost and LightGBM models on MIMIC-III ICU time-series to predict sepsis onset, reaching AUROC 0.88 with cost-sensitive thresholding.",
+        "evidence_ids": [
+          "sepsis_b1"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.95
+      },
+      {
+        "variant_id": "v2_bad_metric_deleted",
+        "text": "Trained XGBoost and LightGBM models on ICU clinical time-series to predict sepsis onset effectively.",
+        "evidence_ids": [
+          "sepsis_b1"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.6
+      }
+    ],
+    "notes": "Target Commure: prose repair cannot improve brevity by stripping away a verified quantitative achievement."
+  },
+  {
+    "case_id": "sel_35_fabricated_polished_candidate_ineligible",
+    "category": "multi_candidate_generation",
+    "target_id": "zoom_4766",
+    "requirement": {
+      "id": "req_zoom_large_scale_video",
+      "raw_quote": "Architecting video streaming infrastructure serving millions of concurrent connections.",
+      "interpreted_intent": "Large-scale video streaming architecture.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "pc_b04_transport_consolidation",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Consolidated dual-transport network engine into single multiplexed stream"
+      }
+    ],
+    "protected_facts": [
+      "Zero 10M concurrent user video streaming evidence in canonical catalog"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "fabricated_candidate_strictly_ineligible",
+      "rhetoric_score_cannot_override_factual_truth"
+    ],
+    "expected_ranking_properties": [
+      "Fabricated candidate assigned zero score or rejected"
+    ],
+    "expected_runtime_severity": "FATAL_INTEGRITY",
+    "forbidden_inferences": [
+      "Allowing high stylistic fluency or recruiter keywords to excuse factual fabrication"
+    ],
+    "acceptable_variation": [
+      "Honest framing of PeerChat socket networking without false scale claims"
+    ],
+    "candidate_variants": [
+      {
+        "variant_id": "v1_fabricated_polished",
+        "text": "Spearheaded company-wide WebRTC video streaming infrastructure scaling to 10M concurrent users across global data centers.",
+        "evidence_ids": [
+          "pc_b04_transport_consolidation"
+        ],
+        "is_factually_valid": false,
+        "ranking_score": 0.0
+      },
+      {
+        "variant_id": "v2_honest_bounded",
+        "text": "Consolidated dual-transport network engine into single multiplexed stream, cutting connection setup latency by ~500ms across distributed test nodes.",
+        "evidence_ids": [
+          "pc_b04_transport_consolidation"
+        ],
+        "is_factually_valid": true,
+        "ranking_score": 0.88
+      }
+    ],
+    "notes": "Target Zoom: fabricated candidate is strictly ineligible regardless of prose polish; triggers FATAL_INTEGRITY."
+  },
+  {
+    "case_id": "sel_36_repeated_sentence_structures_penalized",
+    "category": "resume_ranking",
+    "target_id": "roadrunner_5027",
+    "requirement": {
+      "id": "req_roadrunner_resume_flow",
+      "raw_quote": "Strong written communication and technical narrative clarity across all work experience.",
+      "interpreted_intent": "Clear, engaging, varied technical writing across resume sections.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Built order processing services using Java to handle transactions"
+      },
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Built dead-letter queue handler using Kafka to consolidate topics"
+      },
+      {
+        "evidence_id": "am_b02_row_level_entitlement",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Built row-level access control using SQL to enforce security"
+      }
+    ],
+    "protected_facts": [
+      "Amdocs Software Developer evidence"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "syntactic_variety_promoted",
+      "monotonous_verb_structure_penalized"
+    ],
+    "expected_ranking_properties": [
+      "Redundancy penalty applied when 3+ consecutive bullets share identical 'Built [X] using [Y]' template"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Treating repeated sentence structure as a fatal integrity violation"
+    ],
+    "acceptable_variation": [
+      "Mixing XYZ, STAR, and active action lead-ins across bullets",
+      "Varying lead verbs (Engineered, Architected, Consolidated, Enforced)"
+    ],
+    "notes": "Target RoadRunner: repeated sentence structures incur a redundancy penalty in résumé-level ranking."
+  },
+  {
+    "case_id": "sel_37_repeated_ai_abstractions_visible",
+    "category": "resume_ranking",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_buzzword_audit",
+      "raw_quote": "Demonstrated technical substance in applied AI without relying on marketing buzzwords.",
+      "interpreted_intent": "Authentic engineering substance rather than repetitive AI buzzwords.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "rft_b08_tailoring_orchestration",
+        "entry_id": "resumefinetune",
+        "summary": "ResumeFinetune orchestration"
+      },
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Sepsis ML model"
+      }
+    ],
+    "protected_facts": [
+      "AUROC 0.88",
+      "ResumeFinetune multi-provider lane"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "repeated_ai_buzzwords_detected_and_penalized",
+      "concrete_subsystem_terminology_rewarded"
+    ],
+    "expected_ranking_properties": [
+      "Draft with 'cutting-edge AI' repeated in 5 bullets penalized in whole-résumé ranking"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Assuming more mentions of 'AI' automatically improves match score for OpenAI"
+    ],
+    "acceptable_variation": [
+      "Replacing vague AI buzzwords with concrete mechanisms: XGBoost, cost-sensitive thresholding, prompt evaluation harness"
+    ],
+    "notes": "Target OpenAI: repeated AI abstractions across headers and bullets are detected and penalized."
+  },
+  {
+    "case_id": "sel_38_duplicate_requirement_crowding_penalized",
+    "category": "resume_ranking",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_balanced_coverage",
+      "raw_quote": "Broad systems coverage: distributed transactions, datastores, concurrency, and automated testing.",
+      "interpreted_intent": "Balanced coverage across multiple required technical domains.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "PostgreSQL atomic reservations"
+      },
+      {
+        "evidence_id": "cm_b1",
+        "entry_id": "campus_marketplace",
+        "summary": "PostgreSQL relational database schema"
+      },
+      {
+        "evidence_id": "am_b04_data_retention",
+        "entry_id": "amdocs_software_developer",
+        "summary": "PostgreSQL partitioned tables"
+      },
+      {
+        "evidence_id": "am_b05_test_automation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Automated regression test suite"
+      }
+    ],
+    "protected_facts": [
+      "Diverse canonical evidence across databases, transactions, and testing"
+    ],
+    "expected_matches": [
+      "int_b2",
+      "am_b05_test_automation"
+    ],
+    "expected_non_matches": [
+      "cm_b1"
+    ],
+    "expected_selection_properties": [
+      "diverse_requirement_coverage_preferred",
+      "duplicate_requirement_crowding_penalized"
+    ],
+    "expected_ranking_properties": [
+      "Penalizing drafts where 4 bullets address basic relational queries while omitting concurrency or testing"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Rewarding multiple redundant bullets for the same requirement at the cost of zero coverage for another must-have"
+    ],
+    "acceptable_variation": [
+      "Selecting 1-2 strong database bullets and allocating remaining slots to testing and concurrency"
+    ],
+    "notes": "Target Twitch: multiple bullets serving the same requirement do not crowd out broader role coverage."
+  },
+  {
+    "case_id": "sel_39_whole_resume_positioning_matters",
+    "category": "resume_ranking",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_coherent_positioning",
+      "raw_quote": "Engineers with strong software fundamentals who build robust, reliable systems for user impact.",
+      "interpreted_intent": "Coherent profile presentation as a systems & applied backend engineer.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Enterprise backend"
+      },
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "Banking concurrency"
+      },
+      {
+        "evidence_id": "rft_b01_ingestion_scale",
+        "entry_id": "resumefinetune",
+        "summary": "Ingestion engine"
+      }
+    ],
+    "protected_facts": [
+      "Coherent backend and systems software track record"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain",
+      "int_b2",
+      "rft_b01_ingestion_scale"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "holistic_systems_engineer_narrative_rewarded",
+      "fragmented_grab_bag_penalized"
+    ],
+    "expected_ranking_properties": [
+      "Whole-résumé cohesion evaluated beyond individual local bullet scores"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Evaluating each bullet in total isolation without assessing whole-page candidate narrative"
+    ],
+    "acceptable_variation": [
+      "Emphasizing either applied systems or backend infrastructure, provided the narrative is consistent"
+    ],
+    "notes": "Target OpenAI: whole-résumé role positioning matters beyond local bullet quality scores."
+  },
+  {
+    "case_id": "sel_40_misleading_applied_product_positioning_flagged",
+    "category": "resume_ranking",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_honest_framing",
+      "raw_quote": "Direct experience collaborating with product designers and frontend teams on user experiences.",
+      "interpreted_intent": "Product UX collaboration and user-facing feature delivery.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b04_data_retention",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Maintained database partition pruning and archiving scripts"
+      }
+    ],
+    "protected_facts": [
+      "Amdocs data retention partitioning scripts (backend database maintenance)"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [
+      "am_b04_data_retention"
+    ],
+    "expected_selection_properties": [
+      "misleading_product_framing_flagged",
+      "database_archiving_not_spun_as_ui_ux"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "NEEDS_HUMAN_REVIEW",
+    "forbidden_inferences": [
+      "Framing backend cron job or partition script as 'Spearheaded user experience design for enterprise customers'"
+    ],
+    "acceptable_variation": [
+      "Framing accurately as enterprise data retention and storage optimization",
+      "Disclosing product UX as an honest gap rather than fabricating a connection"
+    ],
+    "notes": "Target OpenAI: factual but misleading product positioning is flagged for human review."
+  },
+  {
+    "case_id": "sel_41_buried_strong_evidence_triggers_reordering",
+    "category": "resume_ranking",
+    "target_id": "c3ai_4894",
+    "requirement": {
+      "id": "req_c3ai_hierarchy_order",
+      "raw_quote": "Demonstrated technical excellence and rigor in software systems and engineering delivery.",
+      "interpreted_intent": "Prominent display of candidate's strongest engineering accomplishments.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "cm_b4",
+        "entry_id": "campus_marketplace",
+        "summary": "Updated CSS stylesheets for responsive mobile menu navigation"
+      },
+      {
+        "evidence_id": "am_b01_dlq_consolidation",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Consolidated 862 dead-letter topics across distributed clusters into shared queues"
+      }
+    ],
+    "protected_facts": [
+      "862 dead-letter topics (Amdocs production)",
+      "Campus marketplace CSS styling"
+    ],
+    "expected_matches": [
+      "am_b01_dlq_consolidation"
+    ],
+    "expected_non_matches": [
+      "cm_b4"
+    ],
+    "expected_selection_properties": [
+      "strong_evidence_placed_above_weak_evidence",
+      "buried_high_impact_evidence_triggers_reordering"
+    ],
+    "expected_ranking_properties": [
+      "Draft placing minor CSS bullet above distributed cluster consolidation penalized"
+    ],
+    "expected_runtime_severity": "REPAIRABLE_QUALITY",
+    "forbidden_inferences": [
+      "Accepting visual ordering where low-impact styling appears ahead of high-impact distributed systems"
+    ],
+    "acceptable_variation": [
+      "Promoting Amdocs DLQ consolidation to top bullet in Experience section",
+      "Omitting minor CSS bullet to preserve space"
+    ],
+    "notes": "Target C3.ai: strong evidence buried below weak evidence triggers reordering or reselection."
+  },
+  {
+    "case_id": "sel_42_uncertain_evaluator_fallback_usable",
+    "category": "resume_ranking",
+    "target_id": "lexisnexis_4987",
+    "requirement": {
+      "id": "req_lexis_uncertain_score",
+      "raw_quote": "Software engineer with solid design judgment and reliable execution in enterprise environments.",
+      "interpreted_intent": "General software engineering design and execution capability.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Enterprise order processing services in Java"
+      },
+      {
+        "evidence_id": "am_b03_audit_trail",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Asynchronous audit trail engine recording state transitions"
+      }
+    ],
+    "protected_facts": [
+      "Both bullets canonical and factually verified"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain",
+      "am_b03_audit_trail"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "deterministic_fallback_on_evaluator_uncertainty",
+      "graceful_degradation_without_pipeline_abort"
+    ],
+    "expected_ranking_properties": [
+      "When evaluator score delta is within uncertainty margin (<0.05), preserve canonical order without crashing"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Aborting pipeline or throwing unhandled exception when evaluator cannot decide between two valid bullets"
+    ],
+    "acceptable_variation": [
+      "Falling back to profile appearance order",
+      "Selecting either candidate bullet without penalty"
+    ],
+    "notes": "Target LexisNexis: candidate selection remains usable and robust when the model evaluator is uncertain."
+  },
+  {
+    "case_id": "sel_43_strong_omitted_evidence_in_ledger",
+    "category": "unused_evidence_page_fill",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_page_budget",
+      "raw_quote": "Deliver a concise, impactful 1-page résumé demonstrating systems depth.",
+      "interpreted_intent": "Single-page constraint requires strict selection, leaving high-value evidence omitted.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform handling financial transaction workflows"
+      },
+      {
+        "evidence_id": "pc_b01_event_sourcing",
+        "entry_id": "peerchat_peer_discovery",
+        "summary": "Peer discovery protocol using event sourcing"
+      },
+      {
+        "evidence_id": "sepsis_b1",
+        "entry_id": "sepsis_early_warning",
+        "summary": "Sepsis early warning time-series ML on MIMIC-III ICU data"
+      }
+    ],
+    "protected_facts": [
+      "Canonical evidence items int_b1, pc_b01, sepsis_b1"
+    ],
+    "expected_matches": [
+      "int_b1",
+      "pc_b01_event_sourcing",
+      "sepsis_b1"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "unused_evidence_retained_in_structured_ledger",
+      "high_value_omissions_not_permanently_discarded"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Silently dropping unselected evidence without recording it in an omission ledger",
+      "Treating strong omitted evidence as invalid or rejected"
+    ],
+    "acceptable_variation": [
+      "Recording unused items with evidence_id, summary, and potential requirement mapping",
+      "Categorizing by candidate section (Experience, Projects)"
+    ],
+    "omission_reason": "space_constraint",
+    "page_budget_priority": 1,
+    "notes": "Target OpenAI: strong omitted evidence is cataloged in structured unused-evidence ledger."
+  },
+  {
+    "case_id": "sel_44_unused_items_record_omission_reasons",
+    "category": "unused_evidence_page_fill",
+    "target_id": "openai_4949",
+    "requirement": {
+      "id": "req_openai_omission_audit",
+      "raw_quote": "Maintain transparent provenance and selection rationale for all profile content.",
+      "interpreted_intent": "Explicit accounting for why candidate evidence was or was not included.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b07_code_quality_gates",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Established SonarQube code quality gates and static analysis checks"
+      },
+      {
+        "evidence_id": "cm_b3",
+        "entry_id": "campus_marketplace",
+        "summary": "Implemented basic password hashing using bcrypt"
+      }
+    ],
+    "protected_facts": [
+      "Amdocs code quality gates",
+      "Campus marketplace password hashing"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "explicit_omission_reasons_recorded",
+      "distinguishes_space_cap_from_low_relevance"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Leaving omission reason blank, null, or generic 'omitted' string without rationale"
+    ],
+    "acceptable_variation": [
+      "Reason codes: 'space_constraint', 'lower_target_relevance', 'redundant_coverage', 'single_employer_cap'"
+    ],
+    "omission_reason": "lower_target_relevance",
+    "page_budget_priority": 3,
+    "notes": "Target OpenAI: every unused item explicitly records its specific omission reason."
+  },
+  {
+    "case_id": "sel_45_blank_space_expansion_ranks_unused_evidence",
+    "category": "unused_evidence_page_fill",
+    "target_id": "doordash_4608",
+    "requirement": {
+      "id": "req_doordash_page_fill",
+      "raw_quote": "Comprehensive résumé utilizing full vertical space without spilling onto page 2.",
+      "interpreted_intent": "Optimizing page budget by dynamically filling available vertical space.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform handling financial transaction workflows"
+      },
+      {
+        "evidence_id": "cm_b5",
+        "entry_id": "campus_marketplace",
+        "summary": "Configured local SQLite database for development testing"
+      }
+    ],
+    "protected_facts": [
+      "int_b1 is high-value production banking evidence",
+      "cm_b5 is low-value local testing configuration"
+    ],
+    "expected_matches": [
+      "int_b1"
+    ],
+    "expected_non_matches": [
+      "cm_b5"
+    ],
+    "expected_selection_properties": [
+      "blank_space_expansion_selects_highest_ranked_unused_item",
+      "priority_order_respected_during_fill"
+    ],
+    "expected_ranking_properties": [
+      "int_b1 selected first when page has vertical space for 1 additional bullet"
+    ],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Selecting a trivial local configuration bullet over a commercial banking integration bullet during page expansion"
+    ],
+    "acceptable_variation": [
+      "Expanding Experience section by adding int_b1 to MalyTech",
+      "Adding a high-impact project bullet if employer section is already saturated"
+    ],
+    "omission_reason": "space_constraint",
+    "page_budget_priority": 1,
+    "notes": "Target DoorDash: blank-space expansion queries unused ledger to promote highest-value evidence."
+  },
+  {
+    "case_id": "sel_46_ledger_excludes_prohibited_unsupported",
+    "category": "unused_evidence_page_fill",
+    "target_id": "tiktok_4164",
+    "requirement": {
+      "id": "req_tiktok_ledger_integrity",
+      "raw_quote": "Transparent, auditable data records adhering to strict factual compliance.",
+      "interpreted_intent": "Ledger contains only verified canonical facts; zero hallucination allowed in reserve pool.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b03_audit_trail",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Asynchronous audit trail engine recording state transitions"
+      }
+    ],
+    "protected_facts": [
+      "Canonical facts only",
+      "Zero unevidenced or prohibited claims in ledger"
+    ],
+    "expected_matches": [
+      "am_b03_audit_trail"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "ledger_strictly_quarantines_prohibited_or_unsupported_claims",
+      "reserve_pool_is_100_percent_factually_grounded"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "FATAL_INTEGRITY",
+    "forbidden_inferences": [
+      "Storing fabricated or unverified bullets in the unused-evidence ledger as 'backups'",
+      "Promoting an ungrounded claim during page fill"
+    ],
+    "acceptable_variation": [
+      "Maintaining unused ledger strictly as a subset of verified canonical catalog items"
+    ],
+    "omission_reason": "space_constraint",
+    "page_budget_priority": 2,
+    "notes": "Target TikTok: unused-evidence ledger must NEVER contain fabricated or unsupported claims."
+  },
+  {
+    "case_id": "sel_47_space_omission_distinguished_from_irrelevance",
+    "category": "unused_evidence_page_fill",
+    "target_id": "twitch_4182",
+    "requirement": {
+      "id": "req_twitch_omission_types",
+      "raw_quote": "High signal-to-noise ratio in technical resume presentation.",
+      "interpreted_intent": "Clear taxonomy distinguishing space constraints from lack of relevance.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "int_b1",
+        "entry_id": "bank_integration_internship",
+        "summary": "MalyTech banking integration platform"
+      },
+      {
+        "evidence_id": "cm_b4",
+        "entry_id": "campus_marketplace",
+        "summary": "Mobile responsive CSS styling"
+      }
+    ],
+    "protected_facts": [
+      "int_b1 is highly relevant to banking/payments, omitted solely due to space",
+      "cm_b4 is low relevance to backend payments engineering"
+    ],
+    "expected_matches": [],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "space_omission_distinguished_from_irrelevance",
+      "space_constrained_items_flagged_as_expansion_candidates"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Marking a highly relevant banking bullet as 'irrelevant' just because it did not make the 1-page cut"
+    ],
+    "acceptable_variation": [
+      "Tagging int_b1 with omission_reason='space_constraint'",
+      "Tagging cm_b4 with omission_reason='lower_target_relevance'"
+    ],
+    "omission_reason": "space_constraint",
+    "page_budget_priority": 1,
+    "notes": "Target Twitch Payments: omission due to space budget is clearly distinguished from irrelevance."
+  },
+  {
+    "case_id": "sel_48_valid_resume_unused_space_not_fatal",
+    "category": "unused_evidence_page_fill",
+    "target_id": "roadrunner_5027",
+    "requirement": {
+      "id": "req_roadrunner_formatting_space",
+      "raw_quote": "Professional, clean formatting with high readability.",
+      "interpreted_intent": "Acceptable page layout with reasonable vertical space utilization.",
+      "importance": "must_have",
+      "is_alternative_or_group": false,
+      "alternative_options": []
+    },
+    "candidate_evidence": [
+      {
+        "evidence_id": "am_b00_order_management_domain",
+        "entry_id": "amdocs_software_developer",
+        "summary": "Amdocs enterprise order processing"
+      },
+      {
+        "evidence_id": "int_b2",
+        "entry_id": "bank_integration_internship",
+        "summary": "PostgreSQL atomic reservations"
+      }
+    ],
+    "protected_facts": [
+      "High quality tailored résumé with 0.85 vertical fill ratio"
+    ],
+    "expected_matches": [
+      "am_b00_order_management_domain",
+      "int_b2"
+    ],
+    "expected_non_matches": [],
+    "expected_selection_properties": [
+      "unused_vertical_space_is_optimization_not_fatal_error",
+      "clean_pass_for_well_formatted_resume"
+    ],
+    "expected_ranking_properties": [],
+    "expected_runtime_severity": "CLEAN_PASS",
+    "forbidden_inferences": [
+      "Rejecting a factually sound, beautifully tailored résumé because vertical fill is 85% instead of 100%",
+      "Raising FATAL_INTEGRITY or ERROR for whitespace"
+    ],
+    "acceptable_variation": [
+      "Emitting an informational advisory note suggesting optional expansion",
+      "Accepting the draft with CLEAN_PASS"
+    ],
+    "notes": "Target RoadRunner: unused vertical whitespace is an optimization target, never a fatal pipeline rejection.",
+    "omission_reason": "space_constraint",
+    "page_budget_priority": 1
+  }
+]

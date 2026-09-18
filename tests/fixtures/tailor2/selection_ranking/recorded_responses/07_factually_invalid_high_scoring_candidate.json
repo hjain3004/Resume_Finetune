@@ -1,0 +1,27 @@
+{
+  "candidate_id": "cand_fabricated_web_scale",
+  "text": "Spearheaded enterprise-wide WebRTC live streaming architecture scaling to 10M concurrent connections across globally distributed clusters.",
+  "local_style_scores": {
+    "readability": 0.98,
+    "recruiter_scan": 0.97,
+    "active_verb_power": 0.95
+  },
+  "factual_integrity_audit": {
+    "is_grounded": false,
+    "violations": [
+      {
+        "field": "metrics",
+        "finding": "10M concurrent connections is fabricated; not present in canonical master profile.",
+        "severity": "FATAL_INTEGRITY"
+      },
+      {
+        "field": "technology",
+        "finding": "WebRTC live streaming is unevidenced in candidate profile.",
+        "severity": "FATAL_INTEGRITY"
+      }
+    ]
+  },
+  "verdict": "FATAL_INTEGRITY",
+  "pipeline_action": "REJECT_CANDIDATE",
+  "rule": "Factual integrity check strictly overrides local style score."
+}

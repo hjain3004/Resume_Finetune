@@ -1,0 +1,13 @@
+{
+  "raw_provider_content": "Here is the structured evaluation result:\n```json\n{\n  \"bullet_id\": \"b01\",\n  \"status\": \"EVALUATED\",\n  \"factual_fidelity\": 3,\n  \"metric_fidelity\": 3,\n  \"outcome_score\": \"0.94\",\n  \"notes\": \"Clean outcome-oriented bullet\",\n}\n```\nEvaluation complete.",
+  "recovery_strategy": "strip_markdown_fences_and_trailing_commas",
+  "parsed_payload": {
+    "bullet_id": "b01",
+    "status": "EVALUATED",
+    "factual_fidelity": 3,
+    "metric_fidelity": 3,
+    "outcome_score": 0.94,
+    "notes": "Clean outcome-oriented bullet"
+  },
+  "recovered_successfully": true
+}

@@ -1,0 +1,20 @@
+{
+  "comparison_type": "binary_bullet_ranking",
+  "candidate_a": {
+    "id": "b_amdocs_order",
+    "text": "Engineered order processing services in Java ensuring transactional consistency across distributed services.",
+    "score": 0.882
+  },
+  "candidate_b": {
+    "id": "b_amdocs_audit",
+    "text": "Built asynchronous audit trail engine recording state transitions and transaction histories.",
+    "score": 0.88
+  },
+  "score_delta": 0.002,
+  "uncertainty_threshold": 0.05,
+  "is_uncertain": true,
+  "fallback_applied": "CANONICAL_PROFILE_ORDER",
+  "selected_candidate_id": "b_amdocs_order",
+  "verdict": "CLEAN_PASS",
+  "notes": "Score difference is within statistical noise margin; preserved deterministic profile order without error."
+}

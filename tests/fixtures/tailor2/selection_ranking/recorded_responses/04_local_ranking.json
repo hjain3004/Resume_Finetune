@@ -1,0 +1,34 @@
+{
+  "evidence_id": "rft_b01_ingestion_scale",
+  "requirement_id": "req_openai_systems_impact",
+  "ranked_candidates": [
+    {
+      "rank": 1,
+      "variant_id": "v1_outcome",
+      "text": "Architected 3-tier ingestion engine processing 50+ ATS sources; isolated deterministic extraction from tiered resolvers via transactional SQLite state transitions, guaranteeing idempotency.",
+      "scores": {
+        "outcome_orientation": 0.96,
+        "factual_grounding": 1.0,
+        "information_density": 0.94,
+        "recruiter_scan": 0.95
+      },
+      "aggregate_score": 0.96,
+      "verdict": "SELECTED",
+      "rationale": "High engineering depth, concrete 3-tier architectural outcome, explicit transactional guarantees."
+    },
+    {
+      "rank": 2,
+      "variant_id": "v2_catalogue",
+      "text": "Built job discovery pipeline featuring SQLite storage, Crawl4AI browser crawling, Pydantic data models, Trafilatura article extraction, deterministic deduplication filters, and scoring orchestrator.",
+      "scores": {
+        "outcome_orientation": 0.5,
+        "factual_grounding": 1.0,
+        "information_density": 0.65,
+        "recruiter_scan": 0.6
+      },
+      "aggregate_score": 0.58,
+      "verdict": "DEFERRED",
+      "rationale": "Feature catalogue presentation; lists tools and components rather than clear engineering outcome."
+    }
+  ]
+}
