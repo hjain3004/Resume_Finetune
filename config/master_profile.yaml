@@ -36,7 +36,7 @@
 # =============================================================================
 
 schema_version: "0.3.0"
-last_updated: "2026-09-13"
+last_updated: "2026-09-18"
 
 # -----------------------------------------------------------------------------
 # ATS policy -- derived from ATS_Guide_and_Optimization_Checklist.md
@@ -142,6 +142,613 @@ base_variants:
 # PROJECTS
 # -----------------------------------------------------------------------------
 projects:
+
+  - id: resume_finetune_pipeline
+    display_date: "Jul. 2026 - Present"
+    name: "ResumeFinetune - Automated Job Search and Resume Tailoring Platform"
+    display_title: "ResumeFinetune - Job Search and Resume Tailoring Platform"
+    org: "Independent Project"
+    context: >-
+      Independent, AI-assisted engineering project that combines a deterministic
+      Python data plane with bounded LLM judgment for job discovery, job-description
+      resolution, eligibility filtering, fit scoring, evidence-constrained resume
+      tailoring, PDF rendering, and human review. Himanshu defined the product,
+      architecture, contracts, acceptance criteria, and review gates, then directed,
+      reviewed, tested, and integrated implementation produced with coding agents.
+    role: "Product owner and principal engineer (AI-assisted implementation)"
+    ownership_boundary: >-
+      SAFE TO CLAIM: end-to-end product and system architecture, deterministic
+      ingestion and eligibility pipeline, SQLite lifecycle, ATS resolver routing,
+      duplicate clustering, scoring contracts and self-consistency controls,
+      tailoring orchestration, model-authority isolation, JD provenance boundary,
+      atomic publication, audit framework, and the measured 2026-09-08 ingestion
+      results. STATUS BOUNDARY: the committed staged tailoring lane is implemented
+      and testable, but it has not produced high-quality resumes for the complete
+      shortlist. A newer draft-audit-repair Tailor2 lane currently exists only as
+      uncommitted work in a separate local worktree and must not be described as
+      shipped until it is preserved, reviewed, tested, and merged. PLANNED WORK may
+      be described only with design verbs such as "designed" or "specified".
+    start: "2026-07"
+    end: null
+    status: in_progress
+
+    links:
+      repo: "https://github.com/hjain3004/Resume_Finetune"
+      render_as: visible_url
+
+    tech:
+      primary: ["Python", "SQLite", "LLM APIs", "pytest", "LaTeX"]
+      secondary: ["requests", "PyYAML", "trafilatura", "Crawl4AI", "Firecrawl",
+                  "Claude", "Gemini", "OpenAI", "SHA-256", "Jaccard similarity"]
+      tech_line: "Python, SQLite, LLM APIs, pytest, LaTeX"
+
+    keywords:
+      exact: ["Python", "SQLite", "SQL", "REST API", "HTTP", "JSON", "PyYAML",
+              "pytest", "large language models", "LLM", "Claude", "Gemini",
+              "OpenAI", "LaTeX", "Crawl4AI", "Firecrawl"]
+      topical: ["data pipeline", "workflow orchestration", "job search automation",
+                "ATS integration", "state machine", "idempotency", "schema validation",
+                "data provenance", "content hashing", "deduplication",
+                "Jaccard similarity", "circuit breaker", "retry with backoff",
+                "rate limiting", "LLM orchestration", "structured output",
+                "prompt injection defense", "human in the loop", "fault tolerance",
+                "observability", "transactional publication", "agentic AI"]
+
+    scale:
+      live_run_discovered: 3212
+      live_run_inserted: 3176
+      live_run_resolved: 2019
+      live_run_filtered: 1766
+      qualifying_roles: 164
+      scoring_objects_after_clustering: 154
+      scoring_chunk_size: 6
+      self_consistency_runs: 3
+      model_providers: 3
+      audit_invariants: 14
+
+    metric_scope:
+      ingestion_run: >-
+        Isolated live run 22 on 2026-09-08, covering records discovered during
+        2026-09-01 through 2026-09-08. Of 164 qualifying roles, 86 had confirmed
+        posting dates in the window and 78 had unknown posting dates but were first
+        discovered during the window.
+      scoring_variance: >-
+        Repeat-run comparison documented in the 2026-07-16 project report; mean
+        absolute score movement before and after k=3 self-consistency.
+      implementation_status: >-
+        Metrics describe ingestion, filtering, clustering, and scoring experiments.
+        They do not establish that the full shortlist was converted into completed,
+        recruiter-ready tailored resumes.
+
+    metric_ledger:
+      discovered_listings:
+        { value: 3212, provenance: doc_backed, renderable: true,
+          note: "review/2026-09-08-ingest/REPORT.md sections 3-4; includes 3,176 newly inserted rows." }
+      inserted_listings:
+        { value: 3176, provenance: doc_backed, renderable: true,
+          note: "New rows inserted during live ingestion run 22." }
+      resolved_job_descriptions:
+        { value: 2019, provenance: doc_backed, renderable: true,
+          note: "Tier-1 resolutions during live ingestion run 22." }
+      filtered_listings:
+        { value: 1766, provenance: doc_backed, renderable: true,
+          note: "Global deterministic eligibility exclusions during live run 22." }
+      qualifying_roles:
+        { value: 164, provenance: doc_backed, renderable: true,
+          note: "86 confirmed-fresh plus 78 posting-date-unknown roles discovered in the window; say discovery window, not all posted within seven days." }
+      scoring_objects:
+        { value: 154, provenance: doc_backed, renderable: true,
+          note: "Fresh qualifying rows after within-company duplicate clustering." }
+      score_mean_abs_movement_before:
+        { value: 0.67, provenance: doc_backed, renderable: true,
+          note: "Measured repeated scoring runs before k=3 self-consistency." }
+      score_mean_abs_movement_after:
+        { value: 0.20, provenance: doc_backed, renderable: true,
+          note: "Measured repeated scoring runs after k=3 median aggregation." }
+      shortlist_threshold_flips_before:
+        { value: "2 of 30", provenance: doc_backed, renderable: true }
+      shortlist_threshold_flips_after:
+        { value: "1 of 30", provenance: doc_backed, renderable: true }
+      supported_model_providers:
+        { value: 3, provenance: counted, renderable: true,
+          note: "Claude CLI plus direct Gemini and OpenAI HTTP providers." }
+      audit_invariants:
+        { value: 14, provenance: doc_backed, renderable: true,
+          note: "M7 audit suite count documented in docs/ROADMAP.md." }
+      crawl4ai_live_resolutions:
+        { value: 0, provenance: doc_backed, renderable: false,
+          note: "Tier-2 browser ran during the 2026-09-08 ingestion but no render cleared the content-quality gate; never claim a live yield improvement." }
+      completed_tailored_shortlist:
+        { value: null, provenance: none, renderable: false,
+          note: "The full shortlisted set has not been rendered and approved; never imply end-to-end batch completion." }
+
+    bullets:
+
+      - id: rft_b01_ingestion_scale
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Surfaced 164 qualifying US early-career roles from a seven-day discovery
+            window by building a deterministic Python ingestion pipeline that
+            discovered 3,212 listings across three trackers, inserted 3,176 new
+            records, and resolved 2,019 current and backlog job descriptions in a
+            1 hour 43 minute live run.
+          medium: >-
+            Surfaced **164 qualifying US early-career roles** from a seven-day
+            discovery window by building a deterministic Python pipeline that
+            discovered 3,212 listings, inserted 3,176 records, and resolved
+            **2,019 current and backlog job descriptions** in 1 hour 43 minutes.
+          short: >-
+            Surfaced 164 qualifying roles in a run that discovered 3,212 listings
+            and resolved 2,019 current and backlog job descriptions.
+        evidence:
+          - "review/2026-09-08-ingest/REPORT.md sections 3, 4, and 6: run 22 timing, 3,212 discovered, 3,176 inserted, 2,019 resolved, and 164 qualifying"
+          - "src/run_ingest.py: orchestrates discovery, persistence, resolution, eligibility, liveness, audit, and digest generation"
+        keywords_hit: ["Python", "data pipeline", "workflow orchestration", "job search automation"]
+        defense: ""
+        interview_risk: |
+          Say "seven-day discovery window", not "all posted in the last seven
+          days". Only 86 had confirmed posting dates in the window; 78 had an
+          unknown posting date and were first discovered during it. The 2,019
+          resolutions include existing July backlog, not only the 3,176 rows newly
+          inserted in September. This bullet reports pipeline throughput, not
+          unique employers or applications sent.
+
+      - id: rft_b02_eligibility_engine
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Filtered 1,766 ineligible listings through a typed two-stage policy
+            engine spanning country, work authorization, opportunity type, start
+            window, role family, and seniority, preserving the full job description
+            and an auditable rejection reason for every decision.
+          medium: >-
+            Filtered **1,766 ineligible listings** through a typed two-stage policy
+            engine spanning location, work authorization, role family, seniority,
+            opportunity type, and start date while preserving an **auditable reason**
+            for every decision.
+          short: >-
+            Filtered 1,766 listings through typed eligibility gates while preserving
+            the source job description and an auditable rejection reason.
+        evidence:
+          - "review/2026-09-08-ingest/REPORT.md sections 4 and 8: 1,766 filtered with exact reason breakdown"
+          - "src/eligibility.py and src/prefilter.py: pure typed classifier plus pre- and post-resolution gate adapters"
+          - "config/eligibility.yaml and config/location_taxonomy.yaml: validated business policy and vocabulary"
+        keywords_hit: ["rules engine", "schema validation", "data pipeline", "Python"]
+        defense: ""
+        interview_risk: |
+          This is deterministic policy classification, not a learned ranking
+          model. Be ready to explain the difference between a hard eligibility
+          gate and the later LLM fit score, and why sponsorship silence passes
+          while explicit no-sponsorship language fails.
+
+      - id: rft_b03_resolution_runtime
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Engineered a pluggable job-description resolution layer for Greenhouse,
+            Lever, Ashby, Workday, Amazon Jobs, and Jobright, combining structured
+            API adapters with quality-gated generic and browser fallbacks, per-host
+            throttling, typed failure outcomes, and a run-scoped circuit breaker.
+          medium: >-
+            Engineered a **pluggable ATS resolution layer** across Greenhouse,
+            Lever, Ashby, Workday, Amazon Jobs, and Jobright with quality-gated
+            fallbacks, per-host rate limiting, typed failures, and a
+            **run-scoped browser circuit breaker**.
+          short: >-
+            Built pluggable ATS resolvers with content-quality gates, per-host
+            throttling, typed failures, and circuit-broken browser fallback.
+        evidence:
+          - "src/resolve/: router and dedicated Greenhouse, Lever, Ashby, Workday, Amazon Jobs, Jobright, generic, wrapper, and browser modules"
+          - "src/resolve/outcomes.py and src/resolve/tier2.py: typed orchestration outcomes and run-scoped browser lifecycle"
+          - "docs/ARCHITECTURE.md sections 6.1-6.5: implemented routing, throttling, fallback, and runtime-hardening contracts"
+        keywords_hit: ["REST API", "HTTP", "circuit breaker", "rate limiting", "fault tolerance"]
+        defense: ""
+        interview_risk: |
+          Do not describe every route as an official ATS API. The Workday endpoint
+          is unofficial and defensively parsed, Jobright can yield aggregator
+          summaries, and generic/browser resolution is heuristic. The live
+          September run resolved all 2,019 successful rows through tier 1; browser
+          fallback produced zero accepted rows.
+
+      - id: rft_b04_idempotent_lifecycle
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Designed an idempotent SQLite lifecycle from discovery through
+            application review, enforcing forward-only state transitions, durable
+            insert-before-checkpoint ordering, collision-safe posting identities,
+            bounded retry accounting, compare-and-set remediation, and dead-link
+            liveness checks.
+          medium: >-
+            Designed an **idempotent SQLite lifecycle** with forward-only state
+            transitions, durable insert-before-checkpoint ordering, collision-safe
+            posting identities, bounded retries, compare-and-set remediation, and
+            **dead-link liveness checks**.
+          short: >-
+            Designed an idempotent SQLite state machine with atomic checkpoints,
+            collision-safe identities, bounded retries, and liveness checks.
+        evidence:
+          - "src/db.py: lifecycle schema, idempotent migrations, state transitions, collision keys, compare-and-set closures, and read-only tailoring queries"
+          - "src/discover/base.py and src/run_ingest.py: pending checkpoints committed only after durable database insertion"
+          - "src/freshness.py: repost detection, reopen handling, and liveness rechecks"
+        keywords_hit: ["SQLite", "state machine", "idempotency", "transactional systems", "fault tolerance"]
+        defense: ""
+        interview_risk: |
+          Idempotency has narrowly documented exceptions for run-ledger rows,
+          legitimate retries, and last-seen/repost counters. Never say a second
+          run performs literally zero writes. Explain the invariant as no duplicate
+          jobs and no unintended business-state changes.
+
+      - id: rft_b05_duplicate_clustering
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Reduced 164 qualifying database rows to 154 non-overlapping scoring
+            objects by clustering within each company on exact content hashes,
+            normalized titles, and 5-word-shingle Jaccard similarity at a 0.85
+            threshold while preserving every source row id for transactional import.
+          medium: >-
+            Reduced **164 qualifying rows to 154 scoring objects** using exact
+            content hashes, normalized titles, and **5-word-shingle Jaccard
+            clustering**, preserving complete source-row lineage for score import.
+          short: >-
+            Clustered 164 qualifying rows into 154 scoring objects using content
+            hashes and Jaccard similarity while preserving source-row lineage.
+        evidence:
+          - "scripts/export_batch.py: _cluster_rows combines content hash, normalized title, and Jaccard similarity with a 0.85 threshold"
+          - "review/2026-09-08-ingest/REPORT.md sections 6 and 9: 164 qualifying rows and the regenerated 154-object fresh batch"
+          - "src/textsim.py: normalized text, SHA-256 content hashing, 5-word shingles, and Jaccard similarity"
+        keywords_hit: ["deduplication", "content hashing", "Jaccard similarity", "data pipeline"]
+        defense: ""
+        interview_risk: |
+          Clustering runs only within the same normalized company. It is designed
+          to avoid duplicate scoring, not to prove that two postings are legally or
+          organizationally the same requisition. Row ids remain attached so every
+          clustered decision can be imported back to its source rows.
+
+      - id: rft_b06_scoring_stability
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Cut mean absolute LLM score movement from 0.67 to 0.20 and shortlist
+            threshold flips from 2 of 30 to 1 of 30 by scoring six-role chunks three
+            times, aggregating median scores and majority-vote resume variants, then
+            validating row coverage before transactional SQLite import.
+          medium: >-
+            Cut mean absolute LLM score movement from **0.67 to 0.20** by scoring
+            six-role chunks three times and aggregating median scores and
+            majority-vote variants before **schema-validated SQLite import**.
+          short: >-
+            Reduced mean LLM score movement from 0.67 to 0.20 with three-pass
+            self-consistency, median aggregation, and validated score import.
+        evidence:
+          - "docs/superpowers/reports/2026-07-16-project-progress-errors-and-tailoring-forecast.md section 5: measured 0.67 to 0.20 movement and threshold-flip reduction"
+          - "scripts/score_batch.py: CHUNK_SIZE=6, SELF_CONSISTENCY_K=3, median score and majority-vote variant aggregation"
+          - "scripts/import_scores.py: strict schema, row-coverage validation, and transactional database update"
+        keywords_hit: ["large language models", "LLM", "model evaluation", "schema validation", "SQLite"]
+        defense: ""
+        interview_risk: |
+          This reduces run-to-run instability but does not establish ranking
+          accuracy. The measured comparison covered 30 jobs, and one threshold
+          flip remained after self-consistency. Do not call the scorer deterministic.
+
+      - id: rft_b07_model_authority_boundary
+        claim_type: verified
+        priority: 1
+        phrasings:
+          long: >-
+            Contained external models behind a least-authority text-in/text-out
+            boundary with no database or repository access, keeping prompt
+            construction, schema validation, immutable trace capture, and every
+            filesystem or SQLite write inside deterministic Python wrappers.
+          medium: >-
+            Contained LLMs behind a **least-authority text-in/text-out boundary**
+            with no database or repository access, while deterministic Python owned
+            schema validation, trace capture, and **every filesystem and SQLite write**.
+          short: >-
+            Isolated LLMs behind a tool-free text boundary while deterministic code
+            owned validation, traces, and all database and filesystem writes.
+        evidence:
+          - "scripts/score_batch.py module contract: prompt content embedded directly; nested scorer has zero filesystem authority"
+          - "src/tailor/invoke.py and src/tailor/providers.py: tool-disabled Claude invocation and direct tool-free Gemini/OpenAI HTTP calls"
+          - "src/llm_trace.py: wrapper-owned immutable invocation traces with prompt hashes and raw output"
+        keywords_hit: ["LLM orchestration", "least privilege", "structured output", "prompt injection defense"]
+        defense: ""
+        interview_risk: |
+          The trace payload intentionally stores model inputs and raw outputs under
+          gitignored data/traces. Do not claim those traces are anonymized. The
+          security property is authority isolation, not automatic privacy redaction.
+
+      - id: rft_b08_tailoring_orchestration
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Implemented a resumable resume-tailoring workflow spanning requirement
+            extraction, company positioning, evidence selection, bounded terminology
+            alignment, deterministic lint, independent LLM critique, one-page LaTeX
+            rendering, and a fingerprint-bound human review packet.
+          medium: >-
+            Implemented a **resumable, fingerprint-bound tailoring workflow** across
+            requirement extraction, evidence selection, bounded alignment,
+            deterministic lint, independent critique, **one-page LaTeX rendering**,
+            and human review.
+          short: >-
+            Implemented a resumable tailoring workflow with evidence selection,
+            bounded edits, independent critique, one-page rendering, and review.
+        evidence:
+          - "src/tailor/pilot.py: resumable S1, S0, S2, S3, G2, render, and G3 orchestration with per-stage manifests"
+          - "src/tailor/alignment_view.py and src/tailor/artifacts.py: canonical projections, SHA-256 fingerprints, and atomic JSON artifacts"
+          - "src/render/tailored.py, src/render/latex.py, and src/render/l7.py: deterministic projection, PDF generation, and post-render checks"
+        keywords_hit: ["workflow orchestration", "LLM orchestration", "LaTeX", "human in the loop", "idempotency"]
+        defense: ""
+        interview_risk: |
+          The committed lane is technically implemented, but its constrained
+          terminology-edit contract did not consistently produce the desired
+          STAR/XYZ writing quality. Do not say it fully automated recruiter-ready
+          resumes across the shortlist. The newer draft-audit-repair lane remains
+          uncommitted local work until separately preserved and reviewed.
+
+      - id: rft_b09_jd_provenance
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Prevented unverified and aggregator-written job descriptions from
+            entering resume generation by binding exact JD content hashes, source
+            and ATS URLs, database metadata or user attestation, and canonical
+            provenance fingerprints into fail-closed run manifests.
+          medium: >-
+            Enforced a **fail-closed JD provenance boundary** that binds content
+            hashes, source and ATS metadata, and database verification or user
+            attestation into each run, blocking **aggregator summaries and manifest drift**.
+          short: >-
+            Bound JD hashes and source evidence into fail-closed manifests,
+            preventing aggregator summaries or unverified text from being tailored.
+        evidence:
+          - "src/tailor/provenance.py: typed provenance states, canonical fingerprints, content hashes, and database verification"
+          - "src/tailor/lane.py: manifest v2 binds the verified provenance fingerprint to every file-fed run"
+          - "tests/tailor/test_provenance.py and tests/tailor/test_lane.py: tampering, mismatch, and fail-closed cases"
+        keywords_hit: ["data provenance", "SHA-256", "schema validation", "security", "auditability"]
+        defense: ""
+        interview_risk: |
+          User attestation establishes who supplied the official copy and what was
+          attested; it does not independently prove the employer authored the text.
+          Database State A is stronger because it is checked against an ATS-quality
+          row. Explain the distinction rather than calling both states verified.
+
+      - id: rft_b10_atomic_publication
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Made shortlist and JD publication crash-consistent through immutable
+            generation directories, stable symlink indirection, a single atomic
+            pointer swap, destination-collision refusal, staged sidecars, and
+            filesystem-level failure injection across every commit boundary.
+          medium: >-
+            Made exports **crash-consistent** with immutable generations, stable
+            symlink indirection, and a **single atomic pointer swap**, backed by
+            collision refusal and filesystem-level failure-injection tests.
+          short: >-
+            Built crash-consistent exports with immutable generations, stable
+            indirection, one atomic commit point, and failure-injection tests.
+        evidence:
+          - "scripts/export_shortlist.py: generation directories, current pointer, compatibility indirections, and os.replace commit point"
+          - "scripts/tailor_now.py export-jd: collision refusal, hidden temporary files, validation, and atomic installation"
+          - "tests/tailor/test_provenance.py and tests/test_tailor_now_cli.py: multi-stage publication and crash-injection coverage"
+        keywords_hit: ["atomic operations", "transactional publication", "fault tolerance", "failure injection", "Python"]
+        defense: ""
+        interview_risk: |
+          Filesystems do not provide a general multi-file atomic transaction. The
+          design creates one externally visible commit point through indirection or
+          installs the sidecar before the final JD path. Describe the achieved
+          visible-state invariant, not universal filesystem atomicity.
+
+      - id: rft_b11_multi_provider
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Built a multi-provider model boundary for Claude, Gemini, and OpenAI,
+            normalizing tool-free invocation, credential preflight, bounded error
+            diagnostics, strict response extraction, provider/model trace labels,
+            and prompt-injection authority canaries behind one typed interface.
+          medium: >-
+            Built one **typed model interface for Claude, Gemini, and OpenAI** with
+            tool-free invocation, credential preflight, bounded diagnostics,
+            strict response extraction, trace labels, and **authority-canary tests**.
+          short: >-
+            Unified Claude, Gemini, and OpenAI behind a tool-free typed interface
+            with credential checks, bounded diagnostics, and authority canaries.
+        evidence:
+          - "src/tailor/providers.py: Provider and ModelCommand contracts, safe command construction, credential checks, and authority canary evaluation"
+          - "src/tailor/invoke.py: Claude subprocess plus direct Gemini and OpenAI HTTP invocation adapters"
+          - "tests/tailor/test_providers.py and tests/tailor/test_invoke.py: deterministic provider, security, and error-path coverage"
+        keywords_hit: ["Claude", "Gemini", "OpenAI", "REST API", "LLM orchestration", "security"]
+        defense: ""
+        interview_risk: |
+          Multi-provider support means a shared execution contract, not identical
+          output quality or feature parity. Claude uses a locked-down CLI process;
+          Gemini and OpenAI use direct HTTP APIs. Live provider quality still
+          depends on the selected model and prompt contract.
+
+      - id: rft_b12_audit_framework
+        claim_type: verified
+        priority: 2
+        phrasings:
+          long: >-
+            Implemented a 14-invariant audit framework covering source liveness,
+            resolver health, duplicate leakage, content purity, eligibility drift,
+            state-machine legality, referential integrity, LLM traceability,
+            prompt isolation, score integrity, and stale-shortlist detection.
+          medium: >-
+            Implemented a **14-invariant audit framework** spanning source and
+            resolver health, duplicate leakage, state legality, eligibility drift,
+            LLM traceability, prompt isolation, score integrity, and
+            **stale-shortlist detection**.
+          short: >-
+            Built a 14-invariant audit suite for source health, data integrity,
+            lifecycle legality, LLM traces, prompt isolation, and score quality.
+        evidence:
+          - "src/audit/: deterministic source, export, database, and LLM invariant modules"
+          - "scripts/audit.py: audit CLI and structured JSON report generation"
+          - "docs/ROADMAP.md Phase 1 and docs/SELF_HEALING.md: 14-invariant contract and operational response policy"
+        keywords_hit: ["observability", "data quality", "auditability", "schema validation", "reliability"]
+        defense: ""
+        interview_risk: |
+          The audit detects and reports degradation; it does not autonomously repair
+          every failure. The 2026-09-08 live audit correctly failed on known resolver
+          coverage and missing historical traces. Call it self-monitoring or
+          fail-closed auditing, not a fully self-healing production service.
+
+      - id: rft_b13_research_banks
+        claim_type: verified
+        priority: 3
+        phrasings:
+          long: >-
+            Built versioned company and resume evidence banks with strict schemas,
+            source-quote anchoring, domain and privacy policy checks, duplicate
+            detection, canonical serialization, deterministic lookup, and atomic
+            promotion from staged research into approved corpora.
+          medium: >-
+            Built **versioned company and resume evidence banks** with strict
+            schemas, source-quote anchoring, privacy and domain checks, duplicate
+            detection, deterministic lookup, and **atomic corpus promotion**.
+          short: >-
+            Built validated company and resume evidence banks with quote anchoring,
+            privacy checks, duplicate detection, and atomic promotion.
+        evidence:
+          - "src/company_bank/: typed research bundles, source policy, validation, lookup, and atomic corpus importer"
+          - "src/resume_evidence/: outcome evidence model, privacy and attribution policy, duplicate detection, reporting, and atomic promotion"
+          - "scripts/company_bank.py and scripts/resume_evidence.py: deterministic operator CLIs"
+        keywords_hit: ["data provenance", "schema validation", "privacy", "deduplication", "knowledge base"]
+        defense: ""
+        interview_risk: |
+          These are offline evidence foundations, not a live retrieval-augmented
+          generation service. Company Bank research integration into tailoring and
+          a canonical resume-evidence corpus remain incomplete. Describe the
+          validation and storage system, not an end-user recommendation engine.
+
+      - id: rft_b14_agentic_discovery_design
+        claim_type: verified
+        priority: 4
+        phrasings:
+          long: >-
+            Designed a hybrid discovery control plane that confines agentic scouts
+            and bounded crawlers to versioned proposal artifacts, requiring
+            deterministic provenance, URL policy, content-quality, deduplication,
+            budget, and human-promotion gates before any candidate can reach SQLite.
+          medium: >-
+            Designed a **staged agentic discovery control plane** in which LLM and
+            crawler outputs remain proposals until deterministic provenance,
+            policy, quality, deduplication, budget, and **human-promotion gates** pass.
+          short: >-
+            Designed a staged agentic discovery plane with deterministic provenance,
+            policy, quality, budget, deduplication, and human approval gates.
+        evidence:
+          - "docs/ARCHITECTURE.md sections 4.5 and 5.4: approved hybrid discovery records, staging boundary, and acceptance gateway"
+          - "docs/superpowers/specs/2026-07-14-hybrid-discovery-design.md: versioned M9D control-plane design"
+        keywords_hit: ["agentic AI", "control plane", "data provenance", "human in the loop", "security"]
+        defense: ""
+        interview_risk: |
+          This is an architecture and design claim. M9D-0 checkpoint correctness is
+          complete, but M9D-1 through M9D-5, the scout, direct ATS watchlists, and
+          observation-ledger migration are not implemented. Never replace "designed"
+          with "built" or imply that an agent currently writes canonical jobs.
+
+      - id: rft_b15_budgeted_browser_backend
+        claim_type: verified
+        priority: 4
+        phrasings:
+          long: >-
+            Integrated a credit-bounded Firecrawl REST backend with reserve-before-use
+            accounting, response-based credit reconciliation, cooldown and budget
+            enforcement, deterministic content acceptance, and an exclusive backend
+            switch that prevents duplicate paid fetches.
+          medium: >-
+            Integrated a **credit-bounded Firecrawl REST backend** with reservation
+            and reconciliation accounting, cooldown and budget enforcement,
+            deterministic content gates, and an **exclusive backend switch** that
+            prevents duplicate paid fetches.
+          short: >-
+            Integrated a budget-aware Firecrawl backend with credit reconciliation,
+            cooldowns, deterministic acceptance, and no double-fetch fallback.
+        evidence:
+          - "src/firecrawl/client.py and src/firecrawl/budget.py: REST transport, reservation ledger, reconciliation, cooldown, and budget checks"
+          - "src/run_ingest.py _build_tier2_client: exactly one of Crawl4AI, Firecrawl, or off is constructed per run"
+          - "docs/ROADMAP.md M9F-0: offline verification plus one user-supervised live scrape smoke; feature remains disabled by default"
+        keywords_hit: ["REST API", "Firecrawl", "budget enforcement", "rate limiting", "fault tolerance"]
+        defense: ""
+        interview_risk: |
+          Firecrawl completed one transport-and-budget smoke and remains disabled by
+          default pending the M9F-1 bake-off. The smoke posting was dead and did not
+          exercise an accepted job description. Claim integration and accounting,
+          never improved resolution yield or production activation.
+
+    known_gaps:
+      - id: rft_gap_tailor2_uncommitted
+        severity: high
+        status: open
+        detail: >-
+          The newer LLM-first draft-audit-repair Tailor2 implementation exists only
+          as uncommitted files in a local worktree and has no commit, remote branch,
+          or durable Git history yet. The earlier M8L-1 implementation is likewise
+          uncommitted in a second worktree.
+        fix: >-
+          Preserve each lane independently on a non-main branch, exclude generated
+          traces and scratch scripts, then compare contracts and tests before
+          selecting one architecture. Do not claim either lane as shipped yet.
+      - id: rft_gap_tailoring_quality
+        severity: high
+        status: open
+        detail: >-
+          The committed constrained S3 lane emphasizes small terminology edits and
+          has not demonstrated consistently coherent STAR/XYZ bullet rewriting for
+          the full shortlist. The complete top-job set has not been rendered and
+          approved end to end.
+        fix: >-
+          Validate the selected draft-audit-repair lane on a small pilot set with
+          human review, preserve evidence fidelity, and record accepted outputs
+          before claiming automated recruiter-ready resume production.
+      - id: rft_gap_freshness_wording
+        severity: medium
+        status: open
+        detail: >-
+          Of the 164 qualifying roles from the 2026-09-08 run, only 86 had confirmed
+          posting dates inside the seven-day window; 78 had no posting date and were
+          merely discovered during that window.
+        fix: >-
+          Always say "seven-day discovery window" or "164 qualifying roles, including
+          86 confirmed fresh". Never say all 164 were posted in the prior seven days.
+      - id: rft_gap_browser_yield
+        severity: medium
+        status: open
+        detail: >-
+          Crawl4AI ran during the 2026-09-08 ingestion but zero browser-rendered
+          pages passed the content-quality gate. Firecrawl has only a one-credit
+          transport smoke and remains disabled by default.
+        fix: >-
+          Describe the browser and Firecrawl work as fallback architecture and
+          budget-safe integration. Do not claim improved live resolution yield until
+          a fixed-sample bake-off records accepted job descriptions.
+      - id: rft_gap_live_audit
+        severity: medium
+        status: open
+        detail: >-
+          The 2026-09-08 live audit reported failures for resolver coverage and
+          missing historical LLM traces. The audit framework worked by surfacing the
+          problems, but the live run was not globally green.
+        fix: >-
+          Say the system has fail-closed auditing and cite the findings it caught.
+          Do not call the entire live pipeline production-hardened or fully healthy.
 
   - id: peerchat_peer_discovery
     display_date: "Feb. 2026 - May 2026"

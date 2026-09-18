@@ -1,0 +1,171 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage[letterpaper,
+  left=0.20in, right=0.20in,
+  top=0.20in, bottom=0.20in
+]{geometry}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{1pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-4pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-4pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\setlist{itemsep=0pt, parsep=0pt, topsep=2pt, partopsep=0pt}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-1pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{center}
+    \textbf{\Huge \scshape Himanshu Jain} \\ \vspace{1pt}
+    \small 408-390-0164 $|$ \href{mailto:himanshu.jain@sjsu.edu}{\underline{himanshu.jain@sjsu.edu}} $|$
+    \href{https://www.linkedin.com/in/himanshu-jain-5203751b8/}{\underline{Linkedin}} $|$
+    \href{https://github.com/hjain3004}{\underline{GitHub}} $|$
+    \small San Jose, CA
+
+\end{center}
+
+\section{Education}
+\resumeSubHeadingListStart
+    \resumeSubheading
+      {San Jose State University}{San Jose, CA}
+      {Master of Science in Software Engineering}{Aug. 2025 - May 2027}
+    \resumeSubheading
+      {National Institute of Technology, Warangal}{Warangal, India}
+      {Bachelor of Technology in Computer Science and Engineering}{Aug. 2019 - May 2023}
+\resumeSubHeadingListEnd
+
+\section{Experience}
+\resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Software Engineering Intern\textnormal{ $|$ \emph{\small Python, FastAPI, SQLAlchemy, PostgreSQL, RabbitMQ}}}{June 2026 - August 2026}
+      {MalyTech}{}
+      \resumeItemListStart
+        \resumeItem{Built the \textbf{anti-corruption layer} of four adapter services between a commercial bank\textquotesingle{}s core and providers for telecom messaging, real-time transfers, identity verification, and AML screening, then the \textbf{Core onboarding service} orchestrating three of those four through one non-blocking API, five asynchronous Python microservices in all.}
+        \resumeItem{Engineered an \textbf{idempotent transfer submission engine} using atomic PostgreSQL reservations and payload hashing, ensuring eight concurrent requests produced \textbf{exactly one downstream provider call}.}
+        \resumeItem{Designed a \textbf{fail-closed AML sanctions gateway} that returns a typed error instead of a false clear on any backend fault, serving both REST/JSON and legacy SOAP/XML through shared orchestration and hardened with \textbf{credential isolation, PII redaction, and XML-injection defenses}.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Software Developer\textnormal{ $|$ \emph{\small Java, Spring Boot, Kafka, Elasticsearch, OpenShift}}}{July 2023 - June 2025}
+      {Amdocs Ltd.}{}
+      \resumeItemListStart
+        \resumeItem{\textbf{Cut idle Kafka topic sprawl by 70\% and reclaimed \textasciitilde{}80\% of empty DLQ partitions} by consolidating 862 per-consumer dead-letter topics across 11 deployments into one shared DLQ per subdomain, delivered through a feature-flagged, zero-downtime Helm rollout.}
+        \resumeItem{Enforced \textbf{tenant data isolation} by co-building a Java row-level entitlement library that translated JWT claims into Couchbase N1QL and Elasticsearch query predicates, pre-filtering rows and failing closed with HTTP 403.}
+        \resumeItem{\textbf{Shortened issue-resolution time by \textasciitilde{}60\%} by replacing multi-service log correlation with a single filtered query, building an append-only Kafka and Elasticsearch audit trail that indexed actor-attributed lifecycle events.}
+        \resumeItem{\textbf{Reduced production data footprint by \textasciitilde{}40\% and query latency by \textasciitilde{}25\%} by implementing policy-driven retention across three microservices, combining REST lifecycle APIs with Kafka archival under archive-before-delete ordering.}
+        \resumeItem{\textbf{Lowered manual end-to-end test effort by \textasciitilde{}50\% and cross-service defects by \textasciitilde{}40\%} by automating Postman and Newman suites with JSON-schema validation in Jenkins to catch contract drift at build time.}
+      \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+\section{Projects}
+\resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\textbf{ResumeFinetune - Agentic Job Intelligence Platform} $|$ \emph{Python, Agentic AI, LLM Orchestration}}{Jul. 2026 - Present}
+      \resumeItemListStart
+        \resumeItem{Discovered 3,212 postings and resolved \textbf{2,019 job descriptions} in a 1-hour-43-minute run through a deterministic Python pipeline, surfacing 164 qualifying early-career roles from a seven-day discovery window.}
+        \resumeItem{\textbf{Cut mean LLM scoring drift from 0.67 to 0.20} by running three-pass self-consistency scoring with median aggregation, then validating output schemas before importing results into the production database.}
+        \resumeItem{Engineered a resumable agentic workflow that turns a job description into an \textbf{evidence-grounded resume draft} through typed stage contracts, deterministic claim validation, an independent LLM review pass, and a human approval gate.}
+      \resumeItemListEnd
+
+    \resumeProjectHeading
+      {\textbf{Fake Review Detection on Yelp} $|$ \emph{Python, PySpark, PyTorch, Transformers}}{Feb. 2026 - Apr. 2026}
+      \resumeItemListStart
+        \resumeItem{Processed 608K Yelp reviews through a \textbf{PySpark ETL}, deriving 260K reviewer and 5K seller behavioral profiles into partitioned Delta Lake tables validated by automated quality checks.}
+        \resumeItem{Fine-tuned a DeBERTa transformer on 423K labeled reviews using reviewer-disjoint data splits to prevent leakage, achieving \textbf{0.93 ROC-AUC and 0.84 macro-F1} on held-out test data.}
+      \resumeItemListEnd
+
+    \resumeProjectHeading
+      {\textbf{Campus Marketplace} $|$ \emph{Java 21, Spring Boot, PostgreSQL}}{Sep. 2025 - Dec. 2025}
+      \resumeItemListStart
+        \resumeItem{Built the backend for a campus marketplace as primary developer on a three-person team, delivering Java 21 and Spring Boot services over \textbf{Flyway-managed PostgreSQL} migrations.}
+      \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{AI and Machine Learning}: Agentic AI, LLM Orchestration, LLM Evaluation, Prompt Engineering, Structured Outputs, Human-in-the-Loop Systems \\
+     \textbf{Languages}: Java, Python, C++, SQL \\
+     \textbf{Backend and Data}: Spring Boot, FastAPI, PostgreSQL, Apache Kafka, RabbitMQ, Elasticsearch, PySpark, PyTorch \\
+     \textbf{Developer Tools}: Jenkins, Docker, Git/GitHub, Postman, OpenShift, SonarQube
+    }}
+ \end{itemize}
+
+\end{document}
