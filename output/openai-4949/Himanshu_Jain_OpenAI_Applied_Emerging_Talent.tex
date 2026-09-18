@@ -39,8 +39,8 @@
 \setlength{\tabcolsep}{0in}
 
 \titleformat{\section}{
-  \vspace{-6pt}\scshape\raggedright\large
-}{}{0em}{}[\color{black}\titlerule \vspace{-6pt}]
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
 \pdfgentounicode=1
 
@@ -51,11 +51,11 @@
 }
 
 \newcommand{\resumeSubheading}[4]{
-  \vspace{0pt}\item
+  \vspace{1pt}\item
     \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
       \textbf{#1} & #2 \\
       \textit{\small#3} & \textit{\small #4} \\
-    \end{tabular*}\vspace{-5pt}
+    \end{tabular*}\vspace{-4pt}
 }
 
 \newcommand{\resumeSubSubheading}[2]{
@@ -69,19 +69,19 @@
     \item
     \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
       \small#1 & #2 \\
-    \end{tabular*}\vspace{-5pt}
+    \end{tabular*}\vspace{-4pt}
 }
 
 \newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
 
 \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
 
-\setlist{itemsep=0pt, parsep=0pt, topsep=1pt, partopsep=0pt}
+\setlist{itemsep=0pt, parsep=0pt, topsep=2pt, partopsep=0pt}
 
 \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
-\newcommand{\resumeSubHeadingListEnd}{\end{itemize}\vspace{-3pt}}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}\vspace{-1pt}}
 \newcommand{\resumeItemListStart}{\begin{itemize}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-2pt}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-1.5pt}}
 
 %-------------------------------------------
 %%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -128,7 +128,6 @@
         \resumeItem{\textbf{Shortened issue-resolution time by \textasciitilde{}60\%} by replacing multi-service log correlation with a single filtered query, building an append-only Kafka and Elasticsearch audit trail that indexed actor-attributed lifecycle events.}
         \resumeItem{\textbf{Reduced production data footprint by \textasciitilde{}40\% and query latency by \textasciitilde{}25\%} by implementing policy-driven retention across three microservices, combining REST lifecycle APIs with Kafka archival under archive-before-delete ordering.}
         \resumeItem{\textbf{Lowered manual end-to-end test effort by \textasciitilde{}50\% and cross-service defects by \textasciitilde{}40\%} by automating Postman and Newman suites with JSON-schema validation in Jenkins to catch contract drift at build time.}
-        \resumeItem{\textbf{Raised unit-test coverage to 90\%} across four microservices with JUnit 5, Mockito, and WireMock, resolving \textasciitilde{}500 SonarQube findings behind enforced build-time quality gates.}
       \resumeItemListEnd
 
 \resumeSubHeadingListEnd
@@ -143,7 +142,6 @@
         \resumeItem{\textbf{Cut mean LLM scoring movement from 0.67 to 0.20} using three-pass self-consistency and median aggregation, then enforced schema and row-coverage validation before \textbf{transactional score import}.}
         \resumeItem{Orchestrated a resumable, evidence-grounded tailoring workflow that constrained generated claims to \textbf{approved profile evidence} and routed drafts through deterministic validation, a separate LLM review, and human approval.}
         \resumeItem{Isolated LLMs behind a \textbf{least-authority, tool-free text boundary} with no repository or database access, while deterministic Python owned validation, trace capture, and \textbf{every filesystem and database write}.}
-        \resumeItem{Enforced \textbf{fail-closed JD provenance} by binding content hashes, source and ATS metadata, and database verification or user attestation into each run, blocking unverified aggregator summaries and manifest drift.}
       \resumeItemListEnd
 
     \resumeProjectHeading

@@ -17,7 +17,7 @@ only LaTeX escaping applied.
 Five bullets were revised on top of the original draft; everything else on the résumé was
 unchanged from commit `faa29c1`.
 
-## Revision 3 changes (this cycle — density maximization)
+## Revision 3 changes (density maximization)
 
 The user explicitly overrode the prior whitespace-preservation guidance: "maximize
 defensible, recruiter-relevant content" rather than stop at a conservative bullet count.
@@ -32,6 +32,35 @@ Changes this cycle:
   tightened once, safely, and verified with no overlap.
 - The Amdocs title ("Software Developer" -> "Software Engineer") requested in the same
   message was **held, not applied** — see "Title change held" below.
+- This state (18 bullets) was pushed as commit `afe3572`.
+
+## Revision 4 changes (readability correction — this cycle)
+
+The user reported the pushed Revision 3 result directly: "format become a little messed
+up. spacing and all is really less between lines." This is a legibility complaint from the
+actual reader, weighted above the density-maximization instruction from Revision 3 — a
+résumé nobody can comfortably scan is not "recruiter-relevant content," regardless of how
+well-sourced the bullets are. Changes:
+- All vertical-spacing macro values reverted to within 0.5-1pt of the original template
+  defaults (the aggressive Revision 3 tightening — `\resumeItem` at -3pt trailing space,
+  `\setlist topsep=1pt`, `\resumeItemListEnd` at -2pt — is gone; current values are
+  `\resumeItem` -3pt *only* — one increment tighter than the -2pt original, needed to keep
+  one page — with `\resumeSubheading`, `\resumeProjectHeading`, section title spacing, and
+  `\setlist topsep` all restored to the exact original template values, plus a 0.5-1pt
+  nudge on the two list-end macros).
+- **Removed `rft_b09_jd_provenance`** (5th ResumeFinetune bullet, the lowest-priority
+  Revision 3 addition) to make room for comfortable spacing.
+- **Removed `am_b07_code_quality_gates`** (6th Amdocs bullet, the next-lowest-priority
+  Revision 3 addition) for the same reason.
+- PeerChat (2 bullets, both required by explicit instruction) and `rft_b07` (the
+  highest-priority Revision 3 addition) were both kept.
+- Result: 16 bullets (3 MalyTech + 5 Amdocs + 4 ResumeFinetune + 2 Fake Review Detection +
+  2 PeerChat), back within the originally-stated 16-17 target range, at comfortable,
+  near-original spacing.
+
+This is a legibility-over-density trade-off made in direct response to reader feedback,
+not a reversal of the Revision 3 instruction's intent — PeerChat and the highest-priority
+ResumeFinetune addition (`rft_b07`) are both preserved.
 
 Final bullet count: 3 MalyTech + 6 Amdocs + 5 ResumeFinetune + 2 Fake Review Detection +
 2 PeerChat = **18 bullets**, one page, 11pt, 0.30in margins, zero LaTeX overflow.
@@ -82,7 +111,7 @@ Unchanged from rev. 1 — not in scope for this revision cycle.
 | Audit trail, ~60% issue-resolution time | `am_b03` | estimated (user-approved 2026-08-03) | as-is since rev. 1 |
 | Data retention, ~40% footprint / ~25% latency | `am_b04` | estimated (user-approved 2026-08-03) | as-is since rev. 1 |
 | Test automation, ~50% effort / ~40% defects | `am_b05` | estimated (user-approved 2026-08-03) | as-is since rev. 1 |
-| 90% unit-test coverage, JUnit 5/Mockito/WireMock, ~500 SonarQube findings | `am_b07` | verified | **restored (rev. 3)** — dropped in rev. 1 to meet the then-5-bullet cap; re-added as the 6th bullet under the rev. 3 density-maximization instruction. Wording follows the user's suggested rendering, changing "deployment quality gates" (rev. 1's phrasing, since this bullet wasn't rendered then) to "build-time quality gates," which is the more precise match to `am_b07.evidence`: "Jenkins quality gates failing builds on new-code coverage and new critical issues." |
+| *(dropped again, rev. 4)* 90% unit-test coverage, JUnit 5/Mockito/WireMock, ~500 SonarQube findings | `am_b07` | verified | Restored in rev. 3 as the 6th Amdocs bullet, **dropped again in rev. 4** to recover comfortable line spacing after the user reported the rev. 3 result read as cramped. Wording was drafted (build-time quality gates, matching `am_b07.evidence`'s "Jenkins quality gates failing builds on new-code coverage") and is preserved here in case it's wanted again with more page budget (e.g. if the Amdocs title question is resolved and other content is cut to compensate). |
 | *(dropped)* generic Order Management domain bullet | `am_b00` | verified | dropped in rev. 1, still dropped — weakest of the priority-1 Amdocs bullets, no metric |
 
 ## Projects — ResumeFinetune (listed first per instruction)
@@ -93,7 +122,7 @@ Unchanged from rev. 1 — not in scope for this revision cycle.
 | Cut LLM scoring movement 0.67->0.20, schema/row-coverage validation, transactional score import | `rft_b06_scoring_stability` | verified | **rewritten (rev. 2)** — rev. 1 ended with "importing results into the production database," which overstated what the evidence supports. Corrected to "enforced schema and row-coverage validation before transactional score import," tracing exactly to `rft_b06.evidence`: "scripts/import_scores.py: strict schema, row-coverage validation, and transactional database update." The bullet does not call the scorer deterministic and does not claim the metric proves ranking accuracy, per `rft_b06.interview_risk` ("This reduces run-to-run instability but does not establish ranking accuracy... Do not call the scorer deterministic"). |
 | Resumable evidence-grounded tailoring workflow, approved profile evidence, separate LLM review, human approval | `rft_b08_tailoring_orchestration` + `rft_b09_jd_provenance` (conceptual overlap; `rft_b09` gets its own full bullet in rev. 3, see below) | verified (both) | **rewritten (rev. 2)** — replaces rev. 1's version, which was still partially a stage inventory. "Resumable ... tailoring workflow" and "deterministic validation" trace to `rft_b08.evidence` ("src/tailor/pilot.py: resumable S1, S0, S2, S3, G2, render, and G3 orchestration with per-stage manifests"; the deterministic-lint step). "Approved profile evidence" combines `rft_b08`'s evidence-selection step with `rft_b09.evidence` ("src/tailor/provenance.py: typed provenance states, canonical fingerprints, content hashes, and database verification"). Internal stage names (S1/S0/S2/S3/G2) are not exposed, per instruction. |
 | Isolated LLMs behind least-authority tool-free boundary, no repo/database access, deterministic Python owns every write | `rft_b07_model_authority_boundary` | verified | **added (rev. 3)**, wording follows the user's suggested rendering almost verbatim. Traces to `rft_b07.evidence`: "scripts/score_batch.py module contract: prompt content embedded directly; nested scorer has zero filesystem authority," "src/tailor/invoke.py and src/tailor/providers.py: tool-disabled Claude invocation and direct tool-free Gemini/OpenAI HTTP calls," "src/llm_trace.py: wrapper-owned immutable invocation traces." Matches `rft_b07.medium` almost exactly ("Contained LLMs behind a least-authority text-in/text-out boundary with no database or repository access, while deterministic Python owned schema validation, trace capture, and every filesystem and SQLite write") — "database write" is used in place of "SQLite write" for generality; both are accurate since SQLite is the database in question. |
-| Fail-closed JD provenance, content hashes, source/ATS metadata, database verification or user attestation, blocks aggregator summaries | `rft_b09_jd_provenance` | verified | **added (rev. 3)** as its own full bullet (previously only contributed a concept to the rft_b08 bullet in rev. 2). Wording follows the user's suggested rendering, matching `rft_b09.medium` closely: "Enforced a fail-closed JD provenance boundary that binds content hashes, source and ATS metadata, and database verification or user attestation into each run, blocking aggregator summaries and manifest drift." "Unverified" was added before "aggregator summaries" for clarity; this is consistent with `rft_b09.interview_risk`'s distinction between attested-but-unverified and database-verified provenance states. |
+| *(dropped again, rev. 4)* Fail-closed JD provenance, content hashes, source/ATS metadata, database verification or user attestation, blocks aggregator summaries | `rft_b09_jd_provenance` | verified | Added in rev. 3 as a standalone 5th ResumeFinetune bullet, **dropped again in rev. 4** — it was the lowest-priority rev. 3 addition (added third of four candidates, after `rft_b07` and `am_b07`), so it was the first cut when restoring comfortable spacing. `rft_b09`'s concept (constraining claims to "approved profile evidence") still lives inside the rendered bullet 3 (`rft_b08`+`rft_b09` merge), so the provenance idea isn't entirely absent from the page, just not given its own full bullet. |
 
 ### Separate LLM review vs. a different auditor model
 
@@ -139,29 +168,35 @@ Unchanged from rev. 1, per instruction to keep the existing role-focused skills 
 | Backend and Data | Spring Boot, FastAPI, PostgreSQL, Apache Kafka, RabbitMQ, Elasticsearch, PySpark, PyTorch | Union of `tech.primary`/`tech.secondary` across MalyTech, Amdocs, and the two AI/ML projects actually rendered |
 | Developer Tools | Jenkins, Docker, Git/GitHub, Postman, OpenShift, SonarQube | Subset of `skills.developer_tools` retained only where a rendered bullet or entry's `keywords.exact` evidences it; dropped `Bitbucket`, `Maven`, `IntelliJ` as not evidenced by anything shown on this version |
 
-## Not used on this résumé (as of rev. 3)
+## Not used on this résumé (as of rev. 4)
 
 - `sepsis_early_warning`, `clinical_trial_platform` — not part of either base variant for this
   role and not raised in any instruction; still excluded.
-- `campus_marketplace` (`cm_b1` through `cm_b5`) — **removed entirely in rev. 3** per explicit
-  instruction, replaced by PeerChat.
+- `campus_marketplace` (`cm_b1` through `cm_b5`) — **removed entirely in rev. 3**, stays removed
+  in rev. 4, replaced by PeerChat.
 - `pc_b03_testing_rigor` (priority 2), `pc_b04_transport_consolidation` (priority 1 but
   `scoped`, not `verified`), `pc_b05_tofu_bootstrap` (priority 3) — PeerChat bullets not
   selected; `pc_b01`/`pc_b02` are the two strongest `verified` bullets, per instruction.
 - `am_b06_aws_ci_transition`, `am_b08_human_task_resilience` — priority-3 Amdocs bullets,
-  still excluded; `am_b00` also excluded (weakest priority-1 bullet, no metric). Amdocs is
-  now at 6 bullets (`am_b01`-`am_b05` + `am_b07`), the maximum reachable without the page
-  breaking, per the rev. 3 candidate-by-candidate compile-and-inspect process.
+  still excluded; `am_b00` also excluded (weakest priority-1 bullet, no metric). `am_b07`
+  was tried (rev. 3), then **dropped again in rev. 4** to restore comfortable spacing —
+  Amdocs is back at its original 5 bullets (`am_b01`-`am_b05`).
 - `int_b4` through `int_b9` — priority-2/3 MalyTech bullets, excluded by the fixed 3-bullet
   cap; `int_b1`/`int_b2`/`int_b3` are all priority-1.
 - `rft_b04_idempotent_lifecycle`, `rft_b05_duplicate_clustering`, `rft_b10_atomic_publication`
-  through `rft_b11_multi_provider` — ResumeFinetune bullets not selected; not attempted in the
-  rev. 3 candidate loop because the four higher-priority instructed candidates (`rft_b07`,
-  restored `am_b07`, `rft_b09`, then `rft_b12`) already reached the page's safe limit.
-- `rft_b12_audit_framework` — **attempted and rejected in rev. 3**; see "Candidate rejected"
-  above. ResumeFinetune is at 5 bullets (`rft_b01`+`rft_b02`+`rft_b03` merged into bullet 1,
-  `rft_b06`, `rft_b08`+`rft_b09`-concept merged into bullet 3, `rft_b07`, `rft_b09` as its own
-  bullet 5), the maximum reachable without overlap at the 0.30in margin floor.
+  through `rft_b11_multi_provider` — ResumeFinetune bullets not selected in rev. 3 and not
+  reconsidered in rev. 4 (rev. 4 only removed content, it didn't add new candidates).
+- `rft_b09_jd_provenance` — added as its own bullet in rev. 3, **dropped again in rev. 4** as
+  the lowest-priority rev. 3 addition, to restore comfortable spacing. Its core idea still
+  appears folded into bullet 3 (the `rft_b08`+`rft_b09`-concept merge).
+- `rft_b12_audit_framework` — attempted and rejected in rev. 3 for causing visible overlap;
+  not reconsidered in rev. 4 (there was even less page budget available after prioritizing
+  spacing over density).
 - `rft_b13_research_banks`, `rft_b14_agentic_discovery_design`, `rft_b15_budgeted_browser_backend`
-  — priority-3/4 ResumeFinetune bullets, not attempted (lower priority than the four
-  instructed candidates, and the page was already full by the time `rft_b12` was rejected).
+  — priority-3/4 ResumeFinetune bullets, never attempted.
+
+**Current ResumeFinetune bullet count: 4** (`rft_b01`+`rft_b02`+`rft_b03` merged into bullet
+1, `rft_b06` as bullet 2, `rft_b08`+`rft_b09`-concept merged into bullet 3, `rft_b07` as
+bullet 4). **Current Amdocs bullet count: 5** (`am_b01`-`am_b05`), matching the original
+rev. 1 selection exactly. **Current total: 16 bullets** (3 + 5 + 4 + 2 FRD + 2 PeerChat),
+one page, comfortable spacing, near-original template vertical rhythm.

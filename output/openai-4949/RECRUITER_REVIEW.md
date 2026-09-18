@@ -299,3 +299,39 @@ to the user in chat; not applied to the rendered résumé pending their answer.
 direct and disclosed consequence of the density-maximization instruction rather than
 defects, plus one held item (the Amdocs title) that is a fraud-risk question for the human,
 not a résumé-quality question a self-review can resolve alone.
+
+---
+
+## Revision 4 — Reader-Reported Correction
+
+The user read the actual pushed Revision 3 PDF and reported: "format become a little
+messed up. spacing and all is really less between lines." This is the exact "denser scan
+time" and "more 3-line bullets" trade-off flagged in the Revision 3 verdict above, and the
+reader's judgment on it is definitive in a way a self-review's own visual inspection is
+not — a self-review can confirm the absence of *overlap*, but "feels cramped" is a genuine
+readability judgment only a human reader makes reliably.
+
+Response: reverted the Revision 3 spacing tightening to within 0.5-1pt of the original
+template's values, and removed the two lowest-priority Revision 3 additions (`rft_b09`,
+`am_b07`) to make the room that reversal costs. Kept PeerChat's required two bullets and
+the highest-priority addition (`rft_b07`). Result: 16 bullets, one page, spacing visually
+confirmed comfortable (clear gaps between every bullet, entry, and section — see the
+rendered PNG).
+
+**Re-checking the two criteria Revision 3 flagged as trade-offs:**
+
+**Ten-second positioning / scan time.** Back to a scan length comparable to Revision 2
+(16 bullets vs. Revision 2's 14, Revision 3's 18). Passes cleanly, no longer just "passes
+with a named cost."
+
+**Sentence complexity.** Fewer 3-line bullets than Revision 3 (removing `rft_b09` and
+`am_b07` removes two of the six 3-line bullets Revision 3 had). Passes cleanly.
+
+Nothing else changed — technical credibility, naturalness, AI slop, ResumeFinetune value,
+the MalyTech bullet-1 fix, and skills taxonomy are all unaffected by a pure content
+removal plus spacing reversion, and were re-confirmed by re-reading the rendered PDF text
+and PNG rather than assumed unchanged.
+
+## Revision 4 overall verdict
+**PASS**, no remaining named trade-offs. The Amdocs title question remains open and
+unapplied, unchanged from Revision 3.
