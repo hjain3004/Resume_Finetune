@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0",
+  "dictionary_version": "1.0.0",
+  "description": "Standardized data dictionary and evaluation criteria for the 14 Tailor2 blind human review dimensions.",
+  "dimensions": {
+    "factual_trustworthiness": {
+      "name": "Factual Trustworthiness & Provenance",
+      "priority": "critical",
+      "description": "Strict fidelity to canonical profile facts. The resume must contain zero fabricated employers, dates, degrees, metrics, or technical mechanisms.",
+      "evaluation_focus": "Check if every bullet and skill claim is directly grounded in canonical experience. Watch for invented numbers, altered past job titles, or inflated scopes.",
+      "positive_indicators": [
+        "All metrics match verified profile claims or accepted tolerances",
+        "Previous job titles and company names are reproduced verbatim without alterations",
+        "Technical mechanisms describe realistic, defensible engineering work"
+      ],
+      "negative_indicators": [
+        "Fabrication of metrics not present in master profile (e.g., turning 'improved latency' into 'improved latency by 92%')",
+        "Unauthorized alteration of former job title (e.g., changing 'Software Developer' to 'Backend Engineer' or dropping 'Intern')",
+        "Attributing tools or systems to employers where the candidate never used them"
+      ]
+    },
+    "target_role_fit": {
+      "name": "Target Role Fit & Alignment",
+      "priority": "high",
+      "description": "Alignment with target job description requirements, core competencies, domain challenges, and tech stack.",
+      "evaluation_focus": "Assess whether the chosen bullets and highlighted strengths directly address the core challenges outlined in the JD.",
+      "positive_indicators": [
+        "Bullets prioritize experience most relevant to the target role's tech stack and domain",
+        "Professional summary and skills sections align cleanly with job requirements",
+        "Demonstrates direct experience solving problems similar to the target team's responsibilities"
+      ],
+      "negative_indicators": [
+        "Irrelevant experience emphasized at the expense of directly applicable work",
+        "Missing obvious table-stakes technologies explicitly demanded by the JD",
+        "Reads as a generic resume without tailoring to the target role"
+      ]
+    },
+    "recruiter_scan_quality": {
+      "name": "Recruiter Scan Quality (6-Second Test)",
+      "priority": "high",
+      "description": "Information architecture and visual skimmability for a fast recruiter scan.",
+      "evaluation_focus": "Determine if a recruiter can grasp candidate seniority, core stack, top achievements, and education within a 6-second initial scan.",
+      "positive_indicators": [
+        "Strong action verbs lead each bullet point",
+        "Key technologies and metrics are placed early in bullets or easy to spot",
+        "Clean, consistent hierarchy (Company, Title, Dates, Location, Bullets)"
+      ],
+      "negative_indicators": [
+        "Dense walls of text that cause cognitive fatigue",
+        "Passive sentence structures ('Responsible for...', 'Assisted with...')",
+        "Burying key accomplishments at the end of lengthy, unstructured paragraphs"
+      ]
+    },
+    "clarity": {
+      "name": "Clarity & Conciseness",
+      "priority": "high",
+      "description": "Clear, precise communication free from ambiguity, convoluted syntax, and wordiness.",
+      "evaluation_focus": "Evaluate sentence flow, grammatical precision, and whether complex technical ideas are expressed crisply.",
+      "positive_indicators": [
+        "Crisp phrasing that communicates maximum impact with minimal words",
+        "Flawless grammar and punctuation",
+        "Unambiguous technical descriptions"
+      ],
+      "negative_indicators": [
+        "Run-on sentences and convoluted clauses",
+        "Filler words that add length without technical substance",
+        "Vague hand-waving descriptions of technical contributions"
+      ]
+    },
+    "achievement_strength": {
+      "name": "Achievement & Impact Strength",
+      "priority": "high",
+      "description": "Emphasis on tangible technical and business outcomes rather than routine duty descriptions.",
+      "evaluation_focus": "Examine whether bullets demonstrate that the candidate delivered real value and measurable technical results.",
+      "positive_indicators": [
+        "Accomplishment-oriented structure (Accomplished [X], as measured by [Y], by doing [Z])",
+        "Clear business or system-level impact (throughput, reliability, cost, adoption)",
+        "Highlights engineering ownership and problem-solving"
+      ],
+      "negative_indicators": [
+        "Pure chore or task logs ('Wrote unit tests', 'Attended daily standups')",
+        "Effort described without any outcome or impact",
+        "Weak, passive impact statements"
+      ]
+    },
+    "metric_interpretability": {
+      "name": "Metric Interpretability & Credibility",
+      "priority": "high",
+      "description": "Quantifiable figures that make logical engineering sense and carry meaningful context.",
+      "evaluation_focus": "Verify that numbers and percentages are interpretable, plausible, and provide appropriate baseline or scale.",
+      "positive_indicators": [
+        "Contextualized metrics (e.g., 'reduced p99 latency from 320ms to 45ms')",
+        "Scale and volume indicators that demonstrate production complexity (e.g., 'processing 10M daily events')",
+        "Credible, defensible orders of magnitude"
+      ],
+      "negative_indicators": [
+        "Meaningless standalone percentages ('improved efficiency by 40%' without saying what improved)",
+        "Implausible or impossible metrics (e.g., 'achieved 1000x speedup' on standard CRUD endpoint)",
+        "Metric stacking without engineering substance"
+      ]
+    },
+    "interview_defensibility": {
+      "name": "Interview Defensibility",
+      "priority": "critical",
+      "description": "Whether claims can be vigorously defended under deep technical interrogation by senior interviewers.",
+      "evaluation_focus": "Determine if the candidate can explain trade-offs, architectures, edge cases, and failure modes for everything claimed.",
+      "positive_indicators": [
+        "Claims match standard engineering practices and architectures",
+        "Accurate terminology and architectural trade-offs reflect genuine hands-on experience",
+        "Defensible scope consistent with candidate's career level"
+      ],
+      "negative_indicators": [
+        "Buzzword dropping without coherent architectural context",
+        "Claims that suggest unrealistic senior architect authority for early-career projects",
+        "Superficial buzzword associations that fall apart under basic technical questioning"
+      ]
+    },
+    "mechanism_outcome_balance": {
+      "name": "Mechanism-Outcome Balance (How vs. What)",
+      "priority": "medium",
+      "description": "Equal balance between technical mechanisms (how the problem was solved) and outcomes (what was achieved).",
+      "evaluation_focus": "Check that bullets neither become pure implementation manuals nor pure management-summary fluff.",
+      "positive_indicators": [
+        "Specific mechanisms mentioned (e.g., 'partition key redesign', 'eBPF probe', 'connection pooling')",
+        "Clear causal link between the mechanism employed and the resulting performance/reliability outcome",
+        "Balanced narrative in each bullet"
+      ],
+      "negative_indicators": [
+        "Overly technical implementation details with zero indication of why it mattered",
+        "Fluffy executive statements with no technical mechanism mentioned ('Transformed cloud ecosystem')",
+        "Disconnected claims where the mechanism cannot logically produce the stated outcome"
+      ]
+    },
+    "redundancy": {
+      "name": "Redundancy & Repetition Avoidance",
+      "priority": "medium",
+      "description": "Efficient use of bullet space without repeating action verbs, technologies, or themes across jobs.",
+      "evaluation_focus": "Assess whether bullet points offer diverse evidence across the candidate's full skillset rather than repeating the same story.",
+      "positive_indicators": [
+        "Varied action verbs across all bullet openings",
+        "Each bullet demonstrates a distinct competency or architectural domain",
+        "Zero duplicate phrasing between summary, projects, and work history"
+      ],
+      "negative_indicators": [
+        "Opening 4+ bullets with 'Developed', 'Built', or 'Designed'",
+        "Repeating the exact same database optimization story in multiple roles",
+        "Redundant bullet points that rephrase the same achievement"
+      ]
+    },
+    "ai_slop": {
+      "name": "Freedom from AI Slop & Clichés",
+      "priority": "high",
+      "description": "Absence of stereotypical generative AI phrasing, hollow superlatives, and robotic cadence.",
+      "evaluation_focus": "Watch for LLM hallmarks like 'spearheaded', 'orchestrated seamless transitions', 'tapestry', 'testament to', and breathless corporate jargon.",
+      "positive_indicators": [
+        "Natural, authoritative engineering voice",
+        "Pragmatic, matter-of-fact tone",
+        "No hollow puffery or hyperbole"
+      ],
+      "negative_indicators": [
+        "Overused LLM tropes ('spearheaded multifaceted initiatives', 'leveraged cutting-edge synergies')",
+        "Unnatural uniform cadence across every single sentence",
+        "Overly dramatic descriptions of mundane software development tasks"
+      ]
+    },
+    "skills_credibility": {
+      "name": "Skills Section Credibility",
+      "priority": "medium",
+      "description": "Authentic, well-categorized technical skills that match the evidence presented in the experience bullets.",
+      "evaluation_focus": "Verify that listed technologies are backed up by actual project/work bullets and logically organized.",
+      "positive_indicators": [
+        "Clean, logical taxonomy (e.g., Languages, Frameworks, Cloud & Distributed Systems, Databases)",
+        "Every major claimed skill is corroborated by experience bullets",
+        "Focused, credible list rather than encyclopedic kitchen-sink dump"
+      ],
+      "negative_indicators": [
+        "Claiming 40+ technologies without bullet corroboration",
+        "Listing outdated or trivial tools alongside core systems (e.g., 'JSON', 'Eclipse', 'Notepad')",
+        "Mismatched categorization (e.g., listing PostgreSQL under Languages)"
+      ]
+    },
+    "visual_readability": {
+      "name": "Visual Readability & Typography",
+      "priority": "high",
+      "description": "Professional typesetting, clean spacing, comfortable margins, and elimination of awkward line wraps.",
+      "evaluation_focus": "Review layout cleanliness, bullet indentation, margins, font sizing, and ensure no orphaned words (widows) on trailing lines.",
+      "positive_indicators": [
+        "Comfortable vertical line spacing and section breaks",
+        "Balanced margins (neither cramped nor excessive)",
+        "Bullet points wrap cleanly without single-word runover lines (widows)"
+      ],
+      "negative_indicators": [
+        "Cramped text that strains reader eyes",
+        "Ragged line wraps leaving a solitary word on a second line",
+        "Inconsistent indentation or misaligned date/location columns"
+      ]
+    },
+    "page_utilization": {
+      "name": "Page Utilization & Budget Compliance",
+      "priority": "critical",
+      "description": "Exact 1-page budget compliance without spilling onto page 2 or leaving gaping bottom voids.",
+      "evaluation_focus": "Check that the resume fills the single-page canvas naturally (85-98% vertical fill) without overflowing.",
+      "positive_indicators": [
+        "Strictly 1 page with no spillover lines",
+        "Natural bottom margin (0.4in to 0.75in remaining whitespace)",
+        "Balanced density throughout all sections"
+      ],
+      "negative_indicators": [
+        "Spilling 1-3 lines onto a second page",
+        "Massive empty gap (more than 25% of page) at the bottom of the page",
+        "Extreme vertical squishing used to artificially force content onto 1 page"
+      ]
+    },
+    "overall_preference": {
+      "name": "Overall Hiring Preference",
+      "priority": "critical",
+      "description": "The ultimate bottom-line hiring decision: which resume candidate would you submit to the hiring manager?",
+      "evaluation_focus": "Weigh factual trustworthiness, target fit, recruiter appeal, and visual polish into a single definitive choice.",
+      "positive_indicators": [
+        "Select candidate 'A' or 'B' based on superior overall candidate presentation",
+        "Select 'TIE' only if both resumes are virtually indistinguishable in quality and credibility",
+        "Select 'NEITHER' if both resumes exhibit fatal factual flaws or fail minimum acceptable hiring bar"
+      ],
+      "negative_indicators": [
+        "Selecting a candidate that contains fatal factual errors or resume fraud",
+        "Ignoring severe visual rendering failures in favor of content"
+      ]
+    }
+  }
+}
