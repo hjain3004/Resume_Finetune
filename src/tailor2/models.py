@@ -192,6 +192,10 @@ class Tailor2Manifest:
     # scores and reasons in the manifest" instruction.
     dimension_scores: dict[str, dict[str, Any]] = field(default_factory=dict)
     title_resolutions: list[dict[str, Any]] = field(default_factory=list)
+    selection_schema_version: str = "1.0"
+    selection_enabled: bool = False
+    selection_artifacts: dict[str, Any] = field(default_factory=dict)
+    unresolved: list[str] = field(default_factory=list)
 
 
 def parse_draft_response(raw_text: str) -> DraftResponse:

@@ -214,13 +214,12 @@ This is a first slice, not the complete system the task sketches. Deferred,
 each because it is a substantial independent feature rather than a small
 addition to what's here:
 
-1. **True multi-candidate generation and ranking.** The task describes
-   "generate multiple valid candidates, rank them, select the strongest."
-   This slice implements the *consequence* of that policy (best-safe-draft
-   fallback when a repair breaks a structural invariant — see
-   `_audit_repair_cycle`'s `validate_draft_response` exception handler) but
-   does not request N candidates from the drafter or build a ranking
-   scorer. A single draft per run, as before.
+1. **Rendered multi-candidate selection.** The bounded offline selection layer
+   now requests a small configurable candidate set, applies deterministic
+   integrity filtering, persists component rankings, and performs a whole-
+   résumé safe selection pass. It deliberately does not replace the existing
+   draft contract's authority over sections, entries, or ordering; rendered
+   line-fill optimization remains deferred.
 2. **Active page-fill expansion/compression.** The renderer no longer
    *fails* on page-count variance (see above), but it does not yet add
    unused high-value evidence to fill remaining space or algorithmically

@@ -135,16 +135,67 @@ def _format_evidence_catalog(profile: MasterProfile) -> str:
     return "\n".join(lines)
 
 
+def build_selection_prompt(
+    jd_text: str,
+    profile: MasterProfile,
+    base_variant: str,
+    company: str,
+    title: str,
+    *,
+    max_candidates_per_bullet: int = 3,
+) -> str:
+    """Construct the single bounded model call for selection and ranking."""
+    return f"""You are the constrained selection and ranking stage for a résumé tailoring lane.
+Return one JSON object only. Do not write résumé structure, section order, project order,
+or employer order: the downstream draft contract remains the authority for those decisions.
+Use only the canonical evidence catalog below.
+
+Target: {company} — {title}
+Base variant: {base_variant}
+
+JOB DESCRIPTION
+{jd_text}
+
+CANONICAL EVIDENCE
+{_format_evidence_catalog(profile)}
+
+Your response must contain:
+1. `requirements`: stable IDs, exact JD quotes, `kind` in `must_have`, `preferred`, or
+   `responsibility`, optional `alternative_group_id`, domain context, ambiguity, and evidence gaps.
+2. `matches`: requirement IDs mapped to evidence IDs with `classification` in `direct`,
+   `adjacent`, `transferable`, or `gap`, confidence, strength, explanation, and limitation.
+   Do not turn general AI interest into LLM production experience.
+3. `evidence_selection`: role-aware selections with score, requirement IDs, line cost, and reason.
+   Balance employer/project ownership and avoid keyword-heavy or redundant bullets.
+4. `skills`: only terms from existing canonical skill categories; never invent a category or term.
+5. `candidates`: at most {max_candidates_per_bullet} candidates per canonical selected bullet.
+   Preserve evidence IDs, identities, achievements, metrics, units, baselines, approximation markers,
+   title and prohibited-claim constraints. Candidates must be one line and no longer than canonical text.
+6. `rankings`: explicit candidate IDs, component scores for clarity, relevance, achievement,
+   metric interpretability, defensibility, mechanism/outcome balance, redundancy, AI abstraction,
+   recruiter scan, and line cost, plus concise rationale.
+7. `unused_evidence`: include omitted evidence IDs, requirement coverage, strength, likely section,
+   line cost, omission/redundancy reason, and later page-fill suitability.
+
+The deterministic validator will discard unsafe candidates individually and use a safe fallback when
+ranking data is incomplete. Never fabricate evidence, numbers, metrics, categories, or experience.
+Never render Kubernetes or any other do_not_claim term.
+"""
+
+
 def build_draft_prompt(
     jd_text: str,
     profile: MasterProfile,
     base_variant: str,
     company: str,
     title: str,
+    selection_context: str | None = None,
 ) -> str:
     """Construct prompt for the draft generation stage."""
     canonical_amdocs_str = ", ".join(f"`{bid}`" for bid in CANONICAL_AMDOCS_BULLETS)
     catalog_str = _format_evidence_catalog(profile)
+
+    selection_block = selection_context or "No separate selection artifact was supplied; make a conservative evidence selection from the canonical catalog."
 
     return f"""You are an expert technical résumé drafter. Your task is to draft a world-class, tailored, one-page software engineering résumé for the following target role using ONLY the candidate's real, verified evidence from their master profile.
 
@@ -182,11 +233,14 @@ def build_draft_prompt(
    - All seven canonical Amdocs bullets: {canonical_amdocs_str} MUST be either:
      a) included in the draft, OR
      b) listed in `amdocs_omission_ledger` with a specific relevance or space reason.
-4. **Layout Blueprint Proportions:**
-   - Amdocs MUST carry the most bullets of any entry in the résumé.
-   - `bank_integration_internship` (MalyTech) is capped at 3 bullets (typically default int_b1, int_b2, int_b3 unless the JD clearly favors another).
-   - Projects: For backend, include 3 projects (PeerChat ~2, Fake Review Detection ~2, Campus Marketplace ~1). For ML, include 2 projects (Sepsis ~4, Fake Review Detection ~3).
-   - Maximum total bullets: 15 for backend, 16 for ML.
+4. **Flexible Selection and Layout:**
+   - Select evidence by role coverage, strength, specificity, recency, defensibility, diversity, and line cost; do not use fixed project or employer counts.
+   - Preserve the supplied base variant's canonical project/experience availability and let the selected bullets determine the final allocation.
+   - Keep the strongest evidence visible without allowing one employer, project, or keyword cluster to consume the whole résumé.
+   - Do not add a bullet merely to fill a quota; omission reasons must remain explicit.
+
+## Bounded Selection Artifact
+{selection_block}
 
 ## Output Format
 You MUST respond with a single valid JSON object with NO preamble or surrounding markdown text outside ```json ... ``` code fences.

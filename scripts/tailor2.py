@@ -210,6 +210,12 @@ def cmd_run(args: argparse.Namespace) -> int:
             auditor_invoker=auditor_invoker,
             acknowledge_same_model=args.acknowledge_same_model,
             repair_budget=args.repair_budget,
+            selection_enabled=(
+                None
+                if fake_resp_dict is not None and not args.disable_selection_ranking
+                else not args.disable_selection_ranking
+            ),
+            selection_candidate_count=args.selection_candidate_count,
         )
     except Exception as exc:
         return _fail("run", str(exc))
@@ -308,6 +314,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Maximum repair+re-audit cycles attempted before an unresolved REPAIRABLE_QUALITY finding falls "
         "through to NEEDS_HUMAN_REVIEW (default: 1).",
+    )
+    run.add_argument(
+        "--selection-candidate-count",
+        type=int,
+        default=3,
+        help="Maximum bounded wording candidates per selected bullet (default: 3).",
+    )
+    run.add_argument(
+        "--disable-selection-ranking",
+        action="store_true",
+        help="Use the legacy single-draft path; intended only for backward-compatible offline replays.",
     )
     run.add_argument("--root", help="Root directory for manual applications (default: applications_manual)")
     run.add_argument("--out-dir", help="Explicit output directory override")

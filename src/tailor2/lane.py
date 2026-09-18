@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -35,8 +36,20 @@ from src.tailor2.models import (
     parse_draft_response,
     parse_repair_response,
     repair_response_to_dict,
+    strip_markdown_fences,
 )
 from src.tailor2.prompts import build_audit_prompt, build_draft_prompt, build_re_audit_prompt, build_repair_prompt
+from src.tailor2.prompts import build_selection_prompt
+from src.tailor2.selection_ranking import (
+    SelectionContractError,
+    bound_candidates,
+    build_unused_evidence_ledger,
+    filter_candidates,
+    parse_selection_bundle,
+    rank_candidates,
+    select_whole_resume,
+    selection_bundle_to_dict,
+)
 from src.tailor2.render import compile_draft_to_pdf
 from src.tailor2.severity import RunStatus, Severity
 from src.tailor2.validators import (
@@ -103,6 +116,9 @@ class _Stage:
     final_draft: DraftResponse | None = None
     final_projection: ResumeProjection | None = None
     needs_human_review: bool = False
+    selection_enabled: bool = False
+    selection_artifacts: dict[str, Any] = field(default_factory=dict)
+    unresolved: list[str] = field(default_factory=list)
 
 
 def _record_dimension_scores(stage: _Stage, audit: AuditResponse) -> None:
@@ -148,6 +164,9 @@ def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: lis
         advisory_gaps=list(stage.advisory_gaps),
         dimension_scores=dict(stage.dimension_scores),
         title_resolutions=list(stage.title_resolutions),
+        selection_enabled=stage.selection_enabled,
+        selection_artifacts=dict(stage.selection_artifacts),
+        unresolved=list(stage.unresolved),
     )
 
 
@@ -184,6 +203,8 @@ def run_tailor2_lane(
     acknowledge_same_model: bool = False,
     repair_budget: int = 1,
     source_conflicts: set[str] | None = None,
+    selection_enabled: bool | None = None,
+    selection_candidate_count: int = 3,
 ) -> Tailor2RunResult:
     """Run the LLM-first tailoring pipeline.
 
@@ -238,10 +259,86 @@ def run_tailor2_lane(
     # Save copy of job description
     (out_dir / "job_description.txt").write_text(jd_text, encoding="utf-8")
 
+    if selection_enabled is None:
+        selection_enabled = invoker.fake_responses is None or "selection" in (invoker.fake_responses or {})
+    stage.selection_enabled = selection_enabled
+    selection_context: str | None = None
+    if selection_enabled:
+        selection_prompt = build_selection_prompt(
+            jd_text,
+            profile,
+            variant,
+            company,
+            title,
+            max_candidates_per_bullet=selection_candidate_count,
+        )
+        try:
+            raw_selection = invoker.invoke(selection_prompt, invocation_type="selection", input_paths=[jd_path])
+            stage.call_count += 1
+            selection_raw_data = json.loads(strip_markdown_fences(raw_selection))
+            bundle = parse_selection_bundle(
+                selection_raw_data,
+                jd_text=jd_text,
+                profile=profile,
+                variant=variant,
+                provider=stage.drafter_id[0],
+                model=stage.drafter_id[1],
+            )
+            evidence_by_id = {
+                bullet.id: bullet
+                for entry in (*profile.experience, *profile.projects)
+                for bullet in entry.bullets
+            }
+            canonical_ids = set(profile.base_variants[variant].bullet_order)
+            canonical_text = {
+                bullet_id: evidence_by_id[bullet_id].phrasings.medium or evidence_by_id[bullet_id].phrasings.short
+                for bullet_id in canonical_ids
+            }
+            canonical_evidence = {bullet_id: [bullet_id] for bullet_id in canonical_ids}
+            selected_evidence_ids = {item.evidence_id for item in bundle.evidence_selection if item.selected}
+            bounded_candidates, candidate_bound_warnings = bound_candidates(bundle.candidates, selection_candidate_count)
+            safe_candidates, integrity = filter_candidates(
+                bounded_candidates,
+                canonical_text_by_bullet=canonical_text,
+                canonical_evidence_by_bullet=canonical_evidence,
+                selected_evidence_ids=selected_evidence_ids,
+                profile=profile,
+            )
+            ranking = rank_candidates(safe_candidates, integrity=integrity, model_rankings=selection_raw_data.get("rankings"))
+            selected_candidates, whole_warnings = select_whole_resume(safe_candidates, ranking)
+            selected_by_bullet = {candidate.bullet_id for candidate in selected_candidates}
+            ledger = build_unused_evidence_ledger(bundle.evidence_selection, selected_evidence_ids, profile)
+            bundle = dataclasses.replace(
+                bundle,
+                integrity=integrity,
+                rankings=ranking,
+                unused_evidence=ledger,
+                warnings=list(bundle.warnings) + whole_warnings + ranking.warnings,
+            )
+            bundle = dataclasses.replace(bundle, candidates=bounded_candidates, warnings=list(bundle.warnings) + candidate_bound_warnings)
+            stage.selection_artifacts = selection_bundle_to_dict(bundle)
+            stage.selection_artifacts["selected_candidate_bullet_ids"] = sorted(selected_by_bullet)
+            for warning in bundle.warnings:
+                if warning not in stage.warnings:
+                    stage.warnings.append(warning)
+            selection_context = json.dumps(
+                {
+                    "requirements": [dataclasses.asdict(item) for item in bundle.requirements.requirements],
+                    "matches": [dataclasses.asdict(item) for item in bundle.matches],
+                    "evidence_selection": [dataclasses.asdict(item) for item in bundle.evidence_selection],
+                    "skills": [dataclasses.asdict(item) for item in bundle.skills if item.include],
+                },
+                sort_keys=True,
+            )
+            write_json_atomic(out_dir / "selection.json", stage.selection_artifacts)
+        except (SelectionContractError, json.JSONDecodeError, KeyError, ValueError) as exc:
+            stage.unresolved.append(f"selection stage fallback: {exc}")
+            stage.warnings.append(f"selection stage fallback: {exc}")
+
     # ---------------------------------------------------------
     # STAGE 1: DRAFT
     # ---------------------------------------------------------
-    draft_prompt = build_draft_prompt(jd_text, profile, variant, company, title)
+    draft_prompt = build_draft_prompt(jd_text, profile, variant, company, title, selection_context)
     try:
         raw_draft = invoker.invoke(draft_prompt, invocation_type="draft", input_paths=[jd_path])
         stage.call_count += 1
