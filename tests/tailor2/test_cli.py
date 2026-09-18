@@ -154,7 +154,10 @@ def test_cli_run_with_fake_responses_e2e(
     ])
     assert code == 0
     captured = capsys.readouterr()
-    assert "COMPLETED" in captured.out
+    # CLI now prints the actual RunStatus (ACCEPTED / ACCEPTED_WITH_WARNINGS
+    # / etc.) instead of a generic "COMPLETED" label; "ACCEPTED" is a
+    # substring of every non-rejected status.
+    assert "ACCEPTED" in captured.out
 
     # Verify generated artifacts
     assert (out_dir / "job_description.txt").exists()

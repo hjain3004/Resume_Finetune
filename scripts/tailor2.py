@@ -136,6 +136,20 @@ def cmd_run(args: argparse.Namespace) -> int:
             if shutil.which("claude") is None:
                 return _fail("run", "claude CLI not found on PATH.")
 
+        if args.auditor_provider:
+            aud_prov = args.auditor_provider.lower()
+            if aud_prov == Provider.OPENAI.value:
+                err = check_openai_credentials()
+                if err:
+                    return _fail("run", f"auditor: {err}")
+            elif aud_prov == Provider.GEMINI.value:
+                err = check_gemini_credentials()
+                if err:
+                    return _fail("run", f"auditor: {err}")
+            elif aud_prov == Provider.CLAUDE.value:
+                if shutil.which("claude") is None:
+                    return _fail("run", "auditor: claude CLI not found on PATH.")
+
     if args.dry_run:
         try:
             load_profile(profile_path)
@@ -174,6 +188,16 @@ def cmd_run(args: argparse.Namespace) -> int:
             fake_responses=fake_resp_dict,
             trace_dir=Path(args.trace_dir or "data/traces"),
         )
+        auditor_invoker = None
+        if args.auditor_provider or args.auditor_model:
+            auditor_invoker = Tailor2Invoker(
+                provider=args.auditor_provider or (args.provider or "claude"),
+                model=args.auditor_model or args.model,
+                timeout_seconds=args.timeout or 300,
+                dry_run=args.dry_run,
+                fake_responses=fake_resp_dict,
+                trace_dir=Path(args.trace_dir or "data/traces"),
+            )
         outcome = run_tailor2_lane(
             jd_path=jd_path,
             company=args.company,
@@ -183,13 +207,17 @@ def cmd_run(args: argparse.Namespace) -> int:
             out_dir=out_dir,
             profile_path=profile_path,
             template_path=template_path,
+            auditor_invoker=auditor_invoker,
+            acknowledge_same_model=args.acknowledge_same_model,
+            repair_budget=args.repair_budget,
         )
     except Exception as exc:
         return _fail("run", str(exc))
 
+    status_label = outcome.status or ("ACCEPTED" if outcome.success else "REJECTED_FATAL")
     if not outcome.success:
         print(
-            f"tailor2 run: FAILED ({outcome.call_count} model calls, repair_performed={outcome.repair_performed})",
+            f"tailor2 run: {status_label} ({outcome.call_count} model calls, repair_performed={outcome.repair_performed})",
             file=sys.stderr,
         )
         for reason in outcome.rejection_reasons:
@@ -197,7 +225,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"manifest: {outcome.manifest_path}", file=sys.stderr)
         return 1
 
-    print(f"tailor2 run: COMPLETED ({outcome.call_count} model calls, repair_performed={outcome.repair_performed})")
+    print(f"tailor2 run: {status_label} ({outcome.call_count} model calls, repair_performed={outcome.repair_performed})")
+    for warning in outcome.warnings:
+        print(f"  [warning] {warning}")
     print(f"pdf: {outcome.out_pdf}")
     print(f"manifest: {outcome.manifest_path}")
     return 0
@@ -253,8 +283,32 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--company", required=True, help="Target company name")
     run.add_argument("--title", required=True, help="Target job title")
     run.add_argument("--variant", required=True, choices=["backend", "ml"], help="Resume variant")
-    run.add_argument("--provider", choices=[p.value for p in Provider], help="Model provider")
-    run.add_argument("--model", help="Explicit model identifier")
+    run.add_argument("--provider", choices=[p.value for p in Provider], help="Drafter model provider")
+    run.add_argument("--model", help="Drafter explicit model identifier")
+    run.add_argument(
+        "--auditor-provider",
+        choices=[p.value for p in Provider],
+        help="Auditor model provider (independent of --provider). Also used for repair/re-audit unless overridden. "
+        "Omit to reuse --provider (same-model audit; a disclosure is logged and recorded in the manifest).",
+    )
+    run.add_argument(
+        "--auditor-model",
+        help="Auditor explicit model identifier (independent of --model). Omit to reuse --model.",
+    )
+    run.add_argument(
+        "--acknowledge-same-model",
+        action="store_true",
+        help="Suppress the same-model warning log line when --auditor-provider/--auditor-model are omitted or "
+        "identical to --provider/--model. The manifest's same_model_draft_and_audit field is still recorded "
+        "either way -- this flag only silences the console warning for a deliberate same-model run.",
+    )
+    run.add_argument(
+        "--repair-budget",
+        type=int,
+        default=1,
+        help="Maximum repair+re-audit cycles attempted before an unresolved REPAIRABLE_QUALITY finding falls "
+        "through to NEEDS_HUMAN_REVIEW (default: 1).",
+    )
     run.add_argument("--root", help="Root directory for manual applications (default: applications_manual)")
     run.add_argument("--out-dir", help="Explicit output directory override")
     run.add_argument("--suffix", help="Optional suffix for the application directory slug")

@@ -188,7 +188,15 @@ def test_lane_repair_path_exactly_four_calls(tmp_path, valid_jd_file):
     assert (out_dir / "re_audit.json").exists()
 
 
-def test_lane_fails_closed_if_re_audit_rejects(tmp_path, valid_jd_file):
+# Renamed from test_lane_fails_closed_if_re_audit_rejects: under the
+# quality_core severity model (see src/tailor2/severity.py), a
+# factual_fidelity=1 finding is FATAL_INTEGRITY, which can never be
+# repaired without inventing evidence -- so the lane now fails closed at
+# the FIRST audit (before repair is even attempted), not after a wasted
+# repair+re-audit round trip. This is the intended behavior change from
+# the "IMPORTANT ARCHITECTURAL CORRECTION" policy override: only
+# AUTO_CORRECTABLE and REPAIRABLE_QUALITY findings ever reach repair.
+def test_lane_fails_closed_on_fatal_factual_finding_before_repair(tmp_path, valid_jd_file):
     bullet_ids = [f"b{i:02d}" for i in range(1, 16)]
     dims_pass = {
         "factual_fidelity": {"score": 3, "findings": "OK"},
@@ -254,6 +262,11 @@ def test_lane_fails_closed_if_re_audit_rejects(tmp_path, valid_jd_file):
     )
 
     assert result.success is False
-    assert result.call_count == 4
+    assert result.status == "REJECTED_FATAL"
+    # Only 2 calls (draft, audit): the fatal factual_fidelity finding is
+    # caught on the FIRST audit and short-circuits before repair/re_audit
+    # are ever invoked -- repairing a fabricated fact would mean inventing
+    # evidence, which repair must never do.
+    assert result.call_count == 2
     assert not (out_dir / "resume.pdf").exists()
     assert (out_dir / "rejected" / "run_manifest.json").exists()

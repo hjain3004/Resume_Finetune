@@ -19,6 +19,23 @@ REQUIRED_AUDIT_DIMENSIONS: tuple[str, ...] = (
     "ai_slop_risk",
 )
 
+# Whole-résumé dimensions: evaluated ONCE per audit call against the complete
+# résumé projection (see audit_projection.py), not per bullet. These catch
+# defects that only exist at the whole-document level -- a title mismatch,
+# a Skills entry with no supporting bullet anywhere, the same "agentic"
+# vocabulary repeated across three sections -- which no per-bullet
+# evaluation can see in isolation.
+REQUIRED_WHOLE_RESUME_DIMENSIONS: tuple[str, ...] = (
+    "metric_interpretability",
+    "interview_defensibility",
+    "whole_resume_positioning",
+    "skills_evidence_integrity",
+    "title_identity_fidelity",
+    "mechanism_outcome_balance",
+    "cross_bullet_repetition",
+    "misleading_implication",
+)
+
 
 class ModelContractError(ValueError):
     """Raised when a model response fails schema or contract validation."""
@@ -68,6 +85,10 @@ class DraftResponse:
     amdocs_omission_ledger: list[AmdocsOmission]
     section_order: list[str]
     bullets: list[DraftBullet]
+    # entry_id -> proposed displayed title. Optional; absent or empty means
+    # every entry renders its canonical profile title. See title_policy.py
+    # for why this exists and how a proposal is resolved/auto-corrected.
+    entry_title_overrides: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -85,9 +106,28 @@ class BulletAuditEvaluation:
 
 
 @dataclass(frozen=True)
+class WholeResumeEvaluation:
+    """Result of auditing the complete résumé projection as a single unit
+    (title fidelity, skills-to-evidence integrity, cross-bullet repetition,
+    whole-résumé positioning, and the other REQUIRED_WHOLE_RESUME_DIMENSIONS).
+    """
+
+    dimensions: dict[str, DimensionScore]
+    verdict: Literal["ACCEPT", "REJECT"]
+    rejection_reasons: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class AuditResponse:
     evaluations: list[BulletAuditEvaluation]
     overall_verdict: Literal["PASS", "REPAIR_REQUIRED"]
+    # Optional for backward compatibility with recorded fixtures/tests
+    # written against the pre-whole-résumé-audit contract. New runs always
+    # request and receive this; a legacy fixture that omits it is treated as
+    # "whole-résumé auditing was not performed for this run" rather than a
+    # parse error -- lane.py surfaces that as a disclosed warning, never as
+    # a silent skip.
+    whole_resume: WholeResumeEvaluation | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +145,8 @@ class RepairResponse:
 class Tailor2Manifest:
     run_id: str
     created_at: str
+    # provider/model retained unchanged for backward compatibility: this is
+    # always the DRAFTER's identity (the historical single-invoker meaning).
     provider: str
     model: str
     company: str
@@ -114,6 +156,38 @@ class Tailor2Manifest:
     repair_performed: bool
     status: str
     rejection_details: list[str] = field(default_factory=list)
+    # ---- Added for model-identity separation (see invoker.py / lane.py) ----
+    drafter_provider: str = ""
+    drafter_model: str = ""
+    auditor_provider: str = ""
+    auditor_model: str = ""
+    repair_provider: str = ""
+    repair_model: str = ""
+    re_audit_provider: str = ""
+    re_audit_model: str = ""
+    # True when the auditor stage used the identical provider+model as the
+    # drafter stage. A live run in this configuration must have received an
+    # explicit override (see invoker.py SAME_MODEL_OVERRIDE_ENV /
+    # Tailor2Invoker(..., acknowledge_same_model=True)); this field is the
+    # durable, auditable record of that fact so no downstream reader can
+    # mistake a same-model run for an independently cross-checked one.
+    same_model_draft_and_audit: bool = False
+    # ---- Added for the severity model / richer outcomes ----
+    # One of severity.RunStatus's values; `status` above also carries this
+    # same string for backward compatibility (old readers only look at
+    # `status`), this field exists so new readers don't have to guess that
+    # `status` is now a RunStatus rather than the old ad-hoc FAILED_* string.
+    run_status: str = ""
+    warnings: list[str] = field(default_factory=list)
+    auto_corrections: list[str] = field(default_factory=list)
+    advisory_gaps: list[str] = field(default_factory=list)
+    # Preserves every dimension's score+findings from the (re-)audit that
+    # produced the final result, keyed by "bullet:<id>:<dimension>" or
+    # "whole_resume:<dimension>", so the original rubric detail survives
+    # even when the final run_status collapses many dimensions into one
+    # outcome. Required by the task's "preserve the original dimension
+    # scores and reasons in the manifest" instruction.
+    dimension_scores: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def parse_draft_response(raw_text: str) -> DraftResponse:
@@ -179,12 +253,18 @@ def parse_draft_response(raw_text: str) -> DraftResponse:
             )
         )
 
+    raw_title_overrides = data.get("entry_title_overrides", {}) or {}
+    if not isinstance(raw_title_overrides, dict):
+        raise ModelContractError("entry_title_overrides must be an object if present")
+    entry_title_overrides = {str(k): str(v) for k, v in raw_title_overrides.items()}
+
     return DraftResponse(
         atomic_requirements=atomic_requirements,
         selected_evidence_ids=[str(eid) for eid in data["selected_evidence_ids"]],
         amdocs_omission_ledger=amdocs_omission_ledger,
         section_order=[str(sec) for sec in data["section_order"]],
         bullets=bullets,
+        entry_title_overrides=entry_title_overrides,
     )
 
 
@@ -231,9 +311,32 @@ def parse_audit_response(raw_text: str) -> AuditResponse:
             )
         )
 
+    whole_resume = None
+    raw_whole_resume = data.get("whole_resume")
+    if raw_whole_resume is not None:
+        if not isinstance(raw_whole_resume, dict) or "dimensions" not in raw_whole_resume or "verdict" not in raw_whole_resume:
+            raise ModelContractError("whole_resume must be an object with 'dimensions' and 'verdict'")
+        wr_dims_data = raw_whole_resume["dimensions"]
+        if not isinstance(wr_dims_data, dict):
+            raise ModelContractError("whole_resume.dimensions must be an object")
+        wr_dimensions = {}
+        for dim in REQUIRED_WHOLE_RESUME_DIMENSIONS:
+            if dim not in wr_dims_data:
+                raise ModelContractError(f"whole_resume missing dimension: {dim!r}")
+            dim_val = wr_dims_data[dim]
+            if not isinstance(dim_val, dict) or "score" not in dim_val or "findings" not in dim_val:
+                raise ModelContractError(f"whole_resume.dimensions[{dim}] must have score and findings")
+            wr_dimensions[dim] = DimensionScore(score=int(dim_val["score"]), findings=str(dim_val["findings"]))
+        whole_resume = WholeResumeEvaluation(
+            dimensions=wr_dimensions,
+            verdict=raw_whole_resume["verdict"],
+            rejection_reasons=[str(r) for r in raw_whole_resume.get("rejection_reasons", [])],
+        )
+
     return AuditResponse(
         evaluations=evaluations,
         overall_verdict=data["overall_verdict"],
+        whole_resume=whole_resume,
     )
 
 

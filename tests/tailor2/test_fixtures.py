@@ -108,7 +108,12 @@ def test_immutable_e2e_happy_path_determinism(tmp_path: Path) -> None:
 
     # Verify atomic manifest
     manifest_data = json.loads((out_dir / "run_manifest.json").read_text(encoding="utf-8"))
-    assert manifest_data["status"] == "ACCEPTED"
+    # ACCEPTED_WITH_WARNINGS, not bare ACCEPTED: this frozen fixture's
+    # draft only selects evidence covering a subset of the full profile
+    # Skills list, so the new skills-evidence-integrity AUTO_CORRECTABLE
+    # check (added for quality_core) removes the unsupported terms and
+    # discloses that correction as a warning -- it does not reject the run.
+    assert manifest_data["status"] == "ACCEPTED_WITH_WARNINGS"
     assert manifest_data["call_count"] == 2
     assert manifest_data["repair_performed"] is False
 
@@ -161,6 +166,8 @@ def test_immutable_e2e_repair_path_determinism(tmp_path: Path) -> None:
 
     # Verify atomic manifest
     manifest_data = json.loads((out_dir / "run_manifest.json").read_text(encoding="utf-8"))
-    assert manifest_data["status"] == "ACCEPTED"
+    # See the happy-path test above for why this is ACCEPTED_WITH_WARNINGS,
+    # not ACCEPTED: the skills-evidence-integrity auto-correction.
+    assert manifest_data["status"] == "ACCEPTED_WITH_WARNINGS"
     assert manifest_data["call_count"] == 4
     assert manifest_data["repair_performed"] is True

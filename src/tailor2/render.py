@@ -25,8 +25,18 @@ def _slugify(value: str) -> str:
 def render_doc_from_draft_response(
     draft: DraftResponse,
     profile: MasterProfile,
+    resolved_titles: dict[str, str] | None = None,
+    filtered_skills: dict[str, tuple[str, ...]] | None = None,
 ) -> RenderDoc:
-    """Map accepted DraftResponse into RenderDoc IR."""
+    """Map accepted DraftResponse into RenderDoc IR.
+
+    `resolved_titles` (entry_id -> displayed title) and `filtered_skills`
+    (category -> terms) let the caller supply the AUTO_CORRECTABLE-resolved
+    state from audit_projection/validators (title mismatches corrected to
+    canonical, Skills entries with no supporting evidence removed) so the
+    rendered PDF matches what was actually audited. Both default to None,
+    which preserves the exact prior behavior (canonical profile title,
+    full profile.skills minus do_not_claim/Kubernetes)."""
     exp_by_id = {exp.id: exp for exp in profile.experience}
     proj_by_id = {proj.id: proj for proj in profile.projects}
 
@@ -54,11 +64,12 @@ def render_doc_from_draft_response(
     for exp_id in entry_order:
         if exp_id in exp_by_id:
             exp = exp_by_id[exp_id]
+            displayed_title = (resolved_titles or {}).get(exp.id, exp.title)
             experience.append(
                 RenderEntry(
                     entry_id=exp.id,
                     heading=exp.employer,
-                    subheading=exp.title,
+                    subheading=displayed_title,
                     date_range=exp.display_date,
                     bullets=tuple(bullets_by_entry[exp.id]),
                     tech_line=exp.tech_line,
@@ -92,13 +103,17 @@ def render_doc_from_draft_response(
         for item in profile.education
     ]
 
-    # Clean skills (filter out do_not_claim & Kubernetes)
-    banned = {term.casefold() for term in profile.do_not_claim}
-    banned.add("kubernetes")
+    if filtered_skills is not None:
+        skills = dict(filtered_skills)
+    else:
+        # Clean skills (filter out do_not_claim & Kubernetes) -- prior
+        # behavior, preserved when no auto-corrected skill set is supplied.
+        banned = {term.casefold() for term in profile.do_not_claim}
+        banned.add("kubernetes")
 
-    skills: dict[str, tuple[str, ...]] = {}
-    for cat, items in profile.skills.items():
-        skills[cat] = tuple(item for item in items if item.casefold() not in banned)
+        skills = {}
+        for cat, items in profile.skills.items():
+            skills[cat] = tuple(item for item in items if item.casefold() not in banned)
 
     return RenderDoc(
         identity=dict(profile.identity),
@@ -115,9 +130,11 @@ def render_draft_to_latex(
     draft: DraftResponse,
     profile: MasterProfile,
     template_path: Path = Path("profile/template.tex"),
+    resolved_titles: dict[str, str] | None = None,
+    filtered_skills: dict[str, tuple[str, ...]] | None = None,
 ) -> str:
     """Render DraftResponse to LaTeX markup source string."""
-    doc = render_doc_from_draft_response(draft, profile)
+    doc = render_doc_from_draft_response(draft, profile, resolved_titles, filtered_skills)
     template = Template(Path(template_path).read_text(encoding="utf-8"))
     return template.safe_substitute(
         BODY=emit_latex_body(doc),
@@ -135,11 +152,13 @@ def compile_draft_to_pdf(
     profile: MasterProfile,
     out_dir: Path,
     template_path: Path = Path("profile/template.tex"),
+    resolved_titles: dict[str, str] | None = None,
+    filtered_skills: dict[str, tuple[str, ...]] | None = None,
 ) -> tuple[Path, Path, RenderDoc]:
     """Render to .tex and compile to .pdf in out_dir."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    doc = render_doc_from_draft_response(draft, profile)
+    doc = render_doc_from_draft_response(draft, profile, resolved_titles, filtered_skills)
     out_pdf = out_dir / "resume.pdf"
     render_latex(doc, template_path, out_pdf)
     tex_path = out_pdf.with_suffix(".tex")

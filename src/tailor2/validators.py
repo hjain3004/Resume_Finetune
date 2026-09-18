@@ -18,12 +18,16 @@ import re
 from typing import Any, Iterable
 
 from src.profile import MasterProfile
+from src.tailor2.audit_projection import ResumeProjection, unsupported_skill_terms
 from src.tailor2.models import (
     REQUIRED_AUDIT_DIMENSIONS,
     AuditResponse,
+    BulletAuditEvaluation,
     DraftResponse,
     RepairResponse,
+    WholeResumeEvaluation,
 )
+from src.tailor2.severity import Severity, has_fatal_dimension
 
 CANONICAL_AMDOCS_BULLETS: tuple[str, ...] = (
     "am_b00_order_management_domain",
@@ -326,3 +330,76 @@ def validate_repair_response(
 
 # Re-audit response uses identical validation rules as audit response
 validate_re_audit_response = validate_audit_response
+
+
+# ---------------------------------------------------------------------------
+# Severity classification and deterministic auto-correction.
+#
+# validate_audit_response above is unchanged: it only enforces that the
+# AuditResponse object is internally consistent (score==1 on a dimension
+# implies verdict==REJECT on that evaluation, overall_verdict reflects
+# whether anything was rejected). It says nothing about what the LANE should
+# DO once it sees a REJECT -- that policy decision lives here, using the
+# dimension -> Severity table in severity.py, so it can be reasoned about
+# and tested independently of the schema-consistency rule.
+# ---------------------------------------------------------------------------
+
+
+def classify_evaluation_severity(evaluation: BulletAuditEvaluation) -> Severity | None:
+    """Severity of a bullet's rejection, or None if the bullet was accepted.
+
+    A bullet can fail multiple dimensions at once; if ANY failing dimension
+    is FATAL_INTEGRITY, the whole bullet is treated as fatal (a single
+    fabricated number is not offset by three well-written sentences)."""
+    if evaluation.verdict != "REJECT":
+        return None
+    failing = [name for name, d in evaluation.dimensions.items() if d.score == 1]
+    if has_fatal_dimension(failing):
+        return Severity.FATAL_INTEGRITY
+    return Severity.REPAIRABLE_QUALITY
+
+
+def classify_whole_resume_severity(evaluation: WholeResumeEvaluation | None) -> Severity | None:
+    """Same logic as classify_evaluation_severity, for the whole-résumé
+    evaluation block. None input (legacy fixture with no whole_resume audit)
+    and an ACCEPT verdict both return None."""
+    if evaluation is None or evaluation.verdict != "REJECT":
+        return None
+    failing = [name for name, d in evaluation.dimensions.items() if d.score == 1]
+    if has_fatal_dimension(failing):
+        return Severity.FATAL_INTEGRITY
+    return Severity.REPAIRABLE_QUALITY
+
+
+def check_skills_evidence_integrity(projection: ResumeProjection) -> list[str]:
+    """Deterministic AUTO_CORRECTABLE check: every rendered Skills term must
+    resolve to this run's selected evidence. Returns human-readable
+    auto-correction messages for any term that does not (the caller is
+    expected to actually remove them -- see
+    apply_deterministic_auto_corrections)."""
+    return [
+        f"Skills: {category!r} term {term!r} does not resolve to any selected evidence for this run; removed"
+        for category, term in unsupported_skill_terms(projection)
+    ]
+
+
+def apply_deterministic_auto_corrections(
+    projection: ResumeProjection,
+) -> tuple[ResumeProjection, list[str]]:
+    """Apply every AUTO_CORRECTABLE fix this module knows how to make
+    deterministically (title mismatches were already resolved when the
+    projection was built -- see audit_projection.build_resume_projection --
+    so this only needs to strip unsupported Skills entries) and return the
+    corrected projection plus a flat list of human-readable correction
+    messages for the manifest."""
+    import dataclasses as _dc
+
+    corrections = list(projection.title_auto_corrections)
+    corrections.extend(check_skills_evidence_integrity(projection))
+
+    corrected_skills = {
+        category: [s for s in terms if s.supported]
+        for category, terms in projection.skills.items()
+    }
+    corrected = _dc.replace(projection, skills=corrected_skills)
+    return corrected, corrections
