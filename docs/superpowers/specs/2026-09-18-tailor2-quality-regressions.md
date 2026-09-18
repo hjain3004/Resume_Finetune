@@ -257,13 +257,23 @@ To resolve title fidelity without hardcoding employer-specific exceptions:
    - `canonical_title`: The legally verified former employment title in `master_profile.yaml`.
    - `approved_display_variants`: Pre-authorized display variants with documented provenance (`APPROVED_TITLE_VARIANTS`). Amdocs has no approved variants.
    - `displayed_title`: The actual string rendered in the generated LaTeX/PDF résumé.
-   - `resolution_status`: One of `"canonical"`, `"approved_variant"`, or `"unresolved_conflict"`.
-2. **Conflict Routing (`NEEDS_HUMAN_REVIEW`):**
-   - If an unapproved substitution is proposed (e.g. `Software Engineer` for Amdocs):
-     - The safest supported title is preserved (`displayed_title = canonical_title`).
-     - `resolution_status = "unresolved_conflict"` and `was_auto_corrected = True`.
-     - `requires_human_review = True`, routing the run to `RunStatus.NEEDS_HUMAN_REVIEW`.
-   - Title ambiguity **never produces `REJECTED_FATAL`** and **never destroys the usable rendered artifact**.
+   - `resolution_status`: One of `"canonical_exact"`, `"approved_variant"`, `"auto_corrected_to_canonical"`, or `"unresolved_source_conflict"`.
+2. **Resolution & Conflict Routing Policy:**
+   - **Exact canonical title (`canonical_exact`):** Proposal matches canonical title; passes normally without modification (`was_auto_corrected = False`, `requires_human_review = False`).
+   - **Approved variant (`approved_variant`):** Pre-authorized variant with documented provenance; passes normally (`was_auto_corrected = False`, `requires_human_review = False`).
+   - **Unapproved substitution with unambiguous canonical evidence (`auto_corrected_to_canonical`):**
+     - When a drafter proposes an unapproved substitution (e.g. `Software Engineer` for Amdocs) but canonical evidence is unambiguous:
+       - Proposed title is replaced with the verified canonical title (`displayed_title = canonical_title`).
+       - `resolution_status = "auto_corrected_to_canonical"`, `was_auto_corrected = True`, `requires_human_review = False`.
+       - Transparent warning is emitted and recorded in `manifest["auto_corrections"]` and `manifest["warnings"]`.
+       - The run continues with the corrected résumé and completes with `RunStatus.ACCEPTED_WITH_WARNINGS` (not `NEEDS_HUMAN_REVIEW`).
+       - Rendered PDF and LaTeX artifacts are fully preserved.
+   - **Genuinely contradictory authoritative sources (`unresolved_source_conflict`):**
+     - When authoritative sources genuinely contradict one another (e.g. flagged via `source_conflicts` or conflicting profile records):
+       - The safest supported canonical title is preserved (`displayed_title = canonical_title`).
+       - `resolution_status = "unresolved_source_conflict"`, `was_auto_corrected = True`, `requires_human_review = True`.
+       - Routes the run to `RunStatus.NEEDS_HUMAN_REVIEW` while preserving all artifacts.
+   - Fabricated or unresolvable employment evidence retains existing fatal integrity behavior (`REJECTED_FATAL`).
 3. **No Amdocs-Specific Rules:**
    - `APPROVED_TITLE_VARIANTS` contains only entries with documented provenance (e.g. `bank_integration_internship`).
    - `title_policy.py` contains zero employer-specific hardcoding or string branching.
@@ -276,17 +286,21 @@ To resolve title fidelity without hardcoding employer-specific exceptions:
 
 To prevent over-restrictive skills pruning where valid canonical capabilities were previously stripped when bullets were not selected, Tailor2 implements a decoupled 4-tier model:
 
-1. `canonical_support` (bool):
+1. `canonical_support` / `eligible` (bool):
    - True if the skill appears in `profile.skills` or is backed by any bullet across `profile.experience` or `profile.projects`.
    - False for banned terms (`profile.do_not_claim`, `Kubernetes`) or terms unsupported anywhere in canonical evidence.
+   - **Establishes truth eligibility, NOT mandatory display.** Canonical support does not auto-add skills to the résumé.
 2. `selected_demonstration` (bool):
    - True if the skill (or any of its semantic aliases) is visibly demonstrated in the bullets selected for this specific run (`selected_evidence_ids`).
    - False otherwise. Weak demonstration is an informational advisory, not a truth gate.
 3. `target_relevance` (bool):
    - True if the skill is relevant to the target job description or atomic requirements.
-4. `display_decision` (bool):
-   - Determines whether the skill is retained in the Skills section of the rendered résumé.
-   - Matches `canonical_support`. Canonically supported skills remain on the résumé even if their supporting bullets were not selected.
+4. `is_displayed` / `display_decision` (bool):
+   - Determines whether the skill is actually displayed in the candidate résumé.
+   - **Decoupled from `canonical_support`:** Only skills present in the candidate draft (or explicitly selected for display) remain displayed. The pipeline does NOT turn the Skills section into the complete master profile inventory.
+   - Displayed skills with canonical support are retained (`is_displayed = True`).
+   - Displayed skills lacking canonical support are removed deterministically (`is_displayed = False`, `removal_reason = "not canonically supported in profile"`).
+   - Displayed skills with canonical support but lacking selected demonstration remain displayed with an advisory notice (`advisory_reason`).
 
 ### 9.2 Semantic Aliasing
 

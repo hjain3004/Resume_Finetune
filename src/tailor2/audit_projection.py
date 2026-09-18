@@ -66,18 +66,41 @@ class SkillTermProjection:
     canonical_support: bool = True
     selected_demonstration: bool = False
     target_relevance: bool = True
-    display_decision: bool = True
+    is_displayed: bool = True
+    advisory_reason: str | None = None
+    removal_reason: str | None = None
     evidence_ids: list[str] = dataclasses.field(default_factory=list)
     canonical_evidence_ids: list[str] = dataclasses.field(default_factory=list)
     supported: bool = True
+
+    @property
+    def eligible(self) -> bool:
+        """Canonical support implies truth eligibility, not mandatory display."""
+        return self.canonical_support
+
+    @property
+    def display_decision(self) -> bool:
+        """Backward compatibility: reflects whether the term is displayed."""
+        return self.is_displayed
 
     def __post_init__(self) -> None:
         if not self.canonical_support and self.supported:
             object.__setattr__(self, "supported", False)
         elif not self.supported and self.canonical_support:
             object.__setattr__(self, "canonical_support", False)
-        if not self.canonical_support:
-            object.__setattr__(self, "display_decision", False)
+        # If not canonically supported, it cannot be displayed
+        if not self.canonical_support and self.is_displayed:
+            object.__setattr__(self, "is_displayed", False)
+            if not self.removal_reason:
+                object.__setattr__(self, "removal_reason", "not canonically supported in profile")
+        # If canonically supported but weakly demonstrated and displayed, set advisory_reason
+        if self.canonical_support and not self.selected_demonstration and self.is_displayed:
+            if not self.advisory_reason:
+                object.__setattr__(
+                    self,
+                    "advisory_reason",
+                    "canonically supported in profile but not demonstrated in selected bullets for this run",
+                )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -156,17 +179,23 @@ def _resolve_skills(
     evidence_by_id: dict[str, Any],
     selected_evidence_ids: set[str],
     skills_by_category: dict[str, list[str]] | None = None,
+    candidate_skills: dict[str, list[str]] | None = None,
 ) -> dict[str, list[SkillTermProjection]]:
     """Resolve skills using the 4-tier model:
-    1. canonical_support: supported anywhere in verified master profile or profile.skills.
+    1. canonical_support (eligible): supported anywhere in verified master profile or profile.skills.
     2. selected_demonstration: visibly demonstrated by selected evidence for this run.
     3. target_relevance: relevant to the target role / JD context.
-    4. display_decision: selected for display on the tailored resume.
+    4. is_displayed (display_decision): whether this skill is displayed on the tailored résumé.
 
-    Semantic aliases (e.g. Postgres <-> PostgreSQL) resolve to the same concept.
+    Canonical support establishes TRUTH ELIGIBILITY, not mandatory display.
+    Only skills proposed by the candidate draft (or candidate_skills / skills_by_category)
+    remain displayed. Canonical profile skills not proposed for display are not auto-added
+    to the résumé.
+
+    Semantic aliases (e.g. Postgres <-> PostgreSQL) resolve to the same concept symmetrically.
     Banned terms (Kubernetes, do_not_claim) have canonical_support = False and are auto-corrected.
-    Canonically supported terms lacking selected demonstration remain on the resume,
-    generating an advisory notice rather than automatic removal.
+    Canonically supported terms lacking selected demonstration remain on the résumé if displayed,
+    generating an informational advisory notice rather than automatic removal.
     """
     banned = {t.casefold() for t in profile.do_not_claim}
     banned.add("kubernetes")
@@ -177,7 +206,9 @@ def _resolve_skills(
         for t in cat_terms
     }
 
-    target_skills = skills_by_category if skills_by_category is not None else profile.skills
+    target_skills = candidate_skills if candidate_skills is not None else (
+        skills_by_category if skills_by_category is not None else profile.skills
+    )
     result: dict[str, list[SkillTermProjection]] = {}
 
     for category, terms in target_skills.items():
@@ -205,11 +236,17 @@ def _resolve_skills(
                     if eid in selected_evidence_ids
                 ]
                 selected_demonstration = len(supporting_selected) > 0
-                display_decision = True
+                is_displayed = True
+                removal_reason = None
+                advisory_reason = None if selected_demonstration else (
+                    "canonically supported in profile but not demonstrated in selected bullets for this run"
+                )
             else:
                 supporting_selected = []
                 selected_demonstration = False
-                display_decision = False
+                is_displayed = False
+                removal_reason = "not canonically supported in profile"
+                advisory_reason = None
 
             projected.append(
                 SkillTermProjection(
@@ -217,7 +254,9 @@ def _resolve_skills(
                     canonical_support=canonical_support,
                     selected_demonstration=selected_demonstration,
                     target_relevance=True,
-                    display_decision=display_decision,
+                    is_displayed=is_displayed,
+                    advisory_reason=advisory_reason,
+                    removal_reason=removal_reason,
                     evidence_ids=supporting_selected,
                     canonical_evidence_ids=all_supporting_eids,
                     supported=canonical_support,
@@ -258,6 +297,8 @@ def build_resume_projection(
     title: str,
     variant: str,
     model_identities: dict[str, dict[str, str]],
+    source_conflicts: set[str] | None = None,
+    candidate_skills: dict[str, list[str]] | None = None,
 ) -> ResumeProjection:
     """Pure: DraftResponse + profile + run context -> ResumeProjection.
 
@@ -292,8 +333,12 @@ def build_resume_projection(
     for entry_id in entry_order:
         if entry_id in exp_by_id:
             exp = exp_by_id[entry_id]
+            has_conflict = bool(source_conflicts and entry_id in source_conflicts) or getattr(exp, "has_source_conflict", False)
             resolution = resolve_displayed_title(
-                entry_id, draft.entry_title_overrides.get(entry_id), exp.title
+                entry_id,
+                draft.entry_title_overrides.get(entry_id),
+                exp.title,
+                has_source_conflict=has_conflict,
             )
             title_resolutions.append(resolution)
             if resolution.was_auto_corrected:
@@ -321,7 +366,10 @@ def build_resume_projection(
                 )
             )
 
-    skills = _resolve_skills(profile, evidence_by_id, set(draft.selected_evidence_ids))
+    active_skills = candidate_skills if candidate_skills is not None else getattr(draft, "skills", None)
+    skills = _resolve_skills(
+        profile, evidence_by_id, set(draft.selected_evidence_ids), candidate_skills=active_skills
+    )
     requirement_coverage = _resolve_requirement_coverage(draft)
 
     return ResumeProjection(
@@ -354,12 +402,12 @@ def unsupported_skill_terms(projection: ResumeProjection) -> list[tuple[str, str
 
 
 def weakly_demonstrated_skill_terms(projection: ResumeProjection) -> list[tuple[str, str]]:
-    """(category, term) pairs where canonical_support is True but selected_demonstration is False."""
+    """(category, term) pairs where canonical_support is True but selected_demonstration is False and is_displayed is True."""
     return [
         (category, s.term)
         for category, terms in projection.skills.items()
         for s in terms
-        if s.canonical_support and not s.selected_demonstration
+        if s.canonical_support and not s.selected_demonstration and s.is_displayed
     ]
 
 

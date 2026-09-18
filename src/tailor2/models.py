@@ -89,6 +89,9 @@ class DraftResponse:
     # every entry renders its canonical profile title. See title_policy.py
     # for why this exists and how a proposal is resolved/auto-corrected.
     entry_title_overrides: dict[str, str] = field(default_factory=dict)
+    # category -> list of proposed skills to display. Optional; absent means
+    # default canonical profile skills are evaluated.
+    skills: dict[str, list[str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -259,6 +262,11 @@ def parse_draft_response(raw_text: str) -> DraftResponse:
         raise ModelContractError("entry_title_overrides must be an object if present")
     entry_title_overrides = {str(k): str(v) for k, v in raw_title_overrides.items()}
 
+    raw_skills = data.get("skills")
+    skills = None
+    if raw_skills is not None and isinstance(raw_skills, dict):
+        skills = {str(k): [str(v) for v in vals] for k, vals in raw_skills.items()}
+
     return DraftResponse(
         atomic_requirements=atomic_requirements,
         selected_evidence_ids=[str(eid) for eid in data["selected_evidence_ids"]],
@@ -266,6 +274,7 @@ def parse_draft_response(raw_text: str) -> DraftResponse:
         section_order=[str(sec) for sec in data["section_order"]],
         bullets=bullets,
         entry_title_overrides=entry_title_overrides,
+        skills=skills,
     )
 
 

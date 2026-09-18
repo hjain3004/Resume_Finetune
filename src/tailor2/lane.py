@@ -183,6 +183,7 @@ def run_tailor2_lane(
     re_audit_invoker: Tailor2Invoker | None = None,
     acknowledge_same_model: bool = False,
     repair_budget: int = 1,
+    source_conflicts: set[str] | None = None,
 ) -> Tailor2RunResult:
     """Run the LLM-first tailoring pipeline.
 
@@ -268,6 +269,7 @@ def run_tailor2_lane(
         repair_invoker=repair_invoker,
         re_audit_invoker=re_audit_invoker,
         repair_budget=repair_budget,
+        source_conflicts=source_conflicts,
     )
     if fatal_result is not None:
         return fatal_result
@@ -292,7 +294,10 @@ def run_tailor2_lane(
     resolved_titles = {
         e.entry_id: e.displayed_title_or_tech for e in final_projection.entries if e.kind == "Experience"
     }
-    filtered_skills = {cat: tuple(s.term for s in terms) for cat, terms in final_projection.skills.items()}
+    filtered_skills = {
+        cat: tuple(s.term for s in terms if s.is_displayed)
+        for cat, terms in final_projection.skills.items()
+    }
     try:
         tex_path, pdf_path, render_doc = compile_draft_to_pdf(
             final_draft, profile, out_dir, template_path, resolved_titles, filtered_skills
@@ -356,6 +361,7 @@ def _audit_repair_cycle(
     repair_invoker: Tailor2Invoker,
     re_audit_invoker: Tailor2Invoker,
     repair_budget: int,
+    source_conflicts: set[str] | None = None,
 ) -> Tailor2RunResult | None:
     """Runs audit, then bounded repair+re-audit cycles.
 
@@ -394,7 +400,9 @@ def _audit_repair_cycle(
     expected_eval_ids = [b.bullet_id for b in draft.bullets]
 
     while True:
-        projection = build_resume_projection(current_draft, profile, company, title, variant, model_identities)
+        projection = build_resume_projection(
+            current_draft, profile, company, title, variant, model_identities, source_conflicts=source_conflicts
+        )
         corrected_projection, auto_corrections = apply_deterministic_auto_corrections(projection)
         if auto_corrections:
             stage.auto_corrections.extend(auto_corrections)
@@ -405,6 +413,9 @@ def _audit_repair_cycle(
             for tr in projection.title_resolutions:
                 if tr.requires_human_review:
                     stage.needs_human_review = True
+                    if tr.authority_note not in stage.warnings:
+                        stage.warnings.append(tr.authority_note)
+                elif tr.was_auto_corrected:
                     if tr.authority_note not in stage.warnings:
                         stage.warnings.append(tr.authority_note)
 

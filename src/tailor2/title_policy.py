@@ -39,7 +39,7 @@ class TitleResolution:
     proposed_title: str | None
     canonical_title: str
     displayed_title: str
-    resolution_status: str  # "canonical" | "approved_variant" | "unresolved_conflict"
+    resolution_status: str  # "canonical_exact" | "approved_variant" | "auto_corrected_to_canonical" | "unresolved_source_conflict"
     was_auto_corrected: bool
     requires_human_review: bool
     authority_note: str
@@ -49,32 +49,54 @@ class TitleResolution:
         """Backward compatibility with c13677c."""
         return self.displayed_title
 
+    @property
+    def is_canonical(self) -> bool:
+        """True if rendered title matches canonical title."""
+        return self.resolution_status in ("canonical", "canonical_exact")
+
 
 def resolve_displayed_title(
     entry_id: str,
     proposed_title: str | None,
     canonical_title: str,
     approved_variants: frozenset[str] | set[str] | None = None,
+    has_source_conflict: bool = False,
 ) -> TitleResolution:
     """Resolve what title should actually render for an experience entry.
 
-    - No proposal -> canonical title, resolution_status="canonical".
-    - Proposal equals canonical -> canonical title, resolution_status="canonical".
+    - Genuinely contradictory authoritative sources -> preserve safest canonical title,
+      resolution_status="unresolved_source_conflict", was_auto_corrected=True, requires_human_review=True.
+    - No proposal -> canonical title, resolution_status="canonical_exact".
+    - Proposal equals canonical -> canonical title, resolution_status="canonical_exact".
     - Proposal is an approved variant with verified provenance -> use proposal,
       resolution_status="approved_variant".
-    - Anything else -> unapproved substitution. Preserves the safest supported
-      canonical title, sets resolution_status="unresolved_conflict",
-      was_auto_corrected=True, and requires_human_review=True.
-      The run is never rejected over this; the artifact is preserved and
-      routed to human review.
+    - Anything else -> unapproved substitution with unambiguous canonical evidence.
+      Deterministically auto-corrects to canonical title, sets
+      resolution_status="auto_corrected_to_canonical", was_auto_corrected=True,
+      requires_human_review=False. Continues normally with transparent warning.
     """
+    if has_source_conflict:
+        return TitleResolution(
+            entry_id=entry_id,
+            proposed_title=proposed_title,
+            canonical_title=canonical_title,
+            displayed_title=canonical_title,
+            resolution_status="unresolved_source_conflict",
+            was_auto_corrected=True,
+            requires_human_review=True,
+            authority_note=(
+                f"entry {entry_id!r}: genuine conflict among authoritative sources for title; "
+                f"preserved safest canonical title {canonical_title!r}; flagged for human review."
+            ),
+        )
+
     if not proposed_title or proposed_title.strip() == canonical_title.strip():
         return TitleResolution(
             entry_id=entry_id,
             proposed_title=proposed_title,
             canonical_title=canonical_title,
             displayed_title=canonical_title,
-            resolution_status="canonical",
+            resolution_status="canonical_exact",
             was_auto_corrected=False,
             requires_human_review=False,
             authority_note="Verified canonical employment title.",
@@ -98,19 +120,19 @@ def resolve_displayed_title(
             authority_note=f"Using authorized display variant {clean_proposed!r} with documented provenance.",
         )
 
-    # Unresolved conflict: do NOT alter canonical history.
-    # Preserve the safest canonical title and route to human review.
+    # Unapproved substitution with unambiguous canonical evidence:
+    # Deterministically auto-correct to canonical title without requiring human review.
     return TitleResolution(
         entry_id=entry_id,
         proposed_title=proposed_title,
         canonical_title=canonical_title,
         displayed_title=canonical_title,
-        resolution_status="unresolved_conflict",
+        resolution_status="auto_corrected_to_canonical",
         was_auto_corrected=True,
-        requires_human_review=True,
+        requires_human_review=False,
         authority_note=(
             f"entry {entry_id!r}: proposed title {proposed_title!r} differs from canonical title "
-            f"{canonical_title!r} and is not an approved display variant. Preserved safest canonical "
-            f"title {canonical_title!r}; flagged for human review."
+            f"{canonical_title!r} and is not an approved display variant. Deterministically auto-corrected "
+            f"to verified canonical title {canonical_title!r} from master_profile."
         ),
     )
