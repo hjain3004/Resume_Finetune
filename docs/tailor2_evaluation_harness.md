@@ -75,5 +75,21 @@ A repository-wide search for `G2`, `G3`, "release gate", and "pilot" found only 
 
 - Live evaluation is interface-only (`orchestrator._run_live_target` raises `NotImplementedError` after its authorization checks pass) -- implementing an actual live Top-10 run is out of scope for this task.
 - The release gate's thresholds are proposals; they have not been reviewed or ratified as repository policy.
-- `build_blind_pairs_from_results` (used by the CLI's `build-blind-pairs`) currently pairs each target's recorded result against itself (candidate vs. baseline placeholder) because no second (baseline/manual/render-fill) pipeline has produced comparable output yet; a real comparison run will supply distinct `ComparisonCandidate`s once a baseline artifact exists.
 - Cost estimation (`TargetResult.estimated_cost_usd`) is whatever the (future) live invoker reports or a recorded fixture states; this harness does not implement its own token-based cost model.
+- `--baseline-registry` must currently be authored by hand (see §12); nothing yet auto-populates it from a real Tailor1/legacy run or a render-fill artifact.
+
+## 12. Baseline registry and self-pair prevention (additive correction, 2026-09-18)
+
+**Defect fixed:** the original `build-blind-pairs` (§5 as first shipped) paired each `TargetResult` against itself -- `candidate_a` and `candidate_b` both read the same `run_id`/`resume_checksum`/`resume_text_path`. Self-comparison makes any human-preference result meaningless, so this was never safe to leave executable.
+
+**Fix:** `src/tailor2_eval/baseline_registry.py` adds `BaselineRegistry`, a read-only `target_id -> {old_pipeline | manual | accepted_historical | alternate_config: BaselineEntry}` map loaded from a JSON file (`--baseline-registry PATH`; schema: `artifact_id`, `pipeline_id`, `resume_checksum`, `resume_text_path`, `model_identities`, `provenance` per entry). `.resolve(target_id, preferred_kinds)` returns the first available kind (default order: `old_pipeline`, `accepted_historical`, `alternate_config`, `manual`) or `None` -- it never fabricates a missing artifact, and a missing `manual` entry never blocks resolution of another kind.
+
+`src/tailor2_eval/pairing.py` is the self-pair guard:
+- `check_not_self_pair(candidate, baseline, diagnostic_mode=False)` raises `SelfPairError` if the two sides share an `artifact_id`, `resume_text_path`, `resume_checksum`, or `result_run_id` -- `diagnostic_mode=True` is the **only** bypass, and it is never the default (CLI: `--diagnostic-identical`, off unless passed explicitly).
+- `build_comparison_for_target` resolves a baseline through the registry, verifies `jd_checksum`/`profile_checksum` provenance, runs the self-pair check, and returns either `(ComparisonPair, BlindPackage, AnswerKeyEntry)` or a `PairExclusion` (`no_baseline_available` | `provenance_mismatch` | `self_pair_detected`) -- it never raises for a batch run, so one bad target cannot abort the rest.
+- `build_comparison_between_results` is the direct two-`TargetResult` form (candidate vs. an alternate pipeline configuration, or an explicit same-system diagnostic), used when both sides already exist as results rather than one being a registry-defined baseline.
+- `build_blind_pairs_batch` runs the above across every candidate result and returns a `BatchPairingReport(included, excluded)`.
+
+**Reviewer/answer-key separation:** `ComparisonCandidate` gained additive fields (`artifact_id`, `pipeline_id`, `model_identities`, `provenance`) and `ComparisonPair` gained `purpose` -- all optional/defaulted, so every pre-existing caller and test kept working unchanged. `blind.blind_package_to_dict` was **not** changed and still only ever serializes `resume_text`/`anon_id`, so none of the new identity fields can leak into a reviewer package. Those fields are instead captured in a separate `pairing.AnswerKeyEntry`, written by the CLI to `<out_dir>/answer_key/<comparison_id>.json` -- a distinct file/directory from the reviewer package, never merged into it.
+
+`scripts/evaluate_tailor2.py build-blind-pairs` now requires `--baseline-registry` to produce any pairs at all; omitting it prints a warning and excludes every target (`no_baseline_available`) rather than falling back to self-pairing. It also writes `<out_dir>/pairing_report.json` recording every included and excluded target with its reason.

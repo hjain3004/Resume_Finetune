@@ -59,8 +59,24 @@ def test_cli_run_recorded_and_aggregate_and_blind_pairs(tmp_path: Path, scenario
     assert (artifact_root / "zoom_4766" / "result.json").exists()
     assert (artifact_root / "doordash_4608" / "result.json").exists()
 
-    assert main(["build-blind-pairs", str(artifact_root)]) == 0
-    assert (artifact_root / "blind_pairs" / "zoom_4766.json").exists()
+    baseline_registry_path = Path("tests/fixtures/tailor2_eval/baseline_registry.json")
+    assert main(["build-blind-pairs", str(artifact_root), "--baseline-registry", str(baseline_registry_path)]) == 0
+    blind_pairs_dir = artifact_root / "blind_pairs"
+    # zoom_4766 and doordash_4608 both resolve a real, distinct baseline
+    # (old_pipeline) from the registry -- never self-paired.
+    assert (blind_pairs_dir / "cmp-zoom_4766-old_pipeline.json").exists()
+    assert (blind_pairs_dir / "cmp-doordash_4608-old_pipeline.json").exists()
+    assert (blind_pairs_dir / "answer_key" / "cmp-zoom_4766-old_pipeline.json").exists()
+    pairing_report = json.loads((blind_pairs_dir / "pairing_report.json").read_text(encoding="utf-8"))
+    assert set(pairing_report["included"]) == {"cmp-zoom_4766-old_pipeline", "cmp-doordash_4608-old_pipeline"}
+    assert pairing_report["excluded"] == []
+
+    # A reviewer package never contains the answer key's identifying fields.
+    package_dump = (blind_pairs_dir / "cmp-zoom_4766-old_pipeline.json").read_text(encoding="utf-8")
+    assert "tailor1@legacy" not in package_dump
+    assert "candidate_1" in package_dump and "candidate_2" in package_dump
+
+    assert main(["build-blind-pairs", str(artifact_root)]) == 0  # no --baseline-registry given
 
     assert main(["aggregate", str(artifact_root)]) == 0
     reports_dir = artifact_root / "reports"

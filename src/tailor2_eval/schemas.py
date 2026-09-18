@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 PLAN_SCHEMA_VERSION = "1.0"
 TARGET_RESULT_SCHEMA_VERSION = "1.0"
-COMPARISON_PAIR_SCHEMA_VERSION = "1.0"
+COMPARISON_PAIR_SCHEMA_VERSION = "1.1"  # +purpose, +ComparisonCandidate provenance fields (additive)
 HUMAN_REVIEW_SCHEMA_VERSION = "1.0"
 AGGREGATE_SUMMARY_SCHEMA_VERSION = "1.0"
 RELEASE_GATE_SCHEMA_VERSION = "1.0"
@@ -378,6 +378,23 @@ class ComparisonCandidate:
     result_run_id: str
     resume_checksum: str
     resume_text_path: str
+    # ---- Added for baseline-registry pairing (see pairing.py) ----
+    # A stable identifier for the underlying artifact, independent of
+    # `result_run_id` -- used by pairing.check_not_self_pair so a candidate
+    # and baseline drawn from genuinely different sources are never
+    # collapsed onto the same identity by accident. Defaults to "" so every
+    # pre-existing call site (which never set this) keeps working; callers
+    # that don't set it explicitly get one derived by
+    # pairing.make_artifact_id.
+    artifact_id: str = ""
+    # Pipeline/configuration identifier (e.g. "tailor2@<sha>", "tailor1@legacy").
+    pipeline_id: str = ""
+    # Provider/model identities for this side. Retained for the private
+    # answer key (pairing.AnswerKeyEntry) only -- blind.blind_package_to_dict
+    # never reads this field, so it can never leak into a reviewer package.
+    model_identities: dict[str, Any] = field(default_factory=dict)
+    # Free-text provenance note (e.g. "Tailor1 legacy run, 2026-08-01").
+    provenance: str = ""
 
 
 @dataclass(frozen=True)
@@ -389,6 +406,10 @@ class ComparisonPair:
     profile_checksum: str
     candidate_a: ComparisonCandidate
     candidate_b: ComparisonCandidate
+    # Why this pair exists (e.g. "candidate_vs_old_pipeline",
+    # "candidate_vs_manual", "diagnostic_same_system"). Optional/additive;
+    # "" for any pair built before this field existed.
+    purpose: str = ""
 
 
 def comparison_pair_to_dict(pair: ComparisonPair) -> dict[str, Any]:
@@ -405,6 +426,7 @@ def comparison_pair_from_dict(data: dict[str, Any]) -> ComparisonPair:
         profile_checksum=str(data["profile_checksum"]),
         candidate_a=ComparisonCandidate(**data["candidate_a"]),
         candidate_b=ComparisonCandidate(**data["candidate_b"]),
+        purpose=str(data.get("purpose", "")),
     )
 
 

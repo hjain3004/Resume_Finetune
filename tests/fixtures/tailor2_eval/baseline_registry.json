@@ -1,0 +1,40 @@
+{
+  "zoom_4766": {
+    "old_pipeline": {
+      "artifact_id": "old-zoom-4766-001",
+      "pipeline_id": "tailor1@legacy",
+      "resume_checksum": "1111old1111old1111old1111old1111old1111old1111old1111old1111ol",
+      "resume_text_path": "baselines/zoom_4766/old_pipeline.tex",
+      "model_identities": {"drafter": {"provider": "claude", "model": "claude-3-5-sonnet-20241022"}},
+      "provenance": "Tailor1 (legacy) run archived 2026-08-01"
+    },
+    "manual": {
+      "artifact_id": "manual-zoom-4766-001",
+      "pipeline_id": "manual",
+      "resume_checksum": "2222man2222man2222man2222man2222man2222man2222man2222man2222ma",
+      "resume_text_path": "baselines/zoom_4766/manual.tex",
+      "model_identities": {},
+      "provenance": "Hand-authored reference resume, reviewed 2026-08-10"
+    }
+  },
+  "doordash_4608": {
+    "old_pipeline": {
+      "artifact_id": "old-doordash-4608-001",
+      "pipeline_id": "tailor1@legacy",
+      "resume_checksum": "3333old3333old3333old3333old3333old3333old3333old3333old3333ol",
+      "resume_text_path": "baselines/doordash_4608/old_pipeline.tex",
+      "model_identities": {"drafter": {"provider": "claude", "model": "claude-3-5-sonnet-20241022"}},
+      "provenance": "Tailor1 (legacy) run archived 2026-08-01"
+    }
+  },
+  "idme_3981": {
+    "manual": {
+      "artifact_id": "manual-idme-3981-001",
+      "pipeline_id": "manual",
+      "resume_checksum": "4444man4444man4444man4444man4444man4444man4444man4444man4444ma",
+      "resume_text_path": "baselines/idme_3981/manual.tex",
+      "model_identities": {},
+      "provenance": "Hand-authored reference resume, reviewed 2026-08-12"
+    }
+  }
+}
