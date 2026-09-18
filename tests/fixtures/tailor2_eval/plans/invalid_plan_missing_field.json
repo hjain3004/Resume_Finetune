@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "eval-plan-invalid-missing-field",
+  "profile_id": "master_profile@6412c9fd6e7e",
+  "profile_checksum": "6412c9fd6e7ea390c64a7c773c46afda74199de36966369afb6f79c746534c8d",
+  "target_ids": ["zoom_4766"],
+  "target_jd_checksums": {
+    "zoom_4766": "3cb0db9d4a8b3af912332a1d52213c52742cc7c73a29281f119ce807d3d3c72f"
+  },
+  "candidate_pipeline_id": "tailor2@feat-tailor2-selection-integration-8649c21",
+  "baseline_pipeline_id": null,
+  "drafter": {"provider": "claude", "model": "claude-sonnet-5"},
+  "auditor": {"provider": "claude", "model": "claude-sonnet-5"},
+  "repair": {"provider": "claude", "model": "claude-sonnet-5"},
+  "re_audit": {"provider": "claude", "model": "claude-sonnet-5"},
+  "deterministic_config": {},
+  "max_cost_usd": 5.0,
+  "timeout_seconds": 300,
+  "resume_policy": "skip_completed",
+  "artifact_root": "data/tailor2_eval/eval-plan-invalid-missing-field"
+}
