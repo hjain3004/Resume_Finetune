@@ -6,7 +6,6 @@ the read-only export-jd helper."""
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable
 import json
 import os
 import shlex
@@ -14,8 +13,6 @@ import sys
 import urllib.parse
 import uuid
 from pathlib import Path
-
-_EXPORT_JD_HOOK: Callable[[str], None] | None = None
 
 from src import db
 from src.tailor.provenance import (
@@ -185,107 +182,50 @@ def cmd_export_jd(args) -> int:
             attestation=None,
         )
 
-        out = Path(args.out)
+        out = Path(args.out).resolve()
         out.parent.mkdir(parents=True, exist_ok=True)
         sidecar_path = out.parent / f"{out.name}.provenance.json"
 
-        out_exists = out.exists()
-        sidecar_exists = sidecar_path.exists()
-        if (out_exists or sidecar_exists) and not getattr(args, "overwrite", False):
+        if out.exists() or sidecar_path.exists():
+            existing_dest = out if out.exists() else sidecar_path
             raise LaneError(
-                f"destination {out if out_exists else sidecar_path} already exists; "
-                "use --overwrite to replace existing export"
+                f"destination {existing_dest} already exists. Refusing to overwrite. "
+                "Please specify a new output path or deliberately remove both existing files."
             )
 
         tmp_out = out.with_name(f"{out.name}.tmp.{uuid.uuid4().hex}")
         tmp_sidecar = out.with_name(f"{out.name}.provenance.json.tmp.{uuid.uuid4().hex}")
-
-        if _EXPORT_JD_HOOK is not None:
-            _EXPORT_JD_HOOK("write_jd_temp")
-        tmp_out.write_text(text, encoding="utf-8")
-
-        if _EXPORT_JD_HOOK is not None:
-            _EXPORT_JD_HOOK("write_sidecar_temp")
-        tmp_sidecar.write_text(json.dumps(prov.to_dict(), indent=2), encoding="utf-8")
-
-        from src.tailor.provenance import validate_provenance_for_tailoring
-        validate_provenance_for_tailoring(
-            tmp_out,
-            company=company,
-            title=title,
-            db_conn=conn,
-            sidecar_path=tmp_sidecar,
-        )
-
-        bak_out = out.with_name(f"{out.name}.bak.{uuid.uuid4().hex}") if out_exists else None
-        bak_sidecar = sidecar_path.with_name(f"{sidecar_path.name}.bak.{uuid.uuid4().hex}") if sidecar_exists else None
-        installed_out = False
         installed_sidecar = False
 
         try:
-            if out_exists and bak_out is not None:
-                out.replace(bak_out)
-            if sidecar_exists and bak_sidecar is not None:
-                sidecar_path.replace(bak_sidecar)
+            tmp_out.write_text(text, encoding="utf-8")
+            tmp_sidecar.write_text(json.dumps(prov.to_dict(), indent=2), encoding="utf-8")
 
-            if _EXPORT_JD_HOOK is not None:
-                _EXPORT_JD_HOOK("replace_jd")
-            tmp_out.replace(out)
-            installed_out = True
-
-            if _EXPORT_JD_HOOK is not None:
-                _EXPORT_JD_HOOK("replace_sidecar")
-            tmp_sidecar.replace(sidecar_path)
-            installed_sidecar = True
-
-            # Validate installed pair in-place
+            # Validate staged pair using real State A validator
+            from src.tailor.provenance import validate_provenance_for_tailoring
             validate_provenance_for_tailoring(
-                out,
+                tmp_out,
                 company=company,
                 title=title,
                 db_conn=conn,
-                sidecar_path=sidecar_path,
+                sidecar_path=tmp_sidecar,
             )
 
-            # Success: unlink backups
-            if bak_out is not None and bak_out.exists():
-                bak_out.unlink()
-            if bak_sidecar is not None and bak_sidecar.exists():
-                bak_sidecar.unlink()
+            # Install sidecar first
+            tmp_sidecar.replace(sidecar_path)
+            installed_sidecar = True
+
+            # Install JD last as the commit point
+            tmp_out.replace(out)
         except Exception:
-            # Rollback: remove partially installed files, restore backups
             if installed_sidecar and sidecar_path.exists():
-                try:
-                    sidecar_path.unlink()
-                except OSError:
-                    pass
-            if installed_out and out.exists():
-                try:
-                    out.unlink()
-                except OSError:
-                    pass
-            if bak_sidecar is not None and bak_sidecar.exists():
-                try:
-                    bak_sidecar.replace(sidecar_path)
-                except OSError:
-                    pass
-            if bak_out is not None and bak_out.exists():
-                try:
-                    bak_out.replace(out)
-                except OSError:
-                    pass
+                sidecar_path.unlink()
             raise
         finally:
             if tmp_out.exists():
-                try:
-                    tmp_out.unlink()
-                except OSError:
-                    pass
+                tmp_out.unlink()
             if tmp_sidecar.exists():
-                try:
-                    tmp_sidecar.unlink()
-                except OSError:
-                    pass
+                tmp_sidecar.unlink()
 
         print(f"wrote {out} ({len(text)} chars)")
         print(f"wrote provenance sidecar: {sidecar_path}")
@@ -295,11 +235,15 @@ def cmd_export_jd(args) -> int:
         print(f"jd_quality: {row['jd_quality']}")
         print(f"status: {row['status']}")
         variant = row["base_variant"] or "backend"
-        print(
-            f"\nRecommended tailoring command:\n"
-            f"  python -m scripts.tailor_now run --jd {out} --company {shlex.quote(company)} "
-            f"--title {shlex.quote(title)} --variant {variant} --db {args.db}"
-        )
+        cmd_argv = [
+            "python", "-m", "scripts.tailor_now", "run",
+            "--jd", str(out),
+            "--company", company,
+            "--title", title,
+            "--variant", variant,
+            "--db", str(Path(args.db).resolve() if args.db else "data/jobs.db"),
+        ]
+        print(f"\nRecommended tailoring command:\n  {shlex.join(cmd_argv)}")
         return 0
     except Exception as exc:  # noqa: BLE001
         return _fail("export-jd", exc)
@@ -378,7 +322,6 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--db", default="data/jobs.db")
     export.add_argument("--job-id", type=int, required=True)
     export.add_argument("--out", required=True)
-    export.add_argument("--overwrite", action="store_true", help="Overwrite existing destination files")
     export.set_defaults(func=cmd_export_jd)
 
     return parser

@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import shlex
 import sqlite3
 
 import pytest
@@ -548,11 +549,11 @@ def test_review_only_exports_remain_visibly_non_tailoring(tmp_path):
     # 1. README clearly states REVIEW ONLY and warns against direct tailoring
     readme = (out_dir / "README.md").read_text(encoding="utf-8")
     assert "REVIEW ONLY - NOT TAILORING READY" in readme
-    assert "Aggregator summaries lack literal employer wording and cannot be tailored directly" in readme
+    assert "Aggregator summaries and database rows marked user_attested lack persisted attestation" in readme
     assert "Review-Only (Aggregator)" in readme
 
     # 2. JSON clearly marked review_only
-    json_data = json.loads((out_dir / "jobs_top10.json").read_text(encoding="utf-8"))
+    json_data = json.loads((out_dir / "jobs.json").read_text(encoding="utf-8"))
     assert json_data["mode"] == "review_only"
     assert json_data["total_evaluated"] == 4
     assert json_data["included_count"] == 4
@@ -586,7 +587,7 @@ def test_tailoring_ready_exports_contain_zero_aggregator_jobs(tmp_path):
     export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
 
     # 1. Exactly 2 ATS jobs exported, 2 aggregator jobs excluded
-    json_data = json.loads((out_dir / "jobs_top10.json").read_text(encoding="utf-8"))
+    json_data = json.loads((out_dir / "jobs.json").read_text(encoding="utf-8"))
     assert json_data["mode"] == "tailoring_ready"
     assert json_data["total_evaluated"] == 4
     assert json_data["included_count"] == 2
@@ -607,7 +608,7 @@ def test_tailoring_ready_exports_contain_zero_aggregator_jobs(tmp_path):
         assert sc["jd_quality"] == "ats"
 
     # 3. Exported DB contains only the 2 tailoring-ready jobs
-    exp_conn = sqlite3.connect(out_dir / "jobs_top10.db")
+    exp_conn = sqlite3.connect(out_dir / "jobs.db")
     rows = exp_conn.execute("SELECT id, company, jd_quality FROM jobs").fetchall()
     assert len(rows) == 2
     assert {r[1] for r in rows} == {"Stripe", "Databricks"}
@@ -1195,7 +1196,7 @@ def test_export_shortlist_excludes_user_attested_db_row(tmp_path):
     out_dir = tmp_path / "shortlist_export"
     export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
 
-    exported_json = json.loads((out_dir / "jobs_top10.json").read_text(encoding="utf-8"))
+    exported_json = json.loads((out_dir / "jobs.json").read_text(encoding="utf-8"))
     excluded = {ex["company"]: ex["reason"] for ex in exported_json["excluded"]}
     assert "UserAttestedCo" in excluded
     assert excluded["UserAttestedCo"] == "user_attested row lacks persisted attestation metadata in database"
@@ -1204,7 +1205,7 @@ def test_export_shortlist_excludes_user_attested_db_row(tmp_path):
     assert len(included_qualities) == 2
     assert all(q == "ats" for q in included_qualities)
 
-    compact_db = out_dir / "jobs_top10.db"
+    compact_db = out_dir / "jobs.db"
     compact_conn = db.get_readonly_connection(compact_db)
     try:
         for p in (out_dir / "jds").glob("*.txt"):
@@ -1222,6 +1223,54 @@ def test_export_shortlist_excludes_user_attested_db_row(tmp_path):
         compact_conn.close()
 
 
+def test_review_only_user_attested_row_labeled_missing_persisted_attestation(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    conn = db.get_connection(db_path)
+    now = "2026-09-01T00:00:00+00:00"
+    conn.execute(
+        """
+        INSERT INTO jobs (
+            dedup_key, company, title, url, source, discovered_at, status, jd_text,
+            resolver, jd_quality, ats_url, fit_score, base_variant
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("k5", "UserAttestedCo", "Lead SWE", "https://example.com/job/5", "manual", now, "SHORTLISTED", JD_TEXT, None, "user_attested", None, 9.5, "backend"),
+    )
+    conn.commit()
+    conn.close()
+
+    out_dir = tmp_path / "shortlist_review"
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.REVIEW_ONLY)
+
+    readme = (out_dir / "README.md").read_text(encoding="utf-8")
+    assert "Review-Only (Missing Persisted Attestation)" in readme
+
+    exported_json = json.loads((out_dir / "jobs.json").read_text(encoding="utf-8"))
+    co_map = {j["company"]: j for j in exported_json["jobs"]}
+    assert "UserAttestedCo" in co_map
+
+    # Find the sidecar for UserAttestedCo
+    attested_sidecars = [p for p in (out_dir / "jds").glob("*.provenance.json") if "userattested" in p.name.lower()]
+    assert len(attested_sidecars) == 1
+    sidecar_data = json.loads(attested_sidecars[0].read_text(encoding="utf-8"))
+    assert sidecar_data["jd_quality"] == "unverified"
+    assert sidecar_data["attestation"] is None
+
+    # Prove it cannot enter tailoring
+    attested_jd = attested_sidecars[0].parent / attested_sidecars[0].name.replace(".provenance.json", "")
+    with pytest.raises(LaneError, match="cannot tailor unverified JD"):
+        run_manual_application(
+            attested_jd,
+            company="UserAttestedCo",
+            title="Lead SWE",
+            variant="backend",
+            root=tmp_path / "apps",
+            profile_path=PROFILE,
+            sidecar_path=attested_sidecars[0],
+        )
+
+
 @pytest.mark.parametrize("hook_stage", [
     "before_db",
     "before_jds",
@@ -1229,6 +1278,7 @@ def test_export_shortlist_excludes_user_attested_db_row(tmp_path):
     "before_json",
     "before_readme",
     "before_current_json",
+    "before_indirections",
     "before_pointer_swap",
     "during_pointer_swap",
 ])
@@ -1249,7 +1299,10 @@ def test_export_shortlist_failure_injection_all_steps(tmp_path, monkeypatch, hoo
     assert initial_gen_dir.is_dir()
     assert (out_dir / "current").resolve() == initial_gen_dir
     assert (out_dir / "jds").resolve() == initial_gen_dir / "jds"
-    assert (out_dir / "jobs_top10.db").resolve() == initial_gen_dir / "jobs_top10.db"
+    assert (out_dir / "jobs.db").resolve() == initial_gen_dir / "jobs.db"
+    assert (out_dir / "jobs.json").resolve() == initial_gen_dir / "jobs.json"
+    assert (out_dir / "README.md").resolve() == initial_gen_dir / "README.md"
+    assert (out_dir / "current.json").resolve() == initial_gen_dir / "current.json"
 
     # 2. Inject failure at hook_stage during next export
     def failing_hook(stage: str) -> None:
@@ -1264,7 +1317,9 @@ def test_export_shortlist_failure_injection_all_steps(tmp_path, monkeypatch, hoo
     # 3. Verify previous export is completely unchanged, pointer is untouched, no dangling links
     assert (out_dir / "current").resolve() == initial_gen_dir
     assert (out_dir / "jds").resolve() == initial_gen_dir / "jds"
-    assert (out_dir / "jobs_top10.db").resolve() == initial_gen_dir / "jobs_top10.db"
+    assert (out_dir / "jobs.db").resolve() == initial_gen_dir / "jobs.db"
+    assert (out_dir / "jobs.json").resolve() == initial_gen_dir / "jobs.json"
+    assert (out_dir / "README.md").resolve() == initial_gen_dir / "README.md"
     assert (out_dir / "current.json").resolve() == initial_gen_dir / "current.json"
     post_data = json.loads(current_json.read_text(encoding="utf-8"))
     assert post_data["generation_id"] == initial_gen_id
@@ -1275,39 +1330,84 @@ def test_export_shortlist_failure_injection_all_steps(tmp_path, monkeypatch, hoo
     assert gen_dirs[0].name == initial_gen_id
 
 
-def test_export_shortlist_legacy_migration_preserves_data(tmp_path):
+def test_export_shortlist_limit_changes_create_no_dangling_symlinks(tmp_path):
     db_path = tmp_path / "jobs.db"
     _seed_shortlist_db(db_path)
-    out_dir = tmp_path / "legacy_export"
+    out_dir = tmp_path / "shortlist_limits"
+
+    required_symlinks = ["jds", "jobs.db", "jobs.json", "README.md", "current.json"]
+
+    # Run 1: limit = 10
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+    for name in required_symlinks:
+        p = out_dir / name
+        assert p.is_symlink()
+        assert p.exists(), f"Symlink {name} is dangling after limit=10"
+
+    # Run 2: limit = 1
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=1, mode=ExportMode.TAILORING_READY)
+    for name in required_symlinks:
+        p = out_dir / name
+        assert p.is_symlink()
+        assert p.exists(), f"Symlink {name} is dangling after limit=1"
+
+    # Run 3: limit = 10
+    export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+    for name in required_symlinks:
+        p = out_dir / name
+        assert p.is_symlink()
+        assert p.exists(), f"Symlink {name} is dangling after second limit=10"
+
+
+def test_export_shortlist_refuses_legacy_non_symlinks_without_moving_anything(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    out_dir = tmp_path / "legacy_dest"
     out_dir.mkdir(parents=True)
 
-    # Create real, non-symlink legacy directory structure
+    # Place non-symlink legacy directory and file
     legacy_jds = out_dir / "jds"
     legacy_jds.mkdir()
-    legacy_file = legacy_jds / "legacy_job.txt"
-    legacy_file.write_text("Legacy job content that must not be lost", encoding="utf-8")
-    legacy_db = out_dir / "jobs_top10.db"
-    legacy_db.write_bytes(b"SQLite format 3\x00legacy_db")
-    legacy_readme = out_dir / "README.md"
-    legacy_readme.write_text("# Legacy Readme", encoding="utf-8")
+    legacy_file = legacy_jds / "untracked_legacy.txt"
+    legacy_file.write_text("critical untracked content", encoding="utf-8")
+    legacy_db = out_dir / "jobs.db"
+    legacy_db.write_bytes(b"existing-db")
 
-    # Run export_shortlist on this legacy directory
+    with pytest.raises(ValueError, match="Refusing to overwrite or migrate tracked shortlist files implicitly"):
+        export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
+
+    # Verify existing files are completely untouched and unmoved
+    assert legacy_file.exists()
+    assert legacy_file.read_text(encoding="utf-8") == "critical untracked content"
+    assert legacy_db.exists()
+    assert legacy_db.read_bytes() == b"existing-db"
+    assert not (out_dir / "generations").exists()
+
+
+def test_tailoring_ready_readme_recommended_command_includes_compact_db(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_shortlist_db(db_path)
+    out_dir = tmp_path / "tailoring_readme_test"
+
     export_shortlist(db_path=str(db_path), out_dir=str(out_dir), limit=10, mode=ExportMode.TAILORING_READY)
 
-    # Check that legacy files were preserved in generations/gen_legacy_initial
-    legacy_gen_dir = out_dir / "generations" / "gen_legacy_initial"
-    assert legacy_gen_dir.exists()
-    assert (legacy_gen_dir / "jds" / "legacy_job.txt").read_text(encoding="utf-8") == "Legacy job content that must not be lost"
-    assert (legacy_gen_dir / "jobs_top10.db").read_bytes() == b"SQLite format 3\x00legacy_db"
-    assert (legacy_gen_dir / "README.md").read_text(encoding="utf-8") == "# Legacy Readme"
+    readme = (out_dir / "README.md").read_text(encoding="utf-8")
+    match = re.search(r"```bash\s*\n(python -m scripts\.tailor_now run [^\n]+)\n```", readme)
+    assert match is not None, "No recommended tailor_now command found in README.md"
 
-    # Public paths are now symlinks pointing to current/... which resolves to the new generation
-    assert (out_dir / "current").is_symlink()
-    assert (out_dir / "jds").is_symlink()
-    assert (out_dir / "jobs_top10.db").is_symlink()
-    assert (out_dir / "current.json").is_symlink()
+    cmd_line = match.group(1)
+    tokens = shlex.split(cmd_line)
+    assert "--db" in tokens
+    db_idx = tokens.index("--db")
+    db_arg = tokens[db_idx + 1]
+    assert Path(db_arg).resolve() == (out_dir / "jobs.db").resolve()
 
-    new_gen_dir = (out_dir / "current").resolve()
-    assert new_gen_dir != legacy_gen_dir
-    assert (out_dir / "jds").resolve() == new_gen_dir / "jds"
-    assert (out_dir / "jobs_top10.db").resolve() == new_gen_dir / "jobs_top10.db"
+    jd_idx = tokens.index("--jd")
+    jd_arg = tokens[jd_idx + 1]
+    assert Path(jd_arg).is_file()
+    assert Path(db_arg).is_file()
+
+    # Verify that running with --dry-run passes provenance validation cleanly
+    dry_run_tokens = tokens[tokens.index("run"):] + ["--dry-run"]
+    rc = cli.main(dry_run_tokens)
+    assert rc == 0

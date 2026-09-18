@@ -4,7 +4,7 @@ Supports two modes:
 - tailoring_ready (default): Only exports verified ATS JDs
   with cryptographic provenance sidecars, excluding aggregator summaries.
 - review_only: Exports shortlisted jobs for human review, clearly labeled as non-tailoring
-  for any aggregator rows.
+  for any aggregator rows or unattested database rows.
 
 Usage:
     .venv/bin/python -m scripts.export_shortlist [--db PATH] [--limit N] [--out DIR] [--mode {tailoring_ready,review_only}]
@@ -21,6 +21,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import sqlite3
 import sys
@@ -88,6 +89,21 @@ def _evaluate_row_eligibility(row: sqlite3.Row, mode: ExportMode) -> str | None:
     return None
 
 
+def _check_no_legacy_non_symlinks(dest: Path) -> None:
+    """Refuse to overwrite or implicitly migrate existing non-symlink public files/directories."""
+    if not dest.exists():
+        return
+    for p in dest.iterdir():
+        if p.name == "generations" or p.name.startswith(".tmp_"):
+            continue
+        if not p.is_symlink():
+            raise ValueError(
+                f"Output directory {dest} contains existing non-symlink artifact '{p.name}'. "
+                "Refusing to overwrite or migrate tracked shortlist files implicitly. "
+                "Please specify a new empty directory via --out."
+            )
+
+
 def _atomic_symlink(target_rel: Path, link_path: Path) -> None:
     """Atomically create or update a symlink to target_rel."""
     tmp_link = link_path.parent / f".tmp_symlink_{link_path.name}_{uuid.uuid4().hex}"
@@ -102,78 +118,9 @@ def _atomic_symlink(target_rel: Path, link_path: Path) -> None:
                 pass
 
 
-def _migrate_legacy_non_symlinks(dest: Path, limit: int) -> None:
-    """Safely and reversibly migrate existing non-symlink files/dirs in dest to a legacy generation."""
-    generations_dir = dest / "generations"
-    generations_dir.mkdir(parents=True, exist_ok=True)
-
-    known_names = {"jds", f"jobs_top{limit}.db", f"jobs_top{limit}.json", "README.md", "current.json"}
-
-    legacy_items: list[Path] = []
-    for p in dest.iterdir():
-        if p.name == "generations" or p.name.startswith(".tmp_"):
-            continue
-        if p.is_symlink():
-            continue
-        if p.name in known_names or p.name.startswith("jobs_top") or p.name == "current":
-            legacy_items.append(p)
-
-    if not legacy_items:
-        return
-
-    # If dest/current already exists as a symlink, legacy migration isn't creating the initial gen,
-    # but we must never rmtree real items. We move them to a backup folder in generations/.
-    if (dest / "current").is_symlink():
-        backup_dir = generations_dir / f"legacy_backup_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        for item in legacy_items:
-            shutil.move(str(item), str(backup_dir / item.name))
-        return
-
-    # Initial migration of a pre-generation export directory
-    legacy_gen_id = "gen_legacy_initial"
-    legacy_gen_dir = generations_dir / legacy_gen_id
-    if legacy_gen_dir.exists():
-        legacy_gen_id = f"gen_legacy_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
-        legacy_gen_dir = generations_dir / legacy_gen_id
-
-    staging_dir = generations_dir / f".tmp_migrating_{uuid.uuid4().hex}"
-    staging_dir.mkdir(parents=True, exist_ok=True)
-
-    moved_items: list[tuple[Path, Path]] = []
-    try:
-        for item in legacy_items:
-            target = staging_dir / item.name
-            shutil.move(str(item), str(target))
-            moved_items.append((item, target))
-
-        os.replace(staging_dir, legacy_gen_dir)
-
-        # Set dest / "current" -> generations / legacy_gen_id
-        tmp_link = dest / f".tmp_current_mig_{uuid.uuid4().hex}"
-        tmp_link.symlink_to(Path("generations") / legacy_gen_id)
-        os.replace(tmp_link, dest / "current")
-
-        # Establish stable indirections pointing through current
-        for item in legacy_items:
-            if item.name != "current":
-                _atomic_symlink(Path("current") / item.name, dest / item.name)
-    except Exception:
-        # Reversible rollback: restore moved items to dest
-        for orig, staged in reversed(moved_items):
-            if staged.exists() and not orig.exists():
-                try:
-                    shutil.move(str(staged), str(orig))
-                except OSError:
-                    pass
-        if staging_dir.exists():
-            shutil.rmtree(staging_dir, ignore_errors=True)
-        raise
-
-
-def _ensure_compatibility_indirections(dest: Path, limit: int) -> None:
+def _ensure_compatibility_indirections(dest: Path) -> None:
     """Ensure all public paths are stable relative symlinks through dest/current."""
-    items = ["jds", f"jobs_top{limit}.db", f"jobs_top{limit}.json", "README.md", "current.json"]
+    items = ["jds", "jobs.db", "jobs.json", "README.md", "current.json"]
     for name in items:
         link_path = dest / name
         target_rel = Path("current") / name
@@ -198,6 +145,7 @@ def export_shortlist(
         export_mode = mode
 
     dest = Path(out_dir).resolve()
+    _check_no_legacy_non_symlinks(dest)
     dest.mkdir(parents=True, exist_ok=True)
 
     src_conn = db.get_readonly_connection(db_path)
@@ -239,9 +187,6 @@ def export_shortlist(
         for r, count in sorted(reasons_tally.items()):
             print(f"    - {count} {r}")
 
-    # Ensure any legacy real files in dest are safely migrated
-    _migrate_legacy_non_symlinks(dest, limit)
-
     generations_dir = dest / "generations"
     generations_dir.mkdir(parents=True, exist_ok=True)
     gen_id = f"gen_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
@@ -255,7 +200,7 @@ def export_shortlist(
 
         # 1. SQLite database
         _call_publication_hook("before_db")
-        gen_db_file = gen_dir / f"jobs_top{limit}.db"
+        gen_db_file = gen_dir / "jobs.db"
         dst_conn = sqlite3.connect(gen_db_file)
         try:
             src_conn_rw = db.get_readonly_connection(db_path)
@@ -278,7 +223,7 @@ def export_shortlist(
         finally:
             dst_conn.close()
 
-        # 2. JSON export, individual JDs, and provenance sidecars
+        # 2. Individual JDs and provenance sidecars
         _call_publication_hook("before_jds")
         jobs_list: list[dict[str, Any]] = []
         table_rows: list[str] = []
@@ -297,10 +242,25 @@ def export_shortlist(
 
             jd_sha256 = compute_jd_sha256(jd_bytes)
 
-            # Determine quality & source type for provenance sidecar
             raw_quality = r["jd_quality"] or "unverified"
-            source_type = (r["resolver"] or "").strip() or (r["source"] or "").strip() or ("ats" if raw_quality == "ats" else "aggregator")
-            ats_url = (r["ats_url"] or "").strip() or (r["url"] if raw_quality == "ats" else None)
+            if raw_quality == JDQuality.USER_ATTESTED.value:
+                tailor_badge = "Review-Only (Missing Persisted Attestation)"
+                sidecar_quality = JDQuality.UNVERIFIED.value
+                source_type = "unverified"
+                ats_url = None
+                sidecar_job_id = None
+            elif raw_quality == JDQuality.ATS.value:
+                tailor_badge = "Tailoring-Ready"
+                sidecar_quality = JDQuality.ATS.value
+                source_type = (r["resolver"] or "").strip() or (r["source"] or "").strip() or "ats"
+                ats_url = (r["ats_url"] or "").strip() or (r["url"] if raw_quality == "ats" else None)
+                sidecar_job_id = r["id"]
+            else:
+                tailor_badge = "Review-Only (Aggregator)"
+                sidecar_quality = raw_quality
+                source_type = (r["resolver"] or "").strip() or (r["source"] or "").strip() or "aggregator"
+                ats_url = None
+                sidecar_job_id = None
 
             sidecar = JDProvenance(
                 schema_version=JD_PROVENANCE_SCHEMA,
@@ -308,17 +268,14 @@ def export_shortlist(
                 title=r["title"],
                 source_url=r["url"],
                 source_type=source_type,
-                jd_quality=raw_quality,
+                jd_quality=sidecar_quality,
                 jd_sha256=jd_sha256,
-                job_id=r["id"],
+                job_id=sidecar_job_id,
                 ats_url=ats_url,
                 attestation=None,
             )
             sidecar_path = gen_jds / f"{filename}.provenance.json"
             sidecar_path.write_text(json.dumps(sidecar.to_dict(), indent=2), encoding="utf-8")
-
-            can_tailor = raw_quality in (JDQuality.ATS.value, JDQuality.USER_ATTESTED.value)
-            tailor_badge = "Tailoring-Ready" if can_tailor else "Review-Only (Aggregator)"
 
             table_rows.append(
                 f"| {idx} | {r['fit_score']} | {r['company']} | {r['title']} | {r['base_variant']} | "
@@ -348,7 +305,7 @@ def export_shortlist(
 
         # 4. JSON export
         _call_publication_hook("before_json")
-        gen_json_file = gen_dir / f"jobs_top{limit}.json"
+        gen_json_file = gen_dir / "jobs.json"
         with open(gen_json_file, "w", encoding="utf-8") as f:
             json.dump(
                 {
@@ -370,34 +327,55 @@ def export_shortlist(
         # 5. README documentation
         _call_publication_hook("before_readme")
         if export_mode is ExportMode.TAILORING_READY:
-            mode_header = f"# Top {limit} Shortlisted Jobs (Tailoring-Ready)"
+            mode_header = f"# Shortlisted Jobs (Tailoring-Ready)"
             mode_desc = (
                 f"This directory contains {len(included_rows)} shortlisted jobs verified as ATS-quality.\n"
                 "All JDs are equipped with cryptographic provenance sidecars (`.provenance.json`) and "
                 "are ready for direct use with the Apply-Now tailoring lane."
             )
+            if included_rows:
+                top_job = included_rows[0]
+                top_co = top_job["company"]
+                top_ti = top_job["title"]
+                top_var = top_job["base_variant"] or "backend"
+                top_co_slug = slugify(top_co)
+                top_ti_slug = slugify(top_ti)
+                example_jd = str(dest / "jds" / f"01_{top_co_slug}_{top_ti_slug}.txt")
+                example_db = str(dest / "jobs.db")
+                cmd_argv = [
+                    "python", "-m", "scripts.tailor_now", "run",
+                    "--jd", example_jd,
+                    "--company", top_co,
+                    "--title", top_ti,
+                    "--variant", top_var,
+                    "--db", example_db,
+                ]
+                example_cmd = shlex.join(cmd_argv)
+            else:
+                example_cmd = f"python -m scripts.tailor_now run --jd {dest}/jds/<file>.txt --company \"<Company>\" --title \"<Title>\" --variant <variant> --db {dest}/jobs.db"
+
             usage_sec = f"""## Usage with Apply-Now Lane
-- **Direct file tailoring:**
-  ```bash
-  python -m scripts.tailor_now run --jd shortlist/jds/<file>.txt --company "<Company>" --title "<Title>" --variant <variant>
-  ```
+```bash
+{example_cmd}
+```
 - **Using as pipeline database:**
   ```bash
-  mkdir -p data && cp shortlist/jobs_top{limit}.db data/jobs.db
+  mkdir -p data && cp {shlex.quote(str(dest / "jobs.db"))} data/jobs.db
   ```"""
         else:
-            mode_header = f"# Top {limit} Shortlisted Jobs (REVIEW ONLY - NOT TAILORING READY)"
+            mode_header = f"# Shortlisted Jobs (REVIEW ONLY - NOT TAILORING READY)"
             mode_desc = (
                 "> [!WARNING]\n"
-                "> **REVIEW ONLY EXPORT — DO NOT TAILOR AGGREGATOR ROWS DIRECTLY**\n"
-                "> This directory contains shortlisted jobs for human/external review, including aggregator summaries.\n"
-                "> Aggregator summaries lack literal employer wording and cannot be tailored directly.\n"
-                "> To tailor an aggregator job, obtain the literal official employer posting and run:\n"
+                "> **REVIEW ONLY EXPORT — NOT TAILORING READY**\n"
+                "> This directory contains shortlisted jobs for human/external review.\n"
+                "> Aggregator summaries and database rows marked user_attested lack persisted attestation "
+                "metadata and cannot be tailored directly.\n"
+                "> To tailor any non-ATS job, obtain the literal official employer posting and run:\n"
                 "> `python -m scripts.tailor_now attest --jd <path> --company \"<Company>\" --title \"<Title>\" --source-url \"<Official URL>\"`"
             )
             usage_sec = f"""## Usage Instructions
 - **Official ATS JDs:** May be used directly with the Apply-Now lane.
-- **Aggregator / unverified summaries:** Must first be attested with official employer copy via:
+- **Aggregator / unverified / unattested summaries:** Cannot be tailored directly. To tailor, recover the official posting and run:
   ```bash
   python -m scripts.tailor_now attest --jd <path> --company "<Company>" --title "<Title>" --source-url "<Official URL>"
   ```"""
@@ -421,8 +399,8 @@ def export_shortlist(
 {mode_desc}
 
 ## Contents
-- `jobs_top{limit}.db`: Standalone SQLite database (contains schema + {len(included_rows)} jobs + latest run).
-- `jobs_top{limit}.json`: Complete JSON export of {len(included_rows)} jobs with scores, rationales, and full JD texts.
+- `jobs.db`: Standalone SQLite database (contains schema + {len(included_rows)} jobs + latest run).
+- `jobs.json`: Complete JSON export of {len(included_rows)} jobs with scores, rationales, and full JD texts.
 - `jds/`: Individual plaintext JD files and their `.provenance.json` sidecars.
 
 {usage_sec}
@@ -445,15 +423,19 @@ def export_shortlist(
             "created_at": datetime.now(timezone.utc).isoformat(),
             "artifacts": {
                 "jds": f"generations/{gen_id}/jds",
-                "db": f"generations/{gen_id}/jobs_top{limit}.db",
-                "json": f"generations/{gen_id}/jobs_top{limit}.json",
+                "db": f"generations/{gen_id}/jobs.db",
+                "json": f"generations/{gen_id}/jobs.json",
                 "readme": f"generations/{gen_id}/README.md",
             },
         }
         gen_current_json = gen_dir / "current.json"
         gen_current_json.write_text(json.dumps(current_data, indent=2), encoding="utf-8")
 
-        # 7. Atomic publication: swap dest / "current" -> generations / gen_id
+        # 7. Ensure stable compatibility indirections BEFORE swapping current
+        _call_publication_hook("before_indirections")
+        _ensure_compatibility_indirections(dest)
+
+        # 8. Atomic commit point: swap dest / "current" -> generations / gen_id
         _call_publication_hook("before_pointer_swap")
         tmp_current = dest / f".tmp_current_{uuid.uuid4().hex}"
         tmp_current.symlink_to(Path("generations") / gen_id)
@@ -468,16 +450,12 @@ def export_shortlist(
                 except OSError:
                     pass
 
-        # 8. Ensure stable indirections (dest/jds -> current/jds, etc.)
-        _call_publication_hook("before_indirections")
-        _ensure_compatibility_indirections(dest, limit)
+        return dest
 
     except Exception:
         if not committed and gen_dir.exists():
             shutil.rmtree(gen_dir, ignore_errors=True)
         raise
-
-    return dest
 
 
 if __name__ == "__main__":

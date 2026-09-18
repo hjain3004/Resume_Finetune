@@ -2803,11 +2803,14 @@ Added Gemini and Codex CLI support alongside Claude for the Apply-Now tailoring 
 - **Provider Independence:** Deterministic tests are decoupled from machine executables and credentials;
   preflight provider presence and credential checks execute only when `not dry_run`.
 - **Safe Exporter Publication:** `scripts/export_shortlist.py` publishes through immutable generation
-  directories (`dest / "generations" / gen_<id>`) with a single atomic commit point: `dest / "current"` is
-  atomically swapped via `os.replace`, while public artifacts (`jds/`, `jobs_top{limit}.db`, `jobs_top{limit}.json`,
-  `README.md`, `current.json`) are stable relative symlink indirections routing through `current/`. Legacy
-  non-symlink directories are reversibly migrated to `gen_legacy_initial` without destructive deletion. Any
-  failure during generation or publication leaves previous exports completely unchanged and readable.
+  directories (`dest / "generations" / gen_<id>`) using fixed artifact names (`jobs.db`, `jobs.json`, `jds/`,
+  `README.md`, `current.json`). The limit is stored inside `current.json` rather than encoded in filenames.
+  Stable relative indirections in `dest` (`jobs.db -> current/jobs.db`, etc.) are verified before commit.
+  The single atomic commit point is `os.replace(tmp_current, dest / "current")` with zero fallible publication
+  work after that call. Ordinary exports refuse legacy non-symlink directories without moving files implicitly.
+- **Transactional Export-JD:** `scripts/tailor_now.py export-jd` forbids overwriting existing destinations,
+  stages temporary files in a single try/finally, validates with the State A validator, installs sidecar first,
+  and installs JD last as the commit point with cleanup rollback on error.
 - **Historical Shortlist Status:** `shortlist/` is preserved as a historical review export with 19 ATS and
   21 aggregator rows documented in `shortlist/README.md`. Direct tailoring from aggregator rows is explicitly
   prohibited without prior user attestation.

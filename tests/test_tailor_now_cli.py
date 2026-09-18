@@ -205,72 +205,138 @@ def test_attest_cli_fails_on_aggregator_url(tmp_path, capsys):
     assert not (tmp_path / "custom_jd.txt.provenance.json").exists()
 
 
-def test_export_jd_refuses_overwrite_without_flag(tmp_path, capsys):
+def test_export_jd_refuses_when_destinations_exist(tmp_path, capsys):
     db_path = tmp_path / "jobs.db"
     _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
     out = tmp_path / "jd" / "225.txt"
+    sidecar = tmp_path / "jd" / "225.txt.provenance.json"
+
+    # 1. Success on fresh destination
     rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
     assert rc == 0
-    assert out.exists()
+    assert out.is_file()
+    assert sidecar.is_file()
 
-    # Rerun without --overwrite
+    # 2. Refuses when out exists
     rc2 = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
     assert rc2 == 1
     err = capsys.readouterr().err
     assert "already exists" in err
-    assert "--overwrite" in err
+    assert "Refusing to overwrite" in err
+    assert "deliberately remove both existing files" in err
+
+    # 3. Refuses when only sidecar exists
+    out.unlink()
+    rc3 = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc3 == 1
+    err3 = capsys.readouterr().err
+    assert "already exists" in err3
+    assert "Refusing to overwrite" in err3
 
 
-def test_export_jd_allows_overwrite_with_flag(tmp_path, capsys):
+def test_export_jd_fs_failure_jd_temp_write(tmp_path, monkeypatch):
     db_path = tmp_path / "jobs.db"
     _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
     out = tmp_path / "jd" / "225.txt"
+
+    orig_write_text = Path.write_text
+
+    def fail_jd_write(self, text, *args, **kwargs):
+        if "tmp" in self.name and not self.name.endswith(".provenance.json"):
+            raise OSError("Disk full simulation on JD temp write")
+        return orig_write_text(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_jd_write)
     rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
-    assert rc == 0
+    assert rc == 1
 
-    # Overwrite with --overwrite flag
-    rc2 = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out), "--overwrite"])
-    assert rc2 == 0
-    assert out.exists()
+    all_files = list(tmp_path.rglob("*"))
+    files_in_out = [p for p in all_files if p.is_file() and p != db_path]
+    assert files_in_out == []
 
 
-@pytest.mark.parametrize("stage", [
-    "write_jd_temp",
-    "write_sidecar_temp",
-    "replace_jd",
-    "replace_sidecar",
-])
-def test_export_jd_failure_injection_all_stages(tmp_path, monkeypatch, stage):
+def test_export_jd_fs_failure_sidecar_temp_write(tmp_path, monkeypatch):
     db_path = tmp_path / "jobs.db"
     _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
 
-    # 1. Fresh destination test: failure leaves NO files
-    out_fresh = tmp_path / f"fresh_{stage}" / "225.txt"
-    sidecar_fresh = out_fresh.parent / f"{out_fresh.name}.provenance.json"
+    orig_write_text = Path.write_text
 
-    def fail_at_stage(s: str) -> None:
-        if s == stage:
-            raise OSError(f"Simulated error at stage {s}")
+    def fail_sidecar_write(self, text, *args, **kwargs):
+        if "provenance.json.tmp" in self.name:
+            raise OSError("Disk full simulation on sidecar temp write")
+        return orig_write_text(self, text, *args, **kwargs)
 
-    monkeypatch.setattr(cli, "_EXPORT_JD_HOOK", fail_at_stage)
-    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out_fresh)])
+    monkeypatch.setattr(Path, "write_text", fail_sidecar_write)
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
     assert rc == 1
-    assert not out_fresh.exists()
-    assert not sidecar_fresh.exists()
 
-    # 2. Existing destination test: failure restores COMPLETE OLD PAIR intact
-    out_existing = tmp_path / f"existing_{stage}" / "225.txt"
-    sidecar_existing = out_existing.parent / f"{out_existing.name}.provenance.json"
-    out_existing.parent.mkdir(parents=True)
-    old_jd_bytes = b"OLD JD CONTENT"
-    old_sidecar_bytes = b'{"old": "sidecar"}'
-    out_existing.write_bytes(old_jd_bytes)
-    sidecar_existing.write_bytes(old_sidecar_bytes)
+    all_files = list(tmp_path.rglob("*"))
+    files_in_out = [p for p in all_files if p.is_file() and p != db_path]
+    assert files_in_out == []
 
-    rc_over = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out_existing), "--overwrite"])
-    assert rc_over == 1
-    assert out_existing.read_bytes() == old_jd_bytes
-    assert sidecar_existing.read_bytes() == old_sidecar_bytes
+
+def test_export_jd_fs_failure_staged_validation(tmp_path, monkeypatch):
+    import src.tailor.provenance as prov_mod
+
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+
+    def fail_validation(*args, **kwargs):
+        raise prov_mod.ProvenanceError("Simulated staged validation rejection")
+
+    monkeypatch.setattr(prov_mod, "validate_provenance_for_tailoring", fail_validation)
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+
+    all_files = list(tmp_path.rglob("*"))
+    files_in_out = [p for p in all_files if p.is_file() and p != db_path]
+    assert files_in_out == []
+
+
+def test_export_jd_fs_failure_sidecar_install(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+    sidecar_target = str(out.parent / f"{out.name}.provenance.json")
+
+    orig_replace = Path.replace
+
+    def fail_sidecar_replace(self, target):
+        if str(target) == sidecar_target:
+            raise OSError("Permission denied replacing sidecar")
+        return orig_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_sidecar_replace)
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+
+    all_files = list(tmp_path.rglob("*"))
+    files_in_out = [p for p in all_files if p.is_file() and p != db_path]
+    assert files_in_out == []
+
+
+def test_export_jd_fs_failure_jd_install_rolls_back_sidecar(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_db(db_path, job_id=225, company="Notion", title="SWE", jd_text=JD)
+    out = tmp_path / "jd" / "225.txt"
+    jd_target = str(out)
+
+    orig_replace = Path.replace
+
+    def fail_jd_replace(self, target):
+        if str(target) == jd_target:
+            raise OSError("I/O error replacing JD")
+        return orig_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_jd_replace)
+    rc = cli.main(["export-jd", "--db", str(db_path), "--job-id", "225", "--out", str(out)])
+    assert rc == 1
+
+    all_files = list(tmp_path.rglob("*"))
+    files_in_out = [p for p in all_files if p.is_file() and p != db_path]
+    assert files_in_out == []
 
 
 def test_export_jd_validates_pair_with_state_a_validator(tmp_path):
