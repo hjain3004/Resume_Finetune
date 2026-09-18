@@ -1,0 +1,76 @@
+Are you excited to start your software engineering career and contribute to innovative products that deliver real-world impact?
+
+Would you enjoy working alongside experienced engineers in a collaborative environment to build innovative, AI-powered solutions that make a meaningful impact for customers worldwide? Look no further than the prestigious LexisNexis Aspire Program!
+
+About our Team
+
+LexisNexis Legal & Professional, which serves customers in more than 150 countries with 11,800 employees worldwide, is part of RELX (www.relx.com), a global provider of information-based analytics and decision tools for professional and business customers. Our company has been a long-time leader in deploying AI and advanced technologies to the legal market to improve productivity and transform the overall business and practice of law, deploying ethical and powerful generative AI solutions with a flexible, multi-model approach that prioritizes using the best model from today’s top model creators for each individual legal use case. The company employs over 2,000 technologists, data scientists, and experts to develop, test, and validate solutions in line with RELX Responsible AI Principles (https://stories.relx.com/responsible-ai-principles/index.html).
+
+About the Aspire Graduate Program
+
+The LexisNexis Aspire Graduate Program is a twelve-month initiative designed for recent graduates from various fields including Software Engineering, Data Science, Cyber Security and Data Analysis. You will be an essential part of our team, working with experts to develop and launch innovative products. The program includes technical and soft-skill training to support your personal and professional development. You’ll be supported by a strong network of peers, mentors, and managers as you build skills and explore different career paths—helping to launch a successful career within our company.
+
+Why Join Us:
+
+- Do meaningful work on real-world projects from day one while developing the skills and confidence to expand your impact.
+- Collaborate with experienced professionals to create cutting-edge legal tech solutions.
+- Work with international leaders in legal tech to make a global impact.
+- You’ll learn quickly because you’re involved in real work early on, not just observing.
+- Here, growth happens through real work, continuous learning, and support from the people around you.
+- Structured growth pathways support internal mobility and learning, so progress is built through real work and feedback.
+
+About the Role
+
+As a Software Engineer I, you will contribute to developing software solutions within a specific product area while building your technical expertise. This entry-level opportunity provides hands-on experience across the software development lifecycle, including coding, testing, debugging, and working with emerging AI-assisted development tools in a supportive team environment.
+
+Location: On-Site in Raleigh, NC
+
+Program Start Dates: January 11, 2027, and June 14, 2027
+
+Graduation Qualifications: Candidates should have completed their studies in 2025 or 2026, or expect to finish between August 2026 and May 2027.
+
+Responsibilities
+
+- Write and review portions of detailed specifications for the development of system components of simple complexity.
+- Complete simple bug fixes.
+- Under the guidance of senior-level engineers, successfully implement development processes, coding best practices, and code reviews.
+- Operate in various development environments (Agile, Waterfall, etc.) while collaborating with key stakeholders.
+- Resolve basic technical issues as necessary.
+- Use AI-assisted and agentic development tools, under appropriate guidance, to accelerate software development, testing, debugging, and documentation.
+- Apply AI-first development workflows while reviewing and validating AI-generated code for correctness, quality, security, and maintainability.
+- Continuously learn and adopt emerging AI development tools and practices as part of the software development lifecycle.
+
+Requirements
+
+- Be on track to receive a bachelor’s or master’s degree in computer science, computer engineering, information technology, or a related field of study.
+- Have proficiency in at least one relevant programming language or technology, such as Angular, C#, Java/J2EE, JavaScript, JSP, C/C++, HTML, XML, SQL, Windows, UNIX, or .NET.
+- Possess a basic understanding of software development methodologies (e.g., Agile, Waterfall), storage systems, and data modeling principles.
+- Basic knowledge of AI-assisted and agentic software development tools, such as GitHub Copilot, Claude Code, Codex, Gemini, or similar tools.
+- Interest in and ability to use AI-assisted development workflows to generate, refine, test, and debug code while applying sound software engineering practices.
+- Demonstrate interest in technology and a willingness to learn new processes and technologies.
+- Have a collaborative mindset with solid communication skills.
+- Be able to engage with leading-edge technologies while working alongside experienced and supportive colleagues.
+
+Work in a Way That Works for You
+
+We promote a healthy work/life balance across the organization. We offer an appealing working prospect for our people. With numerous wellbeing initiatives, shared parental leave, study assistance and sabbaticals, we will help you meet your immediate responsibilities and your long-term goals.
+
+About the Business
+
+LexisNexis Legal & Professional® provides legal, regulatory, and business information and analytics that help customers increase their productivity, improve decision-making, achieve better outcomes, and advance the rule of law around the world. As a digital pioneer, the company was the first to bring legal and business information online with its Lexis® and Nexis® services.
+
+#AIFluent #Aspire
+
+&#xa;&#xa;U.S. National Base Pay Range: $59,200 - $98,600. Geographic differentials may apply in some locations to better reflect local market rates.&#xa;&#xa;&#xa;&#xa;This job is eligible for an annual incentive bonus.&#xa;&#xa;&#xa;&#xa;&#xa;&#xa;We know your well-being and happiness are key to a long and successful career. We are delighted to offer country specific benefits. Click here to access benefits specific to your location.
+
+We are committed to providing a fair and accessible hiring process. If you have a disability or other need that requires accommodation or adjustment, please let us know by completing our Applicant Request Support Form or please contact 1-855-833-5120.
+
+Criminals may pose as recruiters asking for money or personal information. We never request money or banking details from job applicants. Learn more about spotting and avoiding scams here.
+
+Please read our Candidate Privacy Policy.
+
+We are an equal opportunity employer: qualified applicants are considered for and treated during employment without regard to race, color, creed, religion, sex, national origin, citizenship status, disability status, protected veteran status, age, marital status, sexual orientation, gender identity, genetic information, or any other characteristic protected by law.
+
+USA Job Seekers:
+
+EEO Know Your Rights.

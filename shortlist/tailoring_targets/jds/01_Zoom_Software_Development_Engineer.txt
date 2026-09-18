@@ -1,0 +1,68 @@
+What You Can Expect
+
+Join the Zoom Contact Center engineering team at a genuinely exciting moment: we are building an AI-powered analytics engine that acts as a virtual data analyst for our customers, moving beyond traditional reporting to create intelligent agents capable of understanding natural language and reasoning through complex data problems. As an entry-level backend engineer, you will work alongside experienced engineers to implement backend services that power AI reasoning, planning, and analytical tasks — gaining foundational skills at the intersection of scalable systems and modern AI development. The work you build here will directly shape how contact center teams around the world access insight and make decisions. This is a hybrid position that requires on-site presence 2 days per week at our San Jose, CA office. Remote arrangements are not available for this role.
+
+About the Team
+
+The Zoom Contact Center team is at the forefront of Zoom’s next-generation cloud-based customer engagement platform. We are building intelligent agents capable of understanding natural language and reasoning through complex data problems, providing actionable insights that improve contact center efficiency. We move fast, collaborate closely, and care deeply about the quality and impact of what we ship.
+
+Responsibilities
+
+- Implement backend services using Java and Spring Boot to support AI-powered applications within the Zoom Contact Center platform.
+- Build prompt strategies, context management logic, and basic agent workflows in collaboration with senior engineers.
+- Develop task execution logic, data handling pipelines, and error management for AI-driven data flows.
+- Instrument services with logging and monitoring tools to track performance, latency, and correctness across testing and production environments.
+- Collaborate with data scientists, product managers, and senior engineers to translate analytical requirements into working, production-ready code.
+- Contribute to production-grade AI evaluation and orchestration pipelines (LLMOps), working with vector databases (Pinecone, Milvus), semantic search, AI orchestration frameworks (LangChain, Semantic Kernel, AutoGen), and large-scale OLAP databases (ClickHouse).
+
+What We’re Looking For
+
+- BS or MS in Computer Science, Engineering, or a related field (recently graduated or within the last 1–2 years), or equivalent experience, with foundational software engineering exposure through internships, coursework, or personal projects.
+- Familiarity with backend programming in Java, Python, or a similar object-oriented language.
+- Basic understanding of relational (SQL) or non-relational (NoSQL) database design.
+- Curiosity and foundational knowledge of AI concepts, Large Language Models (LLMs), or AI orchestration frameworks (LangChain, Semantic Kernel) gained through projects or coursework.
+- Eagerness to learn distributed systems, real-time streaming protocols (WebSockets), and LLMOps practices in a fast-paced environment.
+
+Salary Range or On Target Earnings:
+
+Minimum:
+
+$73,300.00
+
+Maximum:
+
+$169,500.00
+
+In addition to the base salary and/or OTE listed Zoom has a Total Direct Compensation philosophy that takes into consideration; base salary, bonus and equity value.
+
+Note: Starting pay will be based on a number of factors and commensurate with qualifications & experience.
+
+We also have a location based compensation structure;  there may be a different range for candidates in this and other locations
+
+At Zoom, we offer a window of at least 5 days for you to apply because we believe in giving you every opportunity. Below is the potential closing date, just in case you want to mark it on your calendar. We look forward to receiving your application!
+
+Anticipated Position Close Date:
+
+09/18/26
+
+Ways of Working
+
+Our structured hybrid approach is centered around our offices and remote work environments. The work style of each role, Hybrid, Remote, or In-Person is indicated in the job description/posting.
+
+Benefits
+
+As part of our award-winning workplace culture and commitment to delivering happiness, our benefits program offers a variety of perks, benefits, and options to help employees maintain their physical, mental, emotional, and financial health; support work-life balance; and contribute to their community in meaningful ways. Click Learn for more information.
+
+About Us
+
+Zoomies help people stay connected so they can get more done together. We set out to build the best collaboration platform for the enterprise, and today help people communicate better with products like Zoom Contact Center, Zoom Phone, Zoom Events, Zoom Apps, Zoom Rooms, and Zoom Webinars.
+
+We’re problem-solvers, working at a fast pace to design solutions with our customers and users in mind. Find room to grow with opportunities to stretch your skills and advance your career in a collaborative, growth-focused environment.
+
+Our Commitment
+
+At Zoom, we believe great work happens when people feel supported and empowered. We’re committed to fair hiring practices that ensure every candidate is evaluated based on skills, experience, and potential. If you require an accommodation during the hiring process, let us know—we’re here to support you at every step.
+
+If you need assistance navigating the interview process due to a medical disability, please submit an Accommodations Request Form and someone from our team will reach out soon. This form is solely for applicants who require an accommodation due to a qualifying medical disability. Non-accommodation-related requests, such as application follow-ups or technical issues, will not be addressed.
+
+Our interviews are supported by BrightHire, a tool that helps us create a consistent and thoughtful interview experience and may include recordings. Please refer to our candidate privacy statement for more information of how we use your data.
