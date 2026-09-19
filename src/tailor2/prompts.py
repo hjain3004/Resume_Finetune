@@ -238,6 +238,7 @@ def build_draft_prompt(
    - Preserve the supplied base variant's canonical project/experience availability and let the selected bullets determine the final allocation.
    - Keep the strongest evidence visible without allowing one employer, project, or keyword cluster to consume the whole résumé.
    - Do not add a bullet merely to fill a quota; omission reasons must remain explicit.
+   - The résumé MUST remain exactly one page; never spill content onto a second page. Omit weaker evidence rather than exceeding the one-page limit.
 
 ## Bounded Selection Artifact
 {selection_block}
