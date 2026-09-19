@@ -497,13 +497,12 @@ def test_quality_core_missing_requirement_is_advisory_gap_not_a_halt(tmp_path, v
 
 
 # ---------------------------------------------------------------------------
-# 14/15. A fabricated metric and an unresolved evidence id both still fail
-#    fatally -- these are the deterministic FATAL_INTEGRITY checks, which
-#    this task explicitly preserves.
+# 14/15. A fabricated metric and an unresolved evidence id are quarantined at
+#    element scope; the final delivered résumé remains factually safe.
 # ---------------------------------------------------------------------------
 
 
-def test_quality_core_fabricated_metric_fails_fatally(tmp_path, valid_jd_file, fake_draft_response_backend):
+def test_quality_core_fabricated_metric_is_canonicalized(tmp_path, valid_jd_file, fake_draft_response_backend):
     draft = dict(fake_draft_response_backend)
     draft["bullets"][1]["text"] = "Consolidated dead-letter topics, cutting sprawl by 999%."  # not in evidence
     invoker = Tailor2Invoker(
@@ -513,12 +512,13 @@ def test_quality_core_fabricated_metric_fails_fatally(tmp_path, valid_jd_file, f
     result = run_tailor2_lane(
         jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
     )
-    assert result.success is False
-    assert result.status == RunStatus.REJECTED_FATAL.value
-    assert (out_dir / "rejected" / "run_manifest.json").exists()
+    assert result.success is True
+    assert result.status != RunStatus.REJECTED_FATAL.value
+    assert (out_dir / "resume.pdf").exists()
+    assert "999" not in (out_dir / "resume.tex").read_text()
 
 
-def test_quality_core_unresolved_evidence_id_fails_fatally(tmp_path, valid_jd_file, fake_draft_response_backend):
+def test_quality_core_unresolved_evidence_id_is_quarantined(tmp_path, valid_jd_file, fake_draft_response_backend):
     draft = dict(fake_draft_response_backend)
     draft["bullets"][1]["evidence_ids"] = ["totally_made_up_evidence_id"]
     invoker = Tailor2Invoker(
@@ -528,8 +528,11 @@ def test_quality_core_unresolved_evidence_id_fails_fatally(tmp_path, valid_jd_fi
     result = run_tailor2_lane(
         jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
     )
-    assert result.success is False
-    assert result.status == RunStatus.REJECTED_FATAL.value
+    assert result.success is True
+    assert result.status != RunStatus.REJECTED_FATAL.value
+    assert (out_dir / "resume.pdf").exists()
+    manifest = json.loads(result.manifest_path.read_text())
+    assert any(item["finding"] == "unknown evidence reference" for item in manifest["quarantine_ledger"])
 
 
 # ---------------------------------------------------------------------------
@@ -763,7 +766,7 @@ def test_skills_selection_concerns_never_rejected_fatal(tmp_path, valid_jd_file,
 
 
 def test_skills_existing_factual_integrity_behavior_intact(tmp_path, valid_jd_file, fake_draft_response_backend):
-    """Existing factual-integrity behavior remains intact: fabricated numbers still fail fatally."""
+    """Fabricated numbers are removed from delivered content, not the whole run."""
     draft = dict(fake_draft_response_backend)
     draft["bullets"][0]["text"] = "Engineered custom distributed system scaling by 9999%."
     invoker = Tailor2Invoker(
@@ -773,8 +776,10 @@ def test_skills_existing_factual_integrity_behavior_intact(tmp_path, valid_jd_fi
     result = run_tailor2_lane(
         jd_path=valid_jd_file, company="Acme", title="SE", variant="backend", invoker=invoker, out_dir=out_dir
     )
-    assert result.success is False
-    assert result.status == RunStatus.REJECTED_FATAL.value
+    assert result.success is True
+    assert result.status != RunStatus.REJECTED_FATAL.value
+    assert (out_dir / "resume.pdf").exists()
+    assert "9999" not in (out_dir / "resume.tex").read_text()
 
 
 # ===========================================================================

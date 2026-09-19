@@ -22,11 +22,9 @@ from enum import Enum
 class Severity(str, Enum):
     """How a quality defect should be handled once detected.
 
-    FATAL_INTEGRITY:  fabricated/unresolved evidence, invented or altered
-        numbers, prohibited do_not_claim content, unverifiable JD
-        provenance, an irrecoverably invalid structured response, or a
-        corrupted/unrenderable document. Cannot be repaired without
-        inventing evidence, so the run is REJECTED_FATAL.
+    FATAL_INTEGRITY:  audit-tier factual/metric integrity concern. The lane
+        sanitizes the cited element first; it becomes REJECTED_FATAL only
+        when canonical replacement/removal and safe fallback are impossible.
     AUTO_CORRECTABLE: deterministically fixable without model judgment
         (canonical title/employer mismatch, an unsupported Skills entry
         that can simply be dropped, terminology normalization, spacing).
@@ -65,13 +63,12 @@ class RunStatus(str, Enum):
 #
 # Rationale for each placement is documented once here rather than scattered:
 #
-# FATAL_INTEGRITY -- factual_fidelity and metric_fidelity are the two
-#   rubric dimensions whose failure mode is "the claim is not true" or
-#   "the number is not real." Fixing either requires inventing evidence
-#   (or discovering real evidence the drafter didn't have), which a repair
-#   pass must never do. The deterministic evidence-ID and do_not_claim
-#   checks in validators.py are the other FATAL_INTEGRITY source and are
-#   enforced before the audit stage is even reached.
+# FATAL_INTEGRITY -- factual_fidelity and metric_fidelity identify claims
+#   that require element-level sanitization. They remain fatal-tier for audit
+#   classification, but lane.py quarantines/restores the cited element before
+#   deciding whether a whole run is fatal. Whole-run fatality is reserved for
+#   missing grounded content, impossible provenance, and failed artifact or
+#   source fallback.
 #
 # REPAIRABLE_QUALITY -- everything about HOW a true claim is expressed:
 #   technology_fidelity and technical_guarantee_fidelity failures are

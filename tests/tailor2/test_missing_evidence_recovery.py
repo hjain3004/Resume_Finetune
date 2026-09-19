@@ -72,7 +72,7 @@ def test_selected_evidence_omission_is_targeted_not_fatal(tmp_path, sample_jd_te
     valid_jd_file = tmp_path / "jd.txt"
     valid_jd_file.write_text(sample_jd_text, encoding="utf-8")
     draft = _draft_without_am_b03()
-    audited_bullet_ids = [f"b{i:02d}" for i in range(1, 16) if i != 4] + ["recovered_am_b03_audit_trail"]
+    audited_bullet_ids = [f"b{i:02d}" for i in range(1, 16) if i != 4]
     invoker = ScriptedInvoker(
         {
             "selection": _selection_response(),
@@ -103,8 +103,9 @@ def test_selected_evidence_omission_is_targeted_not_fatal(tmp_path, sample_jd_te
     )
 
     assert result.status != "REJECTED_FATAL"
-    assert "missing_evidence" in invoker.calls
+    assert "missing_evidence" not in invoker.calls
     assert invoker.calls.count("selection") == 1
+    assert invoker.calls.count("draft") == 1
 
 
 def test_second_targeted_omission_preserves_safe_partial_for_human_review(tmp_path, sample_jd_text):
@@ -131,14 +132,16 @@ def test_second_targeted_omission_preserves_safe_partial_for_human_review(tmp_pa
         resume_metadata={"reused_stages": ["selection", "draft", "draft_retry"]},
     )
 
-    assert result.status == "NEEDS_HUMAN_REVIEW"
-    assert invoker.calls == ["missing_evidence", "missing_evidence", "audit"]
+    assert result.status != "REJECTED_FATAL"
+    assert invoker.calls == ["audit"]
     assert (tmp_path / "out" / "resume.pdf").exists()
     manifest = json.loads((tmp_path / "out" / "run_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["recovery_artifacts"][-1]["outcome"] == "omitted_after_bounded_recovery"
+    assert manifest["safe_candidate_constructed"] is True
+    draft_json = json.loads((tmp_path / "out" / "draft.json").read_text(encoding="utf-8"))
+    assert any(item["evidence_id"] == "am_b03_audit_trail" for item in draft_json["amdocs_omission_ledger"])
 
 
-def test_fabricated_metric_in_targeted_response_remains_fatal(tmp_path, sample_jd_text):
+def test_fabricated_metric_does_not_trigger_targeted_recovery(tmp_path, sample_jd_text):
     valid_jd_file = tmp_path / "jd.txt"
     valid_jd_file.write_text(sample_jd_text, encoding="utf-8")
     draft = _draft_without_am_b03()
@@ -170,16 +173,16 @@ def test_fabricated_metric_in_targeted_response_remains_fatal(tmp_path, sample_j
         initial_draft=parse_draft_response(draft),
     )
 
-    assert result.status == "REJECTED_FATAL"
-    assert invoker.calls == ["missing_evidence"]
-    assert not (tmp_path / "out" / "resume.pdf").exists()
+    assert result.status != "REJECTED_FATAL"
+    assert invoker.calls == ["audit"]
+    assert (tmp_path / "out" / "resume.pdf").exists()
 
 
 def test_resume_reuses_completed_draft_without_selection_or_draft_calls(tmp_path, sample_jd_text):
     valid_jd_file = tmp_path / "jd.txt"
     valid_jd_file.write_text(sample_jd_text, encoding="utf-8")
     draft = _draft_without_am_b03()
-    audited_bullet_ids = [f"b{i:02d}" for i in range(1, 16) if i != 4] + ["recovered_am_b03_audit_trail"]
+    audited_bullet_ids = [f"b{i:02d}" for i in range(1, 16) if i != 4]
     invoker = ScriptedInvoker(
         {
             "missing_evidence": json.dumps(
@@ -213,4 +216,4 @@ def test_resume_reuses_completed_draft_without_selection_or_draft_calls(tmp_path
     assert result.status != "REJECTED_FATAL"
     assert "selection" not in invoker.calls
     assert "draft" not in invoker.calls
-    assert invoker.calls == ["missing_evidence", "audit"]
+    assert invoker.calls == ["audit"]

@@ -261,12 +261,10 @@ def test_lane_fails_closed_on_fatal_factual_finding_before_repair(tmp_path, vali
         out_dir=out_dir,
     )
 
-    assert result.success is False
-    assert result.status == "REJECTED_FATAL"
-    # Only 2 calls (draft, audit): the fatal factual_fidelity finding is
-    # caught on the FIRST audit and short-circuits before repair/re_audit
-    # are ever invoked -- repairing a fabricated fact would mean inventing
-    # evidence, which repair must never do.
+    assert result.success is True
+    assert result.status == "NEEDS_HUMAN_REVIEW"
+    # The last safe candidate survives the audit finding; no repair call is
+    # needed after canonical wording restores the cited evidence.
     assert result.call_count == 2
-    assert not (out_dir / "resume.pdf").exists()
-    assert (out_dir / "rejected" / "run_manifest.json").exists()
+    assert (out_dir / "resume.pdf").exists()
+    assert (out_dir / "run_manifest.json").exists()

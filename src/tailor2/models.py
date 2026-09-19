@@ -212,6 +212,11 @@ class Tailor2Manifest:
     render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
     recovery_artifacts: list[dict[str, Any]] = field(default_factory=list)
     provider_metadata: dict[str, Any] = field(default_factory=dict)
+    safe_candidate_constructed: bool = False
+    safe_fallback_used: bool = False
+    quarantine_ledger: list[dict[str, Any]] = field(default_factory=list)
+    artifact_paths: dict[str, str] = field(default_factory=dict)
+    render_failure_reason: str | None = None
 
 
 def parse_draft_response(raw_text: str) -> DraftResponse:

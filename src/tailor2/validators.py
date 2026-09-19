@@ -8,7 +8,7 @@ Enforces strictly objectively falsifiable rules:
 - Numeric token multiset / approximation fidelity
 - Zero occurrences of do_not_claim or prohibited terms ("Kubernetes")
 - Zero duplicate bullets
-- Blueprint layout and section bounds (Amdocs largest, MalyTech <= 3)
+- Blueprint shape is advisory; only factual and resource safety are hard
 - Canonical Amdocs 7-bullet accounting
 """
 
@@ -190,30 +190,10 @@ def validate_draft_response(
                     f"Canonical Amdocs bullet {req_amdocs!r} missing: must be included in draft bullets or listed in amdocs_omission_ledger"
                 )
 
-    # 6. Layout and blueprint bounds
-    if not enforce_layout:
-        return
-    # Amdocs must be the largest entry
-    amdocs_count = entry_bullet_counts.get("amdocs_software_developer", 0)
-    for entry_id, count in entry_bullet_counts.items():
-        if entry_id != "amdocs_software_developer" and count >= amdocs_count and amdocs_count > 0:
-            raise DraftValidationError(
-                f"Amdocs must carry the most bullets: amdocs has {amdocs_count}, but {entry_id} has {count}"
-            )
-
-    # MalyTech (bank_integration_internship) is capped at 3 bullets
-    maly_count = entry_bullet_counts.get("bank_integration_internship", 0)
-    if maly_count > 3:
-        raise DraftValidationError(
-            f"bank_integration_internship (MalyTech) is capped at 3 bullets; found {maly_count}"
-        )
-
-    # Total bullet budget
-    max_bullets = 16 if base_variant == "ml" else 15
-    if len(draft.bullets) > max_bullets:
-        raise DraftValidationError(
-            f"Draft has {len(draft.bullets)} bullets, exceeding layout budget of {max_bullets} for {base_variant}"
-        )
+    # Section counts, ordering, and per-entry allocation are soft budgets.
+    # Render-fill may rebalance them later; retaining grounded overflow is
+    # safer than dropping evidence or rejecting the complete résumé.
+    del entry_bullet_counts, base_variant, enforce_layout
 
 
 def validate_missing_evidence_response(

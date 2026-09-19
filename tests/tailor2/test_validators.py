@@ -142,12 +142,11 @@ def test_validate_draft_do_not_claim_kubernetes_fails(profile, valid_jd_text):
         validate_draft_response(draft, valid_jd_text, profile, "backend")
 
 
-def test_validate_draft_malytech_capped_at_3_bullets(profile, valid_jd_text):
+def test_validate_draft_malytech_overflow_is_a_soft_budget(profile, valid_jd_text):
     draft = make_valid_draft(valid_jd_text)
     extra_b = DraftBullet("b16", ["int_b4"], ["r1"], "Experience", "bank_integration_internship", "Built automated reconciliations.")
     draft = dataclasses.replace(draft, bullets=list(draft.bullets) + [extra_b])
-    with pytest.raises(DraftValidationError, match="capped at 3 bullets"):
-        validate_draft_response(draft, valid_jd_text, profile, "backend")
+    validate_draft_response(draft, valid_jd_text, profile, "backend")
 
 
 def test_validate_audit_response_score_1_must_reject():

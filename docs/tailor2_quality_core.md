@@ -1,11 +1,12 @@
 # Tailor2 quality_core — design notes
 
 First production-hardening slice of the LLM-first tailoring lane. This is an
-implementation, layered on top of the existing 4-stage lane
-(draft -> audit -> conditional repair -> re-audit -> render), not a rewrite.
+implementation, layered on top of the existing draft -> audit -> conditional
+repair -> re-audit -> render stages, with deterministic sanitize-and-deliver
+and artifact-first audit preservation.
 Every existing strength (strict JSON/dataclass contracts, evidence-ID and
 numeric-token grounding, resumable artifacts, multi-provider support,
-one-page enforcement) is preserved unchanged; nothing in `src/tailor2/`
+and bounded render measurement) is preserved unchanged; nothing in `src/tailor2/`
 was deleted or restructured beyond what was needed to add the pieces below.
 
 ## Why: what was wrong before
@@ -27,7 +28,7 @@ Four tiers, matching the task's explicit policy:
 
 | Tier | Meaning | Outcome |
 |---|---|---|
-| `FATAL_INTEGRITY` | Fabricated/unresolved evidence, invented numbers, prohibited claims, unverifiable provenance, an invalid structured response, or an unrenderable document | `REJECTED_FATAL` |
+| `FATAL_INTEGRITY` | Corrupt canonical data, no grounded fallback, unsafe content with no safe removal, unverifiable provenance, or an unrenderable document with no source fallback | `REJECTED_FATAL` |
 | `AUTO_CORRECTABLE` | Deterministically fixable without model judgment (title/employer mismatch, unsupported Skills entry) | Corrected silently, run continues |
 | `REPAIRABLE_QUALITY` | Writing-quality or positioning defect | Bounded targeted repair, not rejection |
 | `ADVISORY_GAP` | Profile has no evidence for a JD capability | Disclosed, never invented, never blocks |
@@ -35,10 +36,10 @@ Four tiers, matching the task's explicit policy:
 `DIMENSION_SEVERITY` in `severity.py` maps every rubric dimension (the
 original 9 bullet-level ones plus the 8 new whole-résumé ones) to a tier,
 with the reasoning for each placement documented inline in that file. The
-two dimensions classified fatal are `factual_fidelity` and `metric_fidelity`
-— the only two whose failure mode is "the claim isn't true," which cannot be
-fixed without inventing evidence. Everything else is a wording, positioning,
-or clarity problem a repair pass can address without touching the facts.
+auditor still marks factual and metric fidelity defects as rejected, but the
+lane validates those cited elements individually and restores canonical
+wording or quarantines the element before delivery. They become run-fatal
+only when no safe replacement or fallback remains.
 
 **Important separation of concerns**: `validators.validate_audit_response`
 is unchanged — it still enforces that a dimension scoring 1 implies
@@ -57,14 +58,14 @@ normally a terminal state a completed run returns), `NEEDS_HUMAN_REVIEW`,
 `REJECTED_FATAL`. Final resolution logic (`run_tailor2_lane`, "FINAL STATUS
 RESOLUTION"):
 
-- Any page-fill variance (PDF compiled but isn't exactly one page) or an
+- Any page-fill variance (PDF compiled but isn't ideal) or an
   unresolved `REPAIRABLE_QUALITY` finding (repair budget exhausted, or a
   whole-résumé-only finding with no single-bullet target) -> `NEEDS_HUMAN_REVIEW`.
 - Any `AUTO_CORRECTABLE` fix was applied, or an `ADVISORY_GAP` was found ->
   `ACCEPTED_WITH_WARNINGS`.
 - Otherwise -> `ACCEPTED`.
-- A `FATAL_INTEGRITY` finding anywhere short-circuits immediately to
-  `REJECTED_FATAL`, before render is even attempted.
+- A fatal-tier finding is sanitized before rendering; only the genuinely fatal
+  conditions in the table above short-circuit the run.
 
 **Deliberate exception**: the same-model draft/audit disclosure (below) is
 recorded in `manifest.warnings` but does **not** by itself downgrade
@@ -141,6 +142,13 @@ makes by reading the whole résumé, not a regex over a banned-word list.
 
 ## 4. Deterministic checks (`title_policy.py`, `validators.py`)
 
+`src/tailor2/sanitize.py` is the artifact-first boundary. It resolves
+unambiguous evidence aliases, auto-populates omission accounting, preserves
+soft section overflow, restores canonical metric/outcome wording, removes
+unsafe elements, and builds a canonical fallback when a draft has no safe
+bullets. Each replacement/removal records `evidence_id`, location, finding,
+action, and replacement in the manifest `quarantine_ledger`.
+
 - **Title/employer fidelity** (`title_policy.resolve_displayed_title`):
   `src/profile.py` is out of this task's scope and the profile's own
   `title` field is documented as immutable, so this does not add a schema
@@ -190,23 +198,26 @@ still finds a `REPAIRABLE_QUALITY` issue and the repair budget (default 1
 cycle, `--repair-budget`) is exhausted, the run resolves to
 `NEEDS_HUMAN_REVIEW` with the last-known-good draft rendered and
 delivered — never a silent pass and never a fatal rejection for a
-writing-quality issue.
+repair-budget or bookkeeping issue. Missing omission ledger entries never
+trigger a model call.
 
 ## 6. Rendering and page fill
 
-Page count != 1 no longer aborts the run. The PDF is compiled and
-delivered; if it isn't exactly one page, the run resolves to
-`NEEDS_HUMAN_REVIEW` with the artifact preserved rather than discarded.
+Page count and section budgets are delivery warnings, not draft gates. The
+renderer attempts the sanitized candidate; if PDF compilation fails, a
+LaTeX source preview is preserved when possible. The manifest records
+`safe_candidate_constructed`, `safe_fallback_used`, artifact paths, and any
+render failure reason.
 
 ## 7. Artifact preservation
 
-Every stage's JSON (`draft.json`, `audit.json`, `repair.json`,
+Every stage's JSON (`draft.json`, `safe_candidate.json`, `audit.json`, `repair.json`,
 `draft_repaired.json`, `re_audit.json`) is still written incrementally as
 it's produced, unchanged from before. `run_manifest.json` is written to
 `out_dir` directly (not a `rejected/` subdirectory) for every non-fatal
-outcome, including `NEEDS_HUMAN_REVIEW` and `ACCEPTED_WITH_WARNINGS` — only
-`REJECTED_FATAL` writes to `out_dir/rejected/`, since that is the one
-outcome that doesn't produce a résumé anyone should submit.
+outcome, including `NEEDS_HUMAN_REVIEW` and `ACCEPTED_WITH_WARNINGS`.
+`REJECTED_FATAL` writes to `out_dir/rejected/` only when no safe artifact or
+source preview can be preserved.
 
 ## Known limitations (deliberately deferred)
 
