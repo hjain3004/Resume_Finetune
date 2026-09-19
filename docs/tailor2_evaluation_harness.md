@@ -1,8 +1,8 @@
 # Tailor2 Offline Evaluation Harness
 
-**Status:** Implemented (harness only -- no live evaluation has been run).
-**Branch:** `feat/tailor2-evaluation-harness`, based on `origin/feat/tailor2-selection-integration` @ `8649c217`.
-**Scope:** `src/tailor2_eval/**`, `scripts/evaluate_tailor2.py`, `tests/tailor2_eval/**`, `tests/fixtures/tailor2_eval/**`. Does not modify `src/tailor2/**`, `scripts/tailor2.py`, `tests/tailor2/**`, render-fill fixtures, Top-10 target source files, or manual résumé artifacts.
+**Status:** Implemented; the ChatGPT-managed Codex pilot lane is opt-in and bounded.
+**Branch:** `feat/tailor2-luna-top10-pilot`, based on `fb101138`.
+**Scope:** bounded Codex-subscription orchestration, read-only Top-10 selection, private pilot artifacts, and fake-provider tests. It does not modify `scripts/tailor2.py`, render-fill fixtures, Top-10 source manifests, or manual résumé artifacts.
 
 ## 1. Purpose
 
@@ -17,7 +17,7 @@ Tailor2 now has offline foundations for evidence grounding, semantic selection, 
 | `redact.py` | Credential redaction; also hard-rejects a plan that carries a credential-shaped field at all. |
 | `plan.py` | Loads a plan and validates its checksums against the real `config/master_profile.yaml` and Top-10 JD files. |
 | `targets.py` | Read-only Top-10 manifest discovery (`shortlist/tailoring_targets/targets.json`); never writes to it. |
-| `orchestrator.py` | Dry-run / recorded / (interface-only) live execution loop, with resumability and cost/call budgets. |
+| `orchestrator.py` | Dry-run, recorded, and bounded Codex-subscription execution with resumability and cost/call budgets. |
 | `blind.py` | Deterministic, identity-hiding A/B comparison package generation. |
 | `metrics.py` | Aggregate release metrics over a set of results. |
 | `release_gate.py` | **Proposed** (not established) release-readiness thresholds. |
@@ -29,9 +29,17 @@ Three modes, selected by the CLI:
 
 - `--dry-run` (default): validates the plan and Top-10 targets, writes a `DRY_RUN_OK` placeholder per target. Never constructs `src.tailor2.invoker.Tailor2Invoker`.
 - `--recorded FIXTURE_DIR`: reads one pre-baked `TargetResult` JSON per target from `FIXTURE_DIR/<target_id>.json`. Pure file I/O; also never touches `Tailor2Invoker`.
-- `--live`: the CLI flag that sets `orchestrator.run_evaluation_plan(..., live_authorized=True)`. Even then, `_run_live_target` additionally requires one of `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY` / `GEMINI_API_KEY` to be set, and then raises `NotImplementedError` -- **live evaluation itself is out of scope for this task** and is deliberately not implemented beyond the authorization interface.
+- `--live`: the CLI flag that sets `orchestrator.run_evaluation_plan(..., live_authorized=True)`. Platform-API providers remain unsupported; `--provider codex_subscription` is the separate, exact-model ChatGPT-managed lane described below.
 
 Every test in `tests/tailor2_eval/` uses only `dry_run` and `recorded`; several assert directly that `Tailor2Invoker.invoke` was never called (via `monkeypatch.setattr` raising `AssertionError` if it is).
+
+### 3.1 ChatGPT-managed Codex pilot lane
+
+The only supported live pilot lane is an explicit `--live --provider codex_subscription` run using the user's authenticated Codex CLI session. It pins `gpt-5.6-luna`, starts a fresh `codex exec` process for each stage, uses `--sandbox read-only --ephemeral`, disables MCP servers for the invocation, and supplies a stage-specific strict JSON Schema. The subprocess environment excludes platform API-key and token variables; the lane never uses the platform provider adapters.
+
+The lane enforces at most 10 targets, 120 invocations, one target at a time, and deterministic run/target deadlines. Usage is recorded as bounded counts and latency with `cost_status=not_applicable_subscription`. I11 traces may contain raw stage output and input snapshots, but remain under the ignored private pilot artifact directory and are never copied into committed/public manifests.
+
+Pilot execution is resumable: completed result files are retained, while `INTERRUPTED`, `REJECTED_FATAL`, and `SKIPPED_BUDGET` targets can be retried only under the plan's retry policy. A canary must publish a usable artifact before the remaining targets are eligible; any fatal integrity finding or interruption stops the batch. Drafter and auditor using the same provider/model is reported explicitly and is not an independent review.
 
 ## 4. Top-10 orchestration and resumability
 
@@ -73,9 +81,9 @@ A repository-wide search for `G2`, `G3`, "release gate", and "pilot" found only 
 
 ## 11. Known limitations (deliberately deferred)
 
-- Live evaluation is interface-only (`orchestrator._run_live_target` raises `NotImplementedError` after its authorization checks pass) -- implementing an actual live Top-10 run is out of scope for this task.
+- Platform-API live evaluation remains unsupported; the bounded Codex-subscription lane is the only implemented live path and requires explicit provider selection plus exact plan identities.
 - The release gate's thresholds are proposals; they have not been reviewed or ratified as repository policy.
-- Cost estimation (`TargetResult.estimated_cost_usd`) is whatever the (future) live invoker reports or a recorded fixture states; this harness does not implement its own token-based cost model.
+- Platform-provider cost estimation remains outside this harness; Codex-subscription results use `cost_status=not_applicable_subscription` and retain bounded usage counts instead of inventing a dollar cost.
 - `--baseline-registry` must currently be authored by hand (see §12); nothing yet auto-populates it from a real Tailor1/legacy run or a render-fill artifact.
 
 ## 12. Baseline registry and self-pair prevention (additive correction, 2026-09-18)

@@ -19,10 +19,11 @@ from pathlib import Path
 
 from src.tailor2_eval.baseline_registry import empty_registry, load_baseline_registry
 from src.tailor2_eval.blind import blind_package_to_dict
+from src.tailor2_eval.codex_selection import load_private_selection_manifest
 from src.tailor2_eval.metrics import compute_aggregate_summary
 from src.tailor2_eval.orchestrator import LiveModeNotAuthorizedError, run_evaluation_plan
 from src.tailor2_eval.pairing import answer_key_entry_to_dict, build_blind_pairs_batch
-from src.tailor2_eval.plan import PlanValidationError, validate_plan_file
+from src.tailor2_eval.plan import PlanValidationError, load_plan, validate_plan_against_repo, validate_plan_file
 from src.tailor2_eval.release_gate import evaluate_release_gate
 from src.tailor2_eval.reports import generate_all_reports
 from src.tailor2_eval.schemas import human_review_from_dict, target_result_from_dict
@@ -35,7 +36,12 @@ def _fail(label: str, msg: str) -> int:
 
 def cmd_validate_plan(args: argparse.Namespace) -> int:
     try:
-        plan = validate_plan_file(Path(args.plan))
+        targets = load_private_selection_manifest(Path(args.targets_manifest)) if args.targets_manifest else None
+        if targets is None:
+            plan = validate_plan_file(Path(args.plan))
+        else:
+            plan = load_plan(Path(args.plan))
+            validate_plan_against_repo(plan, targets=targets)
     except (PlanValidationError, FileNotFoundError, KeyError, ValueError) as exc:
         return _fail("INVALID_PLAN", str(exc))
     print(f"Plan {plan.plan_id!r} is valid: {len(plan.target_ids)} target(s), resume_policy={plan.resume_policy!r}.")
@@ -44,7 +50,12 @@ def cmd_validate_plan(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     try:
-        plan = validate_plan_file(Path(args.plan))
+        targets = load_private_selection_manifest(Path(args.targets_manifest)) if args.targets_manifest else None
+        if targets is None:
+            plan = validate_plan_file(Path(args.plan))
+        else:
+            plan = load_plan(Path(args.plan))
+            validate_plan_against_repo(plan, targets=targets)
     except (PlanValidationError, FileNotFoundError, KeyError, ValueError) as exc:
         return _fail("INVALID_PLAN", str(exc))
 
@@ -61,13 +72,16 @@ def cmd_run(args: argparse.Namespace) -> int:
             mode,
             recorded_dir=Path(args.recorded) if args.recorded else None,
             live_authorized=args.live,
+            provider=args.provider,
+            targets=targets,
         )
     except LiveModeNotAuthorizedError as exc:
         return _fail("LIVE_NOT_AUTHORIZED", str(exc))
     except NotImplementedError as exc:
         return _fail("LIVE_NOT_IMPLEMENTED", str(exc))
 
-    print(f"mode={mode} targets_run={len(summary.results)} calls={summary.provider_calls_made} cost=${summary.total_cost_usd:.4f}")
+    cost_text = summary.cost_status if summary.cost_status != "reported" else f"${summary.total_cost_usd:.4f}"
+    print(f"mode={mode} targets_run={len(summary.results)} calls={summary.provider_calls_made} cost={cost_text}")
     if summary.stopped_on_budget:
         print("WARNING: run stopped early -- max_calls/max_cost_usd budget reached.", file=sys.stderr)
     return 0
@@ -192,6 +206,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_plan_cmd = sub.add_parser("validate-plan")
     validate_plan_cmd.add_argument("plan")
+    validate_plan_cmd.add_argument("--targets-manifest", default=None)
     validate_plan_cmd.set_defaults(func=cmd_validate_plan)
 
     run = sub.add_parser("run")
@@ -199,6 +214,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--dry-run", action="store_true")
     run.add_argument("--recorded", metavar="FIXTURE_DIR", default=None)
     run.add_argument("--live", action="store_true")
+    run.add_argument("--provider", default=None, help="Explicit live provider; codex_subscription uses ChatGPT-managed Codex auth.")
+    run.add_argument("--targets-manifest", default=None, help="Private Codex selection manifest for live pilot targets.")
     run.set_defaults(func=cmd_run)
 
     build_pairs = sub.add_parser("build-blind-pairs")

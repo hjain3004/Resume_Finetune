@@ -27,6 +27,7 @@ from src.render.l7 import run_l7_tailored
 from src.render.parse import parse_pdf
 from src.tailor.artifacts import write_json_atomic
 from src.tailor2.audit_projection import ResumeProjection, build_resume_projection
+from src.tailor2.codex_subscription import CodexPilotInterrupted
 from src.tailor2.invoker import Tailor2Invoker
 from src.tailor2.models import (
     AuditResponse,
@@ -102,6 +103,13 @@ def _invoker_identity(invoker: Tailor2Invoker) -> tuple[str, str]:
     return provider, invoker.model
 
 
+def _invoker_metadata(invoker: Any) -> dict[str, Any]:
+    metadata = getattr(invoker, "metadata", None)
+    if callable(metadata):
+        metadata = metadata()
+    return metadata if isinstance(metadata, dict) else {}
+
+
 @dataclass
 class _Stage:
     """Mutable bookkeeping threaded through the run; avoids re-passing a
@@ -136,6 +144,8 @@ class _Stage:
     selection_artifacts: dict[str, Any] = field(default_factory=dict)
     unresolved: list[str] = field(default_factory=list)
     render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
+    provider_metadata: dict[str, Any] = field(default_factory=dict)
+    provider_invokers: tuple[Any, ...] = ()
 
 
 def _record_dimension_scores(stage: _Stage, audit: AuditResponse) -> None:
@@ -154,6 +164,11 @@ def _record_dimension_scores(stage: _Stage, audit: AuditResponse) -> None:
 
 
 def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: list[str]) -> Tailor2Manifest:
+    if stage.provider_invokers:
+        stage.provider_metadata = {
+            role: _invoker_metadata(invoker)
+            for role, invoker in zip(("drafter", "auditor", "repair", "re_audit"), stage.provider_invokers)
+        }
     return Tailor2Manifest(
         run_id=stage.run_id,
         created_at=stage.created_at,
@@ -185,6 +200,7 @@ def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: lis
         selection_artifacts=dict(stage.selection_artifacts),
         unresolved=list(stage.unresolved),
         render_fill_artifacts=dict(stage.render_fill_artifacts),
+        provider_metadata=dict(stage.provider_metadata),
     )
 
 
@@ -265,6 +281,7 @@ def run_tailor2_lane(
         re_audit_id=_invoker_identity(re_audit_invoker),
     )
     stage.same_model_draft_and_audit = stage.drafter_id == stage.auditor_id
+    stage.provider_invokers = (invoker, auditor_invoker, repair_invoker, re_audit_invoker)
     if stage.same_model_draft_and_audit:
         msg = (
             f"Drafter and auditor share the same provider/model ({stage.drafter_id[0]}:{stage.drafter_id[1]}); "
@@ -363,11 +380,31 @@ def run_tailor2_lane(
         stage.call_count += 1
         draft = parse_draft_response(raw_draft)
         validate_draft_response(draft, jd_text, profile, variant)
+    except CodexPilotInterrupted:
+        raise
     except Exception as exc:
-        # Malformed/invalid structured response or a deterministic evidence/
-        # do_not_claim/numeric-token violation: both are FATAL_INTEGRITY --
-        # neither can be repaired without inventing evidence.
-        return _write_fatal(out_dir, stage, [str(exc)])
+        if hasattr(invoker, "contract_retry_count") and getattr(invoker, "contract_retry_count") < 1:
+            invoker.contract_retry_count += 1
+            retry_prompt = (
+                draft_prompt
+                + "\n\nThe previous structured draft failed deterministic validation with this bounded diagnostic: "
+                + str(exc)
+                + "\nReturn a corrected JSON object using only exact canonical evidence IDs from the supplied profile."
+            )
+            try:
+                raw_draft = invoker.invoke(retry_prompt, invocation_type="draft", input_paths=[jd_path])
+                stage.call_count += 1
+                draft = parse_draft_response(raw_draft)
+                validate_draft_response(draft, jd_text, profile, variant)
+            except CodexPilotInterrupted:
+                raise
+            except Exception as retry_exc:
+                return _write_fatal(out_dir, stage, [str(retry_exc)])
+        else:
+            # Malformed/invalid structured response or a deterministic evidence/
+            # do_not_claim/numeric-token violation: both are FATAL_INTEGRITY --
+            # neither can be repaired without inventing evidence.
+            return _write_fatal(out_dir, stage, [str(exc)])
 
     write_json_atomic(out_dir / "draft.json", draft_response_to_dict(draft))
 
@@ -644,6 +681,8 @@ def _audit_repair_cycle(
             stage.call_count += 1
             audit = parse_audit_response(raw)
             validate_audit_response(audit, expected_eval_ids)
+        except CodexPilotInterrupted:
+            raise
         except Exception as exc:
             return _write_fatal(out_dir, stage, [str(exc)])
 
@@ -760,6 +799,8 @@ def _audit_repair_cycle(
                 evidence_by_id,
                 profile,
             )
+        except CodexPilotInterrupted:
+            raise
         except Exception as exc:
             return _write_fatal(out_dir, stage, [str(exc)])
 

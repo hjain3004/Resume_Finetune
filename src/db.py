@@ -143,6 +143,19 @@ def get_readonly_connection(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def load_shortlisted_ats_jobs_readonly(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Return deterministic ATS shortlist candidates without mutating SQLite."""
+    return conn.execute(
+        """
+        SELECT id, company, title, location, url, ats_url, source, date_posted,
+               status, jd_text, jd_quality, fit_score, fit_rationale, base_variant
+        FROM jobs
+        WHERE status = 'SHORTLISTED' AND jd_quality = 'ats'
+        ORDER BY fit_score DESC, date_posted DESC, id DESC
+        """
+    ).fetchall()
+
+
 def rows_by_ids_status(
     conn: sqlite3.Connection,
     job_ids: tuple[int, ...],

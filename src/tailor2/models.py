@@ -197,6 +197,7 @@ class Tailor2Manifest:
     selection_artifacts: dict[str, Any] = field(default_factory=dict)
     unresolved: list[str] = field(default_factory=list)
     render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
+    provider_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def parse_draft_response(raw_text: str) -> DraftResponse:

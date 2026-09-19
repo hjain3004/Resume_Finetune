@@ -17,7 +17,7 @@ from pathlib import Path
 
 from src.tailor2_eval.checksums import sha256_file
 from src.tailor2_eval.schemas import EvaluationPlan, plan_from_dict, plan_to_dict, validate_plan_dict
-from src.tailor2_eval.targets import load_top10_targets
+from src.tailor2_eval.targets import Top10Target, load_top10_targets
 
 DEFAULT_PROFILE_PATH = Path("config/master_profile.yaml")
 
@@ -31,15 +31,29 @@ def load_plan(path: Path) -> EvaluationPlan:
     return plan_from_dict(data)
 
 
-def validate_plan_file(path: Path, *, profile_path: Path = DEFAULT_PROFILE_PATH) -> EvaluationPlan:
+def validate_plan_file(
+    path: Path,
+    *,
+    profile_path: Path = DEFAULT_PROFILE_PATH,
+    targets_json: Path | None = None,
+    jds_dir: Path | None = None,
+    targets: list[Top10Target] | None = None,
+) -> EvaluationPlan:
     """Full validation: structural (schemas.validate_plan_dict, already run
     inside plan_from_dict) plus checksum freshness against real files."""
     plan = load_plan(path)
-    validate_plan_against_repo(plan, profile_path=profile_path)
+    validate_plan_against_repo(plan, profile_path=profile_path, targets_json=targets_json, jds_dir=jds_dir, targets=targets)
     return plan
 
 
-def validate_plan_against_repo(plan: EvaluationPlan, *, profile_path: Path = DEFAULT_PROFILE_PATH) -> None:
+def validate_plan_against_repo(
+    plan: EvaluationPlan,
+    *,
+    profile_path: Path = DEFAULT_PROFILE_PATH,
+    targets_json: Path | None = None,
+    jds_dir: Path | None = None,
+    targets: list[Top10Target] | None = None,
+) -> None:
     validate_plan_dict(plan_to_dict(plan))
 
     profile_path = Path(profile_path)
@@ -51,7 +65,17 @@ def validate_plan_against_repo(plan: EvaluationPlan, *, profile_path: Path = DEF
                 f"{profile_path} checksum {actual_profile_checksum!r}"
             )
 
-    targets_by_id = {t.target_id: t for t in load_top10_targets()}
+    targets_by_id = {
+        t.target_id: t
+        for t in (
+            targets
+            if targets is not None
+            else load_top10_targets(
+                targets_json or Path("shortlist/tailoring_targets/targets.json"),
+                jds_dir or Path("shortlist/tailoring_targets/jds"),
+            )
+        )
+    }
     for target_id in plan.target_ids:
         if target_id not in targets_by_id:
             raise PlanValidationError(f"plan references unknown target_id: {target_id!r} (not in Top-10 manifest)")

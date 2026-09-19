@@ -259,6 +259,8 @@ class TargetResult:
     resumability: ResumabilityState
     evidence_gaps: tuple[str, ...] = ()
     mode: RunMode = "recorded"
+    cost_status: str = "reported"
+    provider_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 _VALID_TARGET_STATUSES = (
@@ -321,6 +323,8 @@ def target_result_from_dict(data: dict[str, Any]) -> TargetResult:
         resumability=resumability,
         evidence_gaps=tuple(data.get("evidence_gaps", ())),
         mode=data.get("mode", "recorded"),
+        cost_status=str(data.get("cost_status", "reported")),
+        provider_metadata=dict(data.get("provider_metadata", {})),
     )
 
 
