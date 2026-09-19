@@ -69,6 +69,9 @@ def validate_draft_response(
     jd_text: str,
     profile: MasterProfile,
     base_variant: str,
+    *,
+    allow_missing_canonical: bool = False,
+    enforce_layout: bool = True,
 ) -> None:
     """Deterministically validate DraftResponse against JD and MasterProfile."""
     # 1. Unique requirement IDs and exact quote verification
@@ -180,13 +183,16 @@ def validate_draft_response(
     omitted_amdocs_evidence = {
         om.evidence_id for om in draft.amdocs_omission_ledger
     }
-    for req_amdocs in CANONICAL_AMDOCS_BULLETS:
-        if req_amdocs not in cited_amdocs_evidence and req_amdocs not in omitted_amdocs_evidence:
-            raise DraftValidationError(
-                f"Canonical Amdocs bullet {req_amdocs!r} missing: must be included in draft bullets or listed in amdocs_omission_ledger"
-            )
+    if not allow_missing_canonical:
+        for req_amdocs in CANONICAL_AMDOCS_BULLETS:
+            if req_amdocs not in cited_amdocs_evidence and req_amdocs not in omitted_amdocs_evidence:
+                raise DraftValidationError(
+                    f"Canonical Amdocs bullet {req_amdocs!r} missing: must be included in draft bullets or listed in amdocs_omission_ledger"
+                )
 
     # 6. Layout and blueprint bounds
+    if not enforce_layout:
+        return
     # Amdocs must be the largest entry
     amdocs_count = entry_bullet_counts.get("amdocs_software_developer", 0)
     for entry_id, count in entry_bullet_counts.items():
@@ -208,6 +214,59 @@ def validate_draft_response(
         raise DraftValidationError(
             f"Draft has {len(draft.bullets)} bullets, exceeding layout budget of {max_bullets} for {base_variant}"
         )
+
+
+def validate_missing_evidence_response(
+    response: Any,
+    expected_evidence_ids: set[str],
+    existing_bullet_ids: set[str],
+    evidence_by_id: dict[str, Any],
+    profile: MasterProfile,
+) -> None:
+    """Validate a targeted recovery response before it enters the draft."""
+    returned_ids = [item.evidence_id for item in response.recovered_bullets]
+    if set(returned_ids) != expected_evidence_ids or len(returned_ids) != len(set(returned_ids)):
+        raise DraftValidationError(
+            f"Missing-evidence response IDs mismatch: expected {sorted(expected_evidence_ids)}, got {returned_ids}"
+        )
+    do_not_claim_terms = list(profile.do_not_claim)
+    if "Kubernetes" not in do_not_claim_terms:
+        do_not_claim_terms.append("Kubernetes")
+    for item in response.recovered_bullets:
+        if item.evidence_id not in evidence_by_id:
+            raise DraftValidationError(f"Recovery cites unknown evidence_id: {item.evidence_id!r}")
+        if item.bullet_id in existing_bullet_ids:
+            raise DraftValidationError(f"Recovery duplicates existing bullet_id: {item.bullet_id!r}")
+        if not item.text.strip() or "\n" in item.text or "\r" in item.text:
+            raise DraftValidationError(f"Recovery bullet {item.bullet_id!r} must be one non-empty line")
+        for term in do_not_claim_terms:
+            if re.search(r"\b" + re.escape(term) + r"\b", item.text, re.IGNORECASE):
+                raise DraftValidationError(f"Recovery bullet {item.bullet_id!r} contains prohibited term {term!r}")
+        evidence = evidence_by_id[item.evidence_id]
+        evidence_texts: list[str] = []
+        if hasattr(evidence, "phrasings") and evidence.phrasings:
+            evidence_texts.extend(
+                value for value in (
+                    getattr(evidence.phrasings, "short", ""),
+                    getattr(evidence.phrasings, "medium", ""),
+                    getattr(evidence.phrasings, "long", ""),
+                ) if isinstance(value, str)
+            )
+        for attribute in ("evidence", "defense"):
+            value = getattr(evidence, attribute, "")
+            if isinstance(value, str):
+                evidence_texts.append(value)
+        allowed_tokens = {
+            normalized
+            for text in evidence_texts
+            for token in extract_numeric_tokens(text)
+            for normalized in (token, _normalize_num_token(token))
+        }
+        for token in extract_numeric_tokens(item.text):
+            if token not in allowed_tokens and _normalize_num_token(token) not in allowed_tokens:
+                raise DraftValidationError(
+                    f"Recovery bullet {item.bullet_id!r}: numeric token {token!r} not found in canonical evidence"
+                )
 
 
 def validate_audit_response(

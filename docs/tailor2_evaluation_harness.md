@@ -41,6 +41,8 @@ The lane enforces at most 10 targets, 120 invocations, one target at a time, and
 
 Pilot execution is resumable: completed result files are retained, while `INTERRUPTED`, `REJECTED_FATAL`, and `SKIPPED_BUDGET` targets can be retried only under the plan's retry policy. A canary must publish a usable artifact before the remaining targets are eligible; any fatal integrity finding or interruption stops the batch. Drafter and auditor using the same provider/model is reported explicitly and is not an independent review.
 
+When deterministic draft validation finds a grounded canonical or selected evidence item missing, Tailor2 preserves the partial draft and makes at most two targeted `missing_evidence` requests; it never regenerates selection or the complete draft during this recovery. A returned element must pass evidence, numeric-token, prohibited-term, and full layout validation before insertion. If both attempts fail, the omission is recorded and the best safe partial is sent through the existing audit path; it becomes `NEEDS_HUMAN_REVIEW` only when a usable artifact can still be rendered, otherwise a remaining integrity or layout failure stays `REJECTED_FATAL`. Resume callers can supply the preserved draft and record reused/repeated stages in `recovery_artifacts`.
+
 ## 4. Top-10 orchestration and resumability
 
 `orchestrator.run_evaluation_plan` iterates `plan.target_ids` in manifest order. For each target it writes `<artifact_root>/<target_id>/result.json` (via the existing `src.tailor.artifacts.write_json_atomic`, with `redact.redact_mapping` applied first) before moving to the next target. A subsequent call re-reads any existing `result.json`:

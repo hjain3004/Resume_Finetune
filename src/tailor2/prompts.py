@@ -467,6 +467,44 @@ Your job is to rewrite ONLY these rejected bullets to completely resolve the aud
     return base_prompt + extra
 
 
+def build_missing_evidence_prompt(
+    missing_evidence: list[dict[str, Any]],
+    current_bullets: list[DraftBullet],
+    projection: ResumeProjection | None = None,
+) -> str:
+    """Request only bounded additions for evidence omitted from a draft."""
+    context = [
+        {"bullet_id": bullet.bullet_id, "entry_id": bullet.entry_id, "text": bullet.text, "evidence_ids": bullet.evidence_ids}
+        for bullet in current_bullets
+    ]
+    projection_text = ""
+    if projection is not None:
+        projection_text = (
+            "\n## Current résumé projection (context only; do not rewrite existing content)\n"
+            + json.dumps(projection_to_dict(projection), indent=2, default=str)
+        )
+    return f"""You are a constrained résumé recovery editor. Add only the missing evidence elements listed below.
+
+## Missing canonical evidence
+{json.dumps(missing_evidence, indent=2)}
+
+## Existing bullets (immutable context)
+{json.dumps(context, indent=2)}
+{projection_text}
+
+Rules:
+1. Return one recovered bullet for each requested evidence_id, and no other bullets.
+2. Use the supplied canonical evidence, protected facts, and requirement IDs only.
+3. Preserve every numeric token exactly; do not invent or alter metrics.
+4. Use one concise sentence, preserve the evidence's technical guarantee, and never use Kubernetes.
+5. Do not rewrite, summarize, or remove any existing bullet.
+6. If the evidence cannot be added safely, return an empty array rather than inventing content.
+
+Return only this JSON object:
+{{"recovered_bullets":[{{"evidence_id":"...","bullet_id":"recovered_...","supported_requirement_ids":["..."],"text":"..."}}]}}
+"""
+
+
 def build_re_audit_prompt(
     jd_text: str,
     repaired_bullets: list[RepairedBullet],

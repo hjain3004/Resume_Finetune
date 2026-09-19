@@ -145,6 +145,19 @@ class RepairResponse:
 
 
 @dataclass(frozen=True)
+class RecoveredBullet:
+    evidence_id: str
+    bullet_id: str
+    supported_requirement_ids: list[str]
+    text: str
+
+
+@dataclass(frozen=True)
+class MissingEvidenceResponse:
+    recovered_bullets: list[RecoveredBullet]
+
+
+@dataclass(frozen=True)
 class Tailor2Manifest:
     run_id: str
     created_at: str
@@ -197,6 +210,7 @@ class Tailor2Manifest:
     selection_artifacts: dict[str, Any] = field(default_factory=dict)
     unresolved: list[str] = field(default_factory=list)
     render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
+    recovery_artifacts: list[dict[str, Any]] = field(default_factory=list)
     provider_metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -378,6 +392,32 @@ def parse_repair_response(raw_text: str) -> RepairResponse:
         )
 
     return RepairResponse(repaired_bullets=repaired_bullets)
+
+
+def parse_missing_evidence_response(raw_text: str) -> MissingEvidenceResponse:
+    clean_text = strip_markdown_fences(raw_text)
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError as exc:
+        raise ModelContractError(f"Missing-evidence response is not valid JSON: {exc}") from exc
+    if not isinstance(data, dict) or "recovered_bullets" not in data:
+        raise ModelContractError("Missing-evidence response missing 'recovered_bullets'")
+    recovered_bullets = []
+    for idx, item in enumerate(data["recovered_bullets"]):
+        if not isinstance(item, dict):
+            raise ModelContractError(f"recovered_bullets[{idx}] must be an object")
+        for key in ("evidence_id", "bullet_id", "supported_requirement_ids", "text"):
+            if key not in item:
+                raise ModelContractError(f"recovered_bullets[{idx}] missing required key: {key!r}")
+        recovered_bullets.append(
+            RecoveredBullet(
+                evidence_id=str(item["evidence_id"]),
+                bullet_id=str(item["bullet_id"]),
+                supported_requirement_ids=[str(value) for value in item["supported_requirement_ids"]],
+                text=str(item["text"]),
+            )
+        )
+    return MissingEvidenceResponse(recovered_bullets=recovered_bullets)
 
 
 def draft_response_to_dict(draft: DraftResponse) -> dict[str, Any]:

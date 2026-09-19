@@ -109,6 +109,7 @@ def test_stage_schema_is_written_and_raw_events_are_not_persisted(tmp_path: Path
     schema_path = Path(call["argv"][call["argv"].index("--output-schema") + 1])
     assert schema_path.exists() is False
     assert stage_output_schema("repair")["required"] == ["repaired_bullets"]
+    assert stage_output_schema("missing_evidence")["required"] == ["recovered_bullets"]
     assert not list(tmp_path.rglob("*.jsonl"))[1:]
 
 

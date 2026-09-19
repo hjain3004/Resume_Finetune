@@ -31,18 +31,28 @@ from src.tailor2.codex_subscription import CodexPilotInterrupted
 from src.tailor2.invoker import Tailor2Invoker
 from src.tailor2.models import (
     AuditResponse,
+    AmdocsOmission,
     DraftResponse,
+    DraftBullet,
+    MissingEvidenceResponse,
     Tailor2Manifest,
     audit_response_to_dict,
     draft_response_to_dict,
     manifest_to_dict,
     parse_audit_response,
     parse_draft_response,
+    parse_missing_evidence_response,
     parse_repair_response,
     repair_response_to_dict,
     strip_markdown_fences,
 )
-from src.tailor2.prompts import build_audit_prompt, build_draft_prompt, build_re_audit_prompt, build_repair_prompt
+from src.tailor2.prompts import (
+    build_audit_prompt,
+    build_draft_prompt,
+    build_missing_evidence_prompt,
+    build_re_audit_prompt,
+    build_repair_prompt,
+)
 from src.tailor2.prompts import build_selection_prompt
 from src.tailor2.selection_ranking import (
     SelectionContractError,
@@ -70,16 +80,22 @@ from src.tailor2.render_fill import (
 )
 from src.tailor2.severity import RunStatus, Severity
 from src.tailor2.validators import (
+    CANONICAL_AMDOCS_BULLETS,
     apply_deterministic_auto_corrections,
     check_skills_advisories,
     classify_evaluation_severity,
     classify_whole_resume_severity,
     validate_audit_response,
     validate_draft_response,
+    validate_missing_evidence_response,
     validate_repair_response,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class MissingEvidenceFatalError(RuntimeError):
+    """A targeted recovery attempted to introduce an integrity violation."""
 
 
 @dataclass(frozen=True)
@@ -146,6 +162,7 @@ class _Stage:
     render_fill_artifacts: dict[str, Any] = field(default_factory=dict)
     provider_metadata: dict[str, Any] = field(default_factory=dict)
     provider_invokers: tuple[Any, ...] = ()
+    recovery_artifacts: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _record_dimension_scores(stage: _Stage, audit: AuditResponse) -> None:
@@ -200,6 +217,7 @@ def _build_manifest(stage: _Stage, run_status: RunStatus, rejection_details: lis
         selection_artifacts=dict(stage.selection_artifacts),
         unresolved=list(stage.unresolved),
         render_fill_artifacts=dict(stage.render_fill_artifacts),
+        recovery_artifacts=list(stage.recovery_artifacts),
         provider_metadata=dict(stage.provider_metadata),
     )
 
@@ -222,6 +240,165 @@ def _write_fatal(out_dir: Path, stage: _Stage, reasons: list[str]) -> Tailor2Run
     )
 
 
+def _profile_evidence(profile: MasterProfile) -> dict[str, Any]:
+    return {
+        bullet.id: bullet
+        for entry in (*profile.experience, *profile.projects)
+        for bullet in entry.bullets
+    }
+
+
+def _missing_recovery_evidence(draft: DraftResponse, stage: _Stage) -> list[str]:
+    cited = {evidence_id for bullet in draft.bullets for evidence_id in bullet.evidence_ids}
+    omitted = {item.evidence_id for item in draft.amdocs_omission_ledger}
+    missing = [evidence_id for evidence_id in CANONICAL_AMDOCS_BULLETS if evidence_id not in cited and evidence_id not in omitted]
+    for item in stage.selection_artifacts.get("evidence_selection", []):
+        if item.get("selected") and item.get("evidence_id") not in cited and item.get("evidence_id") not in omitted:
+            if item["evidence_id"] not in missing:
+                missing.append(item["evidence_id"])
+    return missing
+
+
+def _recovery_context(
+    evidence_ids: list[str],
+    evidence_by_id: dict[str, Any],
+    stage: _Stage,
+) -> list[dict[str, Any]]:
+    requirement_ids_by_evidence: dict[str, list[str]] = {evidence_id: [] for evidence_id in evidence_ids}
+    for match in stage.selection_artifacts.get("matches", []):
+        for evidence_id in match.get("evidence_ids", []):
+            if evidence_id in requirement_ids_by_evidence and match.get("requirement_id"):
+                requirement_ids_by_evidence[evidence_id].append(str(match["requirement_id"]))
+    context = []
+    for evidence_id in evidence_ids:
+        evidence = evidence_by_id[evidence_id]
+        context.append(
+            {
+                "evidence_id": evidence_id,
+                "requirement_ids": sorted(set(requirement_ids_by_evidence[evidence_id])),
+                "canonical_phrasing": getattr(evidence.phrasings, "medium", ""),
+                "evidence": getattr(evidence, "evidence", ""),
+                "defense": getattr(evidence, "defense", ""),
+            }
+        )
+    return context
+
+
+def _entry_for_evidence(profile: MasterProfile, evidence_id: str) -> tuple[str, str]:
+    for entry in profile.experience:
+        if any(bullet.id == evidence_id for bullet in entry.bullets):
+            return "Experience", entry.id
+    for entry in profile.projects:
+        if any(bullet.id == evidence_id for bullet in entry.bullets):
+            return "Projects", entry.id
+    raise DraftValidationError(f"Recovery cites unknown evidence_id: {evidence_id!r}")
+
+
+def _recover_missing_evidence(
+    *,
+    draft: DraftResponse,
+    validation_error: Exception,
+    jd_path: Path,
+    profile: MasterProfile,
+    variant: str,
+    out_dir: Path,
+    stage: _Stage,
+    invoker: Tailor2Invoker,
+) -> DraftResponse | None:
+    evidence_by_id = _profile_evidence(profile)
+    missing_ids = _missing_recovery_evidence(draft, stage)
+    if not missing_ids or any(evidence_id not in evidence_by_id for evidence_id in missing_ids):
+        return None
+
+    omission_items = list(draft.amdocs_omission_ledger)
+    omission_ids = {item.evidence_id for item in omission_items}
+    for evidence_id in missing_ids:
+        if evidence_id in CANONICAL_AMDOCS_BULLETS and evidence_id not in omission_ids:
+            omission_items.append(
+                AmdocsOmission(
+                    evidence_id=evidence_id,
+                    category="space",
+                    reason="Deferred after bounded targeted evidence recovery; retained for human review.",
+                )
+            )
+    safe_partial = dataclasses.replace(draft, amdocs_omission_ledger=omission_items)
+    try:
+        validate_draft_response(
+            safe_partial,
+            jd_path.read_text(encoding="utf-8"),
+            profile,
+            variant,
+            allow_missing_canonical=True,
+            enforce_layout=False,
+        )
+    except Exception:
+        return None
+
+    context = _recovery_context(missing_ids, evidence_by_id, stage)
+    existing_bullet_ids = {bullet.bullet_id for bullet in draft.bullets}
+    for attempt in range(1, 3):
+        prompt = build_missing_evidence_prompt(context, draft.bullets)
+        try:
+            raw = invoker.invoke(prompt, invocation_type="missing_evidence", input_paths=[jd_path])
+            stage.call_count += 1
+            response = parse_missing_evidence_response(raw)
+            validate_missing_evidence_response(response, set(missing_ids), existing_bullet_ids, evidence_by_id, profile)
+            recovered = list(draft.bullets)
+            for item in response.recovered_bullets:
+                section, entry_id = _entry_for_evidence(profile, item.evidence_id)
+                recovered.append(
+                    DraftBullet(
+                        bullet_id=item.bullet_id,
+                        evidence_ids=[item.evidence_id],
+                        supported_requirement_ids=list(item.supported_requirement_ids),
+                        section=section,
+                        entry_id=entry_id,
+                        text=item.text,
+                    )
+                )
+            candidate = dataclasses.replace(
+                draft,
+                bullets=recovered,
+                selected_evidence_ids=list(dict.fromkeys([*draft.selected_evidence_ids, *missing_ids])),
+                amdocs_omission_ledger=[
+                    item for item in draft.amdocs_omission_ledger if item.evidence_id not in missing_ids
+                ],
+            )
+            validate_draft_response(candidate, jd_path.read_text(encoding="utf-8"), profile, variant)
+            write_json_atomic(out_dir / f"missing_evidence_attempt_{attempt}.json", {"recovered_bullets": [dataclasses.asdict(item) for item in response.recovered_bullets]})
+            stage.recovery_artifacts.append(
+                {
+                    "kind": "missing_evidence",
+                    "evidence_ids": missing_ids,
+                    "attempts": attempt,
+                    "outcome": "recovered",
+                    "trigger": str(validation_error),
+                }
+            )
+            return candidate
+        except CodexPilotInterrupted:
+            raise
+        except Exception as exc:
+            if any(marker in str(exc) for marker in ("unknown evidence_id", "prohibited term", "numeric token")):
+                raise MissingEvidenceFatalError(str(exc)) from exc
+            stage.warnings.append(f"missing evidence recovery attempt {attempt} failed: {exc}")
+
+    stage.needs_human_review = True
+    stage.warnings.append(
+        "missing evidence recovery exhausted; preserved the best safe partial draft and recorded omissions"
+    )
+    stage.recovery_artifacts.append(
+        {
+            "kind": "missing_evidence",
+            "evidence_ids": missing_ids,
+            "attempts": 2,
+            "outcome": "omitted_after_bounded_recovery",
+            "trigger": str(validation_error),
+        }
+    )
+    return safe_partial
+
+
 def run_tailor2_lane(
     jd_path: Path,
     company: str,
@@ -240,6 +417,8 @@ def run_tailor2_lane(
     selection_enabled: bool | None = None,
     selection_candidate_count: int = 3,
     render_fill_config: RenderFillConfig | None = None,
+    initial_draft: DraftResponse | None = None,
+    resume_metadata: dict[str, Any] | None = None,
 ) -> Tailor2RunResult:
     """Run the LLM-first tailoring pipeline.
 
@@ -282,6 +461,8 @@ def run_tailor2_lane(
     )
     stage.same_model_draft_and_audit = stage.drafter_id == stage.auditor_id
     stage.provider_invokers = (invoker, auditor_invoker, repair_invoker, re_audit_invoker)
+    if resume_metadata:
+        stage.recovery_artifacts.append({"kind": "resume", **resume_metadata})
     if stage.same_model_draft_and_audit:
         msg = (
             f"Drafter and auditor share the same provider/model ({stage.drafter_id[0]}:{stage.drafter_id[1]}); "
@@ -375,36 +556,85 @@ def run_tailor2_lane(
     # STAGE 1: DRAFT
     # ---------------------------------------------------------
     draft_prompt = build_draft_prompt(jd_text, profile, variant, company, title, selection_context)
-    try:
-        raw_draft = invoker.invoke(draft_prompt, invocation_type="draft", input_paths=[jd_path])
-        stage.call_count += 1
-        draft = parse_draft_response(raw_draft)
-        validate_draft_response(draft, jd_text, profile, variant)
-    except CodexPilotInterrupted:
-        raise
-    except Exception as exc:
-        if hasattr(invoker, "contract_retry_count") and getattr(invoker, "contract_retry_count") < 1:
-            invoker.contract_retry_count += 1
-            retry_prompt = (
-                draft_prompt
-                + "\n\nThe previous structured draft failed deterministic validation with this bounded diagnostic: "
-                + str(exc)
-                + "\nReturn a corrected JSON object using only exact canonical evidence IDs from the supplied profile."
-            )
+    if initial_draft is not None:
+        draft = initial_draft
+        try:
+            validate_draft_response(draft, jd_text, profile, variant)
+        except Exception as exc:
             try:
-                raw_draft = invoker.invoke(retry_prompt, invocation_type="draft", input_paths=[jd_path])
-                stage.call_count += 1
-                draft = parse_draft_response(raw_draft)
-                validate_draft_response(draft, jd_text, profile, variant)
-            except CodexPilotInterrupted:
-                raise
-            except Exception as retry_exc:
-                return _write_fatal(out_dir, stage, [str(retry_exc)])
-        else:
-            # Malformed/invalid structured response or a deterministic evidence/
-            # do_not_claim/numeric-token violation: both are FATAL_INTEGRITY --
-            # neither can be repaired without inventing evidence.
-            return _write_fatal(out_dir, stage, [str(exc)])
+                draft = _recover_missing_evidence(
+                    draft=draft,
+                    validation_error=exc,
+                    jd_path=jd_path,
+                    profile=profile,
+                    variant=variant,
+                    out_dir=out_dir,
+                    stage=stage,
+                    invoker=invoker,
+                )
+            except MissingEvidenceFatalError as recovery_exc:
+                return _write_fatal(out_dir, stage, [str(recovery_exc)])
+            if draft is None:
+                return _write_fatal(out_dir, stage, [str(exc)])
+    else:
+        try:
+            raw_draft = invoker.invoke(draft_prompt, invocation_type="draft", input_paths=[jd_path])
+            stage.call_count += 1
+            draft = parse_draft_response(raw_draft)
+            validate_draft_response(draft, jd_text, profile, variant)
+        except CodexPilotInterrupted:
+            raise
+        except Exception as exc:
+            try:
+                recovered = _recover_missing_evidence(
+                    draft=draft if "draft" in locals() else None,
+                    validation_error=exc,
+                    jd_path=jd_path,
+                    profile=profile,
+                    variant=variant,
+                    out_dir=out_dir,
+                    stage=stage,
+                    invoker=invoker,
+                ) if "draft" in locals() and draft is not None else None
+            except MissingEvidenceFatalError as recovery_exc:
+                return _write_fatal(out_dir, stage, [str(recovery_exc)])
+            if recovered is not None:
+                draft = recovered
+            elif hasattr(invoker, "contract_retry_count") and getattr(invoker, "contract_retry_count") < 1:
+                invoker.contract_retry_count += 1
+                retry_prompt = (
+                    draft_prompt
+                    + "\n\nThe previous structured draft failed deterministic validation with this bounded diagnostic: "
+                    + str(exc)
+                    + "\nReturn a corrected JSON object using only exact canonical evidence IDs from the supplied profile."
+                )
+                try:
+                    raw_draft = invoker.invoke(retry_prompt, invocation_type="draft", input_paths=[jd_path])
+                    stage.call_count += 1
+                    draft = parse_draft_response(raw_draft)
+                    validate_draft_response(draft, jd_text, profile, variant)
+                except CodexPilotInterrupted:
+                    raise
+                except Exception as retry_exc:
+                    if "draft" in locals() and draft is not None:
+                        try:
+                            recovered = _recover_missing_evidence(
+                                draft=draft,
+                                validation_error=retry_exc,
+                                jd_path=jd_path,
+                                profile=profile,
+                                variant=variant,
+                                out_dir=out_dir,
+                                stage=stage,
+                                invoker=invoker,
+                            )
+                        except MissingEvidenceFatalError as recovery_exc:
+                            return _write_fatal(out_dir, stage, [str(recovery_exc)])
+                    if recovered is None:
+                        return _write_fatal(out_dir, stage, [str(retry_exc)])
+                    draft = recovered
+            else:
+                return _write_fatal(out_dir, stage, [str(exc)])
 
     write_json_atomic(out_dir / "draft.json", draft_response_to_dict(draft))
 

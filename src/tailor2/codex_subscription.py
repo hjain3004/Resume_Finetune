@@ -309,6 +309,24 @@ def stage_output_schema(stage: str) -> dict[str, Any]:
             "required": ["repaired_bullets"],
             "additionalProperties": False,
         }
+    if stage == "missing_evidence":
+        recovered_bullet = {
+            "type": "object",
+            "properties": {
+                "evidence_id": {"type": "string"},
+                "bullet_id": {"type": "string"},
+                "supported_requirement_ids": string_array,
+                "text": {"type": "string"},
+            },
+            "required": ["evidence_id", "bullet_id", "supported_requirement_ids", "text"],
+            "additionalProperties": False,
+        }
+        return {
+            "type": "object",
+            "properties": {"recovered_bullets": {"type": "array", "items": recovered_bullet}},
+            "required": ["recovered_bullets"],
+            "additionalProperties": False,
+        }
     raise ValueError(f"unknown Tailor2 Codex stage: {stage!r}")
 
 
